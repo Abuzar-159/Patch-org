@@ -1,0 +1,495 @@
+<aura:component controller="MatchBill">
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/> 
+    <aura:attribute name="item" type="Object"/>
+    <aura:attribute name="index" type="Integer"/>
+    <aura:attribute name="showModal" type="Boolean" default='false'/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="displCurrency" type="Boolean" default="false"/>
+    <aura:attribute name="today" type="Date" />
+    <aura:attribute name="IsApprovedShow" type="Boolean"/>
+    <aura:attribute name="vList" type="Voucher__c[]"/>
+    <aura:attribute name="isTotalAmtShow" type="Boolean"/>
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}" />
+    <aura:attribute name="voucher" type="Map" default="{}"/>
+    <aura:attribute name="org" type="Map" default="{}"/>
+    <aura:attribute name="SelectedBillIds" type="List"/>
+    <aura:attribute name="SaveErrorMsg" type="String" default=""/>
+    <aura:attribute name="tabularMatchBill" type="Boolean" default="true"/>
+    <aura:attribute name="gridMatchBill" type="Boolean" default="false"/>
+    <aura:attribute name="approvalProcess" type="Boolean" default="false"/>
+    
+    <aura:if isTrue="{!v.gridMatchBill}">
+        
+        <div class="col-md-3 mt-2">
+            <div class="card-contact p-3">
+                <div class="slds-grid text-left pb-2">
+                    <div class="col-1 pl-0 ">
+                        <ui:inputCheckbox aura:id="checkbox" updateOn="change,click" change="{!c.getSelectedBill}" name="{!v.item.Id}" value="{!v.item.isSelect}"/> 
+                    </div>
+                    <div class="col-9 pl-0">
+                        <h5 class="">
+                            {!v.index}. <a href="{!'/'+v.item.Id}" target="_blank" class="contact-name">{!v.item.Name}</a>
+                            
+                        </h5>
+                    </div>
+                    <div class="col-2 pr-0 text-right">
+                        <p>
+                            <ui:menu >
+                                <ui:menuTriggerLink aura:id="trigger" label="">
+                                    <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small dropdown-toggle btnlineheight" iconName="utility:down"/>
+                                </ui:menuTriggerLink>    
+                                <ui:menuList aura:id="actionMenu" class="customMenuposition"><!--autoPosition="true"-->
+                                    <aura:if isTrue="{!v.item.ERP7__Posted__c}">
+                                        <aura:if isTrue="{!!v.item.ERP7__Issue_Voucher__c}">
+                                            <ui:actionMenuItem >
+                                                <a href="javascript:void(0);"  onclick="{!c.CreateVoucher}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.New_Voucher} </span></a>
+                                            </ui:actionMenuItem> 
+                                        </aura:if> 
+                                    </aura:if> 
+                                    
+                                    <aura:if isTrue="{!v.item.RecordType.DeveloperName=='PO_Bill'}">
+                                        <aura:if isTrue="{!v.item.ERP7__Matched__c}">
+                                            <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                                <ui:actionMenuItem >
+                                                    <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                                </ui:actionMenuItem> 
+                                            </aura:if>    
+                                        </aura:if> 
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Expense_Bill'}">
+                                        <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                            <ui:actionMenuItem >
+                                                <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                            </ui:actionMenuItem> 
+                                        </aura:if>    
+                                    </aura:if>
+                                </ui:menuList>
+                            </ui:menu>
+                        </p>
+                    </div>
+                </div>
+                
+                <p class="contact-item">
+                    <span>{!$Label.c.InventoryConsole_Vendor}:</span>
+                    <span>
+                        <a href="{!'/'+v.item.ERP7__Vendor__r.Id}" target="_blank">{!v.item.ERP7__Vendor__r.Name}</a>
+                    </span>
+                </p>
+                <p class="contact-item">
+                    <span>{!$Label.c.EmployeeReviewV2_Due_Date}:</span>
+                    <a href="javascript:void(0);" target="_blank"> {!v.item.ERP7__Due_Date__c}</a>
+                </p>
+                <p class="contact-item">
+                    <span>{!$Label.c.Matched}:</span>
+                    <a href="javascript:void(0);"> {!v.item.ERP7__Matched__c ? $Label.c.Other_Tax_Display : $Label.c.DefaultValuesOnPO}</a><!--was {!v.item.ERP7__Matched__c} changed by Asra for translation - 30.01.24-->
+                    
+                    
+                </p>
+                
+                <div class="slds-grid pt-1 pb-1">
+                    <div class="slds-col col-6 pl-0 text-left"> 
+                        <div class="endime-maq AccountsPayable-newClass37">
+                            {!$Label.c.Acc_Recev_Posted}
+                        </div>
+                    </div>
+                    <div class="slds-col col-6 pr-0">
+                        <div class="endime-maq MatchBI-class8" >
+                            &nbsp;{!v.item.ERP7__Posted__c ? $Label.c.Other_Tax_Display : $Label.c.DefaultValuesOnPO}<!--was {!v.item.ERP7__Posted__c} changed by Asra for translation - 30.01.24-->
+                        </div>
+                    </div> 
+                </div>
+            </div>
+            
+            <div class="card shadow-custom MatchBI-class1 slds-hide">
+                <div class="card-body MatchBI-class2">
+                    <div class="d-flex justify-content-between MatchBI-class3" >
+                        
+                        <h5 class="mb-0 MatchBI-class4">
+                            <ui:inputCheckbox aura:id="checkbox" updateOn="change,click" change="{!c.getSelectedBill}" name="{!v.item.Id}" value="{!v.item.isSelect}"/>
+                            {!v.index}.
+                            <strong><a href="{!'/'+v.item.Id}" target="_blank">{!v.item.Name}</a></strong>
+                            
+                        </h5>
+                        <ui:menu >
+                            <ui:menuTriggerLink aura:id="trigger" label="">
+                                <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small dropdown-toggle btnlineheight" iconName="utility:down"/>
+                            </ui:menuTriggerLink>    
+                            <ui:menuList aura:id="actionMenu" class="customMenuposition"><!--autoPosition="true"-->
+                                <aura:if isTrue="{!v.item.ERP7__Posted__c}">
+                                    <aura:if isTrue="{!!v.item.ERP7__Issue_Voucher__c}">
+                                        <ui:actionMenuItem >
+                                            <a href="javascript:void(0);"  onclick="{!c.CreateVoucher}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.New_Voucher} </span></a>
+                                        </ui:actionMenuItem> 
+                                    </aura:if> 
+                                </aura:if> 
+                                
+                                <aura:if isTrue="{!v.item.RecordType.DeveloperName=='PO_Bill'}">
+                                    <aura:if isTrue="{!v.item.ERP7__Matched__c}">
+                                        <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                            <ui:actionMenuItem >
+                                                <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                            </ui:actionMenuItem> 
+                                        </aura:if>    
+                                    </aura:if> 
+                                </aura:if>
+                                <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Expense_Bill'}">
+                                    <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                        <ui:actionMenuItem >
+                                            <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                        </ui:actionMenuItem> 
+                                    </aura:if>    
+                                </aura:if>
+                            </ui:menuList>
+                        </ui:menu>
+                    </div>
+                    <div class="slds-grid pt-2 pb-2">
+                        <div class="slds-col col-12">
+                            <table width="100%">
+                                <tr>
+                                    <td width="50%"> <strong>{!$Label.c.InventoryConsole_Vendor} :</strong>  </td>
+                                    <td width="50%" class="MatchBI-class6"> &nbsp;<a href="{!'/'+v.item.ERP7__Vendor__r.Id}" target="_blank">{!v.item.ERP7__Vendor__r.Name}</a></td>
+                                </tr>
+                            </table>
+                            
+                            <hr class="MatchBI-class7"/>
+                            <table width="100%">
+                                <tr>
+                                    <td width="50%"> <strong>{!$Label.c.EmployeeReviewV2_Due_Date} :</strong>  </td>
+                                    <td width="50%" class="MatchBI-class6">{!v.item.ERP7__Due_Date__c}</td>
+                                </tr>
+                            </table>
+                            <hr class="MatchBI-class7"/>
+                            <table width="100%">
+                                <tr>
+                                    <td width="80%"> <strong>{!$Label.c.Acc_Pay_Due_Amount} :</strong>  </td>
+                                    <td width="50%" class="MatchBI-class6">&nbsp;<ui:outputNumber format="#0.00" value="{!v.item.ERP7__Amount_Due__c}"/></td>
+                                </tr>
+                            </table>
+                            <hr class="MatchBI-class7"/>
+                            <table width="100%">
+                                <tr>
+                                    <td width="50%"> <strong>{!$Label.c.Matched} :</strong>  </td>
+                                    <td width="50%" class="MatchBI-class6"> {!v.item.ERP7__Matched__c}</td>
+                                </tr>
+                            </table>
+                            
+                            
+                        </div>
+                    </div>
+                    <div class="scroll-bar-wrap">
+                        
+                        <div class="cover-bar"></div>
+                    </div>
+                    
+                    <div class="row m-0">
+                        <div class="col-12 p-0">
+                            <div class="slds-grid pt-3 pb-3">
+                                
+                                <div class="slds-col col-6 pr-0 text-left">
+                                    <div class="endime-maq MatchBI-class8" >
+                                        {!$Label.c.Acc_Recev_Posted} :  &nbsp;{!v.item.ERP7__Posted__c}
+                                    </div>
+                                </div> 
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        
+        <aura:set attribute="else">
+            <tr class="{! and(and(v.item.Status__c != 'Closed',v.item.Status__c != 'Paid'), v.item.ERP7__Due_Date__c &lt; v.today)? 'MatchBI-class9' : ''}"><!--#ffb75d-->
+                <aura:if isTrue="{!or(v.item.ERP7__Status__c=='Approved', !v.approvalProcess)}">
+                    <td data-label="Select All">
+                        <ui:inputCheckbox aura:id="checkbox" updateOn="change,click" change="{!c.getSelectedBill}" name="{!v.item.Id}" value="{!v.item.isSelect}"/>
+                    </td>
+                    <aura:set attribute="else">
+                        <td data-label="Select All">
+                            
+                        </td>
+                    </aura:set>
+                </aura:if>
+                <td>
+                    <div class="slds-truncate" title="">{!v.index}</div>
+                </td>
+                <td data-label="Bill#">
+                    <div class="slds-truncate truncate2" title="">
+                        <a href="{!'/'+v.item.Id}" target="_blank"><strong>{!v.item.Name}</strong></a>
+                        <!--<a onclick="{!c.NavigateToManageBill}">{!v.item.Name}</a>-->
+                    </div>
+                </td>
+                <td data-label="Purchase Order">
+                    <div class="slds-truncate truncate2" title="">
+                        <aura:if isTrue="{!or(v.item.ERP7__Purchase_Order__c=='', v.item.ERP7__Purchase_Order__c == null)}">
+                            <a href="" target="_blank"><strong>{!v.item.ERP7__PO_Name__c}</strong></a>
+                            <aura:set attribute="else">
+                                <a href="{!'/'+v.item.ERP7__Purchase_Order__c}" target="_blank"><strong>{!v.item.ERP7__Purchase_Order__r.Name}</strong></a> 
+                            </aura:set>
+                        </aura:if>
+                    </div>
+                </td>
+                <td data-label="Vendor">
+                    <div class="slds-truncate truncate2" title=""><a href="{!'/'+v.item.ERP7__Vendor__r.Id}" target="_blank">{!v.item.ERP7__Vendor__r.Name}</a></div>
+                </td>  
+                <aura:if isTrue="{!v.isTotalAmtShow}">
+                    <td data-label="Total Amount">
+                        <div class="slds-truncate truncate2" title="{!v.item.ERP7__Total_Amount__c}">
+                            <aura:if isTrue="{!v.displCurrency}">
+                                <lightning:formattedNumber style="currency"  value="{!v.item.ERP7__Total_Amount__c}"/>
+                                <aura:set attribute="else">
+                                    <lightning:formattedNumber value="{!v.item.ERP7__Total_Amount__c}" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                </aura:set>
+                            </aura:if>
+                            
+                        </div>
+                    </td>
+                    <td data-label="Paid Amount">
+                        <div class="slds-truncate truncate2" title="{!v.item.ERP7__Amount_Paid__c}">
+                            <aura:if isTrue="{!v.displCurrency}">
+                                <lightning:formattedNumber style="currency"  value="{!v.item.ERP7__Amount_Paid__c}"/>
+                                <aura:set attribute="else">
+                                    <lightning:formattedNumber value="{!v.item.ERP7__Amount_Paid__c}"  minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </td>
+                </aura:if>
+                <aura:if isTrue="{!v.IsApprovedShow}">
+                    <td data-label="Amount">
+                        <div class="slds-truncate truncate2" title="{!v.item.ERP7__Amount_Due__c}">
+                            
+                            <span class="pr-1s">
+                                <aura:if isTrue="{!v.displCurrency}">
+                                    <lightning:formattedNumber style="currency"  value="{!v.item.ERP7__Amount_Due__c}"/>
+                                    <aura:set attribute="else">
+                                        <lightning:formattedNumber value="{!v.item.ERP7__Amount_Due__c}"  minimumFractionDigits="2"  maximumFractionDigits="2"/>
+                                    </aura:set>
+                                </aura:if></span>
+                        </div>
+                    </td>
+                </aura:if>
+                <td data-label="Bill Date">
+                    <div class="slds-truncate truncate2" title=""><lightning:formattedDateTime value="{!v.item.ERP7__Bill_Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/></div>
+                </td>
+                <td data-label="Due Date">
+                    <div class="slds-truncate truncate2" title=""><lightning:formattedDateTime value="{!v.item.ERP7__Due_Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/></div>
+                </td>
+                <td data-label="Due Date Days">
+                    <div class="slds-truncate truncate2" title="">{!v.item.ERP7__Due_Date_Days__c}</div>
+                </td>
+                <td data-label="Type">
+                    <div class="slds-truncate " title="">
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Expense_Bill'}">
+                            <div class="slds-truncate" title="">{!$Label.c.Income_stmnt_EXPENSE}</div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Advance_to_vendor'}">
+                            <div class="slds-truncate" title="">{!$Label.c.Advance}</div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='PO_Bill'}">
+                            <div class="slds-truncate" title="">{!$Label.c.Purchase}</div>
+                        </aura:if>                        	
+                    </div>
+                </td>
+                <td data-label="Due Date">
+                    <div class="slds-truncate truncate2" title="">{!v.item.ERP7__Status__c}</div>
+                </td>
+                <td data-label="Match">
+                    <div class="slds-truncate" title="">
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='PO_Bill'}">
+                            <aura:if isTrue="{!v.item.ERP7__Matched__c}">
+                                <span class="slds-button--success">{!$Label.c.Yes_UserAvailabilities}</span>
+                                <aura:set attribute="else">
+                                    <span class="slds-button--destructive">{!$Label.c.No}</span>
+                                </aura:set>
+                            </aura:if>
+                        </aura:if>
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Expense_Bill'}">
+                            <span class="slds-button_destructive" disabled="true">{!$Label.c.NA}</span>
+                        </aura:if>
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Advance_to_vendor'}">
+                            <span class="slds-button_destructive" disabled="true">{!$Label.c.NA}</span>
+                        </aura:if>
+                        
+                    </div>
+                </td>
+                
+                <td data-label="Posted">
+                    <div class="slds-truncate" title="">
+                        <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Advance_to_vendor'}">
+                            <span class="slds-button_destructive" disabled="true">{!$Label.c.NA}</span>
+                            <aura:set attribute="else">
+                                <aura:if isTrue="{!v.item.ERP7__Posted__c}">
+                                    <span class="slds-button--success">{!$Label.c.Yes_UserAvailabilities}</span>
+                                    <aura:set attribute="else">
+                                        <span class="slds-button--destructive">{!$Label.c.No}</span>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>                        
+                    </div>
+                </td>
+                <td data-label="Clone">
+                    <a data-record="{!v.item.Id}" data-name="{!v.item.Name}" onclick="{!c.CloneBill}">
+                        <lightning:icon iconName="action:clone" size="x-small" />
+                    </a>
+                </td>
+                <aura:if isTrue="{!or(v.item.ERP7__Status__c=='Approved', !v.approvalProcess)}">
+                    <td class="slds-cell-shrink" data-label="Actions">
+                        <ui:menu >
+                            <ui:menuTriggerLink aura:id="trigger" label="">
+                                <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small dropdown-toggle btnlineheight" iconName="utility:down"/>
+                            </ui:menuTriggerLink> 
+                            
+                            <ui:menuList aura:id="actionMenu" class="customMenuposition" autoPosition="top"><!--autoPosition="true"-->
+                                <ui:actionMenuItem >
+                                    <a href="javascript:void(0);"  data-record="{!v.item.Id}" data-name="{!v.item.Name}" onclick="{!c.ManageBill}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Edit_Bill} </span></a>
+                                </ui:actionMenuItem>
+                                <aura:if isTrue="{!v.item.ERP7__Posted__c}">
+                                    <aura:if isTrue="{!!v.item.ERP7__Issue_Voucher__c}">
+                                        <ui:actionMenuItem >
+                                            <a href="javascript:void(0);"  onclick="{!c.CreateVoucher}" title="" ><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.New_Voucher} </span></a>
+                                        </ui:actionMenuItem> 
+                                    </aura:if> 
+                                </aura:if> 
+                                
+                                <aura:if isTrue="{!v.item.RecordType.DeveloperName=='PO_Bill'}">
+                                    <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                        <ui:actionMenuItem >
+                                            <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                        </ui:actionMenuItem> 
+                                    </aura:if>    
+                                    
+                                </aura:if>
+                                <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Expense_Bill'}">
+                                    <aura:if isTrue="{!!v.item.ERP7__Posted__c}">
+                                        <ui:actionMenuItem >
+                                            <a href="javascript:void(0);"  onclick="{!c.updateBillToApprove}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.Acc_Recev_Post} </span></a>
+                                        </ui:actionMenuItem>
+                                        <!--<ui:actionMenuItem >
+                                        <a href="javascript:void(0);"  onclick="{!c.NavigateToManageBill}" title=""><span class="slds-form-element__label MatchBI-class5" >Manage Bill </span></a>
+                                    </ui:actionMenuItem>-->
+                                    </aura:if>    
+                                </aura:if>
+                                <aura:if isTrue="{!v.item.RecordType.DeveloperName=='Advance_to_vendor'}">
+                                    <ui:actionMenuItem >
+                                        <a href="javascript:void(0);"  onclick="{!c.CreateVoucher}" title=""><span class="slds-form-element__label MatchBI-class5" >{!$Label.c.New_Voucher} </span></a>
+                                    </ui:actionMenuItem>                                  
+                                </aura:if>
+                            </ui:menuList>
+                        </ui:menu>
+                        
+                        
+                    </td>
+                </aura:if>
+            </tr>
+        </aura:set>
+    </aura:if>
+    
+    
+    <aura:if isTrue="{!v.showModal}">
+        <div class="erp_mark7" aura:id="createVoucher">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-p-around_small">
+                        <!-- <lightning:button iconName="utility:close" onclick="{!c.hideModal}" variant="inverse" class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"/>-->
+                        
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Create_Voucher}</h4>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_small" id="modal-content-id-1">
+                        <aura:if isTrue="{!v.vList.length>0}">
+                            <div class="MatchBI-class11">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>{!$Label.c.Acc_Pay_Voucher}</td>
+                                            <td>{!$Label.c.PaySlip_Amount}</td>
+                                            <td>Date</td>
+                                        </tr>
+                                        <aura:iteration items="{!v.vList}" var="var">
+                                            <tr>
+                                                <td>{!var.Name}</td>
+                                                <td>{!var.ERP7__Amount__c}</td>
+                                                <td>{!var.ERP7__Date__c}</td>
+                                            </tr>
+                                        </aura:iteration> 
+                                    </tbody>
+                                </table>
+                            </div>
+                        </aura:if>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-p-horizontal--medium slds-size--1-of-2 slds-m-top--small">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <ui:inputText value="{!v.voucher.Name}" label="{!$Label.c.Name_ManageLeave}" required="true" aura:id="voucherName" class="slds-input"/>
+                                    </div>
+                                </div>    
+                            </div>
+                            <div class="slds-col slds-p-horizontal--medium slds-p-horizontal--medium slds-size--1-of-2 slds-m-top--small">
+                                <div class="slds-form-element">
+                                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.voucher.ERP7__Vendor__c}" label="{!$Label.c.InventoryConsole_Vendor}" required="true" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Vendor'" hideRemove="true"/><!--NameValue="{!v.Bill.ERP7__Vendor__r.Name}" -->
+                                </div>
+                            </div>
+                            <div class="slds-col slds-p-horizontal--medium slds-size--1-of-2 slds-m-top--small">
+                                <div class="slds-form-element">
+                                    <c:CustomInputLookUp objectAPIName="ERP7__Bill__c" IconName="standard:account" selectedRecordId="{!v.voucher.ERP7__Vendor_invoice_Bill__c}" label="{!$Label.c.Acc_Pay_Bill}" required="true" aura:Id="vendorBill"  hideRemove="true"/>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-p-horizontal--medium slds-size--1-of-2 slds-m-top--small">
+                                <div class="slds-form-element">
+                                    <ui:inputCurrency aura:id="voucheramount" value="{!v.voucher.ERP7__Amount__c}"  format="0.00"  class="slds-input" label="{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}"/>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-p-horizontal--medium slds-size--1-of-2 slds-m-top--small">
+                                <div class="slds-form-element">
+                                    <ui:inputText value="{!v.voucher.ERP7__Payment_Summary__c}" class="slds-input" label="{!$Label.c.Payment_Summary}"/>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer MatchBI-class13">
+                        <lightning:button class="slds-button slds-button--neutral" label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.hideModal}" variant="neutral"/>
+                        <lightning:button class="slds-button slds-button__brand" variant="brand" label="{!$Label.c.ContractConsole_Save}" onclick="{!c.save_Voucher}"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.showMmainSpin}">
+        <span class="AccountsPayable-newClass33">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+    </aura:if>
+    
+    <aura:if isTrue="{!and(v.SaveErrorMsg!=undefined, v.SaveErrorMsg!='')}">
+        <div class="erp_mark7">
+            <div class="slds-notify_container slds-is-fixed MatchBI-class14" aura:id="criteriaMsgId">
+                <div class="slds-notify slds-notify_toast slds-theme_alert-texture slds-theme_error MatchBI-class15" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small "> {!v.SaveErrorMsg}
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.onClick}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+</aura:component>

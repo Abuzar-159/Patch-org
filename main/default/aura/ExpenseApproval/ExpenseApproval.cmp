@@ -1,0 +1,145 @@
+<aura:component controller="ExpenseSheetLC">
+    <aura:handler name="init" value="{!this}" action="{!c.getExpDetails}" />
+    <aura:attribute name="Exp" type="Expense__c[]" />
+    <aura:attribute name="rid" type="String" default="" />
+    <aura:attribute name="emp" type="Employees__c" />
+    <!--Sorting the Data Attributes-->
+    <aura:attribute type="Boolean" name="sortAsc" />
+    <aura:attribute type="String" name="sortField" />
+    <!--Sorting the Data Attributes-->
+    <div class="slds">
+        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal table3">
+            <thead>
+                <tr class="slds-text-heading--label">
+                    <th class="padng-1" scope="col">
+                        <span class="slds-truncate">Action</span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByName}" class="nav-decor">Employee Name&nbsp;^</a>
+                        </span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByNameExp}" class="nav-decor">Expense Name&nbsp;^</a>
+                        </span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByProject}" class="nav-decor">Project&nbsp;^</a>
+                        </span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortBySubmitted}" class="nav-decor">Submitted Amount&nbsp;^</a>
+                        </span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByVat}" class="nav-decor">Vat/Tax&nbsp;^</a>
+                        </span>
+                    </th>
+                    <th class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByClaimed}" class="nav-decor">Claimed Amount&nbsp;^</a>
+                            </span>
+                    </th>
+                    <th  class="slds-text-heading--label slds-size--1-of-7 padng-1" scope="col" colspan="2">
+                        <span class="slds-truncate">
+                            <a onclick="{!c.sortByStatus}" class="nav-decor">Status&nbsp;^</a>
+                        </span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <aura:iteration items="{!v.Exp}" var="account" indexVar="i">
+                    <tr class="slds-hint-parent">
+                        <aura:renderIf isTrue="{!account.ERP7__Status__c=='Draft'||account.ERP7__Status__c=='Rejected'||account.ERP7__Status__c=='Approved'}">
+                            <aura:set attribute="else">
+                                <td data-label="Action">
+                                    <div aria-hidden="false" class="slds">
+                                        <a class="ApproveLeaves clr-fff" aura:id="appbtn" buttonTitle="Approve" onclick="{!c.show1}" data-index="{!i}" data-record="{!account.Id}">Approve</a> |
+                                        <a  class="RejectLeaves clr-fff" aura:id="rejectbtn" buttonTitle="Reject" onclick="{!c.show2}" data-index="{!i}" data-record="{!account.Id}">Reject</a>
+                                    </div>
+                                </td>
+                                <td data-label="Employee Name" class="slds-size--1-of-7" colspan="2">
+                                    <a class="Name" target="_blank" href="{!'/' + account.ERP7__Employees__c}">
+                                        <span class="slds-truncate">{!account.ERP7__Employees__r.ERP7__First_Name__c}&nbsp;{!account.ERP7__Employees__r.ERP7__Last_Name__c}</span>
+                                    </a>
+                                </td>
+                                <td data-label="Expense Name" class="slds-size--1-of-7" colspan="2">
+                                    <a class="Name" target="_blank" href="{!'/' + account.Id}">
+                                        <span class="slds-truncate">{!account.Name}</span>
+                                    </a>
+                                </td>
+                                <td data-label="Project" class="slds-size--1-of-7" colspan="2">
+                                    <span class="slds-truncate">{!account.ERP7__Project__r.Name}</span>
+                                </td>
+                                <td data-label="Submitted Amount" class="slds-size--1-of-7" colspan="2">
+                                    <span class="slds-truncate">£{!account.ERP7__Amount_Submitted__c}</span>
+                                </td>
+                                <td data-label="Vat Amount" class="slds-size--1-of-7" colspan="2">
+                                    <span class="slds-truncate">£{!account.ERP7__VAT_Amount__c}</span>
+                                </td>
+                                <td data-label="Claimed Amount" class="slds-size--1-of-7" colspan="2">
+                                    <span class="slds-truncate">£{!account.ERP7__Amount__c}</span>
+                                </td>
+                                <td data-label="Status" class="slds-size--1-of-7" colspan="2">
+                                    <span class="slds-truncate">{!account.ERP7__Status__c}</span>
+                                </td>
+                            </aura:set>
+                        </aura:renderIf>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+        </table>
+        <!--Modal display dialogue boxes-->
+        <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+        <div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve">
+            <div class="slds-modal__container">
+                <div class="slds-modal__header">
+                    <h2 class="slds-text-heading--medium">Approve Reason</h2>
+                    <button class="slds-button slds-button--icon-inverse" onclick="{!c.hide1}">
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+                <div class="slds-modal__content">
+                    <div>
+                        <lightning:textarea aura:id="ReasonApproved" variant="label-hidden" class="display-lable" maxlength="150"/>
+                    </div>
+                </div>
+                <div class="slds-modal__footer slds-modal__footer--directional">
+                    <div class="slds-x-small-buttons--horizontal">
+                        <lightning:button variant="brand" aura:id="remId" title="Cancel" label="Cancel" onclick="{!c.hide1}" />
+                        <lightning:button variant="success" aura:id="remId" title="Approve" label="Approve" onclick="{!c.Approve}" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Reject">
+            
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h2 class="slds-text-heading--medium">Reject Reason</h2>
+                        <button class="slds-button slds-button--icon-inverse" onclick="{!c.hide2}">
+							<span class="slds-assistive-text">Close</span>
+						</button>
+                    </div>
+                    <div class="slds-modal__content">
+                        <div>
+                            <lightning:textarea aura:id="ReasonRejected" variant="label-hidden" class="display-lable" maxlength="150"/>
+                        </div>
+                    </div>
+                    <div class="slds-modal__footer slds-modal__footer--directional">
+                        <div class="slds-x-small-buttons--horizontal">
+                            <lightning:button variant="brand" aura:id="a06w000000lCD0a" title="Cancel" label="Cancel" onclick="{!c.hide2}" />
+                            <lightning:button variant="brand" aura:id="a06w000000lCD0a" title="Reject" label="Reject" onclick="{!c.reject}" />
+                        </div>
+                    </div>
+                </div>
+            
+            
+        </div>
+    </div>
+    <!--End of Modal Dialogue boxes-->
+</aura:component>

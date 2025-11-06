@@ -1,0 +1,1104 @@
+<aura:component controller="BankReconciliationLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+        <ltng:require styles="/resource/ERP7__bootstrap/bootstrap/css/bootstrap.css"/>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="{!join(',', $Resource.PickPackShipResource+'/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/BankReconclation.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    
+    <aura:attribute name="FileList" type="object[]"/>
+    <aura:attribute name="searchString2" type="String"/>
+    <aura:attribute name="searchAmount" type="String"/>
+    <aura:attribute name="display" type="Boolean" default="false"/>
+    <aura:attribute name="display2" type="Boolean" default="false"/>
+    <!-- <aura:attribute name="newTransaction" type="ERP7__Transaction__c"/>-->
+    <aura:attribute name="newTransaction" type="Transaction__c" default="{'ERP7__Transaction_Type__c': '',
+                                                                               'ERP7__Amount__c': '',
+                                                                               'ERP7__Finance_Category_Type__c': 'Credit',
+                                                                               }"/>
+    <aura:method name="switchTab" action="{!c.switchTab}"></aura:method>
+    <aura:attribute name="selectedTransaction" type="list" default=""/>
+    <aura:attribute name="selectedTransaction2" type="list" default=""/>
+    <aura:attribute name="Total" type="integer" default="0"/> 
+    <aura:attribute name="Total2" type="integer" default="0"/> 
+    <aura:attribute name="showSubTabs" type="String" default="cus2"/>
+    <aura:attribute name="TransactionWrapperList" type="list" default=''/>
+    <aura:attribute name="TransactionWrapperList2" type="list" default=''/>
+    <aura:attribute name="undoReconcile_Wrapperlist" type="list" default="{'sObjectType' : 'WrapperBankUnReconcile'}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUserRecord}"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUser}"/>
+    <aura:method name="doInit" action="{!c.doInit}"></aura:method>
+    <aura:attribute name="nextDisa" type="Boolean" default="false"/>
+    <aura:attribute name="AutoReconcile" type="Boolean" default="false"/>
+    <aura:attribute name="startDate"      type="Date" />
+    <aura:attribute name="endDate"      type="Date" />
+    <aura:attribute name="showTabs" type="String" default="cus"/>
+    <aura:attribute name="UserId" type="String" default=""/>
+    <aura:attribute name="RenderBody" type="Boolean" default="true"/>
+    <aura:attribute name="prevDisa" type="Boolean" default="true"/>
+    <aura:attribute name="DocumentId" type="String"/>
+    <aura:attribute name="ClickOn" type="String" default="Next"/>
+    <aura:attribute name="Entries" type="Integer" default="10"/>
+    <aura:attribute name="counter" type="Integer" default="0"/>
+    <aura:attribute name="counterEnd" type="Integer" default="0"/>
+    <aura:attribute name="OrganisationId" type="String"/>
+    <aura:attribute name="Bank_Reconciliation_Id" type="String"/>
+    <aura:attribute name="selectedBankAccount" type="String"/>
+    <aura:attribute name="BankRecon_obj" type="Bank_Reconciliation__c" default=""/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="bankStmtlist" type="Bank_Statement__c[]"/>
+    <aura:attribute name="banktranslist" type="Bank_Transaction__c[]"/>
+    <aura:attribute name="bankStmtlistDum" type="Bank_Statement__c[]"/>
+    <aura:attribute name="pageNumbers" type="String[]" default="1"/> 
+    <aura:attribute name="SearchString" type="String" default=""/> 
+    <aura:attribute name="Status" type="String" default="Completed"/>
+    <aura:attribute name="doc" type="String" default="01524000000VNvO"/> 
+    <aura:attribute name="Tab"           type="String"   default="Tab1" /> 
+    <aura:attribute name="listitems" type="Account[]"/>
+    <aura:attribute name="NoSlotsMessage" type="String" default="No Data available"/>
+    <aura:attribute name="BankStatement" type="Bank_Statement__c"/>
+    <aura:attribute name="FromSP" type="Boolean" default="false"/>
+    <aura:attribute name="SaveErrorMsg" type="String" default=""/>
+    <aura:attribute name="stStatus2Options" type="List"/>
+    <aura:attribute name="OrderBy" type="String" default="ERP7__Transaction_Date__c"/> 
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!--<aura:handler name="change" value="{!v.Bank_Reconciliation_Id}" action="{!c.fetchDetails}"/>-->
+    <div class="maqsood">
+        <div class="erp_mark7 erp_Mark7 BankReconciliation-newClass1" aura:id="body">
+            <div class=" slds-container--fluid">
+                <aura:if isTrue="{!and(v.SaveErrorMsg!=undefined, v.SaveErrorMsg!='')}">
+                    <div class="slds-notify_container slds-is-fixed BankReconciliation-newClass2" aura:id="criteriaMsgId">
+                        <div class="slds-notify slds-notify_toast slds-theme_alert-texture slds-theme_error BankReconciliation-newClass3 " role="status">
+                            <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" onclick="{!c.close}"/>
+                            </span>
+                            <div class="slds-notify__content">
+                                <h2 class="slds-text-heading_x-small "> {!v.SaveErrorMsg}
+                                </h2>
+                            </div>
+                            <div class="slds-notify__close">
+                                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.onClick}">
+                                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_Timesheets}" title="close" />
+                                    <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aura:if>
+                <div class="slds-page-header">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                            <lightning:icon iconName="standard:work_plan" variant="inverse" size="x-medium" alternativeText="{!$Label.c.work_plan}" title="work_plan" />
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset mb-0">{!$Label.c.Bank_Reconcilation_BANK}</p>
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle" title="">{!$Label.c.Bank_Reconcilation_Reconciliation}</h1>
+                                    
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+                <!-- </aura:if>-->
+                <!-- Start of Edit Layout -->
+                <div class="erp_Mark7 BankReconciliation-newClass4"> 
+                    <div class="card shadow-sm BankReconciliation-newClass5">
+                        
+                        <div class="card-body">
+                            
+                            <div class="row padding-t-5">
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small"> 
+                                    <lightning:input type="text"  value="{!v.BankRecon_obj.Name}" label="{!$Label.c.Bank_Reconciliation_Name}" aura:id="poName" oncommit="{!c.validateField}" placeholder="{!$Label.c.Bank_Reconciliation_Name}"/> <!-- required="true"  -->
+                                </div> 
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label  class="slds-form-element__label" for="input-unique-id">Organisation</label>
+                                        <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.BankRecon_obj.ERP7__Organisation__c}" 
+                                                            IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND ERP7__Account_Type__C = 'Organisation'"/> <!-- NameValue="{!v.BankRecon_obj.ERP7__Organisation__r.Name}" -->
+                                    </div>
+                                </div> 
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label  class="slds-form-element__label" for="input-unique-id">{!$Label.c.Bank_Reconcilation_Bank_Account}</label>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Bank_details__c" selectedRecordId="{!v.BankRecon_obj.ERP7__Bank_Account__c}" 
+                                                            IconName="standard:account" placeholder="{!$Label.c.Bank_Reconcilation_Search_Bank_Account}" qry="AND ERP7__Active__c = true"/><!-- NameValue="{!v.BankRecon_obj.ERP7__Bank_Account__r.Name}" -->
+                                    </div>
+                                </div> 
+                                <!--div class="col-md-3  col-xs-6  slds-p-top-xx-small">
+                                    Organisation<br/>
+                                </div-->
+                                <!--div class="col-md-3  col-xs-6  slds-p-top-xx-small">
+                                    Bank Account<br/>
+                                 </div-->
+                                <div class="col-md-3  col-xs-6 slds-p-top--xx-small slds-hide">
+                                    <lightning:input type="date" aura:id="StartDate" label="{!$Label.c.AddSubscription_Start_Date}" value="{!v.BankRecon_obj.ERP7__Start_Date__c}" disabled="true"/>
+                                </div>
+                                <div class="col-md-3  col-xs-6 slds-p-top--xx-small slds-hide">
+                                    <lightning:input type="date" aura:id="EndDate" label="{!$Label.c.CreateClubcard_End_Date}" value="{!v.BankRecon_obj.ERP7__End_Date__c}" disabled="true"/>
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide">
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Beginning_Balance__c}" label="{!$Label.c.Bank_Rdconcilation_Beginning_Balance}" aura:id="BRBeginningBalance" disabled="true" /> <!-- required="true"  -->
+                                </div>
+                                
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide"> <!--Purchase Order Number <span >*</span> -->
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Ending_Balance__c}" label="{!$Label.c.Bank_Reconcilation_Ending_Balance}" aura:id="BREndingBalance" disabled="true" /> <!-- required="true"  -->
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide"> 
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Uncleared_Amount__c}" label="{!$Label.c.Bank_Reconcilation_UnCleared_Amount}" disabled="true"/>
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide"> 
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Calculated_Ending_Balance__c}" label="{!$Label.c.Bank_Reconcilation_Calculated_Ending_Balance}" disabled="true"/> 
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide">
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Cleared_Deposit__c}" label="{!$Label.c.Bank_Reconcilation_Cleared_Deposits}" disabled="true" />
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide"> 
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Cleared_Disbursement__c}" label="{!$Label.c.Bank_Reconcilation_Cleared_Disbursement}" disabled="true"/>
+                                </div>
+                                <div class="col-md-3 col-xs-6 slds-p-top--xx-small slds-hide"> 
+                                    <lightning:input type="text" value="{!v.BankRecon_obj.ERP7__Status__c}" label="{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}" disabled="true" /> 
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!$Label.c.AddSubscription_Start_Date}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                       {!v.BankRecon_obj.ERP7__Start_Date__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:event" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!$Label.c.CreateClubcard_End_Date}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                       {!v.BankRecon_obj.ERP7__End_Date__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:event" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1 min-height57">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!$Label.c.Bank_Rdconcilation_Beginning_Balance}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!v.BankRecon_obj.ERP7__Beginning_Balance__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:partner_marketing_budget" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head"> {!$Label.c.Bank_Reconcilation_Ending_Balance}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                       {!v.BankRecon_obj.ERP7__Ending_Balance__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:partner_fund_claim" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!$Label.c.Bank_Reconcilation_UnCleared_Amount}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!v.BankRecon_obj.ERP7__Uncleared_Amount__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:budget_category_value" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!$Label.c.Bank_Reconcilation_Cleared_Deposits}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!v.BankRecon_obj.ERP7__Cleared_Deposit__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:budget" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head"> {!$Label.c.Bank_Reconcilation_Calculated_Ending_Balance}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!v.BankRecon_obj.ERP7__Calculated_Ending_Balance__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:budget_period" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head"> {!$Label.c.Bank_Reconcilation_Cleared_Disbursement}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!v.BankRecon_obj.ERP7__Cleared_Disbursement__c}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:buyer_group_qualifier" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                    <div class="card l-bg-cvd mb-2 mt-0 min-height57">
+                                        <div class="card-body px-3 py-1">
+                                            <div class="d-flex justify-content-between align-items-start" >
+                                                <div class="color-card" >
+                                                    <p class="mb-0 color-card-head">{!v.BankRecon_obj.ERP7__Status__c}</p>
+                                                    <h6 class="text-left mb-0 pt-1">
+                                                        {!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}
+                                                    </h6>
+                                                </div>
+                                                <lightning:icon iconName="standard:work_capacity_usage" size="small" class="mt-2"></lightning:icon>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>  
+                                </div>
+                            </div>
+                            <div class="slds-m-bottom--large BankReconciliation-newClass6"></div> 
+                            <aura:if isTrue="{!!v.AutoReconcile}">
+                            <div class="slds-docked-form-footer">
+                                <button class="slds-button slds-button--brand" onclick="{!c.saveEditBankRecon_obj}">{!$Label.c.ContractConsole_Save}</button>
+                                <button class="slds-button slds-button_neutral" onclick="{!c.navHome}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                                
+                                <button class="slds-button slds-button--brand" label="{!$Label.c.Download_Bank_Statement_template}"><a href="{!'/servlet/servlet.FileDownload?file='+v.DocumentId.Id}" target="_blank" class="color-white">Download Bank Statement template </a></button>
+                            </div>
+                            </aura:if>
+                        </div>  
+                        <aura:if isTrue="{!v.AutoReconcile}">
+                            
+                                
+                                <div class="card-body p-2">
+                                    <h5 class="mb-2"><strong>Auto Reconcile</strong></h5>
+                                    <table class="table">         
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th class="" scope="col">
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Transaction Summary">Transaction Summary</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Transaction Summary">Statement Amount</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Transaction Summary">Statement Type</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Transaction Date">Transaction Date </div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Salesforce Transaction Reference">Salesforce Transaction Reference</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="">Deposit</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate2" title="Approver">Disbursement</div>
+                                                </th>
+                                            </tr> 
+                                        </thead> 
+                                        <tbody>
+                                            <aura:iteration var="bt" indexVar="STCounter" items="{!v.banktranslist}">
+                                                <tr class="slds-hint-parent">
+                                                    <td name="{!STCounter}">
+                                                        <lightning:button class="slds-button slds-button_neutral neutralC" name="{!STCounter}" onclick="{!c.delete_Item}">
+                                                            <a title="Remove Item">
+                                                                <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                                            </a>
+                                                        </lightning:button>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Start Date">
+                                                            {!bt.ERP7__Transaction_Summary__c}
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Beginning Balance">
+                                                            <lightning:formattedNumber value="{!bt.ERP7__Statement_Amount__c}" />
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Beginning Balance">
+                                                            {!bt.ERP7__Statement_Type__c}
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Start Date">
+                                                            <lightning:formattedDateTime value="{!bt.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" />
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <a href="{'/'+bt.ERP7__Transaction__c}" target="__blank">{!bt.ERP7__Internal_Reference__c}</a>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Beginning Balance">
+                                                            <lightning:formattedNumber value="{!bt.ERP7__Debit__c}" />
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate2" title="Ending Balance">
+                                                            <lightning:formattedNumber value="{!bt.ERP7__Disbursement__c}" />
+                                                        </div>
+                                                    </td>
+                                                </tr>                        
+                                            </aura:iteration>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            
+                            <div class="slds-docked-form-footer">
+                                <lightning:button class="slds-button slds-button_neutral" onclick="{!c.closeAuto}" label="Cancel Auto Reconcile"></lightning:button>
+                               
+                                <lightning:button variant="brand" iconName="utility:change_record_type" label="Reconcile" onclick="{!c.saveAutoReconcile}"></lightning:button>
+                                
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!!v.AutoReconcile}">
+                        <aura:if isTrue="{!(v.BankRecon_obj.ERP7__Status__c!=v.Status)}">             
+                            <div class="slds-tabs--default BankReconciliation-newClass4">
+                                <ul class="slds-tabs--default__nav" role="tablist">
+                                    <li aura:id="cusId" class="{!(v.showTabs=='cus')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Bank Statement" role="presentation">
+                                        <a class="slds-tabs--default__link" onclick="{!c.getTab}" data-record="cus" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                            {!$Label.c.Bank_Statement}
+                                        </a>
+                                    </li>
+                                    
+                                    
+                                    
+                                    <li aura:id="invId" class="{!(v.showTabs=='inv')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Reconcile" role="presentation">
+                                        <a class="slds-tabs--default__link" onclick="{!c.getTab}" data-record="inv" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                            <i class="fa fa-file-text-o" aria-hidden="true"></i>&nbsp;{!$Label.c.Reconcile}
+                                        </a>
+                                        
+                                    </li>
+                                    <li aura:id="payId" class="{!(v.showTabs=='pay')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Payments" role="presentation">
+                                        <a class="slds-tabs--default__link" onclick="{!c.getTab}" data-record="pay" tabindex="-1" aria-selected="false" aria-controls="tab-default-3" id="tab-default-3__item">
+                                            <i class="fa fa-credit-card" aria-hidden="true"></i>&nbsp;{!$Label.c.Undo_Reconcile}
+                                        </a>
+                                    </li>
+                                    <li class="BankReconciliation-newClass10">
+                                        <aura:if isTrue="{!and(v.bankStmtlist.length==0,v.showTabs=='cus',v.BankRecon_obj.ERP7__Status__c!='Completed')}">
+                                            <div class="slds-grid BankReconciliation-newClass9">
+                                                <lightning:input aura:id="file" 
+                                                                 onchange="{!c.CreateRecord}" 
+                                                                 type="file" 
+                                                                 name="file" 
+                                                                 accept=".csv"
+                                                                 multiple="false" variant="label-hidden"/> 
+                                                <button class=" slds-m-left_small slds-button slds-button--neutral " onclick="{!c.CreateOnlineRecord}">{!$Label.c.Import_Online_Bank_Statement}</button>
+                                                
+                                            </div>
+                                        </aura:if>
+                                    </li>
+                                </ul>
+                                
+                                
+                                
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!(v.BankRecon_obj.ERP7__Status__c!=v.Status)}">
+                            <div class="{!v.showTabs=='cus'?'slds-show':'slds-hide'}">
+                                
+                                <div class="table-responsive BankReconciliation-newClass11" tabindex="1">
+                                    <table class="table">                                 
+                                        <thead>
+                                            <tr>
+                                                <th class="slds-text-heading--label " scope="col">Transaction <br/>Date</th>
+                                                <th class="slds-text-heading--label " scope="col">Transaction <br/>Mode</th>
+                                                <th class="slds-text-heading--label " scope="col">Transaction <br/>{!$Label.c.Summary}</th>
+                                                <th class="slds-text-heading--label " scope="col">{!$Label.c.Cheque} <br/>{!$Label.c.Number}</th>
+                                                <th class="slds-text-heading--label " scope="col">{!$Label.c.Reference_Cheque}<br/> {!$Label.c.Number}</th>
+                                                <th class="slds-text-heading--label " scope="col">{!$Label.c.Deposits} </th>
+                                                <th class="slds-text-heading--label " scope="col">{!$Label.c.Withdrawals} </th>
+                                                <th class="slds-text-heading--label " scope="col">{!$Label.c.Acc_Pay_Balance} </th>
+                                            </tr>
+                                        </thead>
+                                        <div class="slds-col slds-p-horizontal--medium slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 pt-1" >
+                                            
+                                            <aura:if isTrue="{!v.bankStmtlist.length>0}">     
+                                                <div class="BankReconciliation-newClass12">
+                                                    {!$Label.c.SalesOrderConsole_Search}:<c:SearchRecord searchString="{!v.SearchString}" Placeholder="{!$Label.c.Bank_Statement}" aura:id="Bank_Reconciliation_Id"/>
+                                                    <!-- <ERP7:StockTakeSearch searchString="{!v.SearchString}"/>-->
+                                                </div>
+                                            </aura:if>
+                                        </div> 
+                                        <tbody> 
+                                            <!--<aura:if isTrue="{!v.Instance.ErrorMsg != null}">
+                                         <div class="slds-notify__content">
+                                                        <h2 class="slds-text-heading_small ">{!v.Instance.ErrorMsg != null}</h2>
+                                         </div>
+                                    </aura:if>-->
+                                            
+                                            <aura:iteration items="{!v.bankStmtlist}" var="list" >
+                                                <tr class="slds-hint-parent">
+                                                    <td class="" data-label="Account Title">
+                                                        <div class="slds-truncate2"><lightning:formattedDateTime value="{!list.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" /></div></td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2">{!list.ERP7__Transaction_Mode__c}</div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2">{!list.ERP7__Transaction_Summary__c}</div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2">{!list.ERP7__Cheque_Number__c}</div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2">{!list.ERP7__Reference_Number__c}</div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2"><lightning:formattedNumber style="currency" value="{!list.ERP7__Deposits__c}" maximumFractionDigits="2"/></div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2"><lightning:formattedNumber style="currency" value="{!list.ERP7__Withdrawals__c}" maximumFractionDigits="2"/></div>
+                                                    </td>
+                                                    <td class="slds-text-heading--label " scope="col">
+                                                        <div class="slds-truncate2"><lightning:formattedNumber style="currency" value="{!list.ERP7__Balance__c}" maximumFractionDigits="2"/></div>
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration>
+                                            <br/>
+                                            <br/>
+                                            <br/>
+                                            
+                                        </tbody>
+                                    </table>
+                                    <aura:if isTrue="{!and(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')}"><!--(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')-->
+                                        <div class="slds-notify_container slds-is-relative BankReconciliation-newClass13" aura:id="criteriaMsgId">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning BankReconciliation-newClass14" role="alert">
+                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                <div class="slds-notify__content BankReconciliation-newClass15">
+                                                    <h2 class="slds-text-heading_small BankReconciliation-newClass16">
+                                                        {!v.NoSlotsMessage}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                        </div>     
+                                    </aura:if>
+                                </div>
+                                
+                            </div>
+                        </aura:if>
+                        </aura:if>
+                    </div>
+                    
+                    
+                </div>
+                <aura:if isTrue="{!!v.AutoReconcile}">
+                <aura:if isTrue="{!(v.BankRecon_obj.ERP7__Status__c!=v.Status)}">
+                    <div class="{!v.showTabs=='inv'?'slds-show':'slds-hide'}">
+                        <div class="container-fluid">
+                            <div class="slds row slds-p-top-xx-small">
+                                <div class="col-md-6 slds-p-top-xx-small">
+                                    <div class="card shadow-sm">
+                                        <div class="card-body p-1">
+                                            <div class="d-flex justify-content-between">
+                                                <h5 class="mb-0 pt-2 pl-2"><strong>{!$Label.c.Your_Import_Bank_Statements}</strong></h5><aura:if isTrue="{!v.bankStmtlist.length>0}">
+                                                	<lightning:button variant="brand" iconName="utility:change_record_type" label="Auto Reconcile" onclick="{!c.fetchReconciliationRecords}"></lightning:button>
+                                                </aura:if>
+                                                <!--<div>
+                                <a class="mr-3 acitve-list" aura:id="gridIcon" onclick="{!c.changeView}" data-record = "grid">
+                                    <i class="fa fa-th-large"></i>
+                                </a>
+                                
+                               
+                                
+                                <a class="mr-3" aura:id="listIcon" onclick="{!c.changeView}" data-record = "list">
+                                    <i class="fa fa-list"></i>
+                                </a>
+                            </div>-->
+                                            </div>
+                                            <div class="table-responsive BankReconciliation-newClass11-s slds-m-top_small" tabindex="1"> 
+                                                
+                                                <table class="table">
+                                                    <thead>
+                                                        <tr >
+                                                            
+                                                            <th > {!$Label.c.Transaction_Summary}</th>
+                                                            <th class="text-left">
+                                                                {!$Label.c.Spent}
+                                                            </th>
+                                                            <th class="text-left">
+                                                                {!$Label.c.Received}
+                                                            </th>
+                                                            
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody> 
+                                                        <tr height="20px"></tr>
+                                                        <aura:iteration items="{!v.bankStmtlist}" var="blist" indexVar="Index">
+                                                            <tr height="70" data-record="{!blist.Id}" value="{!blist.Id}"  name="{!Index}" onclick="{!c.selectedStatement}" class="{!if(blist.Id != v.BankStatement.Id,'BankReconciliation-newClass18','BankReconciliation-newClass17')}"><!--fetchTrans({!rowcounter});colorchange(this.id,{!rowcounter});-->
+                                                                
+                                                                <td class="BankReconciliation-newClass19 ">
+                                                                    <div class="slds-truncate2">
+                                                                    <lightning:formattedDateTime value="{!blist.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" />
+                                                                    <br/> {!blist.ERP7__Transaction_Summary__c}
+                                                                    <lightning:formattedText value="{!blist.ERP7__Cheque_Number__c}"> </lightning:formattedText> <aura:if istrue="{!blist.ERP7__Cheque_Number__c != null?true:false}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="BankReconciliation-newClass20" width="25%">
+                                                                    <lightning:formattedNumber style="currency" value="{!blist.ERP7__Withdrawals__c}" maximumFractionDigits="2"/>
+                                                                </td>
+                                                                <td class="BankReconciliation-newClass21" width="25%">
+                                                                    <lightning:formattedNumber style="currency" value="{!blist.ERP7__Deposits__c}" maximumFractionDigits="2"/>
+                                                                </td>
+                                                                
+                                                            </tr>
+                                                            <tr height="20px"></tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                    
+                                </div>
+                                <div class="col-md-6 slds-p-top--xx-small">
+                                    <div class="card shadow-sm">
+                                        <div class="card-body p-1">
+                                            <div class="d-flex justify-content-between">
+                                                <!--<h5 class="mb-4"><strong>Transactions</strong></h5>-->
+                                                <!--<div>
+                                <a class="mr-3 acitve-list" aura:id="gridIcon" onclick="{!c.changeView}" data-record = "grid">
+                                    <i class="fa fa-th-large"></i>
+                                </a>
+                                
+                               
+                                
+                                <a class="mr-3" aura:id="listIcon" onclick="{!c.changeView}" data-record = "list">
+                                    <i class="fa fa-list"></i>
+                                </a>
+                            </div>-->
+                                            </div>
+                                            
+                                            <div id="MainMatchPanel">
+                                                <div class="slds-tabs--default">
+                                                    <ul class="slds-tabs--default__nav" role="tablist">
+                                                        <li aura:id="cus2Id" class="{!(v.showSubTabs=='cus2')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Customers" role="presentation">
+                                                            <a class="slds-tabs--default__link" data-record="cus2" onclick="{!c.getTab2}" href="javascript:void(0);" role="tab" tabindex="0"
+                                                               aria-selected="true" aria-controls="tab-default-1" id="tab-default-1__item">
+                                                                <i class="fa fa-user" aria-hidden="true"></i>&nbsp;{!$Label.c.Matches}
+                                                            </a>
+                                                        </li>
+                                                        <br/>
+                                                        <br/>
+                                                        
+                                                        <li aura:id="inv2Id" class="{!(v.showSubTabs=='inv2')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Customers" role="presentation">
+                                                            <a class="slds-tabs--default__link" onclick="{!c.getTab2}" data-record="inv2" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                                                <i class="fa fa-file-text-o" aria-hidden="true"></i>&nbsp;{!$Label.c.Find_and_Match}
+                                                            </a>
+                                                            
+                                                        </li>
+                                                        <li aura:id="pay2Id" class="{!(v.showSubTabs=='pay2')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Payments" role="presentation">
+                                                            <a class="slds-tabs--default__link" onclick="{!c.getTab2}" data-record="pay2" tabindex="-1" aria-selected="false" aria-controls="tab-default-3" id="tab-default-3__item">
+                                                                <i class="fa fa-credit-card" aria-hidden="true"></i>&nbsp;{!$Label.c.Transfer_Order_Create}
+                                                            </a>
+                                                        </li>
+                                                        <li aura:id="sel2Id" class="{!(v.showSubTabs=='sel2')?'slds-tabs--default__item slds-active BankReconciliation-newClass8':'slds-tabs--default__item BankReconciliation-newClass8'}" title="Selected Statements" role="presentation">
+                                                            <a class="slds-tabs--default__link" onclick="{!c.getTab2}" data-record="sel2" tabindex="-1" aria-selected="false" aria-controls="tab-default-3" id="tab-default-3__item">
+                                                                <i class="fa fa-file-text" aria-hidden="true"></i>&nbsp;Selected Statements
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                    
+                                                    
+                                                    
+                                                </div>
+                                                <div class="{!v.showSubTabs=='cus2'?'slds-show':'slds-hide'}">
+                                                    <div class="slds-grid">
+                                                        <div class="slds-col slds-p-right_small">
+                                                            <aura:if isTrue="{!v.display2}">
+                                                                <div class="slds-p-top_small slds-p-bottom_small" onclick="{!c.processReconcile2}">
+                                                                    <lightning:button variant="brand" iconName="utility:change_record_type" label="Reconcile"></lightning:button>
+                                                                </div> 
+                                                            </aura:if>
+                                                        </div>
+                                                        <div class="slds-col slds-p-top_medium text-right slds-p-right_small">
+                                                            
+                                                        </div>
+                                                    </div>
+                                                    <table id="trastbl" class="table">
+                                                        
+                                                        <tr class="BankReconciliation-newClass22">
+                                                            <td align="center" class="BankReconciliation-newClass23">
+                                                                <lightning:input type="checkbox" variant="label-hidden" aura:id="select" value="" /><!-- <onclick="{!c.getallinvoiceLI}"/> -->
+                                                            </td>
+                                                            <td align="center" class="BankReconciliation-newClass23">
+                                                                Date
+                                                            </td>
+                                                            <td align="center" class="BankReconciliation-newClass23">
+                                                                {!$Label.c.CreateAddress_Customer}
+                                                            </td>
+                                                            <td align="center" class="BankReconciliation-newClass23">
+                                                                {!$Label.c.Name_Payment}
+                                                            </td>
+                                                            <td align="center" class="BankReconciliation-newClass23">
+                                                                {!$Label.c.PaySlip_Amount}
+                                                            </td>
+                                                            <td width="120px" align="center" class="BankReconciliation-newClass23">
+                                                                {!$Label.c.Type_ManageLeave}
+                                                            </td>
+                                                            
+                                                        </tr>
+                                                       
+                                                        <aura:if isTrue="{!and(v.TransactionWrapperList2==null,v.BankStatement!=null)}">
+                                                            <tr>
+                                                                <td colspan="6">
+                                                                    <div class="slds-notify_container slds-is-relative" style="z-index:9;">
+                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                            <span class="slds-assistive-text">warning</span>
+                                                                            <lightning:icon iconName="utility:warning" size="small"></lightning:icon>
+                                                                            <div class="slds-notify__content slds-p-left_small">
+                                                                                <h2 class="slds-text-heading_small mb-0">{!$Label.c.No_Matches_Found}
+                                                                                </h2>
+                                                                            </div>
+                                                                            <div class="slds-notify__close">
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            
+                                                            <aura:set attribute="else">
+                                                                <aura:iteration items="{!v.TransactionWrapperList2}" var="trans" indexVar="Index">
+                                                                    
+                                                                    <tr ><!-- id="trans_row{!trans_counter}" -->
+                                                                        <aura:if isTrue="{!v.TransactionWrapperList2!=''}">
+                                                                            <td class="innercolclass">
+                                                                                
+                                                                                <lightning:input type="checkbox" variant="label-hidden" aura:id="boxPack" value="{#trans.Id}"  name="{!Index}" onclick="{!c.selectedTransaction2}"  /><!-- click="{!c.getinvoiceLI}" -->
+                                                                            </td>
+                                                                        </aura:if>
+                                                                        <td class="innercolclass">
+                                                                        	<lightning:formattedDateTime value="{!trans.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" />
+                                                                        </td>
+                                                                        <td class="innercolclass">
+                                                                        {!trans.ERP7__Payment__r.ERP7__Accounts__r.Name}
+                                                                        </td>
+                                                                        <td class="innercolclass">
+                                                                            <lightning:formattedText value="{!trans.Name}" /><br/>
+                                                                            <lightning:formattedText value="{!trans.ERP7__Payment__r.Name}" /><br/>
+                                                                            <lightning:formattedText value="{!trans.ERP7__Payment__r.ERP7__Invoice__r.Name}" />
+                                                                            
+                                                                        </td>
+                                                                        <td class="innercolclass">
+                                                                            <lightning:formattedNumber style="currency" value="{!trans.ERP7__Amount__c}" maximumFractionDigits="2"/>
+                                                                        </td>
+                                                                        <td class="innercolclass" width="120px">
+                                                                            <lightning:formattedText value="{!trans.ERP7__Finance_Category_Type__c}" />
+                                                                        </td>
+                                                                    </tr>
+                                                                    
+                                                                </aura:iteration>
+                                                            </aura:set></aura:if>
+                                                        <tr>
+                                                        	<td colspan="4" class="total-f-right"><h5 class="slds-m-bottom_xxx-small"><strong>Total</strong>={!v.Total}</h5> </td>
+                                                        </tr>  
+                                                        
+                                                    </table></div>
+                                                <div class="{!v.showSubTabs=='inv2'?'slds-show':'slds-hide'}">
+                                                    <div id="findMatch">
+                                                        <div class="row pt-4 pb-4">
+                                                            <div class="col-md-5">
+                                                                <lightning:formattedText value="Search By Name or Ref#" />
+                                                                <lightning:input type="text" value="{!v.searchString2}" placeholder="{!$Label.c.Minimum_two_characters}" />
+                                                            </div>
+                                                            <div class="col-md-5">
+                                                                <lightning:formattedText value="Search By Amount" />
+                                                                <lightning:input type="text" value="{!v.searchAmount}" placeholder="{!$Label.c.Amount_to_search}" />&nbsp;
+                                                            </div>
+                                                            <div class="col-md-5">
+                                                                <lightning:input type="date" aura:id="StartDate" label="{!$Label.c.AddSubscription_Start_Date}" value="{!v.startDate}" onchange="{!c.updateEndDate}"/>
+                                                            </div>
+                                                            <div class="col-md-5">
+                                                                <lightning:input type="date" aura:id="StartDate" label="{!$Label.c.CreateClubcard_End_Date}" value="{!v.endDate}"/>
+                                                            </div>
+                                                            <div class="col-md-2 slds-p-top_medium">
+                                                                <button  class="slds-button slds-button_brand" onclick="{!c.Find_And_Match}" reRender="findMatch">
+                                                                    Go </button>
+                                                            </div>
+                                                        </div>
+                                                        <!--<table border="0" width="100%">
+                                            <tr height="10"></tr>
+                                            <tr>
+                                                <td>
+                                                    <lightning:formattedText value="Search By Name or Ref#" />
+                                                </td>
+                                                <td>
+                                                    <lightning:input type="text" value="{!v.searchString2}" placeholder="Minimum two characters.." />
+                                                </td>
+                                                <td>
+                                                </td>
+                                            </tr>
+                                            <tr><td height="10"></td></tr>
+                                            <tr>
+                                                <td>
+                                                    <lightning:formattedText value="Search By Amount" />
+                                                </td>
+                                                <td>
+                                                    <lightning:input type="text" value="{!v.searchAmount}" placeholder="Amount to search.." />&nbsp;
+                                                   
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="right" colspan="2" >
+                                                     <button  class="slds-button slds-button_brand" onclick="{!c.Find_And_Match}" reRender="findMatch">
+                                                        Go </button>
+                                                </td>
+                                                
+                                            </tr>
+                                            <tr > 
+                                                <td height="20"></td></tr>
+                                        </table> -->
+                                                        <div class="table-responsive BankReconciliation-newClass11">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col slds-p-right_small">
+                                                                    <aura:if isTrue="{!v.display}">
+                                                                        <div class="slds-p-top_small slds-p-bottom_small" onclick="{!c.processReconcile}">
+                                                                            <lightning:button variant="brand" iconName="utility:change_record_type" label="Reconcile"></lightning:button>
+                                                                        </div>
+                                                                    </aura:if>
+                                                                </div>
+                                                                <div class="slds-col  slds-p-right_small slds-p-top_medium text-right ">
+                                                                    <h5 class="slds-m-bottom_xxx-small"><strong>Total</strong>={!v.Total}</h5>   
+                                                                </div>
+                                                                
+                                                            </div>
+                                                        <table id="trastbl" class="slds-table slds-table_bordered">
+                                                            
+                                                            <tr class="BankReconciliation-newClass22">
+                                                                <td align="center" class="BankReconciliation-newClass23">
+                                                                    <lightning:input type="checkbox" variant="label-hidden" aura:id="select" value="" /><!-- onclick="{!c.getallinvoiceLI}"/> -->
+                                                                </td>
+                                                                <td align="center" class="BankReconciliation-newClass23">
+                                                                    <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Transaction_Date__c" title="{!$Label.c.Acc_Pay_Payments}" class="AccountsPayable-newClass32">
+                                                                    Date<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="{!$Label.c.Sort_Outbound_logistics}" />                                   
+                                                            		</span> 
+                                                                </td>
+                                                                <td align="center" class="BankReconciliation-newClass23">
+                                                                    Customer
+                                                                </td>
+                                                                <td align="center" class="BankReconciliation-newClass23">
+                                                                    {!$Label.c.Name_Payment}
+                                                                </td>
+                                                                <td align="center" class="BankReconciliation-newClass23">
+                                                                    <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Amount__c" title="{!$Label.c.Acc_Pay_Payments}" class="AccountsPayable-newClass32">
+                                                                    {!$Label.c.PaySlip_Amount}<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="{!$Label.c.Sort_Outbound_logistics}" />                                   
+                                                            		</span> 
+                                                                </td>
+                                                                <td width="120px" align="center" class="BankReconciliation-newClass23">
+                                                                    `<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Finance_Category_Type__c" title="{!$Label.c.Acc_Pay_Payments}" class="AccountsPayable-newClass32">
+                                                                    {!$Label.c.Type_ManageLeave}<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="{!$Label.c.Sort_Outbound_logistics}" />                                   
+                                                            		</span> 
+                                                                </td>
+                                                            </tr>
+                                                            <tr height="7">
+                                                                <td height="20">&nbsp;</td>
+                                                            </tr>
+                                                            <aura:if isTrue="{!and(v.TransactionWrapperList==null,v.BankStatement!=null)}">
+                                                                <p class="BankReconciliation-newClass24">{!$Label.c.No_Matches_Found}</p>
+                                                                <aura:set attribute="else">
+                                                                    <aura:iteration items="{!v.TransactionWrapperList}" var="trans" indexVar="Index">
+                                                                        <tr class="{!if(trans.Id != v.selectedTransaction.Id,'BankReconciliation-newClass18','BankReconciliation-newClass17')}">
+                                                                            <!-- id="trans_row{!trans_counter}" -->
+                                                                            <aura:if isTrue="{!v.TransactionWrapperList!=''}">
+                                                                                <td class="innercolclass">
+                                                                                    
+                                                                                    <lightning:input type="checkbox" variant="label-hidden" aura:id="boxPack" value="{#trans.Id}"  name="{!Index}" onchange="{!c.selectedTransaction}"  /><!-- click="{!c.getinvoiceLI}" -->
+                                                                                </td>
+                                                                            </aura:if>
+                                                                            <td class="innercolclass">
+                                                                                <lightning:formattedDateTime value="{!trans.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" />
+                                                                            </td>
+                                                                            <td class="innercolclass">
+                                                                                {!trans.ERP7__Payment__r.ERP7__Accounts__r.Name}
+                                                                            </td>
+                                                                            <td class="innercolclass">
+                                                                                <aura:if isTrue="{!trans.ERP7__is_Adjustment__c}">
+                                                                                    <a href="{!'/'+trans.Id}" target="__blank">{!trans.Name}</a>|
+                                                                                    Adjustment Transaction
+                                                                                    <aura:set attribute="else">
+                                                                                        <a href="{!'/'+trans.Id}" target="__blank">{!trans.Name}</a>|
+                                                                                        <lightning:formattedText value="{!trans.ERP7__Payment__r.Name}" />|
+                                                                                        <lightning:formattedText value="{!trans.ERP7__Payment__r.ERP7__Invoice__r.Name}" />|
+                                                                                        <lightning:formattedText value="{!trans.ERP7__Expense_Line_Item__r.Name}" />
+                                                                                    </aura:set>
+                                                                                </aura:if><br/>
+                                                                            </td>
+                                                                            <td class="innercolclass">
+                                                                               <lightning:formattedNumber style="currency" value="{!trans.ERP7__Amount__c}" maximumFractionDigits="2"/>
+                                                                            </td>
+                                                                            <td class="innercolclass" width="120px">
+                                                                                <lightning:formattedText value="{!trans.ERP7__Finance_Category_Type__c}" />
+                                                                            </td>
+                                                                            <br/>
+                                                                        </tr>
+                                                                        <tr>
+                                                                        </tr>
+                                                                    </aura:iteration>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <tr >
+                                                                <td height="50" colspan="6">
+                                                                    <div class="BankReconciliation-newClass26">
+                                                                        <a onclick="{!c.ClearList}" class="BankReconciliation-newClass27">Clear Search Results</a><!-- href="{!c.ClearList}" -->
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                        </table>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                    
+                                                </div>
+                                                <div class="{!v.showSubTabs=='pay2'?'slds-show':'slds-hide'}">
+                                                    <div id="CreatePnl">
+                                                        <table border="0" width="100%" cellspacing="0" cellpadding="0">
+                                                            
+                                                            <tr>
+                                                                <td>&nbsp;</td>
+                                                            </tr>
+                                                        </table>
+                                                        <table id="ctTable" border="0" width="100%" height="50%" align="center">
+                                                            <tr>
+                                                                <td align="right" class="BankReconciliation-newClass28">{!$Label.c.Type_ManageLeave}</td>
+                                                                <td class="BankReconciliation-newClass29">
+                                                                    <lightning:select label="Status"  aura:id="stStatus2" value="{!v.newTransaction.ERP7__Transaction_Type__c}" >
+                                                                        <aura:iteration items="{!v.stStatus2Options}" var="option">
+                                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.newTransaction.ERP7__Transaction_Type__c, option.value)}"/>
+                                                                        </aura:iteration>
+                                                                    </lightning:select>
+                                                                </td>
+                                                            </tr>
+                                                            <tr><td height="10"></td></tr>
+                                                            <tr>
+                                                                <td align="left" class="BankReconciliation-newClass28">{!$Label.c.Category} </td>
+                                                                <td class="BankReconciliation-newClass30">
+                                                                    
+                                                                    <lightning:select name="select1" value="{!v.newTransaction.ERP7__Finance_Category_Type__c}" label="Type" required="true">
+                                                                        
+                                                                        <option value="{!v.newTransaction.ERP7__Finance_Category_Type__c}">{!$Label.c.Acc_Recev_Credit}</option>
+                                                                        <option value="{!v.newTransaction.ERP7__Finance_Category_Type__c}">{!$Label.c.Acc_Recev_Debit}</option>
+                                                                        
+                                                                    </lightning:select>
+                                                                    
+                                                                </td>
+                                                            </tr>
+                                                            <tr><td height="20"></td></tr>
+                                                            <tr>
+                                                                <td align="right" class="BankReconciliation-newClass28">{!$Label.c.PaySlip_Amount} </td>
+                                                                <td class="BankReconciliation-newClass29">
+                                                                    <lightning:input type="text" value="{!v.newTransaction.ERP7__Amount__c}"/>
+                                                                    <lightning:formattedText>
+                                                                        <div class="BankReconciliation-newClass31"><strong>{!$Label.c.error}:</strong>&nbsp; {!$Label.c.Enter_Select_Bank_Statment_Amount}</div>
+                                                                    </lightning:formattedText>
+                                                                </td>
+                                                            </tr>
+                                                            <tr><td height="10"></td></tr>
+                                                            <tr class="BankReconciliation-newClass4">
+                                                                <td colspan="2" class="BankReconciliation-newClass34">
+                                                                    <div>
+                                                                        <span class="BankReconciliation-newClass32" onclick="{!c.CreateTransaction}">
+                                                                            <i class="fa fa-retweet BankReconciliation-newClass33" aria-hidden="true"></i>
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="{!v.showSubTabs=='sel2'?'slds-show':'slds-hide'}">
+                                                    <aura:if isTrue="{!v.selectedTransaction.length>0}">
+                                                        <table class="slds-table slds-table_bordered">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Name</th>
+                                                                    <th>Transaction Date</th>
+                                                                    <th>Transaction Amount</th>
+                                                                    <th>Transaction Category</th>
+                                                                    <th>Is Adjustment?</th>
+                                                                 </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <aura:iteration items="{!v.selectedTransaction}" var="trans" indexVar="Index">
+                                                                    <tr>
+                                                                        <td>{!trans.Name}</td>
+                                                                        <td><lightning:formattedDateTime value="{!trans.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" /></td>
+                                                                        <td><lightning:formattedNumber style="currency" value="{!trans.ERP7__Amount__c}" maximumFractionDigits="2"/></td>
+                                                                        <td>{!trans.ERP7__Finance_Category_Type__c}</td>
+                                                                        <td>
+                                                                        <aura:if isTrue="{!trans.ERP7__is_Adjustment__c}">
+                                                                        yes
+                                                                        <aura:set attribute="else">
+                                                                        No
+                                                                        </aura:set>
+                                                                        </aura:if>
+                                                                        </td>
+                                                                    </tr>
+                                                                </aura:iteration>
+                                                            </tbody>
+                                                        </table>
+                                                        <aura:set attribute="else">
+                                                            <div class="slds-notify_container slds-is-relative createinvoice-class8" aura:id="criteriaMsgId">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning createinvoice-class9" role="alert">
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning}"/>
+                                                                    <div class="slds-notify__content createinvoice-class10">
+                                                                        <h2 class="slds-text-heading_small createinvoice-class11">
+                                                                            No Selected Transaction
+                                                                        </h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                </div>
+                            </div></div></div></aura:if>
+                <aura:if isTrue="{!(v.BankRecon_obj.ERP7__Status__c!=v.Status)}">
+                    <div class="{!v.showTabs=='pay'?'slds-show':'slds-hide'}">
+                        <div class="container-fluid">
+                            <div id="ReConciletable">
+                                
+                                <table class="slds-table slds-table--bordered" width="100%">
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>{!$Label.c.Bank_Statement}</th>
+                                        <th>
+                                            <lightning:formattedText value="Associated Transaction's" />
+                                        </th>
+                                        <th>{!$Label.c.Spent}</th>
+                                        <th>{!$Label.c.Received}</th>
+                                    </tr>
+                                    <aura:iteration items="{!v.undoReconcile_Wrapperlist}" var="unlist" indexVar="Index">
+                                        <tr>
+                                            <td>
+                                                
+                                                <lightning:button aura:id="assignButton" class="neutralC" name="{!Index}" onclick="{!c.undoReconcile}" >
+                                                    <a title="Remove" >
+                                                        <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="BankReconciliation-newClass35"/>
+                                                    </a>
+                                                </lightning:button>
+                                                
+                                            </td>
+                                            <td>
+                                                <lightning:formattedText value="{!unlist.bTrans.ERP7__Bank_Statement__r.ERP7__Transaction_Summary__c}"/><!--{!unlist.bTrans.Bank_Statement__r.Transaction_Summary__c}-->
+                                            </td>
+                                            
+                                            <td>
+                                                <aura:iteration items="{!unlist.tTranslist}" var="trans">
+                                                    <a href="{!'/'+trans.Id}" target="__blank"><lightning:formattedText value="{!trans.Name}"/></a>| <!--{!relatedtlist.Name}-->
+                                                  <lightning:formattedDateTime value="{!trans.ERP7__Transaction_Date__c}" year="numeric" month="numeric" day="numeric" />|
+                                                    {!trans.ERP7__Amount__c}<br/>
+                                                </aura:iteration>
+                                                
+                                            </td>
+                                            <td>
+                                                <lightning:formattedNumber style="currency" value="{!unlist.bTrans.ERP7__Bank_Statement__r.ERP7__Withdrawals__c}" maximumFractionDigits="2"/>
+                                            </td>
+                                            <td>
+                                                <lightning:formattedNumber style="currency" value="{!unlist.bTrans.ERP7__Bank_Statement__r.ERP7__Deposits__c}" maximumFractionDigits="2"/>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                </table>
+                                
+                            </div></div></div></aura:if>
+                <aura:if isTrue="{!(v.BankRecon_obj.ERP7__Status__c==v.Status)}"><div class="slds-notify_container slds-is-relative BankReconciliation-newClass13" aura:id="criteriaMsgId">
+                    <div class="slds-notify slds-notify_toast slds-theme_success BankReconciliation-newClass14" role="alert">
+                        <span class="slds-assistive-text">{!$Label.c.Success1}</span>
+                        <lightning:icon iconName="utility:success" size="small" alternativeText="{!$Label.c.Success1}"/>
+                        <div class="slds-notify__content BankReconciliation-newClass15">
+                            <h2 class="slds-text-heading_small BankReconciliation-newClass16" >
+                                {!$Label.c.Reconciliation_Completed}
+                            </h2>
+                        </div>
+                    </div>
+                    </div></aura:if>
+            </aura:if>
+            </div>
+            
+            
+            
+        </div>
+    </div>  
+    <aura:if isTrue="{!v.showMmainSpin}">
+        <span class="BankReconciliation-newClass36">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+    </aura:if> 
+    
+    
+</aura:component>

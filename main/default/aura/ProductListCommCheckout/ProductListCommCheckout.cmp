@@ -1,0 +1,596 @@
+<aura:component controller="ProductListComm" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    
+    <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/bootstrap.custom.min.css', 
+                          $Resource.ProductListComm + '/ProductListComm/css/custom.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/fonts_googleapis.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/listing.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css')}"/>     
+    <ltng:require scripts="{!join(',',
+                           $Resource.ProductListComm + '/ProductListComm/script/common_scripts.min.js',                           
+                           $Resource.ProductListComm + '/ProductListComm/script/main.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/sticky_sidebar.min.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/specific_listing.js')}"/>
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js"/>
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+    <aura:attribute name="AccId" type="String"/>
+    <aura:attribute name="changeSPN" type="Boolean" default="false"/>
+    <aura:attribute name="SubTotal" type="Integer" default="0"/>
+    <aura:attribute name="shippingCost" type="Integer" default="0"/>  
+    <aura:attribute name="Total" type="Integer" default="0"/>
+    <aura:attribute name="cartItems" type="Object"/>
+    <aura:attribute name="cartProducts" type="Object"/>
+    <aura:attribute name="coupon" type="List" default="Empty"/>
+    <aura:attribute name="totalPro" type="Integer" default="0"/>
+    <aura:attribute name="noOfItemsOnCart" type="Integer" default="0"/>
+    <aura:attribute name="showAddress" type="boolean" default="true"/>
+    <aura:attribute name="changeAddress" type="boolean" default="false"/>
+    <aura:attribute name="delay" type="Boolean" default="false"/>
+    
+    <aura:attribute name="SON" type="String" default=""/>
+    <aura:attribute name="IVN" type="String" default=""/>
+    <aura:attribute name="dueAmount" type="Integer"/>
+    <aura:attribute name="SOId" type="String" default=""/>
+    <aura:attribute name="shippingNotAvailable" type="Boolean" default="false"/>
+    <aura:attribute name="showOneAddress" type="String[]" />
+    <!--===========Shipping============-->
+    <aura:attribute name="UPSError" type="String"/>
+    <aura:attribute name="UPS_Services" type="Object" />
+    <aura:attribute name="FedExError" type="String"/>
+    <aura:attribute name="FEDEX_Services" type="Object" />
+    <aura:attribute name="shippingServices" type="Object"/>
+    <aura:attribute name="hideShipping" type="boolean" default="true"/>
+    <!--===========Shipping============-->
+    
+    <aura:attribute name="addList" type="Object" />
+    <aura:attribute name="addToDel" type="String" />
+    <!--================Update Address=============-->
+    <aura:attribute name="addToUpdate" type="String" />
+    <aura:attribute name="Name" type="String"/>
+    <!--<aura:attribute name="Email" type="String"/>-->
+    <aura:attribute name="Mobile" type="String"/>
+    <aura:attribute name="addLine1" type="String"/>
+    <aura:attribute name="addLine2" type="String"/>
+    <aura:attribute name="addLine3" type="String"/>
+    <aura:attribute name="City" type="String"/>
+    <aura:attribute name="Country" type="String[]"/>
+    <aura:attribute name="State" type="String[]"/>
+    <aura:attribute name="CountrySel" type="String" default=""/>
+    <aura:attribute name="StateSel" type="String" default=""/>
+    <aura:attribute name="Zip" type="String"/>
+    <aura:attribute name="addId" type="String"/>
+    <aura:attribute name="conId" type="String"/>
+    <aura:attribute name="errorMsg" type="String" default=""/>
+    <aura:attribute name="errorMsg1" type="String" default=""/>
+    <!--================/Update Address=============-->
+    
+    <!--==============addNewAddress=================-->
+    <aura:attribute name="newName" type="String"/>
+    <aura:attribute name="newMobile" type="String"/>
+    <aura:attribute name="errorMsg2" type="String" default=""/>
+    <aura:attribute name="errorMsg3" type="String" default=""/>
+    <!--==============addNewAddress=================-->
+    
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    
+    <div id="page" class="erp_mark7"> 
+        <div class="main">
+            
+            
+            <div class="container margin_30"> 
+                <div class="page_header">
+                    <h1>Checkout </h1>
+                    <div class="breadcrumbs">
+                        <ul>
+                            <li><a href="javascript:void(0)" onclick="{!c.home}">Home</a></li>                            
+                            <li>Confirm and Pay</li>
+                        </ul>
+                    </div>
+                </div> 
+                <!-- /page_header -->
+                <div class="container">
+                    
+                    
+                        <aura:if isTrue="{!v.changeAddress}">                        
+                            <aura:if isTrue="{!v.addList.length > 0 }">
+                                <p><strong>Shipping Address</strong></p>
+                                <a onclick="{!c.openAddAddressModal}">Add shipping Address</a>
+                                <div class="row">
+                                    <aura:iteration items="{!v.addList}" var="add">
+                                    <div class="col-md-4">
+                                        <div class="maqsood">
+                                            	 
+                                                <div class="box_general summary ProductLCCO-newClass1">
+                                                    <div class="card-body">
+                                                        
+                                                        <div class="d-flex justify-content-between">
+                                                            <div data-id="{!add.Id}" onclick="{!c.saveAddToSO}" class="ProductLCCO-newClass6">
+                                                                <Strong><p class="mb-0">{!add.Name}</p></Strong>
+                                                                <p class="mb-0">{!add.ERP7__Address_Line1__c}&nbsp;{!add.ERP7__Address_Line2__c}&nbsp;{!add.ERP7__Address_Line3__c}</p>
+                                                                <p class="mb-0">{!add.ERP7__City__c}</p>
+                                                                <p class="mb-0">{!add.ERP7__State__c}</p>
+                                                                <p class="mb-0">{!add.ERP7__Postal_Code__c}</p>
+                                                                <p class="mb-0">{!add.ERP7__Country__c}</p><br/>
+                                                                
+                                                              
+                                                            </div>
+                                                            <div>
+                                                                
+                                                                
+                                                                <span class="dropdown">
+                                                                    <a href="#" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                                        <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
+                                                                    </a>
+                                                                    <span class="dropdown-menu dropdown-menu-right">
+                                                                       
+                                                                        <a onclick="{!c.openUpdateAdd}" data-id="{!add.Id}" class="dropdown-item">Edit</a>
+                                                                        <a onclick="{!c.openDeleteAdd}" data-id="{!add.Id}" class="dropdown-item">Delete</a>
+                                                                    </span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                </div>
+                                            
+                                        </div>  
+                                            
+                                        </div>
+                                         </aura:iteration>
+                                    </div>
+                               
+                                
+                            </aura:if>
+                            
+                            <aura:set attribute="else">
+                                
+                                <aura:if isTrue="{!v.showAddress}">
+                                    <div class="col-lg-6 col-md-6">
+                                        <div class="box_general summary">
+                                            <!---->
+                                            <aura:if isTrue="{!v.addList.length == 0}">
+                                                <div class="slds-grid slds-wrap">
+                                                    <h4>Add delivery address</h4>
+                                                    <div class="slds-col col-6">
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newName1" label="Name" value="{!v.newName}" placeholder="Name"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-6"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newMobile" label="Phone" value="{!v.newMobile}" placeholder="Phone" maxlength="10"/>                                         
+                                                        </div>
+                                                    </div>                                 
+                                                    <div class="slds-col col-12"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newAdd1" label="Address Line 1" placeholder="1234 Main St"/>                                         
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-12"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newAdd2" label="Address Line 2" placeholder="Apartment, studio, or floor"/>                                         
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-12"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newAdd3" label="Address Line 3" placeholder="Landmark"/>                                         
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-6"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newCity" label="City" />                                         
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-6"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" aura:id="newZip" label="Zip"/>                                         
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-6"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:select aura:id="newCountry" label="Country">
+                                                                <aura:iteration items="{!v.Country}" var="ct">
+                                                                    <option value="{!ct}">{!ct}</option>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                            <aura:if isTrue="{!v.errorMsg2 != ''}">	<!--Make it as error message like others-->
+                                                                <li>{!v.errorMsg2}</li>>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col col-6"> 
+                                                        <div class="slds-form-element">
+                                                            <lightning:select aura:id="newState" label="State">
+                                                                <aura:iteration items="{!v.State}" var="st">
+                                                                    <option value="{!st}">{!st}</option>
+                                                                </aura:iteration>
+                                                            </lightning:select>  
+                                                            <aura:if isTrue="{!v.errorMsg3 != ''}">	<!--Make it as error message like others-->
+                                                                <li>{!v.errorMsg3}</li>>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                                             
+                                                    <div class="slds-col col-6">
+                                                        <lightning:button label="Save and Deliver" variant="brand" onclick="{!c.saveAndDeliver}"/>
+                                                    </div>
+                                                </div>    
+                                            </aura:if>
+                                        </div>
+                                    </div>
+                                    <aura:set attribute="else">
+                                        <div class="row">
+                                        <div class="col-lg-4 col-md-6">                        
+                                            <div class="first step">                            
+                                                <div class="box_general summary">                                                    
+                                                    <a onclick="{!c.changeAddress}">Change Address</a>
+                                                    <Strong><div>Shipping Address</div></Strong>
+                                                    <aura:if isTrue="{!v.showOneAddress.length >0}">
+                                                        <aura:iteration var="add" items="{!v.showOneAddress}">
+                                                            <Strong><div>{!add.Name}</div></Strong>
+                                                            <div>{!add.ERP7__Address_Line1__c}&nbsp;{!add.ERP7__Address_Line2__c}&nbsp;{!add.ERP7__Address_Line3__c}</div>
+                                                            <div>{!add.ERP7__City__c}</div>
+                                                            <div>{!add.ERP7__State__c}</div>
+                                                            <div>{!add.ERP7__Postal_Code__c}</div>
+                                                            <div>{!add.ERP7__Country__c}</div>
+                                                        </aura:iteration>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                       <!-- <div class="col-lg-4 col-md-6">                        
+                                            <div class="step middle payments">                            
+                                                <div class="box_general summary">
+                                                    <p>Order Summary</p>
+                                                    <!- - <div class="step middle payments"> - ->
+                                                    <ul class="slds-grid">                                                        
+                                                        <aura:if isTrue="{!!v.shippingNotAvailable}">
+                                                            <aura:if isTrue="{!!v.hideShipping}">
+                                                            <li class="pr-3">
+                                                                <aura:iteration var="twl" indexVar="pcount" items="{!v.shippingServices}">
+                                                                    <aura:if isTrue="{!twl != undefined}">
+                                                                        <table>
+                                                                        <tr class="ProductLCCO-newClass2">
+                                                                            <td class="ProductLCCO-newClass3">
+                                                                                <div class="slds-truncate ProductLCCO-newClass7">
+                                                                                    <lightning:input type="radio" onchange="{!c.saveEstimateToOrder}" aura:id="r01" name="others" title="{!twl}"/><!- - value="{!twl.Selected}" - ->                                                            
+                                                                                </div>
+                                                                            </td>                                                    
+                                                                            <td class="ProductLCCO-newClass3">
+                                                                                <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                    <aura:if isTrue="{!twl.Service == ''}">
+                                                                                        <lightning:formattedText value="{!twl.ServiceManual}" title="{!twl.ServiceManual}" />
+                                                                                        <aura:set attribute="else">
+                                                                                            <lightning:formattedText value="{!twl.Service}" title="{!twl.Service}" />
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                    
+                                                                                </div>
+                                                                            </td>
+                                                                            <td class="ProductLCCO-newClass3">
+                                                                                <aura:if isTrue="{!(twl.negotiatedCharges == '')}">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                        <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(twl.negotiatedCharges != '')}">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                        <lightning:formattedText value="{!twl.negotiatedCharges}" title="{!twl.negotiatedCharges}" />
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                            </td>
+                                                                            <td class="ProductLCCO-newClass3">
+                                                                                <div class="slds-truncate ProductLCCO-newClass8" >
+                                                                                    <lightning:formattedText value="{!twl.currencyCode}" title="{!twl.currencyCode}" />
+                                                                                </div>
+                                                                            </td>    
+                                                                        </tr>
+                                                                        </table>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </li>
+                                                            <li class="pr-3">
+                                                                <aura:iteration var="twl" indexVar="pcount" items="{!v.FEDEX_Services}">
+                                                                    <aura:if isTrue="{!twl != undefined}">
+                                                                        <table> 
+                                                                            <tr class="ProductLCCO-newClass2">
+                                                                                <td class="ProductLCCO-newClass3">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass7">
+                                                                                        <lightning:input type="radio" aura:id="Fr0" name="others" value="{!twl.Selected}"/>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td class="ProductLCCO-newClass3">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                        <lightning:formattedText value="{!twl.Service}" title="{!twl.Service}" />
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td class="ProductLCCO-newClass3">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                        <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td class="ProductLCCO-newClass3">
+                                                                                    <div class="slds-truncate ProductLCCO-newClass8">
+                                                                                        <lightning:formattedText value="{!twl.currencyCode}" title="{!twl.currencyCode}" />
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </table>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </li>   
+                                                                <aura:set attribute="else">
+                                                                    <div>Loading Shipping Services...</div>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <aura:set attribute="else">
+                                                                <div class="slds-grid slds-wrap">                                             
+                                                                    Please update your Address <!- - Or Product combination is not available for shipping. - ->
+                                                                </div>
+                                                            </aura:set>
+                                                        </aura:if>                                 
+                                                    </ul> 
+                                                </div>
+                                            </div>
+                                              </div> -->
+                                            <div class="col-lg-4 col-md-6">                        
+                                            <div class="last step">                            
+                                                <div class="box_general summary">
+                                                    <!--</div>-->
+                                                    <aura:iteration items="{!v.cartItems}" var ="ci">
+                                                        <ul>
+                                                            <li class="clearfix"><em>{!ci.Name}</em> &nbsp;&nbsp; <span><lightning:formattedNumber style="currency" value="{!ci.UnitPrice}"/></span></li>
+                                                        </ul>
+                                                    </aura:iteration>
+                                                    <aura:if isTrue="{!v.noOfItemsOnCart > 2}">
+                                                        <ul>
+                                                            <li>{!v.totalPro}&nbsp;&nbsp; more products</li>
+                                                        </ul>
+                                                    </aura:if>
+                                                    <ul>
+                                                        <li class="clearfix"><em><strong>Subtotal</strong></em>&nbsp;&nbsp;  <span>{!v.SubTotal}</span></li>
+                                                       <!-- <li class="clearfix"><em><strong>Shipping</strong></em>&nbsp;&nbsp; <span>{!v.shippingCost}</span></li>  -->                                  
+                                                    </ul>
+                                                    <div class="total clearfix totalconfirmpay">TOTAL &nbsp;&nbsp;<span>{!v.SubTotal}</span></div> <!-- {!(v.SubTotal + v.shippingCost)} -->
+                                                        <lightning:input type="checkbox" label="Register to the Newsletter." onchange="{!c.subscribe}" checked="{!v.changeSPN}"/>
+                                                        
+                                                    <!--<div class="form-group">
+                                    <label class="container_check">Register to the Newsletter.		 
+                                        <input type="checkbox" />
+                                        <span class="checkmark"></span>
+                                    </label>
+                                </div>-->        
+                                                    <aura:if isTrue="{!v.delay == false}">
+                                        <a onclick="{!c.confirmAndPay}" class="btn_1 half-width extra-cart">Confirm and Pay</a>
+                                        <aura:set attribute="else">
+                                            <a onclick="{!c.confirmAndPay}" class="btn_1 half-width">Confirm and Pay</a>
+                                        </aura:set>
+                                    </aura:if>
+                                                </div>
+                                                <!-- /box_general -->
+                                            </div>
+                                            <!-- /step -->
+                                            </div>
+                                      
+                                    </div>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+                        
+                    </div>
+                </div>
+                <!-- /row -->
+            </div>
+            <!-- /container -->
+        </div>
+        <!--/main-->
+    <div class="slds-grid"></div>
+    <!-- page -->
+    
+    <!--delete Modal-->
+    <section aura:id="delModal" role="dialog" tabindex="-1" aria-labelledby="delModalHeading" aria-modal="true" aria-describedby="delModalBody" class="slds-modal">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <lightning:buttonIcon class="slds-modal__close" alternativeText="Close" iconName="utility:close" onclick="{!c.closeDeleteAdd}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                <h2 id="delModalHeading" class="slds-text-heading_medium slds-hyphenate">Delete Address</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_xx-small">               
+                <div class="row justify-content-center">
+                    Do you want to delete this address?				
+                </div>
+            </div>
+            <footer class="slds-modal__footer">
+                <div class="offset-md-2 col-md-8 text-center pl-3 pr-3 ProductLCCO-newClass4">                    
+                    <input type="submit" onclick="{!c.deleteAdd}" value="yes" class="btn_1 half-width mr-2"/>
+                    <input type="submit" value="No" onclick="{!c.closeDeleteAdd}" class="btn_1 gray half-width"/>
+                </div>                
+            </footer>
+        </div>
+    </section>  
+    <div aura:id="delModalBackdrop" class="slds-backdrop"></div>
+    <!--/delete modal-->
+    
+    <!--update Modal-->
+    <section aura:id="EditModal" role="dialog" tabindex="-1" aria-labelledby="EditModalHeading" aria-modal="true" aria-describedby="EditModalBody" class="slds-modal">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <lightning:buttonIcon class="slds-modal__close" alternativeText="Close" iconName="utility:close" onclick="{!c.closeUpdateAdd}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                <h2 id="EditModalHeading" class="slds-text-heading_medium slds-hyphenate">Update Address</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_xx-small">
+                
+                <div class="row justify-content-center">
+                    
+                    <div class="col-xl-12 col-lg-12 col-md-12">
+                        
+                        <div class="box_account shadow-sm ProductLCCO-newClass5">					
+                            <form>                            
+                                <div class="row">
+                                    <div class="form-group col-md-4">
+                                        <label class="slds-form-element__label">
+                                            Name
+                                        </label>
+                                        <lightning:input type="text" aura:id="name" variant="label-hidden" value="{!v.Name}" placeholder="Name"/>
+                                    </div>
+                                    
+                                </div>
+                                <div class="form-group">
+                                    <label class="slds-form-element__label">
+                                        Address
+                                    </label>
+                                    <lightning:input type="text" aura:id="add1" variant="label-hidden"  value="{!v.addLine1}" placeholder="1234 Main St"/>
+                                </div>
+                                <div class="form-group">
+                                    <label class="slds-form-element__label">
+                                        Address Line 2
+                                    </label>
+                                    <lightning:input type="text" aura:id="add2"  variant="label-hidden" value="{!v.addLine2}" placeholder="Apartment, studio, or floor"/>
+                                </div>
+                                <div class="form-group">
+                                    <label class="slds-form-element__label">
+                                        Address Line 3
+                                    </label>
+                                    <lightning:input type="text" aura:id="add3"  variant="label-hidden" value="{!v.addLine3}" placeholder="Apartment, studio, or floor"/>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-md-6">
+                                        <label class="slds-form-element__label">
+                                            City
+                                        </label>
+                                        <lightning:input type="text" aura:id="city" variant="label-hidden" value="{!v.City}" required="true"/>
+                                    </div>                         
+                                    <div class="form-group col-md-4">
+                                        <!--<label for="inputCountry">Country</label>-->	<!--Don't remove label from lightning:select-->
+                                        <lightning:select aura:id="country" label="Country" value="{!v.CountrySel}"><!--value="{!v.CountrySel}"-->
+                                            <aura:iteration items="{!v.Country}" var="ct">
+                                                <option value="{!ct}" selected="{!ct == v.CountrySel}">{!ct}</option>
+                                            </aura:iteration>
+                                        </lightning:select> 
+                                        <aura:if isTrue="{!v.errorMsg1 != ''}">	<!--Make it as error message like others-->
+                                            <li>{!v.errorMsg1}</li>>
+                                        </aura:if>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <!--<label for="inputState">State</label>-->
+                                        
+                                        <lightning:select aura:id="state" label="State" value="{!v.StateSel}"><!--value="{!v.StateSel}"-->
+                                            <aura:iteration items="{!v.State}" var="st">
+                                                <option value="{!st}" selected="{!st == v.StateSel}">{!st}</option>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                        <aura:if isTrue="{!v.errorMsg != ''}">	<!--Make it as error message like others-->
+                                            <li>{!v.errorMsg}</li>>
+                                        </aura:if>
+                                    </div>                  
+                                    <div class="form-group col-md-2">
+                                        <label class="slds-form-element__label">
+                                            Zip
+                                        </label>							
+                                        <lightning:input type="text" aura:id="zip" variant="label-hidden" value="{!v.Zip}" required="true"/>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>				
+                    </div>
+                </div>
+            </div>
+            <footer class="slds-modal__footer">
+                <div class="offset-md-2 col-md-8 text-center pl-3 pr-3 ProductLCCO-newClass4">
+                    <input type="submit" onclick="{!c.updateAddress}" value="Update" class="btn_1 half-width mr-2"/>
+                    <input type="submit" value="Cancel" onclick="{!c.closeUpdateAdd}" class="btn_1 gray half-width"/>
+                </div>                
+            </footer>
+        </div>
+    </section>  
+    <div aura:id="EditModalBackdrop" class="slds-backdrop"></div>
+    <!--/update Modal-->
+    
+    <!--add new address-->
+    <section aura:id="addModal" role="dialog" tabindex="-1" aria-labelledby="addModalHeading" aria-modal="true" aria-describedby="addModalBody" class="slds-modal">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <lightning:buttonIcon class="slds-modal__close" alternativeText="Close" iconName="utility:close" onclick="{!c.closeAddModal}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                <h2 id="addModalHeading" class="slds-text-heading_medium slds-hyphenate">Add shipping Address</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_xx-small">                
+                <div class="row justify-content-center">                    
+                    <div class="col-xl-12 col-lg-12 col-md-12">                        
+                        <div class="box_account shadow-sm ProductLCCO-newClass5">					
+                            <form>                            
+                                <div class="slds-col col-6">
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newName11" label="Name" value="{!v.newName}" placeholder="Name"/>
+                                    </div>
+                                </div>
+                                <!--<div class="slds-col col-6"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newMobile1" label="Phone" value="{!v.newMobile}" placeholder="Phone" maxlength="10"/>                                         
+                                    </div>
+                                </div>-->                               
+                                <div class="slds-col col-12"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newAdd11" label="Address Line 1" placeholder="1234 Main St"/>                                         
+                                    </div>
+                                </div>
+                                <div class="slds-col col-12"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newAdd21" label="Address Line 2" placeholder="Apartment, studio, or floor"/>                                         
+                                    </div>
+                                </div>
+                                <div class="slds-col col-12"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newAdd31" label="Address Line 3" placeholder="Landmark"/>                                         
+                                    </div>
+                                </div>
+                                <div class="slds-col col-6"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newCity1" label="City" />                                         
+                                    </div>
+                                </div>
+                                <div class="slds-col col-6"> 
+                                    <div class="slds-form-element">
+                                        <lightning:input type="text" aura:id="newZip1" label="Zip"/>                                         
+                                    </div>
+                                </div>
+                                <div class="slds-col col-6"> 
+                                    <div class="slds-form-element">
+                                        <lightning:select aura:id="newCountry1" label="Country">
+                                            <aura:iteration items="{!v.Country}" var="ct">
+                                                <option value="{!ct}">{!ct}</option>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                        <aura:if isTrue="{!v.errorMsg2 != ''}">
+                                            <li>{!v.errorMsg2}</li>>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                <div class="slds-col col-6"> 
+                                    <div class="slds-form-element">
+                                        <lightning:select aura:id="newState1" label="State">
+                                            <aura:iteration items="{!v.State}" var="st">
+                                                <option value="{!st}">{!st}</option>
+                                            </aura:iteration>
+                                        </lightning:select>  
+                                        <aura:if isTrue="{!v.errorMsg3 != ''}">
+                                            <li>{!v.errorMsg3}</li>>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>				
+                    </div>
+                </div>
+            </div>
+            <footer class="slds-modal__footer">
+                <div class="offset-md-2 col-md-8 text-center pl-3 pr-3 ProductLCCO-newClass4">
+                    <input type="submit" onclick="{!c.AddAndDeliver}" value="Save and Deliver" class="btn_1 half-width mr-2"/>
+                    <input type="submit" value="Cancel" onclick="{!c.closeAddModal}" class="btn_1 gray half-width"/>
+                </div>                
+            </footer>
+        </div>
+    </section>  
+    <div aura:id="addModalBackdrop" class="slds-backdrop"></div>
+    <!--/add new address-->
+</aura:component>

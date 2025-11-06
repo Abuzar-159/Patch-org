@@ -20,6 +20,49 @@
     },
 
 
+    // Newly added on 14-11-2025 for the doc deletion by saqlain khan
+     SaveButtonForManageBillDoc: function(component, event) {
+        var parentId = component.get('v.recordId');  
+        var queue = (component.get('v.deletedFiles') || []).slice();  
+
+        if (!queue.length) {
+            console.log('[SaveButtonForManageBillDoc] nothing to delete');
+            return;
+        }
+
+        console.log('[SaveButtonForManageBillDoc] deleting:', JSON.stringify(queue));
+
+        var processNext = function() {
+            if (!queue.length) {
+                component.set('v.deletedFiles', []); 
+                console.log('[SaveButtonForManageBillDoc] delete complete');
+                return;
+            }
+
+            var idToDelete = queue.shift();
+            var action = component.get('c.DeleteAttachment'); 
+            action.setParams({
+                attachId: idToDelete,
+                parentId: parentId || ''
+            });
+
+            action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (state === 'SUCCESS') {
+                    console.log('[SaveButtonForManageBillDoc] deleted on server:', idToDelete);
+                } else {
+                    console.error('[SaveButtonForManageBillDoc] failed for', idToDelete, response.getError && response.getError());
+                }
+                processNext();
+            });
+
+            $A.enqueueAction(action);
+        };
+
+        processNext();
+    },
+
+
     resetFileStateSafe: function(component) {
     console.log('🧹 resetFileStateSafe called');
     try {
@@ -552,6 +595,7 @@
                 var base64Mark = 'base64,';
                 var dataStart = contents.indexOf(base64Mark) + base64Mark.length;
                 var fileContents = contents.substring(dataStart);
+                
                 
                 var action = component.get("c.uploadFile");
                 console.log('saveAtt 2');

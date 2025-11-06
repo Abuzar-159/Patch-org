@@ -1,0 +1,644 @@
+<aura:component implements="force:appHostable,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global" controller="StockTake">
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StockTakeItem.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <aura:attribute name="products" type="List" default="[]"/> 
+    <aura:attribute name="allProductsList" type="List" default="[]"/> 
+    <aura:attribute name="adjustedProducts" type="List" default="[]"/> 
+    <aura:attribute name="showAdjustedQty" type="Boolean" default="false"/> 
+    <aura:attribute name="prdIndex" type="Integer" />
+    <aura:handler name="init" value="{!this}" action="{!c.updateDefaults}"/>
+    <!--aura:handler name="change" value="{!v.SelectedBcrd}" action="{!c.handleCmpEvent}"/-->
+    
+    <aura:attribute name="stockTakeItem" type="object" default="{ERP7__Product__c:'', 
+                                                                ERP7__Product__r.Name:'',
+                                                                ERP7__Product__r.StockKeepingUnit:'',
+                                                                ERP7__Inventory_Stock__c:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__Location__c:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__Version__c:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__Version__r.Name:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__Location__r.Name:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__StorageContainer__c:'',
+                                                                ERP7__Inventory_Stock__r.ERP7__StorageContainer__r.Name:'',
+                                                                ERP7__Serial__c:'',
+                                                                ERP7__Serial__r.ERP7__Serial_Number__c:'',
+                                                                ERP7__Stock_Available__c:'',
+                                                                ERP7__Stock_In_Hand__c:'',
+                                                                ERP7__Product__r.ERP7__Barcode__c:'',
+                                                                ERP7__Variance__c:'',
+                                                                ERP7__Adjusted_Quantity__c:'',
+                                                                ERP7__Product__r.ERP7__Is_Asset__c:''}"/>
+    <aura:attribute name="indexcount" type="Integer" />
+    <aura:attribute name="stockOutWardStatus" type="List" default="[]" /> 
+    <aura:attribute name="stockInWardReason" type="List" default="[]" /> 
+    <aura:attribute name="remainingVariance" type="Decimal" />
+    <!-- <aura:attribute name="Selectsite" type="Map" default="{Id:'',Name:''}"/> -->
+    <aura:attribute name="stockInwardItem" type="Map" default="{ERP7__Product__c:'',ERP7__Product__r :{Id:'',Name:'',ERP7__Is_Asset__c:false,StockKeepingUnit:''},
+                                                               ERP7__Fixed_Asset__c :'',ERP7__Fixed_Asset__r:{Id:'',Name:''},
+                                                               ERP7__Quantity__c :0.00,ERP7__Reason__c :'',
+                                                               ERP7__Location__c : '',ERP7__Location__r:{Id:'',Name:''},
+                                                               ERP7__Material_Batch_Lot__c:'',ERP7__Material_Batch_Lot__r:{Id:'',Name:''},
+                                                               ERP7__Serial__c:'',ERP7__Serial__r:{Id:'',Name:''},
+                                                               ERP7__Site_ProductService_InventoryStock__c	:'',ERP7__Site_ProductService_InventoryStock__r:{Id:'',Name:''},
+                                                               ERP7__StorageContainer__c:'',ERP7__StorageContainer__r:{Id:'',Name:''},
+                                                               ERP7__Notes__c	:'',ERP7__Scrap__c :false,
+                                                               ERP7__Purchase_Orders__c:'',ERP7__Purchase_Orders__r:{Id:'',Name:''},
+                                                               ERP7__Purchase_Line_Items__c:'',ERP7__Purchase_Line_Items__r:{Id:'',Name:''},
+                                                               ERP7__Stock_Take_Line_Item__c:'',ERP7__Stock_Take_Line_Item__r:{Id:'',Name:''},
+                                                               Name:''}"/>
+    
+    <aura:attribute name="stockOutwardItem" type="Map" default="{ERP7__Product__c:'',ERP7__Product__r :{Id:'',Name:'',ERP7__Is_Asset__c:false},
+                                                                ERP7__Fixed_Asset__c :'',ERP7__Fixed_Asset__r:{Id:'',Name:''},
+                                                                ERP7__Quantity__c :0.00,ERP7__Scrap__c :false,
+                                                                ERP7__Material_Batch_Lot__c:'',ERP7__Material_Batch_Lot__r:{Id:'',Name:''},
+                                                                ERP7__Serial__c:'',ERP7__Serial__r:{Id:'',Name:''},
+                                                                ERP7__Site_Product_Service_Inventory_Stock__c :'',ERP7__Site_Product_Service_Inventory_Stock__r:{Id:'',Name:''},
+                                                                ERP7__Notes__c	:'',ERP7__Status__c :'',
+                                                                ERP7__Stock_Take_Line_Item__c:'',ERP7__Stock_Take_Line_Item__r:{Id:'',Name:''},
+                                                                Name:''}"/>
+    <aura:attribute name="stockInwardList" type="Object[]"/>
+    
+    <aura:attribute name="stockOutwardList" type="Object[]"/>
+    
+    <aura:attribute name="SelectedBcrd" type="String" default=""/>
+    <aura:attribute name="saveHide" type="Boolean" default="true"/>
+    <aura:attribute name="showstockAdd" type="Boolean" default="true"/>
+    <aura:attribute name="disabbled" type="Boolean" default="false"/>
+    <aura:attribute name="oldSelectedBcrd" type="Boolean" default='false' access="private"/>
+    
+    <aura:method name="createSILI" action="{!c.createStockInward}"></aura:method>
+    <aura:method name="createSTOLI" action="{!c.createStockOutward}"></aura:method>
+    <aura:attribute name="inWardReasonOptions" type="List"/>
+    <aura:attribute name="outWardStatusOptions" type="List"/>   
+    <aura:attribute name="isNewStock" type="Boolean" default="false"/>
+    <aura:attribute name="isAdjusted" type="Boolean" default="false"/>
+    <aura:attribute name="showProdCode" type="Boolean" default="false"/>
+    <aura:attribute name="showInward" type="Boolean" default="false"/>
+    <aura:attribute name="showOutward" type="Boolean" default="false"/>
+    <aura:attribute name="showInwardList" type="Boolean" default="false"/>
+    <aura:attribute name="showOutwardList" type="Boolean" default="false"/>
+     <aura:attribute name="showVenCode" type="Boolean" default="false"/>
+    <aura:method name="updateVariance" action="{!c.updateVariance}"></aura:method>
+    
+    <tr id="{!v.stockTakeItem.ERP7__Product__r.ERP7__Barcode__c}" class="{!(v.oldSelectedBcrd)?'cl1 slds-hint-parent':'slds-hint-parent'}">
+         <aura:if isTrue="{!!v.showProdCode}">
+        <td class="slds-cell-edit cl3" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread"> 
+                <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Product__r.ProductCode != undefined, v.stockTakeItem.ERP7__Product__r.ProductCode != '')}">
+                    <div class="slds-truncate" title="{!v.stockTakeItem.ERP7__Product__r.ProductCode}">
+                        {!v.stockTakeItem.ERP7__Product__r.ProductCode}
+                    </div>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Product__r.StockKeepingUnit != undefined, v.stockTakeItem.ERP7__Product__r.StockKeepingUnit != '')}">
+                            <div class="slds-truncate" title="{!v.stockTakeItem.ERP7__Product__r.StockKeepingUnit}">
+                                {!v.stockTakeItem.ERP7__Product__r.StockKeepingUnit}
+                            </div>
+                        </aura:if>
+                    </aura:set>
+                </aura:if>
+            </div>
+        </td>
+        </aura:if>
+        <aura:if isTrue="{!v.showVenCode}">
+             <td class="slds-cell-edit cl4" role="gridcell">
+                 <div class="slds-grid slds-grid_align-spread">
+                     <div class="slds-truncate truncate-override" title="{!v.stockTakeItem.ERP7__Product__r.ERP7__Vendor_product_Name__c}">
+                         {!v.stockTakeItem.ERP7__Product__r.ERP7__Vendor_product_Name__c}
+                     </div>
+                 </div>
+            </td>
+        </aura:if>
+        <td width="27%" class="slds-cell-edit cl2" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate truncate-override" title="{!v.stockTakeItem.ERP7__Product__r.Name}">
+                    <a href="{!'/'+v.stockTakeItem.ERP7__Product__c}" target="_blank">
+                        {!v.stockTakeItem.ERP7__Product__r.Name}
+                    </a>
+                </div>
+            </div> 
+        </td> 
+        
+        <!--<td class="slds-cell-edit" role="gridcell">
+                    <div class="slds-grid slds-grid_align-spread"> 
+                        <span class="slds-truncate" title="{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Version__r.Name}">{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Version__r.Name}</span>
+                    </div>
+        </td>-->
+        
+        <td class="slds-cell-edit cl4" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate" title="{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Location__r.Name}">
+                    
+                    <aura:if isTrue="{!and((empty(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__StorageContainer__r.Name)),(empty(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Location__r.Name)))}">
+                        {!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Warehouse__r.Name}
+                    </aura:if>
+                    {!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Location__r.Name}
+                    <aura:if isTrue="{!and(not(empty(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__StorageContainer__r.Name)),not(empty(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Location__r.Name)))}">
+                        ->
+                    </aura:if>
+                    {!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__StorageContainer__r.Name}
+                </div>
+            </div>
+        </td>
+        
+        <td class="slds-cell-edit cl2" role="gridcell">
+            <span class="slds-grid slds-grid_align-spread">
+                <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Serial__c != undefined, v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Serial__c != '')}">
+                    <div class="slds-truncate" title="{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Serial__r.ERP7__Serial_Number__c}">{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Serial__r.Name}<!--changed from ERP7__Serial_Number__c to Name 14/12/23 --></div>
+                </aura:if>
+            </span>
+        </td>
+        <td class="slds-cell-edit cl2" role="gridcell">
+            <span class="slds-grid slds-grid_align-spread">
+                <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Batch_Lot__c != undefined, v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Batch_Lot__c != '')}">
+                    <div class="slds-truncate" title="{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Batch_Lot__r.Name}">{!v.stockTakeItem.ERP7__Inventory_Stock__r.ERP7__Batch_Lot__r.Name}</div> 
+                </aura:if>
+            </span>
+        </td>
+        <td class="slds-cell-edit cl4" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate" title="Available Stock"><lightning:formattedNumber value="{!v.stockTakeItem.ERP7__Stock_Available__c}" style="decimal"/></div>
+            </div>
+        </td>
+        <td class="slds-cell-edit cl4" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate scanMN" title="Stock In Hand" id="{!v.stockTakeItem.ERP7__Product__r.ERP7__Barcode__c+'stockInqty'}" >
+                    <lightning:input type="number" step = "0.001" aura:id="StockInHand" variant="label-hidden" class="display-lable" value="{!v.stockTakeItem.ERP7__Stock_In_Hand__c}"  oncommit="{!c.updateVariance}" disabled="{!v.disabbled}"/>
+                </div>
+            </div>
+        </td>
+        <td class="slds-cell-edit cl3" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate" title="Variance">
+                    <aura:if isTrue="{!add(v.stockTakeItem.ERP7__Variance__c,v.stockTakeItem.ERP7__Adjusted_Quantity__c) lt 0.00}">
+                        <a  onclick="{!c.showStockOutwardpopup}" >
+                            <lightning:formattedNumber style="decimal" value="{!v.stockTakeItem.ERP7__Variance__c + v.stockTakeItem.ERP7__Adjusted_Quantity__c}" class="badge badge-warning" />
+                        </a>
+                        <aura:set attribute="else">
+                            <aura:if isTrue="{!(sub(v.stockTakeItem.ERP7__Variance__c,v.stockTakeItem.ERP7__Adjusted_Quantity__c) gt 0.00)}">
+                                <a onclick="{!c.showStockInwardpopup}"> 
+                                    <lightning:formattedNumber style="decimal" value="{!v.stockTakeItem.ERP7__Variance__c - v.stockTakeItem.ERP7__Adjusted_Quantity__c}" class="badge badge-success" />
+                                </a>
+                                <aura:set attribute="else">
+                                    <lightning:formattedNumber style="decimal" value="{!(v.stockTakeItem.ERP7__Variance__c >0.00)?sub(v.stockTakeItem.ERP7__Variance__c,v.stockTakeItem.ERP7__Adjusted_Quantity__c):add(v.stockTakeItem.ERP7__Variance__c ,v.stockTakeItem.ERP7__Adjusted_Quantity__c) }" class="badge badge-primary" />
+                                </aura:set>   
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </div>     
+            </div>
+        </td>
+       <aura:If isTrue="{!v.showAdjustedQty}">
+        <td class="slds-cell-edit cl3" role="gridcell">
+            <div class="slds-grid slds-grid_align-spread">
+                <div class="slds-truncate" title="Adjusted Qty">
+                    <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Variance__c lt 0.00 , v.stockTakeItem.ERP7__Adjusted_Quantity__c >0.00)}">
+                        <a  onclick="{!c.showStockOutwardListpopup}" >
+                            <lightning:formattedNumber  value="{!v.stockTakeItem.ERP7__Adjusted_Quantity__c}" />
+                        </a>
+                        <aura:set attribute="else">
+                            <aura:if isTrue="{!and(v.stockTakeItem.ERP7__Variance__c gt 0.00 , v.stockTakeItem.ERP7__Adjusted_Quantity__c >0.00)}">
+                                <a onclick="{!c.showStockInwardListpopup}"> 
+                                    <lightning:formattedNumber  value="{!v.stockTakeItem.ERP7__Adjusted_Quantity__c}" />
+                                </a>
+                                <aura:set attribute="else">
+                                    <lightning:formattedNumber  value="{!v.stockTakeItem.ERP7__Adjusted_Quantity__c}" />
+                                </aura:set>   
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </div>     
+            </div>
+        </td>
+        </aura:If>
+    </tr>
+    
+    <div class="erp_mark7">
+        <lightning:spinner variant="brand" size="small" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="spinner" class="slds-hide"/> <!--slds-hide for all modal divs-->
+        <aura:if isTrue="{!v.showInward}"> 
+            <div class="demo-only slds-fade-in-open cl5" aura:id="stockInWard" >
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                    <div class="slds-modal__container cl66">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closepopups}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate cl7">{!$Label.c.Stock_Inward_Adjustment}</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            
+                            <div class="slds-grid slds-wrap">
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small slds-truncate scanMN" >
+                                        <lightning:input type="text" label="{!$Label.c.Name_ManageLeave}" value="{!v.stockInwardItem.Name}" required="true" disabled="true"/>
+                                    </div>
+                                </div>
+                                
+                                <aura:if isTrue="{!and(v.isNewStock == false)}">
+                                    <aura:if isTrue="{!and(and(v.stockInwardItem.ERP7__Stock_Take_Line_Item__c != undefined,v.stockInwardItem.ERP7__Stock_Take_Line_Item__c != null),v.stockInwardItem.ERP7__Stock_Take_Line_Item__c != '')}">
+                                        <div class="slds-size_1-of-3">
+                                            <div class="slds-m-around_x-small slds-truncate scanMN">
+                                                <label class="slds-form-element__label" for="input-04">{!$Label.c.Stock_Take_Line_Items}</label><br/>
+                                                <lightning:formattedUrl value="{!'/'+v.stockInwardItem.ERP7__Stock_Take_Line_Item__c}" label="{!v.stockInwardItem.ERP7__Stock_Take_Line_Item__r.Name}" tooltip="{!v.stockInwardItem.ERP7__Stock_Take_Line_Item__r.Name}" target="_blank" />
+                                                <!--ERP7:CustomInputLookUp objectAPIName="ERP7__Stock_Take_Line_Item__c" IconName="standard:custom" selectedRecordId="{!v.stockInwardItem.ERP7__Stock_Take_Line_Item__c}" label="Stock Take Line Item" hideRemove='true'/-->
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <label class="slds-form-element__label" for="input-04">{!$Label.c.PackageSlip_List_Quantity}</label><br/>
+                                        <lightning:input type="number" variant="label-hidden" aura:id="StockInwardQty" value="{!v.stockInwardItem.ERP7__Quantity__c}" disabled="true"/><!--change="{!c.updateVariance}"-->
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small slds-truncate scanMN">
+                                        <label class="slds-form-element__label" for="input-04">{!$Label.c.AddSubscription_Product}</label><br/>
+                                        <lightning:formattedText value="{!v.stockInwardItem.ERP7__Product__r.Name}" title="{!v.stockInwardItem.ERP7__Product__r.Name}"/>
+                                        <!--ERP7:CustomInputLookUp objectAPIName="product2" IconName="standard:product" selectedRecordId="{!v.stockInwardItem.ERP7__Product__c}" label="Product" hideRemove='true' /-->
+                                    </div>
+                                </div>
+                                
+                                <aura:if isTrue="{!and(and(v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__c != undefined,v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__c != null),v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__c != '')}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small slds-truncate scanMN">
+                                            <label class="slds-form-element__label" for="input-04">{!$Label.c.InventoryStock}</label><br/>
+                                            <lightning:formattedUrl value="{!'/'+v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__c}" label="{!v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__r.Name}" tooltip="{!v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__r.Name}" target="_blank" />
+                                            <!--ERP7:CustomInputLookUp objectAPIName="ERP7__Inventory_Stock__c" IconName="custom:custom32" selectedRecordId="{!v.stockInwardItem.ERP7__Site_ProductService_InventoryStock__c}" label="Inventory Site" hideRemove='true'/-->
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!and(and(v.stockInwardItem.ERP7__Location__c != undefined,v.stockInwardItem.ERP7__Location__c != null),v.stockInwardItem.ERP7__Location__c != '')}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small scanMN">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Location__c" IconName="standard:location" selectedRecordId="{!v.stockInwardItem.ERP7__Location__c}" label="{!$Label.c.InventoryConsole_Location}" />
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!and(and(v.stockInwardItem.ERP7__StorageContainer__c != undefined,v.stockInwardItem.ERP7__StorageContainer__c != null),v.stockInwardItem.ERP7__StorageContainer__c != '')}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small scanMN">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c" IconName="custom:custom104" selectedRecordId="{!v.stockInwardItem.ERP7__StorageContainer__c}" label="{!$Label.c.Bin}" />
+                                        </div>
+                                    </div> 
+                                </aura:if>
+                                <!--
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <ERP7:CustomInputLookUp objectAPIName="ERP7__Batch__c" IconName="custom:custom13" selectedRecord="{!v.stockInwardItem.ERP7__Material_Batch_Lot__r}" label="Batch Lot" hideRemove='true'/>
+                                    </div>
+                                </div>-->
+                                
+                                <aura:if isTrue="{!and(and(v.stockInwardItem.ERP7__Serial__c != undefined,v.stockInwardItem.ERP7__Serial__c != null),v.stockInwardItem.ERP7__Serial__c != '')}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small slds-truncate scanMN">
+                                            <label class="slds-form-element__label" for="input-04">{!$Label.c.Serial}</label><br/>
+                                            <lightning:formattedText value="{!v.stockInwardItem.ERP7__Serial__r.Name}" title="{!v.stockInwardItem.ERP7__Serial__r.Name}"/>
+                                            <!--ERP7:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="utility:rows" selectedRecordId="{!v.stockInwardItem.ERP7__Serial__c}" label="Serial" hideRemove='true'/-->
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__PO__c" IconName="standard:product_item" selectedRecordId="{!v.stockInwardItem.ERP7__Purchase_Orders__c}" label="{!$Label.c.purchase_Order1}"/>
+                                    </div>
+                                </div>   
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <!--{!v.stockInwardItem.ERP7__Purchase_Orders__c}-->
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Purchase_Line_Items__c" IconName="standard:product_request_line_item" selectedRecordId="{!v.stockInwardItem.ERP7__Purchase_Line_Items__c}" label="{!$Label.c.Purchase_Order_Line_Item}" qry="{! 'AND ERP7__Purchase_Orders__c = \''+v.stockInwardItem.ERP7__Purchase_Orders__c+'\''}"/>
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small">
+                                        <lightning:select  label="{!$Label.c.Reason_ManageLeave}" aura:id="inWardReason" value="{!v.stockInwardItem.ERP7__Reason__c}">
+                                            <aura:iteration items="{!v.inWardReasonOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.stockInwardItem.ERP7__Reason__c, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <lightning:input label="{!$Label.c.Scrap}" type="checkbox" checked="{!v.stockInwardItem.ERP7__Scrap__c}"/>
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-size_1-of-1">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <lightning:textarea aura:id="stockInwardNotes" label="{!$Label.c.Notes}" value="{!v.stockInwardItem.ERP7__Notes__c}" maxlength="100"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer cl88">
+                            <lightning:button class="slds-button slds-button--neutral" onclick="{!c.closepopups}" label="{!$Label.c.Cancel_UserAvailabilities}"/>
+                            <lightning:button class="slds-button slds-button--brand" onclick="{!c.createStockInward}" label="{!$Label.c.ContractConsole_Save}"/><!--{!c.commitStockInWard}-->
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </div>
+        
+        </aura:if>
+        <aura:if isTrue="{!v.showOutward}">
+            <div class="demo-only  slds-fade-in-open cl5"  aura:id="stockOutWard">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open cl9">
+                    <div class="slds-modal__container cl66">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closepopups}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate cl7">{!$Label.c.Stock_Outward_Adjustment}</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small slds-truncate scanMN" >
+                                        <lightning:input type="text" label="{!$Label.c.Name_ManageLeave}" value="{!v.stockOutwardItem.Name}" required="true" disabled="true"/>
+                                    </div>
+                                </div>
+                                
+                                <aura:if isTrue="{!and(v.isNewStock == false)}">
+                                    <aura:if isTrue="{!and(and(v.stockOutwardItem.ERP7__Stock_Take_Line_Item__c != undefined,v.stockOutwardItem.ERP7__Stock_Take_Line_Item__c != null),v.stockOutwardItem.ERP7__Stock_Take_Line_Item__c != '')}">
+                                        <div class="slds-size_1-of-3">
+                                            <div class="slds-m-around_x-small slds-truncate scanMN">
+                                                <label class="slds-form-element__label" for="input-04">{!$Label.c.Stock_Take_Line_Items}</label><br/>
+                                                <lightning:formattedUrl value="{!'/'+v.stockOutwardItem.ERP7__Stock_Take_Line_Item__c}" label="{!v.stockOutwardItem.ERP7__Stock_Take_Line_Item__r.Name}"  target="_blank" />
+                                                <!--ERP7:CustomInputLookUp objectAPIName="ERP7__Stock_Take_Line_Item__c" IconName="standard:custom" selectedRecordId="{!v.stockOutwardItem.ERP7__Stock_Take_Line_Item__c}" label="Stock Take Line Item" hideRemove='true'/-->
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <lightning:input type="number" aura:id="StockInwardQty" label="{!$Label.c.PackageSlip_List_Quantity}" value="{!v.stockOutwardItem.ERP7__Quantity__c}" disabled="true"/><!--change="{!c.updateVariance}"-->
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small slds-truncate scanMN">
+                                        <label class="slds-form-element__label" for="input-04">{!$Label.c.AddSubscription_Product}</label><br/>
+                                        <lightning:formattedText value="{!v.stockOutwardItem.ERP7__Product__r.Name}" title="{!v.stockOutwardItem.ERP7__Product__r.Name}" />
+                                        <!--ERP7:CustomInputLookUp objectAPIName="product2" IconName="standard:product" selectedRecordId="{!v.stockOutwardItem.ERP7__Product__c}" label="Product" hideRemove='true'/-->
+                                    </div>
+                                </div>
+                                
+                                <aura:if isTrue="{!and(and(v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__c != undefined,v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__c != null),v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__c != '')}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small slds-truncate scanMN">
+                                            <label class="slds-form-element__label" for="input-04">{!$Label.c.InventoryStock}</label><br/>
+                                            <lightning:formattedUrl value="{!'/'+v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__c}" label="{!v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__r.Name}" tooltip="{!v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__r.Name}"  target="_blank" />
+                                            <!--ERP7:CustomInputLookUp objectAPIName="ERP7__Inventory_Stock__c" IconName="custom:custom32" selectedRecordId="{!v.stockOutwardItem.ERP7__Site_Product_Service_Inventory_Stock__c}" label="Inventory Site" hideRemove='true'/-->
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <!--
+                             <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <ERP7:CustomInputLookUp objectAPIName="ERP7__Batch__c" IconName="custom:custom13" selectedRecord="{!v.stockOutwardItem.ERP7__Material_Batch_Lot__r}" label="Batch Lot" hideRemove='true'/>
+                                    </div>
+                                </div>
+             -->
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small">
+                                        <lightning:select  label="{!$Label.c.CreateClubcard_Status}" aura:id="outWardStatus" value="{!v.stockOutwardItem.ERP7__Status__c}">
+                                            <aura:iteration items="{!v.outWardStatusOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.stockOutwardItem.ERP7__Status__c, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                <!--
+                                <aura:if isTrue="{!not(empty(v.stockTakeItem.ERP7__Serial__r.Id))}">
+                                    <div class="slds-size_1-of-3">
+                                        <div class="slds-m-around_x-small scanMN">
+                                            <ERP7:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="utility:rows" selectedRecord="{!v.stockOutwardItem.ERP7__Serial__r}" NameValue="{!v.stockOutwardItem.ERP7__Serial__r.ERP7__Serial_Number__c}" label="Serial" hideRemove='true'/>
+                                        </div>
+                                    </div>
+                                </aura:if>
+             -->    
+                                <div class="slds-size_1-of-3">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <lightning:input type="checkbox" label="{!$Label.c.Scrap}" checked="{!v.stockOutwardItem.ERP7__Scrap__c}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-size_1-of-1">
+                                    <div class="slds-m-around_x-small scanMN">
+                                        <lightning:textarea aura:id="stockOutwardNotes" label="{!$Label.c.Notes}" value="{!v.stockOutwardItem.ERP7__Notes__c}" maxlength="100"/>
+                                    </div>
+                                </div>
+                            </div>    
+                        </div>
+                        <footer class="slds-modal__footer cl88">
+                            <lightning:button class="slds-button slds-button--neutral" onclick="{!c.closepopups}" label="{!$Label.c.Cancel_UserAvailabilities}"/>
+                            <lightning:button class="slds-button slds-button--brand" onclick="{!c.createStockOutward}" label="{!$Label.c.ContractConsole_Save}"/><!--commitStockOutWard-->
+                        </footer>
+                    </div>
+                </section>
+                <!-- <div class="slds-backdrop slds-backdrop_open"></div>  -->
+            </div>
+        </aura:if>
+        <aura:if isTrue="{!v.showInwardList}">
+            <div class="demo-only slds-fade-in-open cl5"  aura:id="stockInWardList">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_medium">
+                    <div class="slds-modal__container cl66">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closepopups}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate mt-0 mb-0">{!$Label.c.Stock_Inward_List}</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-top_medium slds-p-bottom_medium" id="modal-content-id-1">
+                            <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-table_fixed-layout slds-table_resizable-cols">
+                                <thead>
+                                    <tr class="slds-text-title_caps">
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Name">{!$Label.c.Name_ManageLeave}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Qty">{!$Label.c.Qty_Pick}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Product">{!$Label.c.AddSubscription_Product}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Serial">{!$Label.c.Serial}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Batch/Lot">{!$Label.c.Lot}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Location">{!$Label.c.InventoryConsole_Location}</div>
+                                        </th>
+                                        <!--
+                                    <th scope="col" >
+                                        <div class="slds-th__action">
+                                            <span class="slds-assistive-text">Actions</span>
+                                        </div>
+                                    </th>
+                                    -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                    <aura:iteration items="{!v.stockInwardList}" var="item" indexVar="ind">
+                                        <tr>
+                                            <th scope="row" data-label="Name">
+                                                <div class="slds-truncate" title="{!item.Name}">{!item.Name}</div>
+                                            </th>
+                                            <th data-label="Qty">
+                                                <div class="slds-truncate" title="{!item.ERP7__Quantity__c}"><lightning:formattedNumber value="{!item.ERP7__Quantity__c}" /></div>
+                                            </th>
+                                            <th data-label="Product">
+                                                <div class="slds-truncate" title="{!item.ERP7__Product__r.Name}">
+                                                    {!item.ERP7__Product__r.Name}
+                                                </div>
+                                            </th>
+                                            <!--
+                                        <td data-label="Serial">
+                                            <aura:if isTrue="{!not(empty(item.ERP7__Serial__r))}">
+                                                <div class="slds-truncate scanMN" title="Prospecting"> 
+                                                    <ERP7:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="utility:rows" selectedRecord="{!item.ERP7__Serial__r}" label="" hideRemove='true'/>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!not(empty(item.ERP7__Material_Batch_Lot__r))}">
+                                                <div class="slds-truncate scanMN" title="Prospecting"> 
+                                                    <ERP7:CustomInputLookUp objectAPIName="ERP7__Material_Batch_Lot__c" IconName="utility:rows" selectedRecord="{!item.ERP7__Material_Batch_Lot__r}" label="" hideRemove='true'/>
+                                                </div>
+                                            </aura:if>
+                                        </td>
+                                        -->
+                                            <th data-label="Serial">
+                                                <aura:if isTrue="{!not(empty(item.ERP7__Serial__r))}">
+                                                    <div class="slds-truncate" title="{!item.ERP7__Serial__r.Name}"> 
+                                                        {!item.ERP7__Serial__r.Name}
+                                                    </div>
+                                                </aura:if>
+                                            </th>
+                                            <th data-label="Batch">
+                                                <aura:if isTrue="{!not(empty(item.ERP7__Material_Batch_Lot__r))}">
+                                                    <div class="slds-truncate" title="{!item.ERP7__Material_Batch_Lot__r.Name}"> 
+                                                        {!item.ERP7__Material_Batch_Lot__r.Name}
+                                                    </div>
+                                                </aura:if>
+                                            </th>
+                                            <th data-label="Confidence">
+                                                <div class="slds-truncate" title="Stock Address">
+                                                    {!item.ERP7__Location__r.Name} 
+                                                    {!item.ERP7__StorageContainer__r.Name}
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </div>
+        </aura:if>
+        <aura:if isTrue="{!v.showOutwardList}">
+            <div class="demo-only slds-fade-in-open zindexdefault cl5"  aura:id="stockOutWardList">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open" >
+                    <div class="slds-modal__container cl66">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closepopups}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Stock_Outward_List}</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-table_fixed-layout slds-table_resizable-cols">
+                                <thead>
+                                    <tr class="slds-text-title_caps">
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Stock Inward">{!$Label.c.Name_ManageLeave}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Qty">{!$Label.c.Qty_Pick}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Product">{!$Label.c.AddSubscription_Product}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Serial">{!$Label.c.Serial}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Lot">{!$Label.c.Lot}</div>
+                                        </th>
+                                        <th scope="col">
+                                            <div class="slds-truncate" title="Serial">{!$Label.c.Scrap}</div>
+                                        </th>
+                                        <!--
+                                    <th scope="col" >
+                                        <div class="slds-th__action">
+                                            <span class="slds-assistive-text">Actions</span>
+                                        </div>
+                                    </th>
+         -->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.stockOutwardList}" var="item" indexVar="ind">
+                                        <tr>
+                                            <th scope="row" data-label="Name">
+                                                <div class="slds-truncate" title="{!item.Name}">{!item.Name}</div>
+                                            </th>
+                                            <th data-label="Qty">
+                                                <div class="slds-truncate" title="{!item.ERP7__Quantity__c}"><lightning:formattedNumber value="{!item.ERP7__Quantity__c}" /></div>
+                                            </th>
+                                            <th data-label="Product">
+                                                <div class="slds-truncate scanMN" title="{!item.ERP7__Product__r.Name}"> 
+                                                    {!item.ERP7__Product__r.Name}
+                                                    <!--   
+                                                <ERP7:CustomInputLookUp objectAPIName="product2" IconName="standard:product" selectedRecordId="{!item.ERP7__Product__c}"  hideRemove='true'/>
+                                             -->
+                                                </div>
+                                                
+                                            </th>
+                                            <th data-label="Serial">
+                                                <aura:if isTrue="{!not(empty(item.ERP7__Serial__r))}">
+                                                    <div class="slds-truncate" title="{!item.ERP7__Serial__r.Name}"> 
+                                                        {!item.ERP7__Serial__r.Name}
+                                                    </div>
+                                                </aura:if>
+                                            </th>
+                                            <th data-label="Batch">
+                                                <aura:if isTrue="{!not(empty(item.ERP7__Material_Batch_Lot__r))}">
+                                                    <div class="slds-truncate" title="{!item.ERP7__Material_Batch_Lot__r.Name}"> 
+                                                        {!item.ERP7__Material_Batch_Lot__r.Name}
+                                                    </div>
+                                                </aura:if>
+                                            </th>
+                                            <th data-label="Confidence">
+                                                <div class="slds-truncate scanMN" title="is Scrap">
+                                                    <lightning:input type="checkbox" readonly="true" disabled="true" value="{!item.ERP7__Scrap__c}"/>
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            
+                        </div> 
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </div>
+        </aura:if>
+    </div>
+</aura:component>

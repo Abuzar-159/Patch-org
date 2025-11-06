@@ -1,0 +1,422 @@
+({
+    focusTOscan:function(component, event){
+        try{
+            $A.util.addClass(component.find('mainSpin'), "slds-hide");
+            $(document).ready(function() {
+                component.set("v.scanValue",'');  
+                var barcode = "";
+                var pressed = false;
+                var chars = [];
+                $(window).keypress(function(e) {
+                    chars.push(String.fromCharCode(e.which));                      
+                    if (pressed == false) {
+                        setTimeout(
+                            $A.getCallback(function() {
+                                if (chars.length >= 4) {
+                                    var barcode = chars.join("");
+                                    barcode = barcode.trim();
+                                    component.set("v.scanValue",barcode);     
+                                }
+                                chars = [];
+                                pressed = false;
+                                
+                            }), 250
+                        );
+                    }              
+                    pressed = true;
+                }); // end of window key press function         
+                
+                $(window).keydown(function(e){
+                    if ( e.which === 13 ) { 
+                        e.preventDefault();
+                    }
+                }); 
+                
+            }); 
+        }catch(e){
+            $A.util.addClass(component.find('mainSpin'), "slds-hide");
+        }
+        
+        
+    },
+    getSerials : function(cmp,stockAssignedSerialIds){
+        var action1 = cmp.get("c.getSerialNumbers");
+        var MOId = cmp.get("v.manuOrder.Id");
+        action1.setParams({"offsetVal" : 0,"Mo" : MOId,"limitSer" : 500,'SerialIds' : stockAssignedSerialIds});
+        action1.setCallback(this, function(response1) {
+            var state = response1.getState();
+            if (state === "SUCCESS") {
+                var NewSerialsForAllocation = [];
+                var moSerialNos = response1.getReturnValue();
+                cmp.set("v.moSerialNos",moSerialNos);
+                var moBatchNos = cmp.get("v.moBatchNos"); 
+                var newSOL = cmp.get("v.NewSOLI");
+                for(var y in moSerialNos){
+                    console.log('inhere moSerialNos innerloop');
+                    if(stockAssignedSerialIds.includes(moSerialNos[y].Id) == false) {
+                        console.log('inhere moSerialNos innerloop if');
+                        moSerialNos[y].SelectItem = false;
+                        NewSerialsForAllocation.push(moSerialNos[y]);
+                    }
+                }
+                if(NewSerialsForAllocation.length > 0){
+                    newSOL.ERP7__MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
+                }
+                if(moBatchNos.length == 1){
+                    newSOL.ERP7__MO_WO_Material_Batch_Lot__c = moBatchNos[0].Id;
+                }
+                cmp.set("v.NewSOLI",newSOL);
+                cmp.set("v.SerialsForAllocation", NewSerialsForAllocation);
+                console.log('SelectMRP1 moSerialNos.length~>'+moSerialNos.length); 
+                cmp.set("v.saPage",true);
+                cmp.set("v.showSpinner",false);
+                console.log('settimeout saPage SelectMRP1'); 
+            }
+        });
+        $A.enqueueAction(action1);
+    },
+    
+    getSolis: function(cmp, event, helper) {
+        var msoliId = cmp.get("v.mosoliId");
+        var mOrdItmId = cmp.get("v.MOrdItm");//MOrdItm
+        if((msoliId != undefined && msoliId != '')||(mOrdItmId != undefined && mOrdItmId != '')){
+            var action = cmp.get("c.getAllSOLI");
+            action.setParams({
+                "mosoliId": msoliId,
+                "MOrdItm" : mOrdItmId
+            });
+            action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (cmp.isValid() && state === "SUCCESS") {
+                    cmp.set("v.manuOrder", response.getReturnValue().manuOrders);
+                    var mo = response.getReturnValue();
+                    var al = JSON.stringify(mo.Product);
+                    //alert(al);
+                    cmp.set("v.prevent", true);
+                    cmp.set("v.Product", response.getReturnValue().Product);
+                    console.log('Product 4 : ',response.getReturnValue().Product);
+                    cmp.set("v.Version", response.getReturnValue().Version);
+                    console.log('Version 4 : ',response.getReturnValue().Version);
+                    cmp.set("v.Routing", response.getReturnValue().Routing);
+                    cmp.set("v.prevent", false);
+                    if(response.getReturnValue().manuOrders.ERP7__Sales_Order__c != undefined)  cmp.set("v.Back2Parent", true);
+                    if(response.getReturnValue().manuOrders.ERP7__Order__c != undefined)  cmp.set("v.Back2Parent", true);
+                }
+            });
+            $A.enqueueAction(action);
+        }
+    },
+    
+    getMRPMO: function(cmp, event, helper) {
+        var mrpId = cmp.get("v.mrpId");
+        if(mrpId != undefined && mrpId != ''){
+            var action = cmp.get("c.getAllMO");
+            action.setParams({
+                "mrpId": mrpId
+            });
+            action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (cmp.isValid() && state === "SUCCESS") {
+                    cmp.set("v.manuOrder", response.getReturnValue().MO);
+                    if(response.getReturnValue().MRP.ERP7__MO__c != null && response.getReturnValue().MRP.ERP7__MO__c != undefined && response.getReturnValue().MRP.ERP7__MO__c != "") cmp.set("v.manuOrder.ERP7__Manufacturing_Order__r.Name",response.getReturnValue().MRP.ERP7__MO__r.Name);
+                    else cmp.set("v.manuOrder.ERP7__Manufacturing_Order__r.Name",response.getReturnValue().MRP.Name);
+                    
+                    cmp.set("v.prevent", true);
+                    cmp.set("v.Product", response.getReturnValue().Product);
+                    console.log('Product 5 : ',response.getReturnValue().Product);
+                    cmp.set("v.Version", response.getReturnValue().Version);
+                    console.log('Version 5 : ',response.getReturnValue().Version);
+                    cmp.set("v.Routing", response.getReturnValue().Routing);
+                    cmp.set("v.prevent", false);
+                    
+                }
+            });
+            $A.enqueueAction(action);
+        }
+    },
+    
+    getMPSLine: function(cmp, event, helper) {
+        var mpslineId = cmp.get("v.mpslineId");
+        if(mpslineId != undefined && mpslineId != ''){
+            var action = cmp.get("c.getAllMPS");
+            action.setParams({
+                "mpslineId": mpslineId
+            });
+            action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (cmp.isValid() && state === "SUCCESS") {
+                    cmp.set("v.manuOrder", response.getReturnValue().MO);
+                }
+            });
+            $A.enqueueAction(action);
+        }
+    },
+    
+    getParams: function(cmp, event, helper) {
+        var pId = cmp.get("v.PID");
+        var rId = cmp.get("v.RID");
+        var ver = cmp.get("v.VER");
+        var quan = cmp.get("v.QUAN");
+        if(pId != undefined && pId != ""){
+            cmp.set("v.manuOrder.ERP7__Product__c",pId);
+        }
+        if(rId != undefined && rId != ""){
+            cmp.set("v.manuOrder.ERP7__Routing__c",rId);
+        }
+        if(ver != undefined && ver != ""){
+            cmp.set("v.manuOrder.ERP7__Version__c",ver);
+        }
+        if(quan != undefined && quan != ""){
+            cmp.set("v.manuOrder.ERP7__Quantity__c",quan);
+        }
+        //debugger;
+    },
+    CreatePR:function(component, event, solid){
+        var quanMultiplier = 1;
+        var obj = component.get('v.MRPs');
+        for(var x in obj){
+            if(obj[x].MRP.Id == solid){
+                quanMultiplier = obj[x].WeightMultiplier;
+            }
+        }
+        $A.createComponent("c:CreatePurchaseRequisition",{
+            "mrplineId":solid,
+            "quantityMultiplier":quanMultiplier,
+            "cancelclick":component.getReference("c.backMO")
+        },function(newCmp, status, errorMessage){
+            if (status === "SUCCESS") {
+                var body = component.find("body");
+                body.set("v.body", newCmp);
+            }
+        });
+    },
+    
+    CreatePO:function(component, event, solid){
+        console.log('CreatePO called solid~>'+solid);
+        
+        var soliId = solid;
+        var obj = component.get('v.MRPs');
+        var quanMultiplier = 1;
+        for(var x in obj){
+            if(obj[x].MRP.Id == solid){
+                quanMultiplier = obj[x].WeightMultiplier;
+            }
+        }
+        
+        console.log('CreatePO quanMultiplier~>'+quanMultiplier);
+        
+        $A.createComponent("c:CreatePurchaseOrder",{
+            "mrplineId":soliId,
+            "quantityMultiplier":quanMultiplier,
+            "cancelclick":component.getReference("c.backMO"),
+            "showPOType" : false
+        },function(newCmp, status, errorMessage){
+            if (status === "SUCCESS") {
+                var body = component.find("body");
+                body.set("v.body", newCmp);
+            }
+        });
+    },
+    CreateMO : function(cmp, event, solid) { 
+        //event.currentTarget.getAttribute('data-mosoliId');
+        // var URL_RMA = '/apex/ERP7__ManufacturingOrderLC?mrpId='+MRPId;
+        // window.open(URL_RMA,'_self');
+        // var MPSId=event.currentTarget.dataset.record;
+        var requiredQty = 1;
+        var obj = cmp.get('v.MRPs');
+        for(var x in obj){
+            if(obj[x].MRP.ERP7__MRP_Product__c == solid){
+                requiredQty = obj[x].MRP.ERP7__Total_Amount_Required__c*obj[x].WeightMultiplier;
+            }
+        }
+        console.log('requiredQty : ',requiredQty);
+        var evt = $A.get("e.force:navigateToComponent");
+        evt.setParams({
+            componentDef : "c:WorkCenterSchedule",
+            componentAttributes: {
+                ProId :   solid,
+                QTY : requiredQty
+            }
+        });
+        evt.fire();
+    },
+    showToast : function(title, type, message) {
+        var toastEvent = $A.get("e.force:showToast");
+        if(toastEvent != undefined){
+            toastEvent.setParams({
+                "mode":"dismissible",
+                "title": title,
+                "type": type,
+                "message": message
+            });
+            //component.set("v.showMainSpin",false);
+            toastEvent.fire();
+        }
+    },
+    deleteMRPs : function(component,selectedMRPs){
+        var action = component.get('c.deleteSelectedMRP');
+        action.setParams({MRPIds : selectedMRPs});
+        action.setCallback(this,function(response){
+            var state = response.getState();
+            if(state === 'SUCCESS'){
+                var obj = response.getReturnValue();
+                if(obj == 'Success'){
+                    var MRPslst = component.get('v.MRPs');
+                    for(var a in selectedMRPs){
+                        for(var x in MRPslst){
+                            if(MRPslst[x].MRP.Id == selectedMRPs[a]){
+                                MRPslst.splice(x,1); 
+                            } 
+                        }
+                    }
+                    component.set('v.MRPs',MRPslst);
+                    
+                    this.showToast($A.get('$Label.c.Success1'),'success',$A.get('$Label.c.Items_deleted_Successfully'));
+                }
+                else{
+                    console.log('Error : ',response.getError());
+                }
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    getStatus : function(cmp,event){
+        try{
+            var action = cmp.get('c.getInwardStatus');
+            action.setCallback(this,function(response){
+                var state = response.getState();
+                if(state === 'SUCCESS'){
+                    var obj = response.getReturnValue();
+                    if(obj != null){
+                        cmp.set('v.statusOption',obj);
+                    }
+                }
+                else{
+                    console.log('Error : ',response.getError());
+                }
+            });
+            $A.enqueueAction(action);
+        } catch(e){
+            console.log('Error : ',e);
+        }
+    },
+    getpicklistValues : function(cmp,event){
+        try{
+            $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+            var obj11 =  cmp.get("v.objDetail");
+            var controllingFieldAPI = cmp.get("v.controllingFieldAPI");
+            var dependingFieldAPI = cmp.get("v.dependingFieldAPI");
+            var action = cmp.get("c.getDependentMap");
+            // pass paramerters [object definition , contrller field name ,dependent field name] -
+            // to server side function 
+            action.setParams({
+                'objDetail' : obj11,
+                'contrfieldApiName': controllingFieldAPI,
+                'depfieldApiName': dependingFieldAPI 
+            });
+            //set callback   
+            action.setCallback(this, function(response) {
+                if (response.getState() == "SUCCESS") {
+                    //store the return response from server (map<string,List<string>>)  
+                    var StoreResponse = response.getReturnValue();
+                    var arrayMapKeys = [];
+                    for(var key in StoreResponse){
+                        console.log('key~>'+key);
+                        console.log('StoreResponse[key]~>'+JSON.stringify(StoreResponse[key]));
+                        arrayMapKeys.push({key: key, value: StoreResponse[key]});
+                    }                
+                    console.log('arrayMapKeys~>',arrayMapKeys);
+                    
+                    cmp.set("v.depnedentFieldMap",arrayMapKeys);
+                    var listOfkeys = []; // for store all map keys (controller picklist values)
+                    var ControllerField = []; // for store controller picklist value to set on lightning:select. 
+                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                    // play a for loop on Return map 
+                    // and fill the all map key on listOfkeys variable.
+                    for (var singlekey in StoreResponse) {
+                        listOfkeys.push(singlekey);
+                    }
+                    
+                    //set the controller field value for lightning:select
+                    if (listOfkeys != undefined && listOfkeys.length > 0) {
+                        ControllerField.push('--- None ---');
+                    }
+                    
+                    for (var i = 0; i < listOfkeys.length; i++) {
+                        ControllerField.push(listOfkeys[i]);
+                    }  
+                    // set the ControllerField variable values to country(controller picklist field)
+                    cmp.set("v.listControllingValues", ControllerField);
+                    
+                    // cmp.set("v.SelectedTask",cmp.get("v.SelectedTask"));
+                    
+                    
+                }else{
+                    var error = response.getError();
+                    console.log('getDependentMap err~>'+JSON.stringify(error));
+                }
+            });
+            $A.enqueueAction(action);
+        }catch(e){
+            console.log('err',e);
+        }        
+    },
+    fetchDepValues: function(component, ListOfDependentFields) {
+        try{
+            // create a empty array var for store dependent picklist values for controller field  
+            var dependentFields = [];
+            dependentFields.push('--- None ---');
+            for (var i = 0; i < ListOfDependentFields.length; i++) {
+                dependentFields.push(ListOfDependentFields[i]);
+            }
+            // set the dependentFields variable values to store(dependent picklist field) on lightning:select
+            component.set("v.listDependingValues", dependentFields);
+        }catch(e){
+            console.log('err',e);
+        }
+        
+    },
+      finishAllFilesUploadforQAguidelines : function(parentId,fileNameList,base64DataList,contentTypeList,component, event, helper) {
+        try{
+            console.log('finishAllFilesUploadforQAguidelines parentId~>'+JSON.stringify(parentId));
+            console.log('finishAllFilesUploadforQAguidelines fileNameList~>'+fileNameList.length);
+            console.log('finishAllFilesUploadforQAguidelines base64DataList~>'+base64DataList.length);
+            console.log('finishAllFilesUploadforQAguidelines contentTypeList~>'+contentTypeList.length);
+            var action = component.get("c.uploadMultipleFilesforQAguideline");
+            
+            if(parentId.hasOwnProperty('Attachments')){
+                delete parentId.Attachments;
+            }
+            console.log('finishAllFilesUploadforQAguidelines parentId final~>'+JSON.stringify(parentId));
+            
+            action.setParams({
+                parent: JSON.stringify(parentId),
+                fileName: fileNameList,
+                base64Data: base64DataList,
+                contentType: contentTypeList,
+            });
+            
+            action.setCallback(this, function(response) {
+                if (response.getState() === "SUCCESS") {
+                    console.log("finishAllFilesUploadforQAguidelines resp: ", JSON.stringify(response.getReturnValue()));
+                  	component.tabQA();
+                    $A.util.addClass(component.find('mainSpin'), "slds-hide");
+                }
+                else{ 
+                    $A.util.addClass(component.find('mainSpin'), "slds-hide");
+                    var errors = response.getError();
+                    console.log("server error in finishAllFilesUploadforQAguidelines : ", JSON.stringify(errors));
+                    component.set("v.exceptionError", errors[0].message);
+                }
+            });
+            $A.enqueueAction(action);
+            
+            setTimeout($A.getCallback(function () {
+                console.log('setTimeout'); 
+            }), 1000);   //dont remove setTimeout - for loading issue fix for upload files - Arshad
+        }catch(e){
+            console.log('finishAllFilesUpload err',e);
+            $A.util.addClass(component.find('mainSpin'), "slds-hide");
+        }
+    },
+})

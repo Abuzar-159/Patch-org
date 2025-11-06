@@ -1,0 +1,267 @@
+<aura:component controller="ProductListComm" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/bootstrap.custom.min.css', 
+                          $Resource.ProductListComm + '/ProductListComm/css/custom.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/fonts_googleapis.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/listing.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css')}"/>  
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ProductListComm.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <aura:attribute name="AccId" type="String" default=""/>
+    
+    <aura:attribute name="familyList" type="List"/>
+    <aura:attribute name="listOfProduct" type="Object" />
+    <aura:attribute name="listOfCategories" type="String[]" />
+    <!--<aura:attribute name="ProductQuantityList" type="List" default="{}"/>-->
+    <aura:attribute name="paginationList" type="Object"/>
+    <aura:attribute name="paginationPageNumb" type="List" />
+    <aura:attribute name="pageSize" type="Integer" default="12"/>
+    <aura:attribute name="totalSize" type="Integer"/>
+    <aura:attribute name="start" type="Integer" />
+    <aura:attribute name="currentPageNumber" type="Integer" default='1' />
+    <aura:attribute name="end" type="Integer"/>
+    
+    <aura:attribute name="sortOrder" type="String" default="CreatedDate"/>
+    <aura:attribute name="listView" type="boolean"/>
+    <aura:attribute name="gridView" type="boolean" default="true"/>
+    <aura:attribute name="counter" type="integer" default="0"/>
+    <aura:attribute name="quantity" type="integer" default="1"/>
+    
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="catSel" type="String" default=""/>
+    <aura:attribute name="cartItem" type="String"/>
+    <!--<aura:attribute name="attFile" type="Object"/>-->
+    <aura:attribute name="guestProds" type="String[]"/>
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    
+    <!--<aura:handler event="ERP7:ProductListCommEvent" action="{!c.eventHandle}"/> -->
+    <!--<aura:registerEvent name="ProductListComm_BodyToHeader" type="c:ProductListComm_BodyToHeader"/>-->
+    <aura:registerEvent name="ProductListCommEventBody1" type="c:ProductListComm_BodyToHeader"/>
+    
+    <!--<div id="page" class="theia-exception erp_mark7">-->
+    
+    <!--<c.ProductListCommHeader/>-->
+    <!-- /header -->
+    <!--<div aura:id="sldshide">-->
+    <div id="stick_here"></div>
+    <div class="toolbox mb-0"> <!--elemento_stick-->
+        <div class="container">
+            <ul class="clearfix">
+                <li>
+                    <div class="sort_select">
+                        <select name="sort" id="sort_value" onchange="{!c.changeSort}">
+                            <!--<option value="popularity" selected="selected">Sort by popularity</option>
+                                <option value="rating">Sort by average rating</option>-->
+                            <option value="CreatedDate" selected="selected">Sort by Recent</option>
+                            <option value="price">Sort by price: Low to High</option>
+                            <option value="pricedesc">Sort by price: High to Low</option>
+                        </select>
+                    </div>
+                </li>
+                <li>
+                    <a onclick="{!c.gridView}"><i class="ti-view-grid"></i></a>
+                    <a onclick="{!c.listView}"><i class="ti-view-list"></i></a>
+                </li>
+                <li>
+                    <a href="#0" class="open_filters">
+                        <i class="ti-filter"></i><span>Filters</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <!-- /toolbox -->
+    
+    <div class="main"> 
+        <div class="container margin_30">
+            <div class="row">
+                <aside class="col-lg-3" id="sidebar_fixed">
+                    <div class="filter_col">
+                        <div class="inner_bt"><a href="#" class="open_filters"><i class="ti-close"></i></a></div>
+                        <div class="filter_type version_2">
+                            <h4><a href="#filter_1" data-toggle="collapse" class="opened">Categories</a></h4>
+                            <div class="collapse show" id="filter_1">
+                                <ul>
+                                    <li>
+                                        <lightning:input type="checkbox" value="All" label="All" onchange="{!c.selectAll}" aura:id="All"/>
+                                    </li>
+                                    <aura:iteration items="{!v.familyList}" var="fl">
+                                        <li>
+                                            <aura:if isTrue="{!!empty(fl.type)}">
+                                                <lightning:input type="checkbox" value="{!fl.type}" label="{!fl.type}" onchange="{!c.checkboxSelect}" aura:id="checkbox1"/>
+                                            </aura:if>
+                                            <!-- <aura:if isTrue="{!empty(fl.type)}">
+                                                    Others
+                                                    <aura:set attribute="else">
+                                                        {#fl.type}
+                                                    </aura:set>
+                                                </aura:if>-->
+                                        </li>                                            
+                                    </aura:iteration>                                        
+                                </ul>
+                            </div>
+                            <!-- /filter_type -->
+                        </div>
+                        
+                        <!--<div class="buttons">
+                                <a href="#0" class="btn_1" onclick="{!c.fetchProByCat}">Filter</a> <a href="#0" class="btn_1 gray">Reset</a>
+                            </div>-->
+                    </div>
+                </aside>
+                <!-- /col -->
+                <div class="col-lg-9">
+                    
+                    <!-- /top_banner -->  
+                    <aura:if isTrue="{!v.paginationList.length > 0}">
+                        <aura:if isTrue="{!v.gridView}">
+                            <div class="row small-gutters">                                 
+                                <aura:iteration items="{!v.paginationList}" var="pro" indexVar="count">
+                                    <div class="col-6 col-md-3">
+                                        <div class="grid_item">
+                                            <aura:if isTrue="{!pro.stock == 0 }">
+                                                <span class="ribbon off">Out of stock</span>
+                                                <aura:set attribute="else">
+                                                    <span class="ribbon new">{!pro.stock}</span>                                                        
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:If isTrue="{!(pro.ContentDoc.ContentDocumentId != undefined)}">
+                                                <figure onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                    <img src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+pro.ContentDoc.ContentDocumentId}" class="ProductListComm-newClass1"/>
+                                                </figure>    
+                                                <aura:set attribute="else">
+                                                    <figure onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                        <img class="img-fluid lazy" src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" data-src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" alt=""/>
+                                                    </figure>
+                                                </aura:set>
+                                            </aura:If> 
+                                            <a onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                <h3><lightning:formattedText value="{!pro.pbe.Product2.Name}" aura:id="name1"/></h3>
+                                            </a> 
+                                            <div class="price_box" onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                <span class="new_price"><lightning:formattedNumber style="currency" value="{!pro.pbe.UnitPrice}"/></span>
+                                                <!--<span class="old_price">$60.00</span>-->
+                                            </div>
+                                            <ul>
+                                                <aura:if isTrue="{!pro.stock == 0}">
+                                                    <!--<li data-value="{!pro.pbe.Id}" onclick="{!c.addToCart}" ><a class="tooltip-1" data-toggle="tooltip" data-placement="left" title="Add to cart"><i class="ti-shopping-cart"></i><span>Add to cart</span></a></li>-->
+                                                    <aura:set attribute="else">
+                                                        <li data-value="{!pro.pbe.Product2.Id}" onclick="{!c.addToCart}"><a class="tooltip-1" data-toggle="tooltip" data-placement="left" title="Add to cart"><i class="ti-shopping-cart"></i><span>Add to cart</span></a></li>
+                                                    </aura:set>
+                                                </aura:if>
+                                                
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+                            </div>
+                            <aura:set attribute="else">
+                                <div class="row row_item"><!--ListView-->
+                                    <aura:iteration items="{!v.paginationList}" var="pro" indexVar="count">
+                                        <div class="col-sm-4 mb-3">
+                                            <figure>
+                                                <aura:if isTrue="{!pro.stock >0 }">
+                                                    <span class="ribbon new">{!pro.stock}</span>
+                                                    <aura:set attribute="else">
+                                                        <span class="ribbon off">Out of stock</span>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <a onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                    <aura:If isTrue="{!(pro.ContentDoc.ContentDocumentId != undefined)}">
+                                                        <img class="img-fluid lazy ProductListComm-newClass2" src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+pro.ContentDoc.ContentDocumentId}" data-src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+pro.ContentDoc.ContentDocumentId}" />
+                                                        <aura:set attribute="else">
+                                                            <img class="img-fluid lazy" src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" data-src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" alt="Image not available"/>
+                                                        </aura:set>
+                                                    </aura:If>
+                                                </a>	                          
+                                            </figure>
+                                        </div>
+                                        <div class="col-sm-8 mb-3">
+                                            <!--<div class="rating"><i class="icon-star voted"></i><i class="icon-star voted"></i><i class="icon-star voted"></i><i class="icon-star voted"></i><i class="icon-star"></i></div>-->
+                                            <a onclick="{!c.productDetails}" data-value="{!pro.pbe.Product2.Id}">
+                                                <h3>{!pro.pbe.Product2.Name}</h3>
+                                            </a>
+                                            <p>{!pro.pbe.Product2.Description}</p>
+                                            <div class="price_box">
+                                                <span class="new_price"><lightning:formattedNumber style="currency" value="{!pro.pbe.UnitPrice}"/></span>
+                                                <!--<span class="old_price">$60.00</span>-->
+                                            </div>
+                                          
+                                            <ul>
+                                                <li class="pr-3">
+                                                	   <lightning:input type="Number" class="customplc-input" value="1" onchange="{!c.setQuan}"/>        
+                                                </li>
+                                                <aura:if isTrue="{!pro.stock == 0}">
+                                                    <li class="ProductListComm-newClass3"><a class="btn_1">Add to cart</a></li>
+                                                    <aura:set attribute="else">
+                                                        <li data-value="{!pro.pbe.Product2.Id}" onclick="{!c.addToCartList}"><a class="btn_1">Add to cart</a></li>
+                                                    </aura:set>
+                                                </aura:if>
+                                                
+                                            </ul>
+                                        </div>
+                                    </aura:iteration>
+                                </div>
+                            </aura:set>
+                        </aura:if>   
+                        <aura:set attribute="else">
+                            <div>
+                                    No Product Available
+                            </div>
+                        </aura:set>
+                    </aura:if>
+                    
+                    
+                    <!--================Pagination==================-->
+                    <aura:if isTrue="{!v.listOfProduct.length >12}">
+                        <div class="slds-col slds-wrap">
+                            <aura:iteration items="{!v.paginationPageNumb}" var="num" indexVar="index"> 
+                                <aura:if isTrue="{!index==0}">
+                                    <button disabled="{!v.start == 0}" class="slds-button slds-button_neutral"    onmousedown="{!c.previous}" >
+                                        Previous
+                                    </button>
+                                </aura:if>
+                                <button disabled="{!num=='...'}" class="{!if(((v.end+1)/v.pageSize)==num,'slds-button slds-button_brand','slds-button slds-button_neutral')}"   data-record="{!num}" name="{!num}" onmousedown="{!c.currentPage}"   >
+                                    {!num}
+                                </button>
+                                <aura:if isTrue="{!index==v.paginationPageNumb.length-1}">
+                                    <button disabled="{!v.end >= v.totalSize-1}"  class="slds-button slds-button_neutral"   onmousedown="{!c.next}"  >
+                                        Next
+                                    </button>
+                                </aura:if>
+                            </aura:iteration>
+                        </div>
+                    </aura:if>
+                    <!--================/Pagination==================-->
+                    
+                    
+                    <!-- /row -->
+                    <!--  <div class="pagination__wrapper">
+                     <ul class="pagination">
+                         <li><a href="#0" class="prev" title="previous page">&#10094;</a></li>
+                         <li>
+                             <a href="#0" class="active">1</a>
+                         </li>
+                         <li>
+                             <a href="#0">2</a>
+                         </li>
+                         <li>
+                             <a href="#0">3</a>
+                         </li>
+                         <li>
+                             <a href="#0">4</a>
+                         </li>
+                         <li><a href="#0" class="next" title="next page">&#10095;</a></li>
+                     </ul>
+                 </div>-->
+                </div>
+                <!-- /col -->
+            </div>
+            <!-- /row -->
+        </div>
+        <!-- /container -->
+    </div>
+    <!-- /main -->
+    <!--</div>-->
+    <!--</div>   -->
+</aura:component>

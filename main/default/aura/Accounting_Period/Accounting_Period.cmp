@@ -1,0 +1,207 @@
+<aura:component implements="flexipage:availableForRecordHome,force:appHostable,force:lightningQuickActionWithoutHeader" controller="Accounting_Period" access="global">
+ <aura:handler name="init" 				value="{!this}" 	action="{!c.doInit}"/>
+ <aura:attribute name="start_date" 			type="Date" 	default=""/>
+ <aura:attribute name="end_date" 			type="date" 	default=""/>
+ <aura:attribute name="accounting_period" 	type="List"/>
+ <aura:attribute name="orgID"               type="String" default=""/>
+ <aura:attribute name="MPS"                 type="Object"/>
+ <aura:attribute name="AP"                  type="Accounting_Period__c" default="{'sobjectType' : 'Accounting_Period__c','ERP7__Organisation__c' : ''}" />
+ <aura:handler name="change"                value="{!v.AP}" action="{!c.changeOrg}"/>
+ <aura:attribute name="message"             type="String"  default="Your records has been created successfully."/>
+ <aura:attribute name="existmessage"        type="String"  default="Already records has been created for this period."/>
+ <aura:attribute name="recMessage"          type="String"  default="No items found."/> 
+ <aura:attribute name="periodMessage"       type="String"  default="Select Proper Period Interval."/>
+ <aura:attribute name="checkInsertion"      type="Boolean" default="false"/>
+ <aura:attribute name="checkRecords"        type="Boolean" default="false"/>
+ <aura:attribute name="existRecords"        type="Boolean" default="false"/>
+ <aura:attribute name="wrongPeriod"         type="Boolean" default="false"/>   
+ <aura:attribute name="sorting"             type="Boolean" default="true"/> 
+ <aura:attribute name="sortField"           type="String"  default="Name"/>
+ <aura:attribute name="arrowDirection"      type="string"  default="arrowup" description="Use for change arrow sign direction on header based on click"/>
+ <aura:attribute name="nameSortType"        type="integer" default="1"/>
+ <aura:attribute name="startDateSortType"   type="integer" default="0"/>
+ <aura:attribute name="endDateSortType"     type="integer" default="0"/>
+ <aura:attribute name="statusnameSortType"  type="integer" default="0"/>
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Accounting_Period.css"/>
+    
+<ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+   
+  <div class="erp_mark7">
+      <div class="slds-page-header">
+        <div class="slds-media">
+        <div class="slds-media__figure">
+        <span class="slds-icon_container slds-icon-standard-opportunity" title="Description of icon when needed">
+            <lightning:icon iconName="standard:orders" size="x-small" alternativeText="Order" title="Order" />          
+        </span>
+        </div>
+            <div class="slds-media__body">
+                <h1 class="slds-page-header__title slds-truncate slds-align-middle" title="">Accounting Periods
+                    <aura:if isTrue="{!v.checkInsertion==true}">
+                        <div class="maq-only">
+                            <div class="slds-notify_container slds-is-relative">
+                                <div class="slds-notify slds-notify_toast slds-theme--success" role="alert">                                   
+                                    <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="">
+                                        <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                                        
+                                    </span>
+                                    <div class="slds-notify__content AccountingPeriod-newClass1">
+                                        <h2 class="slds-text-heading_small ">{!v.message}</h2>
+                                    </div>
+                                    
+                                    <div class="slds-notify__content AccountingPeriod-newClass2">
+                                        <button class="slds-button slds-button_icon slds-notify__close slds-button_icon-inverse" title="Close"  onclick="{!c.hideNotification}">
+                                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                                            <span class="slds-assistive-text">Close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.existRecords==true}">
+                        <div class="maq-only">
+                            <div class="slds-notify_container slds-is-relative">
+                                <div class="slds-notify slds-notify_toast slds-theme--success" role="alert">                                   
+                                    <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="">
+                                        <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                                    </span>
+                                    <div class="slds-notify__content AccountingPeriod-newClass1">
+                                        <h2 class="slds-text-heading_small ">{!v.existmessage}</h2>
+                                    </div>
+                                    
+                                    <div class="slds-notify__content AccountingPeriod-newClass2">
+                                        <button class="slds-button slds-button_icon slds-notify__close slds-button_icon-inverse" title="Close" 
+                                                onclick="{!c.hideNotification2}">
+                                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                                            <span class="slds-assistive-text">Close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                </h1>
+                <p class="slds-text-body_small slds-line-height_reset"></p> 
+            </div>
+        </div>
+        </div>
+    <div class="epr_Mark7">
+        
+       <div class="row m-0"> 
+           <div class="col-md-3 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+            <div class="slds-form-element__control">
+            	<label class="slds-form-element__label"> Organisation</label>
+                  <div class="slds-form-element__control">
+                      <c:CustomInputLookUp aura:id="inputlookup" objectAPIName="Account" selectedRecordId="{!v.AP.ERP7__Organisation__c}" qry="AND ERP7__Account_Type__c ='Organisation'"  IconName="standard:contact"/>
+                </div>    <!-- {!v.AP.ERP7__Organisation__c} -->
+            </div>
+       </div>
+       <div class="col-md-3 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+            <div class="slds-form-element__control">
+            	<label class="slds-form-element__label"> Start Date</label>
+                <lightning:input type="date" variant="label-hidden" aura:id="start_date" value="{!v.start_date}" onchange="{!c.changeDate}"/>      
+            </div>
+        </div>
+        
+        <div class="col-md-3 slds-m-top--small slds-m-bottom--small" aura:id="layout2"   >
+        	<div class="slds-form-element__control">
+            	<label class="slds-form-element__label">End Date</label>
+        		<lightning:input type="date" variant="label-hidden" aura:id="end_date" value="{!v.end_date}" onchange="{!c.changeEndDate}"/>    
+            </div>
+        </div>
+    	
+        <div class="col-md-3  AccountingPeriod-newClass3" >
+        	<lightning:button variant="brand"  aura:id="button" class="slds-button slds-button--brand" label="Create" onclick="{!c.passDate}" /> <!-- c.getSelectedOrg -->
+       </div>
+       </div> 
+	</div>
+    
+      
+        <aura:if isTrue="{!v.checkRecords==true}"><br/>
+      <div  align="center" class="AccountingPeriod-newClass4">
+      		{!v.recMessage}
+          </div></aura:if>
+      
+      <aura:if isTrue="{!v.wrongPeriod==true}"><br/>
+      <div  align="center" class="AccountingPeriod-newClass4">
+      		{!v.periodMessage}
+          </div></aura:if>
+
+   <aura:if isTrue="{!and(!(v.checkRecords==true),!(v.wrongPeriod==true) ) }"><br/>   
+  <div class="AccountingPeriod-newClass5">
+  <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+  <thead>
+    <tr class="slds-text-title_caps AccountingPeriod-newClass6">
+      <th scope="col" onclick="{!c.sortByName}">
+        <div class="slds-truncate AccountingPeriod-newClass7" title="Name" >Name 
+      <aura:if isTrue="{!v.nameSortType==0}">   
+          <lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                        
+      </aura:if>
+	  <aura:if isTrue="{!v.nameSortType==-1}"> 
+      <lightning:icon iconName="utility:arrowdown" size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                       
+      </aura:if>
+      <aura:if isTrue="{!v.nameSortType==1}"> 
+      <lightning:icon iconName="utility:arrowup" size="x-small" alternativeText="arrowup!" title="arrowup" />                               
+          </aura:if>
+  		</div>
+      </th>
+      <th scope="col" onclick="{!c.sortByStartDate}">
+        <div class="slds-truncate AccountingPeriod-newClass7" title="ERP7__Start_Date__c">Start Date
+         <aura:if isTrue="{!v.startDateSortType==0}">   
+      <lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                          
+      </aura:if>
+	  <aura:if isTrue="{!v.startDateSortType==-1}"> 
+      <lightning:icon iconName="utility:arrowdown" size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                      
+      </aura:if>
+      <aura:if isTrue="{!v.startDateSortType==1}"> 
+      <lightning:icon iconName="utility:arrowup" size="x-small" alternativeText="arrowup!" title="arrowup" />                             
+          </aura:if></div>
+      </th>
+      <th scope="col" onclick="{!c.sortByEndDate}">
+        <div class="slds-truncate AccountingPeriod-newClass7" title="ERP7__End_Date__c">End Date
+         <aura:if isTrue="{!v.endDateSortType==0}">   
+      <lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                       
+      </aura:if>
+	  <aura:if isTrue="{!v.endDateSortType==-1}"> 
+      <lightning:icon iconName="utility:arrowdown" size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                         
+      </aura:if>
+      <aura:if isTrue="{!v.endDateSortType==1}"> 
+      <lightning:icon iconName="utility:arrowup" size="x-small" alternativeText="arrowup!" title="arrowup" />                              
+          </aura:if></div>
+      </th>
+      <th scope="col" onclick="{!c.sortByStatus}">
+        <div class="slds-truncate AccountingPeriod-newClass7" title="ERP7__Status__c">Status
+         <aura:if isTrue="{!v.statusnameSortType==0}">   
+      <lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                      
+      </aura:if>
+	  <aura:if isTrue="{!v.statusnameSortType==-1}"> 
+      <lightning:icon iconName="utility:arrowdown" size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                     
+      </aura:if>
+      <aura:if isTrue="{!v.statusnameSortType==1}"> 
+      <lightning:icon iconName="utility:arrowup" size="x-small" alternativeText="arrowup!" title="arrowup" />                                   
+          </aura:if> </div>
+      </th>
+     </tr>
+  </thead>
+      <tbody>
+          <aura:iteration items="{!v.accounting_period}" var="list">
+              <tr>
+                  <td data-label="Name" ><div class="slds-truncate" title="{!list.Name}" >
+                      <a href="{!'/'+list.Id}" target = "_blank">
+                          {!list.Name}
+                      </a>
+                      </div></td>
+                  <td data-label="{!list.ERP7__Start_Date__c}"><div class="slds-truncate" title="{!list.ERP7__Start_Date__c}"><lightning:formattedDateTime value="{!list.ERP7__Start_Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/></div></td>
+                  <td data-label="{!list.ERP7__End_Date__c}"><div class="slds-truncate" title="{!list.ERP7__End_Date__c}"><lightning:formattedDateTime value="{!list.ERP7__End_Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/></div></td>
+                  <td data-label="{!list.ERP7__Status__c}"><div class="slds-truncate" title="{!list.ERP7__Status__c}">{!list.ERP7__Status__c}</div></td>
+              </tr>
+          </aura:iteration>
+      </tbody>
+  </table>
+  </div>
+     </aura:if>
+ </div>  
+    
+</aura:component>

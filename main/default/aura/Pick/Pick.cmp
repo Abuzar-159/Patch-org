@@ -1,0 +1,814 @@
+<aura:component Controller="ERP7.OutboundLogisticsLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>  
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/> 
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+        <!--ltng:require scripts="/resource/ERP7__bootStrap/js/bootstrap.min.js" afterScriptsLoaded="{!c.setScriptLoaded}"/-->
+        
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Pick.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>  
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Manufacturing_orders.css"/>
+        <!--<ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" />-->
+    </head>
+    <aura:attribute name="PickSerialNos" type="object[]" />
+    <aura:attribute name="PickSelectedSerialNos" type="object[]" />
+    <aura:attribute name="SearchSerialNos" type="String" access="global" default=""/>
+    <aura:attribute name="pickloglineId" type="String" access="global" default=""/>
+    <aura:attribute name="RemainingQty" type="Integer" access="global" default="0"/>
+    <aura:attribute name="disableAdd" type="Boolean" default="true"/>
+    <aura:attribute name="disableRemove" type="Boolean" default="true"/>
+    <aura:attribute name="selectAllSerials" type="Boolean" default="false"/>
+    <aura:attribute name="showSerials" type="String" default="100"/>
+    
+    <aura:attribute name="PickMultiScreenInUse" type="Boolean" default="false"/>
+    
+    <aura:attribute name="MRPs" type="object[]" />
+    <aura:attribute name="Scanflow" type="Boolean" default="false"/>
+    <aura:attribute name="showStockAddress" type="Boolean" default="false"/>
+    <aura:attribute name="BarcodeLabelhidden" type="Boolean" default="false"/>
+    <aura:attribute name="editErrMsg" type="String" default="" />
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="logisticIds" type="String" access="global" />
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="Logistics" type="object"/>
+    <aura:attribute name="soliWrapperList" type="object"/>
+    <aura:attribute name="soliExistingList" type="object"/>
+    <aura:attribute name="editmode" type="Boolean" default="false"/>
+    <aura:attribute name="SerialIds2Exempt" type="object"/>
+    <aura:attribute name="stockMap" type="object"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="SiteName" type="String" default=""/>
+    <aura:attribute name="initialSTOLISerial" type="String" default=""/>
+    <aura:attribute name="ChannelName" type="String"/>
+    <aura:attribute name="ChannelId" type="String"/>
+    <aura:attribute name="show" type="String" default="25"/>
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="barcodeLocMsg" type="String" default=""/>
+    <aura:attribute name="showBatch" type="Boolean" default="false"/>
+    <aura:attribute name="showSN" type="Boolean" default="false"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="ScanNo" type="Integer" default="0"/>
+    <aura:attribute name="Redirect" type="String" default=""/>
+    <aura:attribute name="warningMSgError" type="String" default=""/>
+    <aura:attribute name="ReplacePickSlipOrgURL" type="boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForPickSlip" type="Boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForPicksliptModal" type="Boolean" default="false"/>
+    <aura:attribute name="Langoptions" type="List" default="[
+                                                            {'label': 'English', 'value': 'English'},
+                                                            {'label': 'French', 'value': 'French'}
+                                                            ]"/>
+    <aura:attribute name="SelectedLang" type="String" default="English"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="Back2Outbound" action="{!c.Back2Outbound}"></aura:method>
+    <aura:method name="createPicks" action="{!c.createPicks}"></aura:method>
+    <aura:method name="saveSOLI" action="{!c.saveSOLI}"></aura:method>
+    <aura:method name="createPacks" action="{!c.createPacks}"></aura:method>
+    <aura:method name="createShips" action="{!c.createShips}"></aura:method>
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    
+    <aura:method name="AddSerials" action="{!c.AddSerials}"></aura:method>
+    <aura:method name="AddAllSerials" action="{!c.AddAllSerials}"></aura:method>
+    <aura:method name="RemoveAllSerials" action="{!c.RemoveAllSerials}"></aura:method>
+    <aura:method name="PickMultiSerials" action="{!c.PickMultiSerials}"></aura:method>
+    <aura:method name="FindSerials" action="{!c.FindSerials}"></aura:method>
+    
+    <aura:method name="getAllDetailsInit" action="{!c.getAllDetails}"></aura:method>
+    
+    <aura:attribute name="navToPack" type="Boolean" default="false"/>
+    
+    <aura:attribute name="startIndexCommittedSOLI" type="Integer" default="0"/>
+    <aura:attribute name="endIndexCommittedSOLI" type="Integer" default="100"/>
+    <aura:attribute name="SerialLookUpQry" type="String" default=""/>
+    
+    <body aura:id="body" class="lookupInput">
+        <div class="erp_mark7" id="er7">
+            <span class="Pick-newClass1">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+            
+            <div class="cpq theme-bg">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item">
+                                            <div class="slds-grid">
+                                                <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Pick-newClass5">
+                                                    
+                                                    <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Pick-newClass6"></i>&nbsp;
+                                                        <lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/>
+                                                    </div>
+                                                    <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter Pick-newClass6" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                                                    
+                                                </div>
+                                            </div>
+                                            <!--<aura:if isTrue="{!(v.soliWrapperList.length > 0)}">-->
+                                            <aura:if isTrue="{!(v.soliWrapperList.length > 0)}">
+                                                <aura:if isTrue="{!if(v.BarcodeLabelhidden == false,true,false)}">
+                                                    <lightning:button variant="brand" label="{!$Label.c.Barcode_Outbound_logistics}" iconName="utility:products" iconPosition="left" class="mobiledisplaynone height32p float-right" onclick="{!c.CreateBarcodes}"/>
+                                                </aura:if>
+                                            </aura:if>
+                                            <lightning:button variant="brand"  label="{!$Label.c.Picking_Slip}" iconName="utility:rows" iconPosition="left" class="mobiledisplaynone height32p float-right slds-m-right_small" onclick="{!c.createPickingSlips}"/>
+                                            <!--</aura:if>  -->  
+                                            
+                                            <div class="slds-p-left--small Pick-newClass7 ">
+                                                
+                                            </div>
+                                            
+                                            
+                                        </li>
+                                        
+                                    </ol>
+                                    
+                                </div>
+                                <h4 class="page-title card-pricing headermt">
+                                    
+                                    <i class="card-pricing-icon slds-icon-standard-budget-allocation"><img src="/resource/erp7__SLDS213/assets/icons/custom/stock_disp.png" width="58"/></i>&nbsp;{!$Label.c.Outbound_logistics}&nbsp;
+                                    <lightning:buttonIcon size="medium" iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+                                </h4>
+                                <div class="slds-grid slds-wrap">
+                                    
+                                    <aura:iteration var="so" indexVar="Counter" items="{!v.Logistics}">
+                                        
+                                        <div class="slds-truncate slds-p-top--xx-small" title="SLN" id="{!so.Name}">
+                                            <span onclick="{!c.StillToFulfill}" data-target="{!so.Id}">
+                                                <lightning:formattedText value="{!so.Name}"  class="Pick-newClass10"/> 
+                                                <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if>
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if> -->
+                                    </aura:iteration>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+            </div>
+           
+            <div class="slds-page-header slds-page-header--object-home Pick-newClass2 slds-hide" role="banner">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">                                
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large Pick-newClass3"> 
+                                        <img src="/resource/erp7__SLDS213/assets/icons/custom/stock_disp.png" width="58"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod Pick-newClass4">
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate Pick-newClass4" title="Outbound Logistics" >{!$Label.c.Outbound_logistics}</h1>
+                                        <lightning:buttonIcon iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound}" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+                                        
+                                    </ul>
+                                </nav>
+                                
+                            </div>
+                            
+                        </div>
+                        
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Pick-newClass5">
+                        
+                        <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Pick-newClass6"></i>&nbsp;
+                            <lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/>
+                        </div>
+                        <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter Pick-newClass6" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                        
+                    </div>
+                    <lightning:button variant="brand"  label="{!$Label.c.Picking_Slip}" iconName="utility:rows" iconPosition="left" class="mobiledisplaynone height32p" onclick="{!c.createPickingSlips}"/>
+                    <aura:if isTrue="{!v.soliWrapperList.length > 0}">
+                        <aura:if isTrue="{!if(v.BarcodeLabelhidden == false,true,false)}">
+                            <lightning:button variant="brand" label="{!$Label.c.Barcode_Outbound_logistics}" iconName="utility:products" iconPosition="left" class="mobiledisplaynone height32p" onclick="{!c.CreateBarcodes}"/>
+                        </aura:if>
+                    </aura:if>
+                    <!--<aura:if isTrue="{!or(v.soliWrapperList.length > 0,v.soliExistingList.length > 0)}">
+                        <lightning:button variant="brand"  label="Picking Slip" iconName="utility:rows" iconPosition="left" class="mobiledisplaynone height32p" onclick="{!c.createPickingSlips}"/>
+                    </aura:if>
+                    <aura:if isTrue="{!(v.soliWrapperList.length > 0)}">
+                        <lightning:button variant="brand" label="Barcode" iconName="utility:products" iconPosition="left" class="mobiledisplaynone height32p" onclick="{!c.CreateBarcodes}"/>
+                    </aura:if> -->   
+                </div>
+                <div class="slds-p-left--small Pick-newClass7 ">
+                    <aura:iteration var="so" indexVar="Counter" items="{!v.Logistics}">
+                        <div class="slds-truncate slds-p-top--xx-small" title="SLN" id="{!so.Name}">
+                            <span onclick="{!c.StillToFulfill}" data-target="{!so.Id}">
+                                <lightning:formattedText value="{!so.Name}"  class="Pick-newClass10"/> 
+                                <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if>
+                            </span>
+                        </div>
+                        <!-- <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if> -->
+                    </aura:iteration>
+                </div>
+            </div>
+            <div class="epr_Mark7 erp_mark7 maqsood" >
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-2 shadow-sm">
+                            <div class="card-body p-1">
+                                
+                                <div  class="panel-collapse">
+                                    <div class="panel-body Pick-newClass8">
+                                        <!-- Nav tabs --> 
+                                        <ul class="nav nav-tabs " role="tablist">
+                                            <li class="nav-item"><!-- /apex/OutboundLogisticsLC?core.apexpages.devmode.url=1       /lightning/n/ERP7__Logistics_Outbound -->
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Outbound}">
+                                                    <i class="fa fa-list Pick-newClass9" aria-hidden="true" ></i>&nbsp;{!$Label.c.List_Outbound_logistics}</a>
+                                            </li>    
+                                            <li class="nav-item active">
+                                                <a class="nav-link Pick-newClass11" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPicks}">
+                                                    <i class="fa fa-truck Pick-newClass9" aria-hidden="true" ></i>&nbsp;{!$Label.c.Pick_Outbound_logistics}</a>
+                                                
+                                            </li>    
+                                            <li class="nav-item"> 
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPacks}">
+                                                    <i class="fa fa-archive Pick-newClass9" aria-hidden="true"></i>&nbsp;{!$Label.c.Pack_Outbound_logistics} </a>
+                                            </li>
+                                            <li class="nav-item mobiledisplaynone mobiledisplaynone-landscape" > 
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createShips}">
+                                                    <i class="fa fa-plane Pick-newClass9" aria-hidden="true" ></i> &nbsp;{!$Label.c.Ship_Outbound_logistics} </a>
+                                            </li>
+                                            
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                                <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'Pick-newClass13 slds-notify_container slds-is-fixed','Pick-newClass12 slds-notify_container slds-is-fixed')}">
+                                    <div class="slds-notify slds-notify_toast slds-theme_error Pick-newClass14" role="status">
+                                        <span class="slds-assistive-text">{!$Label.c.Error_UsersShiftMatch}</span>
+                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                            <lightning:icon iconName="utility:error" variant="inverse" size="small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                        </span>
+                                        <div class="slds-notify__content">
+                                            <h2 class="slds-text-heading_small mb-0">{!v.exceptionError}
+                                            </h2>
+                                        </div>
+                                        <div class="slds-notify__close top:.25rem;">
+                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                <lightning:icon iconName="utility:close" variant="inverse" size="small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="close" />
+                                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="{!if(and(v.warningMSgError != '', v.warningMSgError != undefined),'Pick-newClass13 slds-notify_container slds-is-fixed','Pick-newClass12 slds-notify_container slds-is-fixed')}">
+                                    <div class="slds-notify slds-notify_toast slds-theme_warning Pick-newClass14" role="status">
+                                        <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                            <lightning:icon iconName="utility:warning" variant="inverse" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}" title="Warning" />
+                                        </span>
+                                        <div class="slds-notify__content">
+                                            <h2 class="slds-text-heading_small mb-0">{!v.warningMSgError}
+                                            </h2>
+                                        </div>
+                                        <div class="slds-notify__close top:.25rem;">
+                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeWarning}">
+                                                <lightning:icon iconName="utility:close" variant="inverse" size="small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="close" />
+                                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="{!if(v.barcodeLocMsg != '','Pick-newClass17 slds slds-form--inline slds-p-around--small','Pick-newClass18 slds slds-form--inline slds-p-around--small')}">                                          
+                                    <div class="slds-form-element">
+                                        <table border="0" width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td align="center" valign="middle">
+                                                    <output value="{!v.barcodeLocMsg}" id="errmsgscan" class="Pick-newClass19"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div> 
+                                </div>
+                                <div >
+                                    <table id="pickList" class="table table-bordered Pick-newClass20 slds-row-hover"><!--slds-max-medium-table-?stacked-horizontal-->
+                                        <thead>
+                                            <tr bgcolor="#f3f3f3" class="slds-text-heading--label">
+                                                
+                                                <th scope="col" class="slds-cell-shrink mobiledisplaynone-landscape Pick-newClass21">
+                                                    
+                                                </th>
+                                                <th scope="col" >
+                                                    <span class="slds-truncate">{!$Label.c.AddSubscription_Product}</span>
+                                                </th>
+                                                <th scope="col" class="mobiledisplaynone mobiledisplaynone-landscape">
+                                                    <span class="slds-truncate">{!$Label.c.Product_Code}</span>
+                                                </th>
+                                                <th scope="col" class="mobiledisplaynone mobiledisplaynone-landscape">
+                                                    <span class="slds-truncate">{!$Label.c.Pick_Order_Line}</span>
+                                                </th>
+                                                <th scope="col">
+                                                    <span class="slds-truncate">{!$Label.c.Qty_Pick}</span>
+                                                </th>              
+                                                <th scope="col" >
+                                                    <span class="Pick-newClass22">*</span><span class="slds-truncate">{!$Label.c.Pick}</span>
+                                                </th>
+                                                
+                                                <aura:if isTrue="{!(v.showBatch == true)}">
+                                                    <th scope="col" >
+                                                        <span class="Pick-newClass22">*</span><span class="slds-truncate">{!$Label.c.Batch_Lot}</span>
+                                                    </th>
+                                                </aura:if>
+                                                <aura:if isTrue="{!(v.showSN == true)}">
+                                                    <th scope="col" >
+                                                        <span class="Pick-newClass22">*</span><span class="slds-truncate">{!$Label.c.Pick_Serial_Number}</span>
+                                                    </th>
+                                                </aura:if>                                                
+                                                <th scope="col" >
+                                                    <span class="slds-truncate">{!$Label.c.Stock_Address_override_in_Pick}</span>
+                                                </th>
+                                                <th scope="col" >
+                                                    <span class="slds-truncate">{!$Label.c.MO_Stock}</span>
+                                                </th>
+                                                <th class="Pick-newClass23" scope="col">
+                                                    <lightning:input type="checkbox"  onchange="{!c.checkAll}" checked="{!v.checkAll}"/>
+                                                </th>
+                                            </tr>
+                                            <aura:if isTrue="{!if((v.soliWrapperList.length == 0),true,false)}">
+                                                <tr >
+                                                    <td colspan="9" class="Pick-newClass24">
+                                                        {!$Label.c.All_Items_have_been_Picked_Pick}
+                                                    </td>
+                                                </tr>
+                                            </aura:if>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration var="solis" indexVar="soliCounter" items="{!v.soliWrapperList}">
+                                                <aura:if isTrue="{!and(solis.LOLI.Id != null, solis.LOLI.Id != undefined)}">  
+                                                    <tr id="{!solis.LOLI.Id}" class="{!if((solis.remainingQty > solis.inventoryStock)||(solis.inventoryStock == 0),'slds-hint-parent Pick-newClass29', if(and((solis.soliVerified),(solis.inventoryStock >= solis.remainingQty)),'slds-hint-parent Pick-newClass28','slds-hint-parent'))}">
+                                                        <td scope="col" class="slds-is-sortable mobiledisplaynone-landscape">
+                                                        </td>
+                                                        <td data-label="Product" class="slds-truncate3">
+                                                            <span class="slds-truncate3">                                                
+                                                                <aura:if isTrue="{!if(and(solis.Product.ERP7__Item_Description__c != '', solis.Product.ERP7__Item_Description__c != null), true, false)}">
+                                                                    <div class="maqtooltip">
+                                                                        <i class="fa fa-commenting-o" aria-hidden="true"></i>&nbsp;
+                                                                        <span class="tooltiptext">{!solis.Product.ERP7__Item_Description__c}</span>
+                                                                    </div>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!if(and(solis.Product.Name != Null, solis.Product.Name != ''),true,false)}">
+                                                                    <lightning:formattedUrl label="{!solis.Product.Name}" value="{!'/'+solis.Product.Id}" target="_blank"/>
+                                                                    
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!if(and(solis.Asset.ERP7__Item_Description__c != '', solis.Asset.ERP7__Item_Description__c != null, true), false)}">
+                                                                    <div class="maqtooltip">
+                                                                        <i class="fa fa-commenting-o" aria-hidden="true"></i>&nbsp;
+                                                                        <span class="tooltiptext">{!solis.Asset.ERP7__Item_Description__c}</span>
+                                                                    </div>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!if(and(solis.Product.Id == Null, solis.Asset.Name != Null, solis.Asset.Name != '',true,false))}">
+                                                                    <lightning:formattedUrl label="{!solis.Asset.Name}" value="{!'/'+solis.Asset.Id}" target="_blank"/>
+                                                                </aura:if>&nbsp;&nbsp;
+                                                                
+                                                                <aura:if isTrue="{!solis.Product.ERP7__Picture__c != undefined}">
+                                                                    <img src="{!solis.Product.ERP7__Picture__c}" id="itemImage" class="Pick-newClass25 mobiledisplaynone"/>
+                                                                    
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!if(and(solis.Product.Id == Null, solis.Asset.Name != Null, solis.Asset.Name != '', solis.Asset.ERP7__Picture__c != Null, solis.Asset.ERP7__Picture__c != '',true,false))}">
+                                                                    <img src="{!solis.Asset.ERP7__Picture__c}" id="assetImage"  class="Pick-newClass25 mobiledisplaynone"/>
+                                                                </aura:if>
+                                                            </span>
+                                                        </td>
+                                                        <td data-label="Pick" class="mobiledisplaynone mobiledisplaynone-landscape">
+                                                            <span class="slds-truncate3"><lightning:formattedText value="{!solis.Product.ProductCode}" /></span>
+                                                        </td> 
+                                                        <td data-label="Order Line" class="mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                                                            <span class="slds-truncate3">
+                                                                <lightning:formattedUrl label="{!solis.LOLI.Name}" value="{!'/'+solis.LOLI.Id}" target="_blank"/>
+                                                            </span>
+                                                        </td>        
+                                                        <td data-label="Quantity">
+                                                            <span class="slds-truncate3">
+                                                                <aura:if isTrue="{!if(!and(solis.LOLI.ERP7__Product__r.ERP7__Is_Kit__c, solis.LOLI.ERP7__Explode__c),true,false)}">
+                                                                    <lightning:formattedNumber  value="{!solis.LOLI.ERP7__Quantity__c}"/>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!if(and(solis.LOLI.ERP7__Product__r.ERP7__Is_Kit__c, solis.LOLI.ERP7__Explode__c),true,false)}">
+                                                                    <lightning:formattedNumber  value="{!solis.MRP.ERP7__Total_Amount_Required__c}"/>
+                                                                </aura:if> 
+                                                                /
+                                                                <lightning:formattedNumber  value="{!solis.raisedQty}" />
+                                                            </span>
+                                                        </td> 
+                                                        <td data-label="Pick">
+                                                            <span class="slds-truncate3">
+                                                                <span class="{!if(solis.serialized || solis.inventoryStock == 0 || and(solis.Asset.Name != Null, solis.Asset.Name != ''),'Pick-newClass30','Pick-newClass31')}">
+                                                                    <lightning:input type="text" variant="label-hidden" value="{!solis.requiredQty}" />
+                                                                </span>
+                                                                <span class="{!if(solis.serialized || solis.inventoryStock == 0 || and(solis.Asset.Name != Null, solis.Asset.Name != ''),'Pick-newClass31','Pick-newClass30')}">
+                                                                    <lightning:formattedNumber value="{!solis.requiredQty}" />
+                                                                </span>
+                                                            </span>
+                                                        </td>
+                                                        <aura:if isTrue="{!(v.showBatch == true)}">
+                                                            <td data-label="Batch/Lot Code" >
+                                                                <aura:if isTrue="{!if(and(solis.Product.ERP7__Lot_Tracked__c==true,solis.serialized == false),true,false)}">
+                                                                    <aura:if isTrue="{!if(solis.BatchLotCodes.length>0,true,false)}">
+                                                                        <span class="slds-truncate">
+                                                                            <lightning:select class="{!'display-lable  ' + soliCounter}" value="{!solis.batchLotCode}" onchange="{!c.fetchBatchStock}" variant="label-hidden" name="{!soliCounter}" label="Batch">
+                                                                                <aura:iteration items="{!solis.BatchLotCodes}" var="option">
+                                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(solis.batchLotCode, option.value)}"/>
+                                                                                </aura:iteration>
+                                                                            </lightning:select>
+                                                                        </span>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </td>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!(v.showSN == true)}">
+                                                            <td data-label="Serial Number">
+                                                                <aura:if isTrue="{!and(v.showSN,solis.serialized)}"> 
+                                                                    <span class="slds-truncate" 
+                                                                          onmouseover = "{!c.changeInitialSerial}" onclick="{!c.fetchSerialStock}" 
+                                                                          data-index="{!soliCounter}" 
+                                                                          data-record-id="{!solis.SerialNumbers.ERP7__Serial__c}" 
+                                                                          data-product-id="{!solis.LOLI.ERP7__Product__c}" 
+                                                                          data-batch-lot-code="{!solis.batchLotCode}">
+                                                                        <c:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" 
+                                                                                             aura:id="sl" 
+                                                                                             IconName="standard:macros" 
+                                                                                             selectedRecordId="{!solis.SerialNumbers.ERP7__Serial__c}" 
+                                                                                             qry="{!v.SerialLookUpQry}" />
+                                                                    </span>
+                                                                </aura:if>
+                                                            </td> 
+                                                        </aura:if>
+                                                        <td data-label="Stock Address" class="slds-truncate3">
+                                                            <span class="slds-truncate3">
+                                                                <lightning:select class="display-lable" value="{!solis.AddressName}" onchange="{!c.fetchStocks}" variant="label-hidden" name="{!soliCounter}" label="Location">
+                                                                    <aura:iteration items="{!solis.Address}" var="option">
+                                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(solis.AddressName, option.value)}"/>
+                                                                    </aura:iteration>
+                                                                </lightning:select>
+                                                            </span>
+                                                            
+                                                        </td>    
+                                                        <td data-label="Inventory Stock">
+                                                            <span class="slds-truncate"><lightning:formattedNumber value="{!solis.inventoryStock}"/></span>
+                                                        </td>
+                                                        <td data-label="Action" role="row">  
+                                                            <div class="slds-grid">
+                                                                <lightning:input type="checkbox"  checked="{!solis.soliSelected}" class="slds-p-top_x-small"/>&nbsp;
+                                                                <aura:if isTrue="{!And(solis.serialized, solis.requiredQty > 0, solis.inventoryStock > 0)}">
+                                                                    <lightning:button value="{!solis.LOLI.ERP7__Remaining_Quantity__c}" name="{!solis.LOLI.Id}" onclick="{!c.OpenMyModalPickSerial}" class="neutralC"> 
+                                                                        <lightning:icon iconName="utility:multi_picklist" size="small" class="blue-utility-icon "></lightning:icon>
+                                                                        <!--img src="/resource/ERPCustomIcons/erpicons/select-multiple-icon-erp-01.png" width="20" data-aura-rendered-by="63:0" class="slds-p-bottom_small" title="Pick Multiples"/-->
+                                                                    </lightning:button>
+                                                                </aura:if>
+                                                            </div>
+                                                        </td>  
+                                                    </tr>
+                                                </aura:if>
+                                            </aura:iteration> 
+                                        </tbody>
+                                    </table>
+                                    
+                                    <section role="dialog" aura:id="myModalPickSerial" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading-01" class="slds-modal slds-modal_large">
+                                        <div class="slds-modal__container">
+                                            <div class="slds-modal__content" id="modal-content-id-1" style="min-height:92vh;background: #fafbfe;">
+                                                <article class="slds-page-header slds-page-header1">
+                                                    <div class="slds-card__header slds-grid">
+                                                        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                                            <div class="slds-media__figure">
+                                                                <span class="slds-icon_container slds-icon-standard-account" title="account">
+                                                                    <lightning:icon iconName="standard:product" size="medium"></lightning:icon>
+                                                                    <span class="slds-assistive-text"></span>
+                                                                </span>
+                                                            </div>
+                                                            <div class="slds-media__body">
+                                                                <h2 class="slds-card__header-title">
+                                                                    <span class="slds-page-header__title slds-truncate"> {!$Label.c.Pick_Multiple_Serial_Numbers}</span>
+                                                                </h2>
+                                                            </div>
+                                                            <!--<div class="slds-notify__content">
+                                                                <h2 class="slds-text-heading_small mb-0">{!v.exceptionError}</h2>
+                                                            </div>-->
+                                                            <div class="slds-no-flex">
+                                                                
+                                                            </div>
+                                                        </header>
+                                                    </div>
+                                                </article>
+                                                <div class="card shadow-sm slds-m-around_medium">
+                                                    <div class="slds-grid slds-wrap">
+                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_5-of-12">
+                                                            <article class="slds-card-extra">
+                                                                <div class="slds-card__header slds-grid">
+                                                                    <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                                                        
+                                                                        <div class="slds-media__body">
+                                                                            
+                                                                            <div class="slds-grid">
+                                                                                <div class="slds-form-element slds-p-right_small">
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <ui:inputText value="{!v.SearchSerialNos}" class="slds-input" placeholder="{!$Label.c.SalesOrderConsole_Search}"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button class="slds-button slds-button_brand" onclick="{!c.FindSerials}">{!$Label.c.Find_StockTake}</button>
+                                                                            </div>
+                                                                            
+                                                                        </div>
+                                                                        <div class="slds-no-flex">
+                                                                            
+                                                                        </div>
+                                                                    </header>
+                                                                </div>
+                                                                  <div class="slds-card__header slds-grid height56-pick">
+                                                                    <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                                                        
+                                                                        <div class="slds-media__body">
+                                                                            <h2 class="slds-card__header-title">
+                                                                                {!$Label.c.Available_Serials} &nbsp; <!--({!v.PickSerialNos.length}) commented by SM on 16/10/23 Since we are restricting the display of serials to 1000--> 
+                                                                            </h2>
+                                                                        </div>
+                                                                        <div class="slds-no-flex">
+                                                                            
+                                                                        </div>
+                                                                    </header>
+                                                                      </div>
+                                                                <div class="slds-grid slds-wrap slds-p-left_small">
+                                                                      <aura:if isTrue="{!(AND(v.PickSerialNos.length > 0, v.RemainingQty > v.PickSelectedSerialNos.length))}">
+                                                                          <lightning:input type="checkbox" aura:id="selectAllSerials" checked="{!v.selectAllSerials}" label="{!$Label.c.Select_All}" onchange="{!c.selectAllSerials}" class="slds-p-top_xx-small"></lightning:input>
+                                                                          <lightning:select value="{!v.showSerials}" onchange="{!c.SetShowSerial}" variant="label-hidden" class="noLabel">
+                                                                              <option value="10">10</option>
+                                                                              <option value="50">50</option>
+                                                                              <option value="100">100</option>
+                                                                              <option value="200">200</option>
+                                                                              <option value="500">500</option> 
+                                                                              <!--option value="1000">1000</option--> 
+                                                                          </lightning:select>
+                                                                      </aura:if>
+                                                                </div>
+                                                               
+                                                                <div class="slds-grid slds-wrap slds-grid slds-wrap slds-p-top_small" style="max-height: 68vh;overflow: auto;">
+                                                                   
+                                                                    <aura:iteration items="{!v.PickSerialNos}" var="PSN" indexVar="i" start="0" end="{!v.showSerials}">
+                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_x-small slds-p-left_x-small" data-serialId = "{!PSN.SerialNo.Id}" onclick="{!c.PickSerialNosDiv}">
+                                                                            <div class="{!if(PSN.isSelected,'card tilebox-one m-2 cursor-pointer active-card-pick','card tilebox-one m-2 cursor-pointer non-active-card-pick')}">
+                                                                                <div class="card-body">
+                                                                                    <div class="slds-grid slds-wrap">
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 slds-p-right_x-small">
+                                                                                            <i class="fa fa-file-text-o file-text-size"></i></div>
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12">
+                                                                                            <h6 class="mt-1 mb-1 pick_class47">
+                                                                                                <div class="slds-truncate" title="{!PSN.SerialNo.Name}">{!PSN.SerialNo.Name}</div>
+                                                                                            </h6>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </aura:iteration>                                       
+                                                                </div>                       
+                                                            </article>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 text-center" style="padding-top:10%;">
+                                                            <lightning:button label="{!$Label.c.Add_All}" iconName="utility:jump_to_right" iconPosition="right" class="slds-button_brand width125-pick" onclick="{!c.AddAllSerials}" disabled="{!!(AND(v.PickSerialNos.length > 0, v.RemainingQty > v.PickSelectedSerialNos.length))}"/><br/><br/>
+                                                            <lightning:button label="{!$Label.c.SalesOrderConsole_Add}" iconName="utility:right" iconPosition="right" class=" width125-pick" onclick="{!c.AddSerials}" disabled="{!v.disableAdd}"/><br/><br/>
+                                                            <lightning:button label="{!$Label.c.Remove}" iconName="utility:left" iconPosition="left" class="width125-pick" onclick="{!c.RemoveSerials}" disabled="{!v.disableRemove}"/><br/><br/>
+                                                            <lightning:button label="{!$Label.c.Remove_All}" iconName="utility:jump_to_left" iconPosition="left" class="slds-button_brand width125-pick" onclick="{!c.RemoveAllSerials}" disabled="{!(v.PickSelectedSerialNos.length==0)}"/>
+                                                            
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_5-of-12" >
+                                                            <article class="slds-card-extra">
+                                                                <div class="slds-card__header slds-grid height56-pick">
+                                                                    <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                                                        
+                                                                        <div class="slds-media__body">
+                                                                            <h2 class="slds-card__header-title">
+                                                                                {!$Label.c.Serial_Numbers_Reserved_Selected} ({!v.PickSelectedSerialNos.length}&nbsp; {!$Label.c.of} &nbsp;{!v.RemainingQty})
+                                                                            </h2>
+                                                                        </div>
+                                                                        <div class="slds-no-flex">
+                                                                            
+                                                                        </div>
+                                                                    </header>
+                                                                </div>
+                                                                <div class="slds-grid slds-wrap" style="max-height: 68vh;overflow: auto;">
+                                                                    <aura:iteration items="{!v.PickSelectedSerialNos}" var="PSN" indexVar="i" start="0" end="1000">
+                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_x-small slds-p-left_x-small" data-serialId = "{!PSN.SerialNo.Id}" onclick="{!c.PickSelectedSerialNosDiv}">
+                                                                            <div class="{!if(PSN.isSelected,'card tilebox-one m-2 cursor-pointer active-card-pick', if(i >= v.RemainingQty,'card3 tilebox-one m-2 cursor-pointer','card2 tilebox-one m-2 cursor-pointer'))}">
+                                                                                <div class="card-body">
+                                                                                    <div class="slds-grid slds-wrap">
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 slds-p-right_x-small">
+                                                                                            <i class="fa fa-file-text-o file-text-size"></i></div>
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12">
+                                                                                            <h6 class=" mt-1 mb-1 pick_class47">
+                                                                                                <div class="slds-truncate" title="{!PSN.SerialNo.Name}">{!PSN.SerialNo.Name}</div>
+                                                                                            </h6>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </aura:iteration>                                  
+                                                                </div>
+                                                            </article>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="slds-modal__footer text-center">
+                                                <button class="slds-button slds-button_neutral" aria-label="Cancel and close" onclick="{!c.CloseMyModalPickSerial}">{!$Label.c.PackageSlip_Back}</button>
+                                                <button class="slds-button slds-button_brand" onclick="{!c.PickMultiSerials}" disabled="{!(v.PickSelectedSerialNos.length == 0)}">{!$Label.c.Pick}</button>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <div class="slds-backdrop" aura:id="myModalMOSerialBackDrop" role="presentation"></div>
+                                </div>
+                                <div>
+                                    <aura:if isTrue="{!v.soliExistingList.length > 0}">
+                                        <div class="card mb-2">
+                                            <div class="card-body p-1">
+                                                <h5 class="card-title mb-2">{!$Label.c.Pick_Picked_Items}</h5>
+                                                <div class="{!if(v.editErrMsg != '','Pick-newClass17 slds slds-form--inline slds-p-around--small','Pick-newClass18 slds slds-form--inline slds-p-around--small')}">                                          
+                                                    <div class="slds-form-element">
+                                                        <table border="0" width="100%" cellpadding="0" cellspacing="0">
+                                                            <tr>
+                                                                <td align="center" valign="middle">
+                                                                    <output value="{!v.editErrMsg}" id="errmsgscan" class="Pick-newClass19"/>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div> 
+                                                </div>
+                                                <table id="pickList" class="table table-bordered Pick-newClass20 slds-row-hover"><!--slds-max-medium-table-?stacked-horizontal-->
+                                                    <thead>
+                                                        <tr bgcolor="#f3f3f3" class="slds-text-heading--label">
+                                                            <th scope="col" class="slds-is-sortable">
+                                                                <span class="slds-truncate"></span>
+                                                            </th>
+                                                            <th scope="col" class="slds-is-sortable">
+                                                                <span class="slds-truncate">{!$Label.c.AddSubscription_Product}</span>
+                                                            </th>
+                                                            <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                                                                <span class="slds-truncate">{!$Label.c.Product_Code}</span>
+                                                            </th>
+                                                            <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                                                                <span class="slds-truncate">{!$Label.c.Pick_Order_Line}</span>
+                                                            </th>
+                                                            <th scope="col" class="slds-is-sortable">
+                                                                
+                                                                <span class="slds-truncate">{!$Label.c.Pick_PICKED_QTY}</span>
+                                                            </th>              
+                                                            <th scope="col" >
+                                                                <span class="slds-truncate">{!$Label.c.Pick_Serial_Number}</span>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <span class="slds-truncate">{!$Label.c.Batch_Lot}</span>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration var="soliex" indexVar="soliexCounter" items="{!v.soliExistingList}" start="{!v.startIndexCommittedSOLI}" end="{!v.endIndexCommittedSOLI}">
+                                                            <aura:if isTrue="{!and(soliex.soli.ERP7__Logistic_Line_Item__c != null, soliex.soli.ERP7__Logistic_Line_Item__c != undefined)}">  
+                                                                <tr id="{!soliex.soli.Id}" class="{!if(soliex.soli.ERP7__Logistic_Line_Item__r.ERP7__Packed_Quantity__c == 0,true,false)}">
+                                                                    
+                                                                    <td data-label="Delete" class="slds-truncate3">
+                                                                        <span class="slds-truncate3">      
+                                                                            <lightning:button onclick="{!c.DeleteRecordSOLI}" class="neutralC" name="{!soliex.soli.Id}"> 
+                                                                                <a href="javascript:void(0)" title="delete" class="MOs_class37">
+                                                                                    <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" style="cursor:pointer; max-width: 20px !important;" />  
+                                                                                </a> 
+                                                                            </lightning:button>
+                                                                        </span>
+                                                                    </td>
+                                                                    
+                                                                    <td data-label="Product" class="slds-truncate3">
+                                                                        <span class="slds-truncate3">                                                
+                                                                            <aura:if isTrue="{!if(and(soliex.soli.ERP7__Product__r.Name != Null, soliex.soli.ERP7__Product__r.Name != ''),true,false)}">
+                                                                                <lightning:formattedUrl label="{!soliex.soli.ERP7__Product__r.Name}" value="{!'/'+soliex.soli.ERP7__Product__c}" target="_blank"/>
+                                                                                
+                                                                            </aura:if> 
+                                                                            <aura:if isTrue="{!soliex.soli.ERP7__Product__r.ERP7__Picture__c != undefined}">
+                                                                                <img src="{!soliex.soli.ERP7__Product__r.ERP7__Picture__c}" id="itemImage" class="Pick-newClass25 mobiledisplaynone"/>
+                                                                                
+                                                                            </aura:if>
+                                                                        </span>
+                                                                    </td>
+                                                                    <td data-label="Pick" class="mobiledisplaynone mobiledisplaynone-landscape">
+                                                                        <span class="slds-truncate3"><lightning:formattedText value="{!soliex.soli.ERP7__Product__r.ProductCode}" /></span>
+                                                                    </td> 
+                                                                    <td data-label="Order Line" class="mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                                                                        <span class="slds-truncate3">
+                                                                            <lightning:formattedUrl label="{!soliex.soli.ERP7__Logistic_Line_Item__r.Name}" value="{!'/'+soliex.soli.ERP7__Logistic_Line_Item__c}" target="_blank"/>
+                                                                        </span>
+                                                                    </td>        
+                                                                    <td data-label="Quantity">
+                                                                        <span class="slds-truncate3">
+                                                                            <lightning:formattedNumber  value="{!soliex.soli.ERP7__Quantity__c}" />
+                                                                        </span>
+                                                                    </td> 
+                                                                    <td data-label="Serial Number" >
+                                                                        <!--<aura:if isTrue="{!v.showSN}">-->
+                                                                        <aura:if isTrue="{!soliex.editserial}">
+                                                                            <span class="slds-truncate" onclick="{!c.checkserial}" name="{!soliexCounter}">
+                                                                                <c:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c " aura:id="sl" IconName="standard:macros" selectedRecordId="{!soliex.soli.ERP7__Serial__c}"  qry="{!'And ERP7__Product__c = \''+soliex.soli.ERP7__Product__c+'\' AND (ERP7__Available__c = true OR Id = \''+soliex.soli.ERP7__Serial__c+'\') AND ERP7__Scrap__c = false'}"/>
+                                                                            </span>
+                                                                            <aura:set attribute="else">
+                                                                                <aura:if isTrue="{!(and(soliex.soli.ERP7__Serial__c != null,soliex.soli.ERP7__Serial__c != undefined))}">
+                                                                                    <span class="slds-truncate3" >
+                                                                                        <lightning:formattedUrl label="{!soliex.soli.ERP7__Serial__r.Name}" value="{!'/'+soliex.soli.ERP7__Serial__c}" target="_blank"/>
+                                                                                        <!-- {!soliex.soli.ERP7__Serial__r.Name}-->
+                                                                                    </span>
+                                                                                    <button onclick="{!c.inlineEditSerial}" oncommit="{!c.removeeditserial}" data-id="{!soliexCounter}" class="slds-button slds-button_icon slds-cell-edit__button slds-m-left_x-small" tabindex="0" title="Edit Serial">
+                                                                                        <lightning:icon iconName="utility:edit" size="xx-small" alternativeText="{!$Label.c.Edit}"/>
+                                                                                    </button>
+                                                                                </aura:if>
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                        <!--</aura:if>-->
+                                                                    </td> 
+                                                                    <td data-label="Batch/Lot Code">
+                                                                        <!--<aura:if isTrue="{!v.showBatch}">-->
+                                                                        <aura:if isTrue="{!soliex.editbatch}"> 
+                                                                            <span class="slds-truncate" onclick="{!c.checkbatchStock}" name="{!soliexCounter}">
+                                                                                <c:CustomInputLookUp objectAPIName="ERP7__Batch__c " aura:id="batch" IconName="standard:macros" selectedRecordId="{!soliex.soli.ERP7__Material_Batch_Lot__c}"  qry="{!' AND  ERP7__Product__c = \''+soliex.soli.ERP7__Product__c+'\' AND (ERP7__Active__c = true OR Id = \''+soliex.soli.ERP7__Material_Batch_Lot__c+'\') AND ERP7__Expired__c = false AND ERP7__Available_Quantity__c > 0'}"/>
+                                                                            </span>
+                                                                            <aura:set attribute="else"> 
+                                                                                <aura:if isTrue="{!(and(soliex.soli.ERP7__Material_Batch_Lot__c != null,soliex.soli.ERP7__Material_Batch_Lot__c != undefined))}">
+                                                                                    
+                                                                                    <span class="slds-truncate">
+                                                                                        <lightning:formattedUrl label="{!soliex.soli.ERP7__Material_Batch_Lot__r.Name}" value="{!'/'+soliex.soli.ERP7__Material_Batch_Lot__c}" target="_blank"/>
+                                                                                        <!-- {!soliex.soli.ERP7__Material_Batch_Lot__r.Name}-->
+                                                                                    </span>
+                                                                                    <button onclick="{!c.inlineEditbatch}" oncommit="{!c.removeeditbatch}" data-id="{!soliexCounter}" class="slds-button slds-button_icon slds-cell-edit__button slds-m-left_x-small" tabindex="0" title="Edit Batch/Lot">
+                                                                                        <lightning:icon iconName="utility:edit" size="xx-small" alternativeText="{!$Label.c.Edit}"/>
+                                                                                    </button>
+                                                                                </aura:if>
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                        <!-- </aura:if>-->
+                                                                    </td> 
+                                                                </tr>
+                                                            </aura:if>
+                                                        </aura:iteration> 
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        <aura:if isTrue="{!v.soliExistingList.length > 100}">
+                                            <div class="slds-docked-form-footer" >
+                                                <div class="col-md-12" style="text-align: center;"> 
+                                                    &nbsp;{!$Label.c.Acc_Recev_Showing} &nbsp;<span class="text-lightblue"> {!v.startIndexCommittedSOLI} - {!v.endIndexCommittedSOLI} &nbsp; {!$Label.c.Acc_Recev_of_total} &nbsp;{!v.soliExistingList.length} </span> &nbsp;
+                                                    <lightning:buttonIcon iconName="utility:chevronleft" variant="brand" alternativeText="Previous" title="Previous" onclick="{!c.PreviousCommittedSOLI}" disabled="{!v.startIndexCommittedSOLI == 0}"/>
+                                                    &nbsp; 
+                                                    <lightning:buttonIcon iconName="utility:chevronright" variant="brand" alternativeText="Next" title="Next" onclick="{!c.NextCommittedSOLI}" disabled="{!v.endIndexCommittedSOLI >= (v.soliExistingList.length - 1)}"/>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </aura:if>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div> 
+            <aura:if isTrue="{!(v.soliWrapperList.length > 0)}">
+                <div class="Pick-newClass27 " onclick="{!c.saveSOLI}">
+                    <a href="javascript:void(0);" class="slds-button slds-button--brand2 Pick-newClass26">
+                       <div class="slds-truncate" title="{!$Label.c.Pick_Outbound_logistics}"> {!$Label.c.Pick_Outbound_logistics}</div>
+                    </a> 
+                </div>            
+            </aura:if>
+            <aura:if isTrue="{!v.ShowLangOptionForPicksliptModal}">
+                <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1">
+                            <lightning:radioGroup name="radioGroup"
+                                                  label="Select Language"
+                                                  options="{! v.Langoptions }"
+                                                  value="{! v.SelectedLang }"
+                                                  type="radio"/>
+                        </div>
+                        <div class="slds-modal__footer">
+                            <lightning:button label="Cancel" onclick="{!c.goBackPackList}"/>
+                            <lightning:button variant="brand" label="Next" onclick="{!c.PackListNext}"/>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+            </aura:if>
+        </div>
+       
+    </body>
+</aura:component>

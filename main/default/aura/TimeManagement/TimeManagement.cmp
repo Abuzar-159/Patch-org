@@ -1,0 +1,263 @@
+<aura:component controller="TimeManagement" implements="force:appHostable,forceCommunity:availableForAllPageTypes" access="global">    
+     <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink"/> 
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css, /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css,
+                              /resource/ERP7__bootStrap/js/bootstrap.min.js, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>      
+         <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/TimeManagement.css"/>"
+    </head>  
+  
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}"/>
+    <aura:attribute name="expertLocsList" type="String[]" />
+    <aura:attribute name="selectedExpLocation" type="String" default=''/>
+    <aura:attribute name="prodServiceList" type="String[]" />
+    <aura:attribute name="selectedService" type="String" />
+    <aura:attribute name="dateFormat" type="String" />
+    <aura:attribute name="seBool" type="Boolean" default="false"/>
+    <aura:attribute name="saveErrorMsg" type="String" default="Please fill out all * fields"/> 
+    <aura:attribute name="checker" type="Integer" default="7" />
+    <aura:attribute name="ResourceList" type="String[]" default=""/>
+    <aura:attribute name="ResourceListDum" type="String[]" default=""/>    
+    <aura:attribute name="TOTList" type="String[]" default=""/>
+    <aura:attribute name="DateList" type="String[]" default=""/>    
+    <aura:attribute name="PrevControll" type="Boolean" default="false"/>    
+    <aura:attribute name="fetchResourcesCtrl" type="Boolean" default="true"/>
+    <aura:attribute name="showResourcesBool" type="Boolean" default="true"/>
+    <aura:attribute name="hidePreviousBool" type="Boolean" default="true" /> 
+    <aura:attribute name="TimeList" type="String[]" default=""/>
+    <aura:handler event="c:TimeEvent" action="{!c.TimeEventHandler}"/>
+    <aura:attribute name="TeamList" type="String[]" default=""/>
+    <aura:attribute name="selectedTeam" type="String" default=""/>
+    <aura:attribute name="isSupervisor" type="Boolean" default="true"/>
+    <aura:handler event="c:PaginationEvent" action="{!c.PaginationEventHandler}"/>
+    <aura:attribute name="showPNPannel" type="Boolean" default="true"/>	
+    <aura:attribute name="ManageResourcePageUrl" type="String" default=""/>	
+    <aura:attribute name="ResourceURL" type="String" default=""/>	
+    <aura:attribute name="TimeDuration" type="Integer" default="0"/>	
+    <aura:attribute name="callDoInit" type="Boolean" default="true"/>
+    <aura:attribute name="criteriaMsg" type="String" default=""/>
+    
+    <div class="erp_mark7 timeM-cls1" >
+            <div class="erp_Mark7">      
+             <div class="" aura:id="body">  
+                <div class="slds-page-header slds-page-header--object-home timeM-cls2" >
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                             <aura:renderIf isTrue="{!v.hidePreviousBool}" > 
+                             
+                                  <a class="disabledClass timeM-cls3">
+                                   <i class="fa fa-chevron-left disabledClass" aria-hidden="true"></i> Previous&nbsp;
+                               </a>
+                               <aura:set attribute="else">
+                                 <a href="javascript:void(0)" onclick="{!c.previous}" class="timeM-cls3">
+                                   <i class="fa fa-chevron-left" aria-hidden="true"></i> Previous&nbsp;   
+                               </a>
+                               </aura:set> 
+                              </aura:renderIf>      
+                         
+                            
+                                
+                                <div class="erp_Mark7 slds-media__body pl-4 timeM-cls4" >
+
+                                    <h1 class="slds-page-header__title slds-p-right--x-small timeM-cls5" >
+                                        <div class="slds-truncate"> &nbsp;  &nbsp;  &nbsp;  &nbsp;  
+                                            <span class="text-white font-weight-bold timeM-cls6">Break Time&nbsp;= <i class="fa fa-coffee" aria-hidden="true"></i>
+                                            &nbsp;Available Time&nbsp;= <i class="fa fa-clock-o" aria-hidden="true"></i> <!--  value="{!'/apex/ManageResource?RId='+v.ResourceList[0].Id}"    -->
+                                             &nbsp;&nbsp;<lightning:formattedText onclick="{!c.getManageResourcePage}" title="Manage Time Off" target="_self"  aura:id="MRId" value="Time Off"
+                                                                       class="{!v.ResourceList.length>0?'':'ResourceDisabledClass'}" />
+                                             &nbsp;&nbsp;<i class="fa fa-calendar-check-o" aria-hidden="true" title="Time Off" ></i>
+                                           </span> 
+                                        </div>
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <img aura:id="mainSpinId" id="mainSpin" src="/resource/ERP7__SLDS/assets/images/spinners/slds_spinner_brand.gif" class="timeM-cls7" />
+                        &nbsp; &nbsp;
+                        <span class="{!v.isSupervisor?'slds-show':'slds-hide'}">
+                            <lightning:select  aura:id="TeamId" value="{!v.selectedTeam}" onchange="{!c.onchange}" variant="label-hidden"  class="display-lable">
+                                <aura:iteration items="{!v.TeamList}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedTeam, option.value)}"/>
+                                </aura:iteration>
+                            </lightning:select>&nbsp;&nbsp;&nbsp;
+                        </span>
+                        
+                        <lightning:select  aura:id="locationId" value="{!v.selectedExpLocation}" onchange="{!c.onchange}" label="{!v.currentSelectedLocationName}">
+                            <aura:iteration items="{!v.expertLocsList}" var="option">
+                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedExpLocation, option.value)}"/>
+                            </aura:iteration>
+                        </lightning:select>&nbsp;&nbsp;&nbsp;
+                         
+                        <lightning:select  aura:id="serviceId" value="{!v.selectedService}" onchange="{!c.onchange}" label="{!v.currentSelectedLocationName}">
+                                <aura:iteration items="{!v.prodServiceList}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedService, option.value)}"/>
+                                </aura:iteration>
+                            </lightning:select>&nbsp;&nbsp;&nbsp;
+                        
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small">
+                            <a href="javascript:void(0)" aura:id="saveBtnId" onclick="{!c.next}" class="timeM-cls8"> Next&nbsp;
+                                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                            </a>
+                            
+                        </div>
+                    </div>
+                    
+                 </div>
+                 <div>
+                 </div>
+                 
+                 <div class="container-fluid slds-m-top--small" >
+                     <div class="row timeM-cls9">
+                         <div class="col-md-3 col-ERP7-right-panels">
+                         </div>
+                         <div class="col-md-3 col-ERP7-right-panels">
+                         </div>
+                         <table class="table table-condensed timeM-cls10" >
+                             
+                             <thead>
+                                 <tr>
+                                     <td align="center" width="10%;" class="timeM-cls11">
+                                         <span class="timeM-cls12">
+                                         </span>
+                                     </td>
+                                 </tr>
+                                 <tr>
+                                   <td align="center" width="9%;" class="timeM-cls13"> <!-- timeEventrok -->
+                                           <div class="timeEventrok timeM-cls14" > 
+                                            <h5 class="text-white font-weight-light pt-1 pb-1 pl-2 timeM-cls15" > Resources</h5> 
+                                              
+                                            </div>
+                                    </td>
+                                    
+                                  
+                                      <aura:iteration items="{!v.DateList}" var="d">                           
+                                       <td align="center" width="9%;" class="timeM-cls16">
+                                          <span class="timeM-cls17">
+                                          <lightning:formattedDateTime value="{!d}" />       
+                                          </span>
+                                        </td>
+                                    </aura:iteration>
+                                    
+                                </tr>
+
+                            </thead>
+                        </table>
+                        <div class="container-fluid timeM-cls18" >
+                           
+                         
+                              <!-- =================================================== RESOURCES PANEL =========================================================== -->
+                            <aura:if isTrue="{!v.showResourcesBool}">    
+                               <aura:iteration items="{!v.ResourceList}" var="r" indexVar="RIndex">
+                                 <aura:if isTrue="{!r.Name!=null}"> 
+                                 <div class="shadow-sm mb-1 pb-2"> 
+                                  
+                                 <!-- ============FOR ROW1 ==================-->      
+                                 <div id="RPId" border="" class="row timeM-cls19" > 
+
+                                        <!-- ============FOR RESOURCE NAME==================-->
+                                     		<div class="col-md-2" >
+                                                <div class="row">
+                                                    <div class="col-8 timeM-cls13" >
+                                                        <h5 class="pl-2 pt-2 slds-truncate timeM-cls20" data-record='{!r.Id}' >
+                                                           <lightning:formattedUrl value="{!'/'+r.Id}" title="{!r.Name}" target="_blank" aura:id="RNameId" label="{!r.Name}"
+                                                                         class="{!v.isSupervisor==false?'ResourceDisabledClass':''}"/>
+                                                          <!--  click="{!c.showResource}"  {!v.ResourceURL}" ResourceDisabledClass -->
+                                                        </h5> 
+                                                     </div>
+                                                    <div class="col-2 timeM-cls21" >
+                                     					<i class="fa fa-clock-o" aria-hidden="true" ></i>	
+                                                    </div>
+                                                </div>     
+                                     		</div> 
+                                   
+                                          
+                                     
+                                     
+                                     <!-- ============FOR WEEK DAYS START/END TIME==================-->
+                                         <div class="col-md-10 mt-2">
+                                           <div class="slds-grid" >
+                                             
+                                     		<aura:iteration items="{!r.TimeOffList}" var="t" indexVar="Index">                                            
+                                                <div class="{!t.Start_Time==undefiend?'slds-col slds-m-right-xx-small TimeDisabledClass':'slds-col slds-m-right-xx-small'}" 
+                                                     title="{!and(t.Start_Time==undefined,t.isAvailable==false)?'Not Available':'Start Time'}" > 
+                                                  <c:Time value="{!t.Start_Time}" RIndex="{!RIndex}" DIndex="{!Index}" action="st" isAvailable="{!t.isAvailable}" TimeDuration="{!v.TimeDuration}"/>  
+                                                </div> 
+                                                <div class="{!t.End_Time==undefiend?'slds-col slds-m-right-xx-small TimeDisabledClass':'slds-col slds-m-right-xx-small'}" title="{!and(t.End_Time==undefined,t.isAvailable==false)?'Not Available':'End Time'}" >
+                                                  <c:Time value="{!t.End_Time}" RIndex="{!RIndex}" DIndex="{!Index}" action="et" isAvailable="{!t.isAvailable}" />                                                   
+                                                </div>
+                                            </aura:iteration>
+                                              </div>
+                                         </div>                                              
+                                </div> 
+                                    
+                                     
+                                <!-- ============FOR ROW2 ==================-->        
+                                  <div id="RPId" border="" class="row timeM-cls19" > 
+                                      
+                                        <!-- ============FOR LOGOS ==================--> 
+                                      
+                                        <div class="col-md-2" >
+                                                <div class="row">
+                                                    <div class="col-8 timeM-cls13">
+                                                        <h5 class="pl-2 pt-2 slds-truncate timeM-cls20"  data-record='{!r.Id}'>
+                                                                                                                     
+                                                        </h5> 
+                                                     </div>
+                                                    <div class="col-2 timeM-cls21" >
+                                     					<i class="fa fa-coffee" aria-hidden="true" ></i>	
+                                                    </div>
+                                                </div>     
+                                     		</div> 
+                                      
+                                      
+                                     
+                                        <!-- ============FOR INDIVIDUAL WEEK DAYS BREAK TIME ==================--> 
+                                         <div class="col-md-10 mt-2">
+                                           <div class="slds-grid" >  
+                                     		<aura:iteration items="{!r.TimeOffList}" var="t" indexVar="Index">                                                                            
+                                                <div class="{!t.BST==undefiend?'slds-col slds-m-right-xx-small TimeDisabledClass':'slds-col slds-m-right-xx-small'}"
+                                                     title="{!and(t.BST==undefined,t.isAvailable==false)?'Not Available':'Break Start Time'}" >  <!-- {!t.isAvailable?'':'pointer-events:none; cursor:not-allowed;'} {!t.TOBool?t.TOType:''}  -->
+                                                   <c:Time value="{!t.BST}" RIndex="{!RIndex}" DIndex="{!Index}" action="bst" TimeDuration="{!v.TimeDuration}" isAvailable="{!t.isAvailable}" />  <!-- BStart_Time  -->
+                                                </div>
+                                                <div class="{!t.BET==undefiend?'slds-col slds-m-right-xx-small TimeDisabledClass':'slds-col slds-m-right-xx-small'}"
+                                                     title="{!and(t.BET==undefined,t.isAvailable==false)?'Not Available':'Break End Time'}" >   <!-- {!t.isAvailable?'':'pointer-events:none; cursor:not-allowed;'} {!t.TOBool?t.TOType:''}  -->
+                                                  <c:Time value="{!t.BET}" RIndex="{!RIndex}" DIndex="{!Index}" action="bet" isAvailable="{!t.isAvailable}" />  
+                                                </div>                                                
+                                            </aura:iteration>
+                                            </div>
+                                         </div>                                              
+                                  </div>
+
+                                </div>                                      
+                              </aura:if>        
+                           </aura:iteration>                             
+                        </aura:if>       
+     
+                       <!-- FOR PAGINATION-->      
+                       <aura:if isTrue="{!and(v.ResourceList.length>0,v.showPNPannel)}">      
+                         <c:PaginationNumber RecordList="{!v.ResourceListDum}" Entries="4"/>          
+                       </aura:if>
+                       
+                       <!-- FOR NOT AVAILIBITY MESSAGE-->      
+                       <aura:renderIf isTrue="{!v.criteriaMsg !=''}">
+                          <div class="slds-notify_container slds-is-relative" aura:id="criteriaMsgId">
+                            <div class="slds-notify slds-notify_toast slds-theme_warning timeM-cls22" role="alert" >
+                                <span class="slds-assistive-text">warning</span>
+                                <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                <div class="slds-notify__content timeM-cls23">
+                                    <h2 class="slds-text-heading_small  timeM-cls24">{!v.criteriaMsg} </h2>
+                                </div>
+                            </div>
+                          </div>       
+                       </aura:renderIf>  
+                            
+                        </div>
+                    </div>
+                </div>
+             </div>         
+           </div> 
+        </div>
+</aura:component>

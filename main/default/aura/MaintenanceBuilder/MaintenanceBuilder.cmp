@@ -1,0 +1,480 @@
+<aura:component Controller="ERP7.MaintenanceBuilder" implements="force:appHostable" access="global">
+   <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+   <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+   <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+   <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+   <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/MaintenanceBuilder.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+   <aura:attribute name="custInvoiceTest" type="Invoice__c" default="{sobjectType:'Invoice__c','ERP7__Account__c':''}"/>
+   <aura:attribute name="WCCP" type="Object"/>
+   <aura:attribute name="exceptionError" type="String"/>
+   <aura:attribute name="RecordId" type="String"/>
+    <aura:attribute name="SOID" type="String"/>
+   <aura:attribute name="Show" type="Boolean" default="false"/>
+   <aura:attribute name="FilterShow" type="Boolean" default="false"/>
+   <aura:attribute name="Record" type="Object"/>
+   <aura:attribute name="WC" type="Work_Center__c" default="{sobjectType : 'Work_Center__c','ERP7__Plant__c ':''}"/>
+   <aura:attribute name="WO2Fin" type="WO__c" default="{sobjectType : 'WO__c'}"/>
+   <aura:attribute name="MO2Fin" type="Manufacturing_Order__c" default="{sobjectType : 'Manufacturing_Order__c'}"/>
+   <aura:attribute name="simpleRecord" type="Object"/>
+   <aura:attribute name="today" type="Date" />
+    
+   <aura:attribute name="View" type="String" default="Grid"/>
+   <aura:attribute name="selectedWOStatus" type="String" default="All"/>
+   <aura:attribute name="MoIndex1" type="Integer" default="-1"/>
+   <aura:attribute name="MoIndex2" type="Integer" default="-1"/>
+   <aura:attribute name="MOduration" type="Decimal" default="3"/>
+   <aura:attribute name="MOtimeLine" type="String" default="M"/>
+
+   <force:recordData aura:id="deleteHandler" recordId="{!v.RecordId}" fields="Id" recordUpdated="{!c.CommitDeleteRecord}" targetError="{!v.exceptionError}"/>
+   <aura:handler name="change" value="{!v.WC}" action="{!c.loadAllDetails}"/>
+    <aura:handler name="change" value="{!v.SOID}" action="{!c.loadAllDetails}"/>
+   <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+   <aura:method name="popInit" action="{!c.loadAllDetails}"></aura:method> 
+   
+    <body class="erp_mark7 maqsood mb-class1" aura:id="body">
+    <div class="erp_mark7 mb-class2">
+     	<span class="mb-class3">
+         <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed mb-class4','slds-notify_container slds-is-fixed mb-class5')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error mb-class6" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small mb-class7">{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close mb-class8">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />		
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+      <div class="slds erp_mark7 epr_Mark7"> 
+       <div class="panel-collapse ">
+           <div class="panel-body mb-class9">
+                <ul class="nav nav-tabs " role="tablist">
+                    <li class="nav-item" onclick="{!c.NavPlanner}">
+                        <a class="nav-link mb-class10" data-toggle="tab" role="tab">
+                        <i class="fa fa-list mb-class11" aria-hidden="true"></i>&nbsp;Planner
+                        </a>
+                    </li>
+                    <li class="nav-item"> <a class="nav-link mb-class10" data-toggle="tab" role="tab" onclick="{!c.NavScheduler}">
+                        <i class="fa fa-clock-o mb-class11" aria-hidden="true"></i>&nbsp;Scheduler</a>
+                    </li>
+                    <li class="nav-item active"> <a class="nav-link mb-class10" data-toggle="tab" role="tab">
+                        <i class="fa fa-gears mb-class11" aria-hidden="true" ></i>&nbsp;Builder</a>
+                    </li>
+                    <div class="slds-grid col-2 mb-class12">
+                        <aura:if isTrue="{!v.selectedWOStatus != 'All'}">
+                            <a class="mb-class13" title="All Orders" onclick="{!c.statusCard}" data-status="All">
+                                <center><i class="fa fa-refresh mb-class14"></i></center>
+                            </a>
+                        </aura:if>
+                        <div class="mb-class15">
+                            <a class="{!(v.View == 'Grid')?'acitve-list2 mb-class16':'mb-class17'}" title="Work Centers" data-tab = "Grid" href="javascript:void(0);" onclick="{!c.toggleTabs}">
+                                <center><i class="fa fa-th-large"></i></center>
+                            </a>
+                            <a class="{!(v.View == 'List')?'acitve-list2 mb-class16':'mb-class17'}" title="Work Centers" data-tab = "List" href="javascript:void(0);" onclick="{!c.toggleTabs}">
+                                <center><i class="fa fa-list"></i></center>
+                            </a>
+                        </div>
+                        <a class="mb-class18" aura:id="wcFilter" title="Filters" onclick="{!c.FilterSet}" >
+                            <center><i class="fa fa-filter mb-class19"></i></center>
+                        </a>
+                    </div>
+                </ul>
+           </div>
+       </div>
+    </div>
+        <div class="maqsood erp_Mark7 container-fluid">
+            <div class="row pt-2 m-0">
+                <div class="col-xl-3 col-lg-6 mb-1">
+                    <div class="card background-new mb-1">
+                        <div class="card-body text-center mb-class20"  onclick="{!c.statusCard}" data-status="Draft">
+                            <h6 class="mb-0 mt-0">Issued</h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-6 mb-1">
+                    <div class="card background-inprogress mb-1">
+                        <div class="card-body text-center mb-class20" onclick="{!c.statusCard}" data-status="In Progress">
+                            <h6 class="mb-0 mt-0">In Progress</h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-6 mb-1">
+                    <div class="card background-success mb-1">
+                        <div class="card-body text-center mb-class20" onclick="{!c.statusCard}" data-status="Complete">
+                            <h6 class="mb-0 mt-0">Completed</h6>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-6 mb-1">
+                    <div class="card l-bg-orange mb-1">
+                        <div class="card-body text-center mb-class20"  onclick="{!c.statusCard}" data-status="Cancelled">
+                            <h6 class="mb-0 mt-0">Backlog</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <div class="epr_Mark7 maqsood">
+        <div class="container-fluid slds-m-top--x-small">
+            <div class="{!(v.View == 'Grid')?'slds-show':'slds-hide'}" aura:id="wcGrid">
+                <aura:if isTrue="{!not(greaterthan(v.WCCP.PWIK.length, 0))}">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td colspan="8" class="mb-class21"> 
+                                <div class="no projects mb-class22">
+                                    <div class="slds-notify_container slds-is-relative mb-class23">
+                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                            <div>
+                                                <span class="slds-assistive-text">warning</span>
+                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                </span>
+                                            </div>
+                                            <div class="slds-notify__content mb-class24">
+                                                <h2 class="slds-text-heading_small mb-class25">Sorry, No Orders Available.</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <aura:set attribute="else">
+                        <div class="maqsood erp_Mark7 container-fluid">
+                            <aura:iteration var="PW" indexVar="productCount" items="{!v.WCCP.PWIK}">
+                                <div class="card col-12 shadow-sm p-1 mb-class26">
+                                    <div class="card-body mb-class27">
+                                        <h6 class="card-title mb-0 pt-1">
+                                            <div class="slds-truncate2 mb-class28">
+                                                <strong>{!productCount+1 +'. '}&nbsp;<lightning:formattedUrl label="{!PW.WorkCenter.Name}" value="{!'/'+PW.WorkCenter.Id}" target="_blank"/></strong>
+                                            </div>
+                                        </h6>
+                                        <div class="slds-grid slds-wrap" id="rfpWorkbench">
+                                            <aura:iteration var="ss" items="{!PW.WOS}" indexVar="count">
+                                                <div class="col-md-3">
+                                                    <div class="card shadow-custom mb-class29">
+                                                        <div class="card-body mb-class30">
+                                                            <div class="d-flex align-items-center col-12 mb-class31">
+                                                                <h5 class="mb-0 mt-0 mb-class32">
+                                                                    <div class="slds-grid mb-class33">
+                                                                        <div class="slds-col col-8 p-0">
+                                                                            <div class="slds-truncate2 mb-class34">
+                                                                                <strong> <lightning:formattedUrl value="{!'/'+ss.ERP7__Product__c}" label="{!ss.ERP7__Product__r.Name}" target="_blank"/></strong>
+                                                                            </div>
+                                                                        </div> 
+                                                                    </div>
+                                                                </h5>
+                                                            </div>
+                                                            <div class="slds-grid mb-class35" >
+                                                                <a href="{!'/apex/ERP7__Traveller?ra=pdf&amp;RId='+ss.Id}"  target="_blank" title="Traveller">
+                                                                    <i title="Traveller" class="fa fa-file-pdf-o mb-class36" aria-hidden="true"></i>
+                                                                </a>&nbsp;
+                                                                <aura:if isTrue="{!(ss.ERP7__MO__r.ERP7__StartDate__c > v.WCCP.NOW)}">
+                                                                    <div onclick="{!c.ScheduleMO}" data-record-Id="{!ps.MO.Id}">
+                                                                        <i class="fa fa-clock-o mb-class37" aria-hidden="true" title="reSchedule" ></i>
+                                                                    </div>&nbsp;
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="col-4"></div>
+                                                            <div class="text-muted small mt-1 mb-1">Build {!ss.ERP7__Quantity_Built__c}/{!ss.ERP7__Quantity_Ordered__c}<br/>Scrap {!ss.ERP7__Quantity_Scrapped__c}/{!ss.ERP7__Quantity_Ordered__c}</div>
+                                                            <p class="">
+                                                                <div class="mb-1 slds-grid mr-2 mt-2"> 
+                                                                    <div class="{!((ss.ERP7__Status__c == 'Issued')?'Issuedgrid':'')||((ss.ERP7__Status__c == 'In Progress')?'InProgressgrid':'')||((ss.ERP7__Status__c == 'Complete')?'Completegrid':'')|| ((ss.ERP7__Status__c == 'Backlog')?'Backloggrid':'')}">
+                                                                        <div class="slds-col col-12 p-0 ">
+                                                                            <span class="slds-truncate ">
+                                                                                <aura:renderIf isTrue="{!ss.ERP7__Active__c}">
+                                                                                    <div class="slds-grid">
+                                                                                        <div class="slds-truncate4 mb-class38" data-record-id = "{!ss.Id}" onclick="{!c.NavWO}">
+                                                                                            <lightning:formattedText title="{!ss.ERP7__Status__c}" value="{!ss.Name}" class="whitetext"/>
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>
+                                                                                </aura:renderIf>
+                                                                                <aura:renderIf isTrue="{!not(ss.ERP7__Active__c)}"> 
+                                                                                    <div class="slds-grid">
+                                                                                        <div class="slds-truncate4" >
+                                                                                            <lightning:formattedText title="{!ss.Name}" value="{!ss.Name}" class="whitetext"/>
+                                                                                        </div>
+                                                                                    </div>     
+                                                                                </aura:renderIf>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </p>
+                                                            <div class="row m-0">
+                                                                <div class="col-12 p-0">
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-col col-6"> 
+                                                                            <div class="startime-maq mb-class39">
+                                                                                <lightning:formattedDateTime aura:id="oDateTime" value="{!ss.ERP7__Start_Date__c}"  month="short" day="2-digit" hour="numeric" minute="2-digit"  timeZone="{!$Locale.timezone}"/>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="slds-col col-6">
+                                                                            <div class="endime-maq mb-class40">
+                                                                                <lightning:formattedDateTime aura:id="oDateTime" value="{!ss.ERP7__ExpectedDate__c}" month="short" day="2-digit" hour="numeric" minute="2-digit"  timeZone="{!$Locale.timezone}"/>
+                                                                            </div>
+                                                                        </div> 
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </aura:iteration>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aura:iteration>
+                        </div>
+                    </aura:set>
+                </aura:if>
+            </div>
+            <div class="{!(v.View == 'List')?'slds-show':'slds-hide'}" aura:id="wcList">
+                <aura:if isTrue="{!not(greaterthan(v.WCCP.PWIK.length, 0))}">
+                    <tr>
+                        <td colspan="8">
+                            <div class="no projects mb-class41">
+                                <div class="slds-notify_container slds-is-relative mb-class42">
+                                    <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                        <div>
+                                            <span class="slds-assistive-text">warning</span>
+                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                            </span>
+                                        </div>
+                                        <div class="slds-notify__content mb-class43">
+                                            <h2 class="slds-text-heading_small mb-class44">Sorry, No orders Available.</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <aura:set attribute="else">
+                        <aura:iteration var="PW" indexVar="productCount" items="{!v.WCCP.PWIK}">
+                            <div class="card shadow-custom mb-class45">
+                                <div class="card-body mb-class46">
+                                    <div class="table-responsive mb-class47" tabindex="1">
+                                        <table class="table">
+                                        <tbody>
+                                            <tr class="slds-text-heading--label">
+                                                <th width="30%" align="left" valign="middle" scope="col">
+                                                    <div class="slds-truncate2">
+                                                        <lightning:formattedUrl label="{!productCount+1 +'. '+PW.WorkCenter.Name}" value="{!'/'+PW.WorkCenter.Id}" target="_blank" />
+                                                    </div>
+                                                </th>
+                                                <th scope="col" ><div class="slds-truncate2">Qty</div></th>
+                                                <th scope="col" ><div class="slds-truncate2">Timeline</div></th>
+                                                <th scope="col" ><div class="slds-truncate2">Work Order</div></th>
+                                                <th scope="col" ><div class="slds-truncate2"></div></th>
+                                            </tr>
+                                        </tbody>
+                                        <aura:iteration var="ss" items="{!PW.WOS}" indexVar="count">
+                                            <tbody>
+                                                <tr class="slds-hint-parent ">
+                                                    <td class="slds-truncate2">
+                                                        <div class="slds-grid">
+                                                            <a href="{!'/apex/ERP7__Traveller?ra=pdf&amp;RId='+ss.Id}"  target="_blank" title="Traveller">
+                                                                <i title="Traveller" class="fa fa-file-pdf-o mb-class48" aria-hidden="true"></i>
+                                                            </a>&nbsp;
+                                                            <aura:if isTrue="{!and(ss.ERP7__Start_Date__c > v.WCCP.NOW, ss.ERP7__Status__c == 'Issued')}">
+                                                                <div onclick="{!c.ScheduleWO}" data-record-Id="{!ss.Id}">
+                                                                    <i class="fa fa-clock-o mb-class49" aria-hidden="true" title="reSchedule" ></i>
+                                                                </div>&nbsp;
+                                                            </aura:if>
+                                                            <div class="slds-truncate2 mb-class50">
+                                                                <lightning:formattedUrl target="_blank"  value="{!'/'+ss.ERP7__Product__c}" label="{!ss.ERP7__Product__r.Name}"/>
+                                                            </div>&nbsp;
+                                                            <aura:renderIf isTrue="{!ss.ERP7__Product__r.ERP7__Picture__c != Null}"> 
+                                                                &nbsp;<lightning:avatar src="{!ss.ERP7__Product__r.ERP7__Picture__c}" alternativeText="" size="40"/>
+                                                            </aura:renderIf>
+                                                        </div>
+                                                    </td>
+                                                    <td class="slds-truncate2">
+                                                        <span>
+                                                            {!ss.ERP7__Quantity_Built__c} / {!ss.ERP7__Quantity_Ordered__c}
+                                                        </span>
+                                                    </td>
+                                                    <td data-label="" class="mb-class51">
+                                                        <div class="startime-maq mb-class52">
+                                                            <lightning:formattedDateTime month="short" day="2-digit" hour="numeric" minute="2-digit"  timeZone="{!$Locale.timezone}" aura:id="oDateTime" value="{!ss.ERP7__Start_Date__c}" />
+                                                        </div>
+                                                        <div class="endime-maq mb-class53">
+                                                            <lightning:formattedDateTime month="short" day="2-digit" hour="numeric" minute="2-digit"  timeZone="{!$Locale.timezone}" aura:id="oDateTime" value="{!ss.ERP7__ExpectedDate__c}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="{!((ss.ERP7__Status__c == 'Issued')?'Issued slds-truncate3':'')||((ss.ERP7__Status__c == 'In Progress')?'InProgress slds-truncate3':'')||((ss.ERP7__Status__c == 'Complete')?'Complete slds-truncate3':'')|| ((ss.ERP7__Status__c == 'Backlog')?'Backlog slds-truncate3':'')}">
+                                                            <span>
+                                                                <aura:renderIf isTrue="{!ss.ERP7__Active__c}">
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-truncate2" >
+                                                                            <div data-record-id = "{!ss.Id}" onclick="{!c.NavWO}" class="mb-class38">
+                                                                                <lightning:formattedUrl target="_blank" title="{!ss.Name}" label="{!ss.Name}" class="whitetext"/>
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                    </div>
+                                                                </aura:renderIf>
+                                                                <aura:renderIf isTrue="{!not(ss.ERP7__Active__c)}"> 
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-truncate2">
+                                                                            <lightning:formattedText title="{!ss.Name}" value="{!ss.Name}" class="whitetext"/>
+                                                                        </div>
+                                                                    </div>     
+                                                                </aura:renderIf>
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </aura:iteration>
+                                    </table>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="mb-class54"></div>
+                        </aura:iteration>
+                    </aura:set>
+                </aura:if>
+            </div>
+        </div>
+        <div class="col-md-12 mb-class56">
+            <c:ProjectLookups type="Account" aura:id="OrgName" value="{!v.custInvoiceTest.ERP7__Account__c}" className="slds-input" />
+        </div>
+    </div>
+        
+        <div class="epr_Mark7 erp_mark7  slds-show">
+            <div class="modal fade mb-class57" id="myModal" role="dialog">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        
+                        <div class="modal-body">
+                            <fieldset class="slds-form--compound">
+                                
+                                <div class="slds-form-element__group">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="slds-form-element__label" for="input-01">Quantity Ordered<span class="mb-class58"> *</span></label><br/>
+                                            <lightning:input type="text" variant="label-hidden" class="display-lable" value="{!v.MO2Fin.ERP7__Manufactured_Quantity__c}"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="slds-form-element__label" for="input-02">Scrapped Quantity<span class="mb-class58"> *</span></label>
+                                            <lightning:input type="text" variant="label-hidden" class="display-lable" value="{!v.MO2Fin.ERP7__Scrapped_Quantity__c}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </fieldset>
+                            
+                        </div>
+                        <div class="modal-footer mb-class59">
+                            <button type="button" onclick="{!c.FinishMO}" class="slds-button slds-button--brand">Save</button>
+                            <button type="button" class="slds-button slds-button--neutral mb-class60" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <aura:renderIf isTrue="{!v.FilterShow}">
+           <section aria-labelledby="panel-heading-id" class="erp_mark7  slds-popover_panel  slds-popover_large slds-popover" role="dialog" id="mypopover">
+               <div class="slds-float_right slds-popover__close">
+                   <lightning:buttonIcon iconName="utility:close" variant="bare" size="small" alternativeText="Close!" title="Close" onclick="{!c.FilterSet}" />
+               </div>
+              <!-- <button class="slds-button slds-button_icon slds-button_icon slds-button_icon-small slds-float_right slds-popover__close" title="Close dialog" >
+                	
+                 <span class="slds-assistive-text">Close dialog</span>
+              </button>-->
+              <div class="row epr_Mark7">
+                 <div class="slds-popover__body col-md-12" >
+                    <aura:renderIf isTrue="{!(v.FilterShow)}">
+                       <div class="col-md-6 col-xs-6">
+                          <div class="slds-col">
+                             <label class="slds-form-element__label" for="input-unique-id">Site </label>
+                          </div>
+                          <div class="slds-col">
+                             <div class="slds-form-element">
+                                <div class="slds-form-element__control">
+                                   <c:CustomInputLookUp objectAPIName="ERP7__Site__c" aura:id="mvr" IconName="standard:flow" selectedRecordId="{!v.WC.ERP7__Plant__c}" inputStyleclass="slds-input"/>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+                       <div class="col-md-6 col-xs-6">
+                          <div class="slds-col">
+                             <label class="slds-form-element__label" for="input-unique-id">Work Center</label>
+                          </div>
+                          <div class="slds-col">
+                             <div class="slds-form-element">
+                                <div class="slds-form-element__control">
+                                   <div class="slds-form-element__control">
+                                   <c:CustomInputLookUp objectAPIName="ERP7__Work_Center__c" aura:id="mvr" IconName="standard:flow" selectedRecordId="{!v.WC.Id}" inputStyleclass="slds-input"/>
+                                </div>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+                        <div class="col-md-6 col-xs-6 mb-class61">
+                          <div class="slds-col">
+                             <label class="slds-form-element__label" for="input-unique-id">Sales Order</label>
+                          </div>
+                          <div class="slds-col">
+                             <div class="slds-form-element">
+                                <div class="slds-form-element__control">
+                                   <div class="slds-form-element__control">
+                                   <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order__c " aura:id="fso" IconName="standard:flow" selectedRecordId="{!v.SOID}" inputStyleclass="slds-input"/>
+                                </div>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+                    </aura:renderIf>
+                 </div>
+              </div>
+           </section>
+        </aura:renderIf>
+    </div>
+     <div class="epr_Mark7 erp_mark7 slds-show">
+            <div class="modal fade mb-class62" id="myModal1" role="dialog" aria-modal="true" >
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                               <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="slds-form-element__label" for="input-01">Quantity Ordered<span class="mb-class58"> *</span></label><br/>
+                                            <lightning:input type="text" variant="label-hidden" class="display-lable" value="{!v.WO2Fin.ERP7__Quantity_Ordered__c}"/>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="slds-form-element__label" for="input-02">Quantity Built<span class="mb-class58"> *</span></label>
+                                            <lightning:input type="text" variant="label-hidden" class="display-lable" value="{!v.WO2Fin.ERP7__Quantity_Built__c}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                        <div class="modal-footer mb-class59">
+                            <button type="button" onclick="{!c.FinishWO}" class="slds-button slds-button--brand">Save</button>
+                            <button type="button" class="slds-button slds-button--neutral mb-class63" data-dismiss="modal" >Close</button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </body>
+</aura:component>

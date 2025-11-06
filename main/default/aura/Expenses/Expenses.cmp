@@ -1,0 +1,273 @@
+<aura:component Controller="ERP7.ExpenseSheetLC" implements="force:appHostable">
+    <ltng:require styles="/resource/ERP7__SLDS0122/assets/styles/salesforce-lightning-design-system.css" />
+    <ltng:require styles="/resource/ERP7__SLDS0211/assets/styles/salesforce-lightning-design-system-vf.css" />
+   <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Expenses.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.displayApproved}" />
+    <aura:handler name="init" value="{!this}" action="{!c.display}" />
+    <aura:registerEvent name="edit" type="c:editTimesheetEvent" />
+    <aura:attribute type="ExpenseSheetLC" name="counts" />
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <!--<aura:handler name="init" value="{!this}" action="{!c.getExpenseDetails}" />-->
+    <aura:attribute name="table" type="Expense__c[]" />
+    <aura:handler name="init" value="{!this}" action="{!c.getExpenseDetailsApproved}" />
+    <aura:attribute name="table2" type="Expense__c[]" />
+    <aura:attribute name="EmpDetails" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute name="currency" type="Map" default="{'EUR' : '€',
+                                                         'GBP' : '£',
+                                                         'USD' : '$',
+                                                         'GHS' :'¢'}" />
+    <aura:attribute name="currencyCode" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.doesInit}" />
+    <!--Events to dalete-->
+    <aura:registerEvent name="delete" type="c:leaveDelete" />
+    <aura:handler name="delete" action="{!c.handleExpenseDelete}" />
+    <!--ExpenseMainComponent-->
+    <aura:attribute name="emp" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute name="Expense" type="Expense__c" />
+    <aura:attribute name="eLineItem" type="Expense_Line_Item__c[]" />
+    <aura:handler event="c:editTimesheetEvent" action="{!c.testToggle}" />
+    <aura:attribute name="TimeSheetObj" type="ExpenseSheetLC" />
+    <!--ExpenseMainComponent End-->
+    <!--Sorting the Data Attributes-->
+    <aura:attribute type="Boolean" name="sortAsc" />
+    <aura:attribute type="String" name="sortField" />
+    <aura:attribute name="ftctrl" type="boolean" default="true"/>
+    <!--Sorting the Data Attributes-->
+    
+    <div class="slds">
+        <div aura:id="sldshide">
+            <div class="slds-container-fluid">
+                <div class="slds-form--inline padng-5" >
+                    <div class="slds-form-element pad-topbottom-5" >
+                        <div class="slds-form-element__control">
+                            <lightning:icon iconName="standard:asset_warranty" size="x-small" alternativeText="asset_warranty!" title="Approved" />	 Approved Amount - {!v.currencyCode}{!v.counts.numAmountApp}
+                        </div>
+                    </div>
+                    <div class="slds-form-element pad-topbottom-5" >
+                        <div class="slds-form-element__control">
+                            <lightning:icon iconName="standard:approval" size="x-small" alternativeText="approval!" title="approval" /> Submitted Amount - {!v.currencyCode}{!v.counts.numAmountSub}
+                        </div>
+                    </div>
+                    <div class="slds-form-element pad-topbottom-5 pad-topbottom-5" >
+                        <div class="slds-form-element__control">
+                            <lightning:icon iconName="custom:custom17" size="x-small" alternativeText="Paid!" title="Paid" /> Paid Amount - {!v.currencyCode}{!v.counts.numAmountPaid}
+                        </div>
+                    </div>
+                    <div class="slds-form-element pad-topbottom-5" >
+                        <div class="slds-form-element__control">
+                            <div class="slds-select_container mar-top5">
+                                <lightning:select aura:id="InputSelectDynamic" onchange="{!c.onChange}" variant="label-hidden" class="display-lable">
+                                    <option value="Today">Today</option>
+                                    <option value="THIS_FISCAL_YEAR">Current FY</option>
+                                    <option value="LAST_FISCAL_YEAR">Previous FY</option>
+                                    <option value="NEXT_FISCAL_YEAR">Next FY</option>
+                                    <option value="LAST_N_FISCAL_YEARS:2">Previous 2 FY</option>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-form-element pad-topbottom-5">
+                        <div class="slds-form-element__control">
+                            <button class="slds-button slds-button--brand" type="button" onclick="{!c.CreateExpense}">New Expense</button>
+                        </div>
+                    </div>
+                </div>
+               <!--Start of Accor 1-->
+                <div>
+                        <div class="slds-page-header Message cur-pointer" onclick="{!c.sectionOne}">
+                            <lightning:icon iconName="utility:description" size="x-small" alternativeText="description!" title="description" />Draft/Submitted/Rejected Expenses
+                    </div>
+                    <div class="slds-hide slds-p-around--medium" aura:id="articleOne">
+                        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                            <thead>
+                                <tr class="slds-text-heading--label">
+                                    <th scope="col">
+                                        <span class="slds-truncate">Action</span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByName}">Expense Name&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByProject}">Project&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByAmount}">Submitted Amount&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByVat}">VAT/Tax &nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByClaimed}">Claimed Amount&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByDate}">Date&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByStatus}">Status&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.table}" var="Exp" indexVar="i">
+                                    <tr class="slds-hint-parent">
+                                        <aura:renderIf isTrue="{!Exp.ERP7__Status__c=='Submitted'||Exp.ERP7__Status__c=='Approved'}">
+                                            <td data-label="Action" class="not-active">
+                                                <a class="svg" onclick="{!c.EditClick}" href="#" data-index="{!i}" data-record="{!Exp.Id}">
+                                                    <lightning:icon iconName="action:edit" size="x-small" alternativeText="Edit!" title="Edit" />
+                                                </a> |
+                                                <!--handleExpenseDelete --><a class="svg" onclick="{!c.handleDelClick}" href="#" data-index="{!i}" data-record-id="{!Exp.Id}">
+                                                    <lightning:icon iconName="action:delete" size="x-small" alternativeText="delete!" title="delete" />
+                                                </a>
+                                            </td>
+                                            <aura:set attribute="else">
+                                                <td data-label="Action">
+                                                    <a class="svg" onclick="{!c.EditClick}" href="#" data-index="{!i}" data-record="{!Exp.Id}">
+                                                        <lightning:icon iconName="action:edit" size="x-small" alternativeText="Edit!" title="Edit" />
+                                                    </a> |
+                                                    <a class="svg" onclick="{!c.handleDelClick}" href="#" data-index="{!i}" data-record-id="{!Exp.Id}">
+                                                        <lightning:icon iconName="action:delete" size="x-small" alternativeText="delete!" title="delete" />
+                                                    </a>
+                                                </td>
+                                            </aura:set>
+                                        </aura:renderIf>
+                                        <td data-label="Expense Name">
+                                            <a class="Name" target="_blank" href="{!'/' + Exp.Id}">
+                                                <span class="slds-truncate">{!Exp.Name}</span>
+                                            </a>
+                                        </td>
+                                        <td data-label="Project">
+                                            <span class="slds-truncate">{!Exp.ERP7__Project__r.Name}</span>
+                                        </td>
+                                        <td data-label="Submitted Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!Exp.ERP7__Amount_Submitted__c}</span>
+                                        </td>
+                                        <td data-label="Vat Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!Exp.ERP7__VAT_Amount__c}</span>
+                                        </td>
+                                        <td data-label="Claimed Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!Exp.ERP7__Amount__c}</span>
+                                        </td>
+                                        <td data-label="Date">
+                                            <span class="slds-truncate">{!Exp.ERP7__Date__c}</span>
+                                        </td>
+                                        <td data-label="Status">
+                                            <span class="slds-truncate">{!Exp.ERP7__Status__c}</span>
+                                        </td>
+                                    </tr>
+                                </aura:iteration>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!--End of Accor 1-->
+                <!--Start of Accor 2-->
+                    <div>
+                        <div class="slds-page-header Message cur-pointer" onclick="{!c.sectionTwo}"> <lightning:icon iconName="utility:success" size="xx-small" alternativeText="Success!" title="Success" />Approved Expenses</div>
+                    <div class="slds-hide slds-p-around--medium" aura:id="articleTwo">
+                        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal">
+                            <thead>
+                                <tr class="slds-text-heading--label">
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByNameApproved}">Expense Name&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByProjectApproved}">Project&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByAmountApproved}">Submitted Amount&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByVatApproved}">VAT/Tax &nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByClaimedApproved}">Claimed Amount&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByDateApproved}">Date&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">
+                                            <a onclick="{!c.sortByStatusApproved}">Status&nbsp;^</a>
+                                        </span>
+                                    </th>
+                                    <th scope="col">
+                                        <span class="slds-truncate">Paid</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.table2}" var="ExpApproved" indexVar="i">
+                                    <tr class="slds-hint-parent">
+                                        <td data-label="Name">
+                                            <a class="Name" target="_blank" href="{!'/' + ExpApproved.Id}">
+                                                <span class="slds-truncate">{!ExpApproved.Name}</span>
+                                            </a>
+                                        </td>
+                                        <td data-label="Project">
+                                            <span class="slds-truncate">{!ExpApproved.ERP7__Project__r.Name}</span>
+                                        </td>
+                                        <td data-label="Submitted Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!ExpApproved.ERP7__Amount_Submitted__c}</span>
+                                        </td>
+                                        <td data-label="Vat Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!ExpApproved.ERP7__VAT_Amount__c}</span>
+                                        </td>
+                                        <td data-label="Claimed Amount">
+                                            <span class="slds-truncate">{!v.currencyCode}{!ExpApproved.ERP7__Amount__c}</span>
+                                        </td>
+                                        <td data-label="Date">
+                                            <span class="slds-truncate">{!ExpApproved.ERP7__Date__c}</span>
+                                        </td>
+                                        <td data-label="Status">
+                                            <span class="slds-truncate">{!ExpApproved.ERP7__Status__c}</span>
+                                        </td>
+                                        <td data-label="Paid">
+                                            <lightning:input type="checkbox" readonly="true" value="{!ExpApproved.ERP7__Paid__c}" />
+                                        </td>
+                                    </tr>
+                                </aura:iteration>
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                <!--End of Accor 2-->
+                <!--Start of Accor 3-->
+                <div>
+                        <div class="slds-page-header Message cur-pointer" onclick="{!c.sectionThree}"><lightning:icon iconName="action:submit_for_approval" size="xx-small" alternativeText="submit_for_approval!" title="submit_for_approval" />Submitted for your approval</div>
+                    <div aura:id="articleThree" class="slds-hide slds-p-around--medium">
+                       <c:ExpenseApproval />
+                    </div>
+                </div>
+                <!-- Edn of Accor 3-->
+            </div>
+        </div>
+    </div>
+    {!v.body}
+</aura:component>

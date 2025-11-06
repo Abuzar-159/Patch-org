@@ -1,0 +1,739 @@
+<aura:component controller="BalanceSheetLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <ltng:require scripts="{!$Resource.JSPDF}" afterScriptsLoaded="{!c.onScriptsLoaded1}" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css,
+                          /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css
+                          "/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/BalanceSheet.css"/>
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>  
+    
+    <aura:attribute name="AssetData" type="list"/>
+    <aura:attribute name="LedgerIds" type="list"/>
+    <aura:attribute name="LiabilityData" type="list"/>
+    <aura:attribute name="EquityData" type="list"/>
+    <aura:attribute name="AggResult" type="AggregateResult[]"/>
+    <aura:attribute name="AssetSum" type="Decimal"/>
+    <aura:attribute name="LiabilitySum" type="Decimal"/>
+    <aura:attribute name="EquitySum" type="Decimal"/>
+    <aura:attribute name="CalculatedEquity" type="Decimal"/>
+    <aura:attribute name="setView"           type="String"   default="Annually" />
+    <aura:attribute name="FiscalYear"           type="String"   default="THIS_FISCAL_YEAR" />
+    <aura:attribute name="Instance"        type="BalanceSheetLightning" />
+    <aura:attribute name="showSpinner"     type="Boolean" default="false" />
+    <aura:attribute name="initLoad"     type="Boolean" default="false" />
+    <aura:attribute name="showAsset"       type="Boolean" default="false" />
+    <aura:attribute name="showLiability"   type="Boolean" default="false" />
+    <aura:attribute name="Tab"             type="String"  default="Tab1" />
+    <aura:attribute name="showEquity"      type="Boolean" default="false" />
+    <aura:attribute name="showPage"        type="Boolean" default="true" />
+    <aura:attribute name="ExecuteOnce"        type="Boolean" default="true" />
+    <aura:attribute name="setKeys"         type="list" />
+    <aura:attribute name="setValues"       type="list" /> 
+    <aura:attribute name="chartyLabel"     type="String" />
+    <aura:attribute name="picklists"       type="list" />
+    <aura:attribute name="Maps" type="Map" />
+    <aura:attribute name="lastId" type="String" default=""/> 
+    <aura:attribute name="callGraph" type="String" default="true"/> 
+    <aura:attribute name="setPick" type="String" default="set"/>
+    <aura:attribute name="stopRepeat"  type="Boolean" default="true"  />
+    <aura:attribute name="Org"     type="String" />
+    <aura:attribute name="SD"      type="Date" />
+    <aura:attribute name="ED"      type="Date" />
+    <aura:attribute name="FY"      type="Date" />
+    <aura:attribute name="selectedCurrency" type="String"/>
+    <aura:attribute name="FiscalYearData" type="List" />
+    
+    <aura:handler   name="init"      value="{!this}" action="{!c.doinit}" />
+    <aura:handler   name="change"    value="{!v.FiscalYear}" action="{!c.fetchDataUpdated}" />
+    <aura:handler   name="change"    value="{!v.eDate}" action="{!c.fetchDataUpdated}" />
+    <aura:handler   name="change"    value="{!v.OrgId}" action="{!c.fetchDataUpdated}" />
+    <aura:attribute type="Date" name="eDate"/>
+    <aura:attribute type="String" name="OrgId"/>
+    <aura:attribute type="Boolean" name="FirstRun" default="true"/>
+   
+    <aura:attribute name="FYOptions" type="List"/>
+    <aura:attribute name="stStatusOptions" type="List"/>
+    <aura:attribute name="FY1Options" type="List"/>
+    
+    <body>
+        <div class="erp_mark7 bg-tb erp">
+            <aura:if isTrue="{!v.showSpinner}">
+                <div >
+                    <lightning:spinner variant="brand" size="large" aura:id="mainSpin" description="Please Wait While Loading" class="mainSpinClass"/>
+                </div>   
+            </aura:if>
+            
+            <!-- ___________________________________ -->
+            <div class="container-fluid bg-white pl-0">
+                <!--<aura:if isTrue="{!v.showSpinner}">-->
+                <div class="slim-pageheader slds-p-around_small">
+                    <ol class="breadcrumb slim-breadcrumb">
+                        
+                        <li class="breadcrumb-item">
+                            <span class="newClass11">
+                                <aura:if isTrue="{!(v.Tab=='Tab1')}">
+                                    <span class="newClass11">
+                                        <a  href="{!'/apex/ERP7__BalanceSheetExcelRender?CurrencyIso='+v.Instance.SelectedCurrency+'&amp;StartDate='+v.Instance.sDate+'&amp;EndDate='+v.eDate}" target="_blank" class="newClass12">
+                                            <i class="fa fa-file-excel-o pr-2" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_Excel} </a>&nbsp;
+                                        <a href="{!'/apex/ERP7__BalanceSheetAsPdf?CurrencyIso='+v.Instance.SelectedCurrency+'&amp;StartDate='+v.Instance.sDate+'&amp;EndDate='+v.eDate}"  target="_blank" class="newClass14"><i class="fa fa-file-pdf-o" aria-hidden="true"></i>&nbsp;{!$Label.c.Bal_Sheet_Download_PDF} </a></span>
+                                    <aura:set attribute="else">
+                                        
+                                        <a  href="{!'/apex/ERP7__ComparisionBalanceSheet_Excel?CurrencyIso='+v.Instance.SelectedCurrency+'&amp;StartDate='+v.Instance.sDate+'&amp;EndDate='+v.eDate}" target="_blank" class="newClass12">
+                                            <i class="fa fa-file-excel-o pr-2" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_Excel} </a>&nbsp;
+                                        <a href="{!'/apex/ERP7__ComparisonBalanceSheet?CurrencyIso='+v.Instance.SelectedCurrency+'&amp;StartDate='+v.Instance.sDate+'&amp;EndDate='+v.eDate}"  target="_blank" class="newClass14"><i class="fa fa-file-pdf-o" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_PDF} </a>&nbsp;
+                                    </aura:set>
+                                </aura:if>
+                            </span>
+                        </li>   
+                    </ol>
+                    <h6 class="slim-pagetitle ">
+                        <div class="row">
+                            <div class="col-md-12"> 
+                                {!$Label.c.Bal_Sheet_Balance_Sheet}&nbsp;  
+                                
+                            </div>
+                            <!--div class="col-md-12 pt-1">
+                                <p class="trialbalance mb-0"> </p>
+                            </div-->
+                            
+                        </div>
+                        
+                    </h6>
+                    
+                </div>
+            </div>
+            
+            <!-- Start Of slds-container-fluid -->
+            <div class="slds-page-header slds-hide">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <lightning:icon iconName="standard:work_plan" alternativeText="Event" title="Event" />
+                                
+                                
+                            </div>
+                            <div class="slds-media__body">
+                                <p class="slds-text-title--caps slds-line-height--reset">Finance</p>
+                                <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">{!$Label.c.Bal_Sheet_Balance_Sheet} </h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--*********new**********-->
+            
+            <aura:if isTrue="{!v.showPage}">
+                <div class="container-fluid bg-tb slds-p-around_medium">
+                    <div class="card card-dash-chart-one mg-t-20 mg-sm-t-10 border-0  bg-tb">
+                        <div class="left-panel p-1">
+                            <nav class="nav">
+                                <b><a href="" class="{!v.Tab=='Tab1'?'active pb-2':'pb-2'}" onclick="{!c.changeTab1}"><i class="fa fa-file-text-o pr-2"  ></i> {!$Label.c.Bal_Sheet_CURRENT_FINANCIAL_YEAR}</a>&nbsp;&nbsp;
+                                    <a href="" class="{!v.Tab=='Tab2'?'active pb-2':'pb-2'}" onclick="{!c.changeTab2}"><i class="fa fa-clone pr-2"  ></i> {!$Label.c.Bal_Sheet_COMPARE_FINANCIAL_DATA}</a></b>
+                                
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+                <!--*********new end**********-->
+                
+                <!--Start of Tab1 Content -->
+                <aura:if isTrue="{!v.Tab=='Tab1'}">
+                    <div>
+                        <!-- Start of ERP_MARK7 -->
+                        <div class="epr_Mark7">
+                            <div class="container-fluid bg-tb">
+                                <div class="slds row slds-p-top--xx-small">
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <c:CustomInputLookUp objectAPIName="Account" label="Organisation" IconName="standard:drafts" selectedRecordId="{!v.OrgId}" qry=" AND (ERP7__Account_Type__c = 'Organisation' or ERP7__Account_Type__c = 'Organisation/Vendor')"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <lightning:select aura:id="FY" value="{!v.FiscalYear}" label="{!$Label.c.Bal_Sheet_Financial_Year_FY}">
+                                                    <aura:iteration items="{!v.FYOptions}" var="option">
+                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.FiscalYear, option.value)}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                            </div>
+                                        </div>
+                                    </div> 
+                                    <!--<div class="col-md-2 slds-p-top-/-xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element_/_control slds-input-has-icon slds-input-has-icon-/-right">
+                                                <label class="slds-form-element__label" >{!$Label.c.AddSubscription_Start_Date}</label>
+                                                <lightning:input type="date" value="{!v.Instance.sDate}" id="startdate"  />
+                                            </div>
+                                        </div>
+                                    </div>-->
+                                    <div class="col-md-2 slds-p-top--xx-small">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label" >{!$Label.c.As_of_Date}</label>
+                                                <lightning:input type="date" value="{!v.eDate}" id="enddate"  />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <aura:if isTrue="{!v.Instance.multiCurrencyEnabled}"> 
+                                        <div class="col-md-2 slds-p-top--xx-small">
+                                            <div class="slds-col slds-form-element">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                    <lightning:select  aura:id="stStatus" value="{!v.Instance.SelectedCurrency}" label="{!$Label.c.Currency}">
+                                                        <aura:iteration items="{!v.stStatusOptions}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Instance.SelectedCurrency, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            
+                            <!--Start of MainPnl1-->
+                            <div class="container-fluid BalanceSheet-class4 bg-tb">
+                                <div class="slds row slds-p-top--xx-small">
+                                    
+                                    <div class="col-md-6 slds-p-top--xx-small">
+                                        <div class="card card-table min-height341"  data-aura-rendered-by="585:0">
+                                            <div class="card-header" data-aura-rendered-by="586:0">
+                                                <h6 class="slim-card-title" data-aura-rendered-by="587:0">{!$Label.c.Bal_Sheet_ASSETS}</h6>
+                                            </div>
+                                            <div class="table-responsive" data-aura-rendered-by="589:0">
+                                                <ul class="BalanceSheet-class9">
+                                                    <!--<aura:if isTrue="{!v.showAsset}"> --> 
+                                                        <aura:iteration items="{!v.AssetData}" var="Ac"> 
+                                                            <li class="slds-tile slds-hint-parent slds-p-around_small">
+                                                                    {!Ac.key}
+                                                                    
+                                                                    
+                                                                    <!--<div class="slds-grid slds-grid-/-align-spread slds-has-flexi-truncate">
+                                                                        <p class="slds-tile_/_title slds-truncate pl-10"><strong>{!SubAc.subName}</strong></p>
+                                                                    </div>-->
+                                                                    
+                                                                    <aura:iteration items="{!Ac.value}" var="FyMainacc">
+                                                                            <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                                <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                                    <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                        
+                                                                                        <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank"><lightning:formattedText value="{!if(FyMainacc.AccountName == 'Sales','Gross '+FyMainacc.AccountName,FyMainacc.AccountName)}"/></a>
+                                                                                        <!--<apex:outputText value="{!if(FyMainacc.Name == 'Sales','Gross '+FyMainacc.Name,FyMainacc.Name)}"/>-->
+                                                                                        
+                                                                                    </aura:if> 
+                                                                                </dt>
+                                                                                <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 ">
+                                                                                    <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                        
+                                                                                        <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/> -->
+                                                                                        <aura:if isTrue="{!(0>(FyMainacc.Debit-FyMainacc.Credit))}">
+                                                                                            (<c:CurrencyOutputField value="{!(FyMainacc.Debit-FyMainacc.Credit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                        </aura:if>
+                                                                                        <aura:if isTrue="{!((FyMainacc.Debit-FyMainacc.Credit)>0)}">
+                                                                                            <c:CurrencyOutputField value="{!(FyMainacc.Debit-FyMainacc.Credit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                        </aura:if>
+                                                                                        
+                                                                                    </aura:if>  
+                                                                                </dd>
+                                                                            </div>
+                                                                            <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                                <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                                    <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                                        <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank">Less {!FyMainacc.AccountName}</a>
+                                                                                    </dt>
+                                                                                </aura:if>    
+                                                                                <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                                    <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 " >
+                                                                                        
+                                                                                        <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/>-->
+                                                                                        <aura:if isTrue="{!(0>(FyMainacc.Credit-FyMainacc.Debit))}">
+                                                                                            (
+                                                                                            <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                            
+                                                                                            
+                                                                                            )
+                                                                                        </aura:if>
+                                                                                        <aura:if isTrue="{!((FyMainacc.Credit-FyMainacc.Debit)>0)}">
+                                                                                            
+                                                                                            <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                            
+                                                                                        </aura:if>
+                                                                                        
+                                                                                    </dd>
+                                                                                </aura:if>
+                                                                            </div>
+                                                                        </aura:iteration>
+                                                                </li>
+                                                                
+                                                                
+                                                            </aura:iteration>
+                                                        
+                                                    <!--</aura:if>-->
+                                                    
+                                                    
+                                                    
+                                                </ul>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                    <!--Liability-->
+                                    <div class="col-md-6 slds-p-top--xx-small">
+                                        <div class="card card-table min-height341" data-aura-rendered-by="585:0">
+                                            <div class="card-header" data-aura-rendered-by="586:0">
+                                                <h6 class="slim-card-title" data-aura-rendered-by="587:0">{!$Label.c.Bal_Sheet_LIABILITIES_STOCKHOLDERS_EQUITY}</h6>
+                                            </div>
+                                            <div class="table-responsive" data-aura-rendered-by="589:0">
+                                                <div class="slds-card__body BalanceSheet-class21">
+                                                     
+                                                    <ul class="BalanceSheet-class9">
+                                                        <aura:iteration items="{!v.LiabilityData}" var="Ac"> 
+                                                            <li class="slds-tile slds-hint-parent slds-p-around_small">
+                                                                {!Ac.key}
+                                                                
+                                                                
+                                                                <!--<div class="slds-grid slds-grid-/-align-spread slds-has-flexi-truncate">
+                                                                        <p class="slds-tile_/_title slds-truncate pl-10"><strong>{!SubAc.subName}</strong></p>
+                                                                    </div>-->
+                                                                
+                                                                <aura:iteration items="{!Ac.value}" var="FyMainacc">
+                                                                    <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                        <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                            <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                
+                                                                                <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank"><lightning:formattedText value="{!if(FyMainacc.AccountName == 'Sales','Gross '+FyMainacc.AccountName,FyMainacc.AccountName)}"/></a>
+                                                                                <!--<apex:outputText value="{!if(FyMainacc.Name == 'Sales','Gross '+FyMainacc.Name,FyMainacc.Name)}"/>-->
+                                                                                
+                                                                            </aura:if> 
+                                                                        </dt>
+                                                                        <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 ">
+                                                                            <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                
+                                                                                <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/> -->
+                                                                                <aura:if isTrue="{!(0>(FyMainacc.Credit-FyMainacc.Debit))}">
+                                                                                    (<c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!((FyMainacc.Credit-FyMainacc.Debit)>0)}">
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                </aura:if>
+                                                                                
+                                                                            </aura:if>  
+                                                                        </dd>
+                                                                    </div>
+                                                                    <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                        <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                            <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                                <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank">Less {!FyMainacc.AccountName}</a>
+                                                                            </dt>
+                                                                        </aura:if>    
+                                                                        <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                            <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 " >
+                                                                                
+                                                                                <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/>-->
+                                                                                <aura:if isTrue="{!(0>(FyMainacc.Credit-FyMainacc.Debit))}">
+                                                                                    (
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" /> 
+                                                                                    
+                                                                                    
+                                                                                    )
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!((FyMainacc.Credit-FyMainacc.Debit)>0)}">
+                                                                                    
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" /> 
+                                                                                    
+                                                                                </aura:if>
+                                                                                
+                                                                            </dd>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </aura:iteration>
+                                                            </li>
+                                                            
+                                                            
+                                                        </aura:iteration>
+                                                        
+                                                        <li class="slds-tile slds-hint-parent slds-p-around_small">
+                                                            
+                                                            <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                    Equity 
+                                                                </dt>
+                                                                <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 ">
+                                                                    <aura:if isTrue="{!v.CalculatedEquity>0}">
+                                                                    	<c:CurrencyOutputField value="{!v.CalculatedEquity}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                        <aura:set attribute="else">
+                                                                            (<lightning:formattedNumber value="{!(v.CalculatedEquity*-1)}" style="decimal" maximumFractionDigits="2" minimumFractionDigits="2"/>)
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </dd>
+                                                            </div>
+                                                        </li>
+                                                        <aura:iteration items="{!v.EquityData}" var="Ac"> 
+                                                            <li class="slds-tile slds-hint-parent slds-p-around_small">
+                                                                {!Ac.key}
+                                                                
+                                                                <!--<div class="slds-grid slds-grid-/-align-spread slds-has-flexi-truncate">
+                                                                        <p class="slds-tile_/_title slds-truncate pl-10"><strong>{!SubAc.subName}</strong></p>
+                                                                    </div>-->
+                                                                
+                                                                <aura:iteration items="{!Ac.value}" var="FyMainacc">
+                                                                    <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                        <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                            <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                
+                                                                                <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank"><lightning:formattedText value="{!if(FyMainacc.AccountName == 'Sales','Gross '+FyMainacc.AccountName,FyMainacc.AccountName)}"/></a>
+                                                                                <!--<apex:outputText value="{!if(FyMainacc.Name == 'Sales','Gross '+FyMainacc.Name,FyMainacc.Name)}"/>-->
+                                                                                
+                                                                            </aura:if> 
+                                                                        </dt>
+                                                                        <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 ">
+                                                                            <aura:if isTrue="{!!FyMainacc.ContraAccount}">
+                                                                                
+                                                                                <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/> -->
+                                                                                <aura:if isTrue="{!(0>(FyMainacc.Credit-FyMainacc.Debit))}">
+                                                                                    (<c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!((FyMainacc.Credit-FyMainacc.Debit)>0)}">
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                </aura:if>
+                                                                                
+                                                                            </aura:if>  
+                                                                        </dd>
+                                                                    </div>
+                                                                    <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                        <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                            <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 ">
+                                                                                <a href="{!$Label.c.Report_Access+'fv0='+FyMainacc.AccountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.eDate+'&amp;fv4='+v.OrgId}" target="_blank">Less {!FyMainacc.AccountName}</a>
+                                                                            </dt>
+                                                                        </aura:if>    
+                                                                        <aura:if isTrue="{!FyMainacc.ContraAccount}">
+                                                                            <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 " >
+                                                                                
+                                                                                <!-- <apex:outputField value="{!FyMainacc.Container.ERP7__Amount__c}"/>-->
+                                                                                <aura:if isTrue="{!(0>(FyMainacc.Credit-FyMainacc.Debit))}">
+                                                                                    (
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" /> 
+                                                                                    
+                                                                                    
+                                                                                    )
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!((FyMainacc.Credit-FyMainacc.Debit)>0)}">
+                                                                                    
+                                                                                    <c:CurrencyOutputField value="{!(FyMainacc.Credit-FyMainacc.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" /> 
+                                                                                    
+                                                                                </aura:if>
+                                                                                
+                                                                            </dd>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </aura:iteration>
+                                                            </li>
+                                                            
+                                                            
+                                                        </aura:iteration>
+                                                    </ul>
+                                                    
+                                                    <!--Equity-->
+                                                    
+                                                </div>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            
+                            <!-- slds hide arshad -->
+                            <div class="row m-0" >
+                                <div class="col-md-6">
+                                    <div class="slds-tile__detail BalanceSheet-class26" >
+                                        <dl class="slds-dl--horizontal slds-text-body--medium BalanceSheet-class13" >
+                                            <dt class="slds-dl--horizontal__label">
+                                                <p class="slds-truncate BalanceSheet-class27" >{!$Label.c.Bal_Sheet_TOTAL_ASSETSASSETS}</p>
+                                            </dt>
+                                            <dd class="slds-dl--horizontal__detail slds-tile__meta BalanceSheet-class10" >
+                                                <p class="slds-truncate BalanceSheet-class27" >
+                                                    {!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.AssetSum)}"  maximumFractionDigits="2"/>
+                                                </p>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="slds-tile__detail BalanceSheet-class26">
+                                        <dl class="slds-dl--horizontal slds-text-body--medium BalanceSheet-class13" >
+                                            <dt class="slds-dl--horizontal__detail slds-tile__meta">
+                                                <p class="slds-truncate BalanceSheet-class27" >{!$Label.c.Bal_Sheet_TOTAL_LIABILITY_AND_STOCKHOLDERS_EQUITY}</p>
+                                            </dt>
+                                            <dd class=" slds-dl--horizontal__label BalanceSheet-class10" >
+                                                <p class="slds-truncate BalanceSheet-class27" >
+                                                    {!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.AssetSum)}" maximumFractionDigits="2"/>                                                    
+                                                </p>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--slds hide arshad --> 
+                            
+                            <!--End of MainPnl1-->
+                            
+                        </div>
+                        <!--End of ERP_MARK7 -->
+                    </div>
+                </aura:if>
+                <!--End Tab1 content-->
+                <!--Start of Tab2 Content-->
+                <aura:if isTrue="{!v.Tab=='Tab2'}">
+                    <div>
+                        <!-- Start of ERP_MARK7 -->
+                        <div class="epr_Mark7">
+                            <div class="container-fluid bg-tb">
+                                <div class="slds row slds-p-top--xx-small">
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <c:CustomInputLookUp objectAPIName="Account" label="Organisation" IconName="standard:drafts" selectedRecordId="{!v.OrgId}" qry=" AND (ERP7__Account_Type__c = 'Organisation' or ERP7__Account_Type__c = 'Organisation/Vendor')"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <lightning:select aura:id="FY" value="{!v.FiscalYear}" label="{!$Label.c.Bal_Sheet_Financial_Year_FY}">
+                                                    <aura:iteration items="{!v.FYOptions}" var="option">
+                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.FiscalYear, option.value)}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                            </div>
+                                        </div>
+                                    </div> 
+                                    <!--<div class="col-md-2 slds-p-top-/-xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element_/_control slds-input-has-icon slds-input-has-icon-/-right">
+                                                <label class="slds-form-element__label" >{!$Label.c.AddSubscription_Start_Date}</label>
+                                                <lightning:input type="date" value="{!v.Instance.sDate}" id="startdate"  />
+                                            </div>
+                                        </div>
+                                    </div>-->
+                                    <div class="col-md-2 slds-p-top--xx-small">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label" >{!$Label.c.As_of_Date}</label>
+                                                <lightning:input type="date" value="{!v.eDate}" id="enddate"  />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <aura:if isTrue="{!v.Instance.multiCurrencyEnabled}"> 
+                                        <div class="col-md-2 slds-p-top--xx-small">
+                                            <div class="slds-col slds-form-element">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                    <lightning:select  aura:id="stStatus" value="{!v.Instance.SelectedCurrency}" label="{!$Label.c.Currency}">
+                                                        <aura:iteration items="{!v.stStatusOptions}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Instance.SelectedCurrency, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <!--div class="slds-m-top-/-x-small slds-m-bottom-/-x-small  slds-p-top-/-xxx-small slds-p-left-/-xx-small IncomeStatement-class29">
+                                <p class="IncomeStatement-class11">Chart Data </p>
+                            </div-->
+                            <div class="IncomeStatement-class30">
+                                <!--<a value="View Annually " name="Fyear" onclick="{!c.changeGraphData}" ><button class="{!v.setView=='Annually'?'slds-button slds-button_outline-brand brand-active':'slds-button slds-button_outline-brand'}"><i class="fa fa-bar-chart"></i>&nbsp;View Annually </button></a>
+                                &nbsp;
+                                <a value="| View Quaterly  " name="FQuarter" onclick="{!c.changeGraphData}"  ><button class="{!v.setView=='Quaterly'?'slds-button slds-button_outline-brand brand-active':'slds-button slds-button_outline-brand'}"><i class="fa fa-bar-chart"></i>&nbsp;View Quaterly </button></a>
+                                &nbsp;
+                                <a value="| View Monthly " name="FMonthly" onclick="{!c.changeGraphData}" ><button class="{!v.setView=='Monthly'?'slds-button slds-button_outline-brand brand-active':'slds-button slds-button_outline-brand'}"><i class="fa fa-bar-chart"></i>&nbsp;View Monthly </button></a>-->
+                            </div>
+                            <div name="Chart Data">
+                                <!--<aura:if isTrue="{!v.showGraph}">
+                            <ERP7:Chart keys="{!v.setKeys}" values="{!v.setValues2}" values2="{!v.setValues4}" values3="{!v.setValues}"  xLabel="{!v.Instance.ChartTitle}"  yLabel="{!v.chartyLabel}"  bgColor="#FF0000" bgColor2="#00b200" bgColor3="blue"  chartType="bar" label="Total Income" label2="Total Expense" label3="Net Profit" />
+                        </aura:if>-->
+                            </div>
+                            <div class="slds-m-top--x-small slds-m-bottom--x-small slds-p-top--xxx-small slds-p-left--xx-small">
+                                <p class="IncomeStatement-class11 ">
+                                    <span class="slds-p-left_small"><strong>Tabular Data </strong></span>
+                                    
+                                    <span class="IncomeStatement-class12">
+                                        <a  href="javascript:void(0);" target="_blank" class="newClass12 slds-m-right_small" onclick="{!c.exportToPDF}">
+                                            <i class="fa fa-file-excel-o pr-2" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_Excel} 
+                                        </a>
+                                        
+                                        <a href="javascript:void(0);"  target="_blank" class="newClass14" onclick="{!c.exportToExcel}" >
+                                            <i class="fa fa-file-pdf-o" aria-hidden="true"></i>&nbsp;{!$Label.c.Bal_Sheet_Download_PDF} 
+                                        </a>
+                                        <!--lightning:button label="Download as PDF" onclick="{!c.exportToPDF}" />
+                                        <lightning:button label="Download as Excel" onclick="{!c.exportToExcel}" /-->
+                                    </span>
+                                    
+                                </p>
+                            </div>
+                            <!--Start of MainPnl1-->
+                            <!--<aura:iteration items="{!v.FiscalYearData}" var="fyData">
+                            <lightning:card title="{!fyData.fiscalYear}">
+                                <!-/- Assets -/->
+                                <lightning:formattedText value="Assets" />
+                                <aura:iteration items="{!fyData.assets}" var="asset">
+                                    <lightning:formattedText value="{!asset.AccountName}" />
+                                    Debit - {!asset.Debit}
+                                    Credit - {!asset.Credit}
+                                    <br/>
+                                </aura:iteration>
+                                
+                                <!-/- Liabilities -/->
+                                <lightning:formattedText value="Liabilities" />
+                                <aura:iteration items="{!fyData.liabilities}" var="liability">
+                                    <lightning:formattedText value="{!liability.AccountName}" />
+                                    Debit - {!liability.Debit}
+                                    Credit - {!liability.Credit}
+                                    <br/>
+                                </aura:iteration>
+                                
+                                <!-/- Equity -/->
+                                <lightning:formattedText value="Equity" />
+                                <aura:iteration items="{!fyData.equity}" var="equity">
+                                    <lightning:formattedText value="{!equity.AccountName}" />
+                                    Debit - {!equity.Debit}
+                                    Credit - {!equity.Credit}
+                                    <br/>
+                                </aura:iteration>
+                            </lightning:card>
+                            </aura:iteration>-->
+                            <div class="slds-grid slds-wrap slds-m-around_small">
+                                <aura:iteration items="{!v.FiscalYearData}" var="fyData">
+                                    
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-m-bottom_small">
+                                        <lightning:card title="{!fyData.fiscalYear}">
+                                            <div class="slds-grid slds-wrap slds-p-top--xx-small">
+                                                <div class="col-md-6 slds-p-top--xx-small">
+                                                    <div class="card card-table min-height341"  data-aura-rendered-by="585:0">
+                                                        <div class="card-header" data-aura-rendered-by="586:0">
+                                                            <h6 class="slim-card-title" data-aura-rendered-by="587:0">{!$Label.c.Bal_Sheet_ASSETS}</h6>
+                                                        </div>
+                                                        <div class="table-responsive" data-aura-rendered-by="589:0">
+                                                            
+                                                                <!--<aura:if isTrue="{!v.showAsset}"> --> 
+                                                                <aura:iteration items="{!fyData.assets}" var="Ac"> 
+                                                                    
+                                                                        
+                                                                        <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                            <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 slds-p-around_x-small">
+                                                                                <a href="javascript:void(0);" target="_blank">{!Ac.AccountName}</a>
+                                                                            </dt>
+                                                                            <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 slds-p-around_x-small">
+                                                                                <aura:if isTrue="{!(0>(Ac.Debit-Ac.Credit))}">
+                                                                                    (<c:CurrencyOutputField value="{!(Ac.Debit-Ac.Credit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!((Ac.Debit-Ac.Credit)>0)}">
+                                                                                    <c:CurrencyOutputField value="{!(Ac.Debit-Ac.Credit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                </aura:if>
+                                                                            </dd>
+                                                                        </div>
+                                                                    
+                                                                </aura:iteration>
+                                                           
+                                                        </div>
+                                                        
+                                                    </div>
+                                                </div>
+                                                
+                                                <!--Liability-->
+                                                <div class="col-md-6 slds-p-top--xx-small">
+                                                    <div class="card card-table min-height341" data-aura-rendered-by="585:0">
+                                                        <div class="card-header" data-aura-rendered-by="586:0">
+                                                            <h6 class="slim-card-title" data-aura-rendered-by="587:0">{!$Label.c.Bal_Sheet_LIABILITIES_STOCKHOLDERS_EQUITY}</h6>
+                                                        </div>
+                                                        <div class="table-responsive" data-aura-rendered-by="589:0">
+                                                            <div class="slds-card__body BalanceSheet-class21">
+                                                                
+                                                              
+                                                                    <aura:iteration items="{!fyData.liabilities}" var="Ac"> 
+                                                                        
+                                                                            
+                                                                            <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                                <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 slds-p-around_x-small">
+                                                                                    <a href="javascript:void(0);" target="_blank">{!Ac.AccountName}</a>
+                                                                                </dt>
+                                                                                <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 slds-p-around_x-small">
+                                                                                    <aura:if isTrue="{!(0>(Ac.Credit-Ac.Debit))}">
+                                                                                        (<c:CurrencyOutputField value="{!(Ac.Credit-Ac.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!((Ac.Credit-Ac.Debit)>0)}">
+                                                                                        <c:CurrencyOutputField value="{!(Ac.Credit-Ac.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                    </aura:if>
+                                                                                </dd>
+                                                                            </div>
+                                                                       
+                                                                    </aura:iteration>
+                                                                
+                                                                        <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                            <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 slds-p-left_x-small">
+                                                                                Equity 
+                                                                            </dt>
+                                                                            <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 ">
+                                                                                
+                                                                            </dd>
+                                                                        </div>
+
+                                                                    <aura:iteration items="{!fyData.equity}" var="Ac"> 
+                                                                        
+                                                                            
+                                                                            <div class="bbColor slds-grid slds-wrap pb-2">
+                                                                                <dt class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_8-of-12 slds-dl--horizontal__label IncomeStatement-class21 slds-p-around_x-small">
+                                                                                    <a href="javascript:void(0);" target="_blank">
+                                                                                    	{!Ac.AccountName}
+                                                                                    </a>
+                                                                                </dt>
+                                                                                <dd class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_4-of-12 text-right slds-dl--horizontal__detail slds-tile__meta IncomeStatement-class18 slds-p-around_x-small">
+                                                                                    <aura:if isTrue="{!(0>(Ac.Credit-Ac.Debit))}">
+                                                                                        (<c:CurrencyOutputField value="{!(Ac.Credit-Ac.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="-1" />)
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!((Ac.Credit-Ac.Debit)>0)}">
+                                                                                        <c:CurrencyOutputField value="{!(Ac.Credit-Ac.Debit)}" isoCode="{!v.Instance.userIsoCode}" Rate="1" /> 
+                                                                                    </aura:if>
+                                                                                </dd>
+                                                                            </div>
+                                                                        
+                                                                    </aura:iteration>
+                                                                
+                                                                
+                                                                <!--Equity-->
+                                                                
+                                                            </div>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                </div>
+                                                
+                                            </div>
+                                        </lightning:card>
+                                    </div>
+                                    
+                                </aura:iteration>
+                            </div>
+                            <!--slds hide arshad --> 
+                            
+                            <!--End of MainPnl1-->
+                            
+                        </div>
+                        <!--End of ERP_MARK7 -->
+                    </div>
+                </aura:if>
+                
+            </aura:if>
+            
+            <!--End of Tab2 Content -->
+        </div>
+        <!-- End Of slds-container-fluid -->
+    </body>
+</aura:component>

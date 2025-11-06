@@ -1,0 +1,1002 @@
+<aura:component implements="force:appHostable" controller="ManageProjects"> 
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/csspw/bootstrap.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/AddMilestoneTask.css"/>
+    </head>
+    
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:attribute name = "isresetTask" type = "boolean" default = "false"/>
+    <aura:attribute name = "taskM" type = "Actions_Tasks__c"/>
+    <aura:attribute name = "manufacturingOrders" type = "Manufacturing_Order__c[]"/>
+    <aura:attribute name = "workOrders" type = "WO__c[]"/>
+    <aura:attribute name = "transferOrders" type = "Transfer_Order__c[]"/>
+    <aura:attribute name = "newTransferOrder" type = "Transfer_Order__c" default="{'sObjectType':'ERP7__Transfer_Order__c'}"/>
+    <aura:attribute name = "salesOrders" type = "Sales_Order__c[]"/>
+    <aura:attribute name = "purchaseOrders" type = "PO__c[]"/>
+    <aura:attribute name = "purchaseRequisitions" type = "Requisition__c[]"/>
+    <aura:attribute name = "newTask" type = "Actions_Tasks__c" default="{'sObjectType':'ERP7__Actions_Tasks__c',}"/>
+    <aura:attribute name = "mstResourceGroup" type = "String" default=""/>
+    <aura:attribute name = "ChatterTab" type = "Boolean" default="false"/>
+    <aura:attribute name = "projectId" type = "Id" />
+    <aura:attribute name = "taskId" type = "Id"/>
+    <aura:attribute name = "milestoneId" type = "Id"/>
+    <aura:attribute name = "currentMilestones" type = "object"/>
+    <aura:attribute name = "currentProject" type = "Project__c"/>
+    
+    <aura:handler name = "init" value = "{!this}" action = "{!c.doInit}"/>
+    <aura:handler name = "change" value = "{!v.taskId}" action = "{!c.fetchTask}"/>
+    
+    <aura:attribute name="taskTypeOptions" type="List"/>
+    <aura:attribute name="taskStatusOptions" type="List"/>
+    <aura:attribute name="newTOTypeOptions" type="List"/>
+    <aura:attribute name="newTOStatusOptions" type="List"/>
+    
+    
+    <body aura:id="body">
+        <div class="erp_mark7 AddMilestoneTask-newClass1">
+            
+            <span class="AddMilestoneTask-newClass2">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+            
+            <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed AddMilestoneTask-newClass3','slds-notify_container slds-is-fixed AddMilestoneTask-newClass4')}">
+                <div class="slds-notify slds-notify_toast slds-theme_error AddMilestoneTask-newClass5" role="status">
+                    <span class="slds-assistive-text">error</span>
+                    <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small AddMilestoneTask-newClass6">{!v.exceptionError}
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close AddMilestoneTask-newClass7">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-page-header">
+                <div class="slds-page-header__row">
+                    <div class="slds-page-header__col-title">
+                        <div class="slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-user">
+                                    <lightning:icon iconName="standard:entity_milestone" size="large" alternativeText="entity_milestone!" title="entity_milestone" />
+                                    
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <div class="slds-truncate AddMilestoneTask-newClass8"><!--slds-page-header__title -->
+                                                Task
+                                            </div>
+                                        </h1>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="maqsood erp_Mark7">
+                <div class="container-fluid mt-2 AddMilestoneTask-newClass9">
+                     <div class="container-fluid mt-3 pb-1">	 
+                            <div class="card shadow-custom AddMilestoneTask-newClass10">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <label class="slds-form-element__label" for="unique-id-of-input">Name<span class="AddMilestoneTask-newClass11">*</span></label>
+                                <lightning:input type="text" variant="label-hidden"   required="true" value="{!v.newTask.Name}" maxlength="30" />
+                            </div>
+                        </div>
+                        
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="date" label="Start Date" aura:id="taskStartdate" value="{!v.newTask.ERP7__Start_Date__c}"/> 
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="date" label="End Date" aura:id="taskEnddate" value="{!v.newTask.ERP7__End_Date__c}"/> 
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <label class="slds-form-element__label" for="form-element-01">Type<span class="AddMilestoneTask-newClass11">*</span></label>
+                                <lightning:select aura:id = "taskType" disabled="{!v.newTask.Id}" variant="label-hidden" value="{!v.newTask.ERP7__Type__c}"  class="display-lable">
+                                    <aura:iteration items="{!v.taskTypeOptions}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.newTask.ERP7__Type__c, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                                
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <lightning:select aura:id = "taskStatus" value="{!v.newTask.ERP7__Status__c}" label="Status">
+                                    <aura:iteration items="{!v.taskStatusOptions}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.newTask.ERP7__Status__c, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div> 
+                        </div>
+                        
+                        <aura:if isTrue="{!not(v.isresetTask)}">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                <div class="slds-form-element__control">
+                                    <c:CustomInputLookUp aura:id="taskMilestone" objectAPIName="ERP7__Milestone__c" required="true" label="Milestone" IconName="standard:product" placeholder="Search Milestone.." selectedRecordId="{!v.newTask.ERP7__Milestone__c}" qry="{!'AND ERP7__Project__c = \''+v.projectId+'\''}"/>
+                                </div> 
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                <div class="slds-form-element__control">
+                                    <c:CustomInputLookUp aura:id="taskOwner" objectAPIName="User" required="true" IconName="standard:user" selectedRecordId="{!v.newTask.ERP7__Owner__c}" label="Owner" /><!--qry="{!'AND ERP7__Resource_Group__c = \'v.mstResourceGroup\''}"-->
+                                </div> 
+                            </div>
+                        </aura:if>
+                    </div>
+                    <!--<aura:if isTrue="{!not(equals(v.newTask.ERP7__Type__c, '-None-'))}">-->
+                                <aura:if isTrue="{!not(equals(v.newTask.ERP7__Type__c, '--None--'))}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between">
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Manufacturing Order'),not(empty(v.manufacturingOrders.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Manufacturing Orders</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Manufacturing Orders" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                    	<aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.manufacturingOrders))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Work Order'), not(empty(v.workOrders.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Work Orders</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Work Orders" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                        <aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.workOrders))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Transfer Order'), not(empty(v.transferOrders.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Transfer Orders</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Transfer Orders" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                        <aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.transferOrders))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Sales Order'), not(empty(v.salesOrders.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Sales Orders</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Sales Orders" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                        <aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.salesOrders))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Order'), not(empty(v.purchaseOrders.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Purchase Orders</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Purchase Orders" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                        <aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.purchaseOrders))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}" >
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Requisition'), not(empty(v.purchaseRequisitions.length,0)))}">
+                                                <aura:if isTrue="{!v.ChatterTab}">
+                                                    <h6 class="card-title">Chatter</h6>
+                                                    <aura:set attribute="else">
+                                                        <h6 class="card-title">Purchase Requisitions</h6>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <div>
+                                                    <aura:if isTrue="{!v.ChatterTab}">
+                                                        <a title="Purchase Requisitions" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.hideChatter}">
+                                                            <i class="fa fa-file-text-o AddMilestoneTask-newClass13"></i>
+                                                        </a>
+                                                        <aura:set attribute="else">
+                                                            <a title="Chatter" href="" class="mr-3 AddMilestoneTask-newClass12" onclick = "{!c.showChatter}">
+                                                                <i class="fa fa-comments-o AddMilestoneTask-newClass13"></i>
+                                                            </a>
+                                                            <aura:if isTrue="{!not(empty(v.purchaseRequisitions))}">
+                                                                <a title="Refresh" href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!equals(v.newTask.ERP7__Type__c, 'Regular')||equals(v.newTask.ERP7__Type__c, 'Issue')||equals(v.newTask.ERP7__Type__c, 'Story')||equals(v.newTask.ERP7__Type__c, 'Task')||equals(v.newTask.ERP7__Type__c, 'Health and Safety')||equals(v.newTask.ERP7__Type__c, 'Upgrade')||equals(v.newTask.ERP7__Type__c, 'Quality Control')}">
+                                                <h6 class="card-title">Chatter</h6>
+                                                <div>
+                                                    <a href="" class="mr-3 AddMilestoneTask-newClass12" aura:id="refreshMilestone" onclick = "{!c.getTypeRelatedVal}">
+                                                        <i class="fa fa-refresh"></i>
+                                                    </a>
+                                                </div>
+                                            </aura:if>
+                                        </div>
+                                        <!-- Chatter -->
+                                        <aura:if isTrue="{!equals(v.newTask.ERP7__Type__c, 'Regular')||equals(v.newTask.ERP7__Type__c, 'Issue')||equals(v.newTask.ERP7__Type__c, 'Story')||equals(v.newTask.ERP7__Type__c, 'Task')||equals(v.newTask.ERP7__Type__c, 'Health and Safety')||equals(v.newTask.ERP7__Type__c, 'Upgrade')||equals(v.newTask.ERP7__Type__c, 'Quality Control')}">
+                                            <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/><!---->
+                                                <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                            </aura:if>
+                                        </aura:if>
+                                        <!-- Chatter End -->
+                                        <!--tab MO -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Manufacturing Order'), not(v.ChatterTab))}">
+                                            <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                    <table class="table">
+                                                        <thead data-aura-rendered-by="785:0">
+                                                            <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                <th class="text-center">
+                                                                    <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                        <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                            <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                            &nbsp;New
+                                                                        </a>
+                                                                        <aura:set attribute="else">
+                                                                            <a data-target="#myModal" onclick="{!c.navMO}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                &nbsp;New
+                                                                            </a>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="787:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="788:0">Name
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="790:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="791:0">Product
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="793:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="794:0">Version
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="796:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="797:0">Routing
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="805:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="806:0">Status
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="808:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="809:0">Progress
+                                                                    </div>
+                                                                </th>
+                                                                <th scope="col" data-aura-rendered-by="817:0">
+                                                                    <div class="slds-truncate2" title="" data-aura-rendered-by="818:0">Quantity
+                                                                    </div>
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <aura:if isTrue="{!not(empty(v.manufacturingOrders))}">
+                                                            <tbody data-aura-rendered-by="820:0">
+                                                                <aura:iteration items = "{!v.manufacturingOrders}" var = "MO" indexVar="moIndex">
+                                                                    <tr class="slds-hint-parent" data-aura-rendered-by="4281:1760;a">
+                                                                        <td class="text-center">
+                                                                            <lightning:formattedText value = "{!moIndex + 1 + '.'}"/>
+                                                                        </td>
+                                                                        <td data-label="" scope="row" data-aura-rendered-by="4282:1760;a">
+                                                                            <div class="slds-truncate2 AddMilestoneTask-newClass19" data-aura-rendered-by="4283:1760;a"><lightning:formattedText value="{!MO.Name}" onclick="{!c.NavMORecord}" title="{!MO.Id}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" scope="row" data-aura-rendered-by="4289:1760;a">
+                                                                            <div class="slds-truncate2"><lightning:formattedText value="{!MO.ERP7__Product__r.Name}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Product__c}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" data-aura-rendered-by="4294:1760;a">
+                                                                            <div class="slds-truncate2"><lightning:formattedText value="{!MO.ERP7__Version__r.Name}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Version__c}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" data-aura-rendered-by="4299:1760;a">
+                                                                            <div class="slds-truncate2"><lightning:formattedText value="{!MO.ERP7__Routing__r.Name}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Routing__c}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" scope="row" data-aura-rendered-by="4314:1760;a">
+                                                                            <div class="slds-truncate2" title=""><lightning:formattedText value="{!MO.ERP7__Status__c}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Status__c}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" data-aura-rendered-by="4317:1760;a">
+                                                                            <div class="slds-truncate2" title=""><lightning:formattedText value="{!MO.ERP7__Progress__c}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Progress__c}"/></div>
+                                                                        </td>
+                                                                        <td data-label="" data-aura-rendered-by="4330:1760;a">
+                                                                            <div class="slds-truncate2" title=""><lightning:formattedText value="{!MO.ERP7__Quantity__c}" onclick="{!c.NavRecord}" title="{!MO.ERP7__Quantity__c}"/></div>
+                                                                        </td>
+                                                                    </tr>
+                                                                </aura:iteration>
+                                                            </tbody>
+                                                        </aura:if>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Manufacturing Order'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab MO end-->
+                                        
+                                        <!--tab WO -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Work Order'), not(v.ChatterTab))}">
+                                            <div class="tab-pane active" id="WO" role="tabpanel">
+                                                <div class="panel-body AddMilestoneTask-newClass20">
+                                                    <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                        <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                            <table class="table">
+                                                                <thead data-aura-rendered-by="785:0">
+                                                                    <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                        <th class="text-center AddMilestoneTask-newClass21">
+                                                                            <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                                <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                    <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                    &nbsp;New
+                                                                                </a>
+                                                                                <aura:set attribute="else">
+                                                                                    <a data-target="#myModal" onclick="{!c.navWO}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                        <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                        &nbsp;New
+                                                                                    </a>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="790:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="791:0">Name
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="790:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="791:0">Product
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="794:0">Version
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="797:0">Routing
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="805:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="806:0">Status
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="808:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="809:0">Progress
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="817:0">
+                                                                            <div class="slds-truncate2" title="" data-aura-rendered-by="818:0">Quantity
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <aura:if isTrue="{!not(empty(v.workOrders))}">
+                                                                    <tbody data-aura-rendered-by="820:0">
+                                                                        <aura:iteration items = "{!v.workOrders}" var = "WO" indexVar="woIndex">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="text-center">
+                                                                                   <lightning:formattedText value = "{!woIndex + 1 + '.'}"/>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="slds-truncate2 AddMilestoneTask-newClass19"><lightning:formattedText value="{!WO.Name}" onclick="{!c.NavWORecord}" title="{!WO.Id}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Product__r.Name}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Product__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Version__r.Name}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Version__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Routing__r.Name}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Routing__c}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Status__c}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Status__c}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Progress__c}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Progress__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" data-aura-rendered-by="4330:1760;a">
+                                                                                    <div class="slds-truncate2"><lightning:formattedText value="{!WO.ERP7__Total_Quantity__c}" onclick="{!c.NavRecord}" title="{!WO.ERP7__Quantity__c}"/></div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </aura:if>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Work Order'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab WO end-->
+                                        
+                                        <!--tab TO -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Transfer Order'), not(v.ChatterTab))}">
+                                            <div class="tab-pane active" id="WO" role="tabpanel">
+                                                <div class="panel-body AddMilestoneTask-newClass20">
+                                                    <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                        <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                            <table class="table">
+                                                                <thead data-aura-rendered-by="785:0">
+                                                                    <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                        <th class="text-center AddMilestoneTask-newClass21">
+                                                                            <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                                <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                    <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                    &nbsp;New
+                                                                                </a>
+                                                                                <aura:set attribute="else">
+                                                                                    <a data-target="#myModal" onclick="{!c.navTO}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                        <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                        &nbsp;New
+                                                                                    </a>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="787:0">
+                                                                            <div>Name
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div>From Channel
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div >From Site
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div>To Channel
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div >To Site
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="817:0">
+                                                                            <div>Status
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <aura:if isTrue="{!not(empty(v.transferOrders))}">
+                                                                    <tbody data-aura-rendered-by="820:0">
+                                                                        <aura:iteration items = "{!v.transferOrders}" var = "TO" indexVar="poIndex">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="text-center">
+                                                                                    <lightning:formattedText value = "{!poIndex + 1 + '.'}"/>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="AddMilestoneTask-newClass19"><lightning:formattedText value="{!TO.Name}" onclick="{!c.NavTORecord}" title="{!TO.Id}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__Channel__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__From_Site__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__To_Channel__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__To_Site__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__Status__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" data-aura-rendered-by="4330:1760;a">
+                                                                                    <div class=""><lightning:formattedText value="{!TO.ERP7__Total_Quantity__c}"/></div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </aura:if>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Transfer Order'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab TO end-->
+                                        
+                                        <!--tab SO -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Sales Order'), not(v.ChatterTab))}">
+                                            <div class="tab-pane active" id="WO" role="tabpanel">
+                                                <div class="panel-body AddMilestoneTask-newClass21">
+                                                    <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                        <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                            <table class="table">
+                                                                <thead data-aura-rendered-by="785:0">
+                                                                    <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                        <th class="text-center AddMilestoneTask-newClass21">
+                                                                            <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                                <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                    <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                    &nbsp;New
+                                                                                </a>
+                                                                                <aura:set attribute="else">
+                                                                                    <a data-target="#myModal" onclick="{!c.navSO}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                        <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                        &nbsp;New
+                                                                                    </a>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="787:0">
+                                                                            <div>Name
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="790:0">
+                                                                            <div >Account
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div >Contact
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div>Employee
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="805:0">
+                                                                            <div>Status
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="817:0">
+                                                                            <div>Quantity
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <aura:if isTrue="{!not(empty(v.salesOrders))}">
+                                                                    <tbody data-aura-rendered-by="820:0">
+                                                                        <aura:iteration items = "{!v.salesOrders}" var = "SO" indexVar="soIndex">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="text-center">
+                                                                                    <lightning:formattedText value = "{!soIndex + 1 + '.'}"/>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="AddMilestoneTask-newClass19"><lightning:formattedText value="{!SO.Name}" onclick="{!c.NavSORecord}" title="{!SO.Id}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class=""><lightning:formattedText value="{!SO.ERP7__Account__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class=""><lightning:formattedText value="{!SO.ERP7__Contact__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!SO.ERP7__Employees__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!SO.ERP7__Status__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" data-aura-rendered-by="4330:1760;a">
+                                                                                    <div class=""><lightning:formattedText value="{!SO.ERP7__Total_Quantity__c}"/></div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </aura:if>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Sales Order'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab SO end-->
+                                        
+                                        <!--tab PO -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Order'), not(v.ChatterTab))}">
+                                            <div class="tab-pane active" id="PO" role="tabpanel">
+                                                <div class="panel-body AddMilestoneTask-newClass21">
+                                                    <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                        <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                            <table class="table">
+                                                                <thead data-aura-rendered-by="785:0">
+                                                                    <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                        <th class="text-center AddMilestoneTask-newClass21">
+                                                                            <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                                <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                    <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                    &nbsp;New
+                                                                                </a>
+                                                                                <aura:set attribute="else">
+                                                                                    <a data-target="#myModal" onclick="{!c.navPO}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                        <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                        &nbsp;New
+                                                                                    </a>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="787:0">
+                                                                            <div>Name
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="790:0">
+                                                                            <div >Vendor
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div >Vendor Contact
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div>Organisation
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="805:0">
+                                                                            <div>Status
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="817:0">
+                                                                            <div>Quantity
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <aura:if isTrue="{!not(empty(v.purchaseOrders))}">
+                                                                    <tbody data-aura-rendered-by="820:0">
+                                                                        <aura:iteration items = "{!v.purchaseOrders}" var = "PO" indexVar="poIndex">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="text-center">
+                                                                                    <lightning:formattedText value = "{!poIndex + 1 + '.'}"/>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="AddMilestoneTask-newClass19"><lightning:formattedText value="{!PO.Name}" onclick="{!c.NavPORecord}" title="{!PO.Id}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class=""><lightning:formattedText value="{!PO.ERP7__Vendor__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class=""><lightning:formattedText value="{!PO.ERP7__Vendor_Contact__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!PO.ERP7__Organisation__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!PO.ERP7__Status__c}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" data-aura-rendered-by="4330:1760;a">
+                                                                                    <div class=""><lightning:formattedText value="{!PO.ERP7__Total_Quantity__c}"/></div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </aura:if>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Order'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab PO end-->
+                                        
+                                        <!--tab PR -->
+                                        <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Requisition'), not(v.ChatterTab))}">
+                                            <div class="tab-pane active" id="PR" role="tabpanel">
+                                                <div class="panel-body AddMilestoneTask-newClass21">
+                                                    <div class="container-fluid mb-5 p-0" data-aura-rendered-by="782:0">
+                                                        <div class="table-responsive AddMilestoneTask-newClass14" tabindex="1">
+                                                            <table class="table">
+                                                                <thead data-aura-rendered-by="785:0">
+                                                                    <tr class="slds-text-title--caps" data-aura-rendered-by="786:0">
+                                                                        <th class="text-center AddMilestoneTask-newClass21">
+                                                                            <aura:if isTrue="{!or(equals(v.newTask.Id, null),equals(v.newTask.Id, undefined))}">
+                                                                                <a data-target="#myModal" data-record="Add" class="AddMilestoneTask-newClass15" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                    <i class="fa fa-plus AddMilestoneTask-newClass18" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                    &nbsp;New
+                                                                                </a>
+                                                                                <aura:set attribute="else">
+                                                                                    <a data-target="#myModal" onclick="{!c.navPR}" data-record="Add" class="AddMilestoneTask-newClass16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                        <i class="fa fa-plus AddMilestoneTask-newClass17" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                        &nbsp;New
+                                                                                    </a>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="787:0">
+                                                                            <div>Name
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="790:0">
+                                                                            <div >Channel
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="793:0">
+                                                                            <div >Distribution Channel
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="796:0">
+                                                                            <div>Requisition By
+                                                                            </div>
+                                                                        </th>
+                                                                        <th scope="col" data-aura-rendered-by="805:0">
+                                                                            <div>Status
+                                                                            </div>
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <aura:if isTrue="{!not(empty(v.purchaseRequisitions))}">
+                                                                    <tbody data-aura-rendered-by="820:0">
+                                                                        <aura:iteration items = "{!v.purchaseRequisitions}" var = "PR" indexVar="prIndex">
+                                                                            <tr class="slds-hint-parent">
+                                                                                <td class="text-center">
+                                                                                    <lightning:formattedText value = "{!prIndex + 1 + '.'}"/>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class="AddMilestoneTask-newClass19"><lightning:formattedText value="{!PR.Name}" onclick="{!c.NavPRRecord}" title="{!PR.Id}"/></div>
+                                                                                </td>
+                                                                                <td data-label="" scope="row">
+                                                                                    <div class=""><lightning:formattedText value="{!PR.ERP7__Channel__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td data-label="">
+                                                                                    <div class=""><lightning:formattedText value="{!PR.ERP7__Distribution_Channel__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!PR.ERP7__Requisitioned_By__r.Name}"/></div>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <div class=""><lightning:formattedText value="{!PR.ERP7__Status__c}"/></div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </aura:iteration>
+                                                                    </tbody>
+                                                                </aura:if>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                            	<aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Purchase Requisition'), v.ChatterTab)}">
+                                                    <aura:if isTrue="{!not(equals(v.newTask.Id,null))}">
+                                                        <forceChatter:publisher context="RECORD"  recordId="{!v.newTask.Id}"/>
+                                                        <forceChatter:feed type="Record" feedDesign="DEFAULT" subjectId="{!v.newTask.Id}"/>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        <!--tab PR end-->
+                                    </div>
+                                    
+                                    
+                                </aura:if>
+                    </div>
+                         </div>
+                </div>
+            </div>
+            <div class="slds-docked-form-footer AddMilestoneTask-newClass22">
+                <lightning:button label="Back" class="slds-button slds-button--neutral" onclick="{!c.goBack}"/> &nbsp;
+                <lightning:button label="Save" variant="brand" class="slds-button slds-button--brand white" onclick="{!c.saveTask}"/>
+            </div>
+            
+            
+            <aura:if isTrue="{!and(equals(v.newTask.ERP7__Type__c, 'Transfer Order'), not(equals(v.newTask,null)))}">
+                <div>
+                    <section aura:id="NewTransferOrder" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeTOModal}" variant="bare-inverse" size="large"/> 
+                                <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate AddMilestoneTask-newClass24">Transfer Order</h2>
+                            </header>
+                            <div class="slds-grid slds-wrap AddMilestoneTask-newClass23">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="unique-id-of-input">Name<span class="AddMilestoneTask-newClass11">*</span></label>
+                                        <lightning:input type="text" variant="label-hidden" aura:id="newTOName"  required="true"  value="{!v.newTransferOrder.Name}" placeholder = "Transfer Order Name.." />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:select  aura:id="newTOType"  value="{!v.newTransferOrder.RecordTypeId}" label="Record Type">
+                                            <aura:iteration items="{!v.newTOTypeOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.newTransferOrder.RecordTypeId, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+=                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="date" label="Requested Date" aura:id="newTORequestDate"  value="{!v.newTransferOrder.ERP7__Requested_Date__c}" />
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="date" label="Expected Date"  value="{!v.newTransferOrder.ERP7__Expected_Date__c	}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOFchannel" objectAPIName="ERP7__Channel__c" required="true" label="From Channel" IconName="standard:product" placeholder="Search Channel .." selectedRecordId="{!v.newTransferOrder.ERP7__Channel__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOTchannel" objectAPIName="ERP7__Channel__c" required="true" label="To Channel" IconName="standard:product" placeholder="Search Channel.." selectedRecordId="{!v.newTransferOrder.ERP7__To_Channel__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOFsite" objectAPIName="ERP7__Site__c" label="From Site" IconName="standard:product" placeholder="Search Site.." selectedRecordId="{!v.newTransferOrder.ERP7__From_Site__c}"/>                           
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOTsite" objectAPIName="ERP7__Site__c" label="To Site" IconName="standard:product" placeholder="Search Site.." selectedRecordId="{!v.newTransferOrder.ERP7__To_Site__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOFDC" objectAPIName="ERP7__Distribution_Channel__c" label="From Distribution Channel" IconName="standard:product" placeholder="Search DC.." selectedRecordId="{!v.newTransferOrder.ERP7__Distribution_Channel__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOTDC" objectAPIName="ERP7__Distribution_Channel__c" label="To Distribution Channel" IconName="standard:product" placeholder="Search DC.." selectedRecordId="{!v.newTransferOrder.ERP7__To_Distribution_Channel__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOFaddress" objectAPIName="ERP7__Address__c" label="From Address" IconName="standard:product" placeholder="Search Address.." selectedRecordId="{!v.newTransferOrder.ERP7__From_Address__c}"/>                            
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp aura:id="newTOTaddress" objectAPIName="ERP7__Address__c" label="To Address" IconName="standard:product" placeholder="Search Address.." selectedRecordId="{!v.newTransferOrder.ERP7__To_Address__c}"/>                           
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:select  aura:id="newTOStatus"  value="{!v.newTransferOrder.ERP7__Status__c}" label="Status">
+                                            <aura:iteration items="{!v.newTOStatusOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.newTransferOrder.ERP7__Status__c, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="checkbox" label="Active" checked="{!v.newTransferOrder.ERP7__Active__c}"/>
+                                    </div> 
+                                </div>
+                            </div>
+                            <footer class="slds-modal__footer">
+                                <lightning:button  label="Cancel" onclick="{!c.closeTOModal}" variant="neutral"/>
+                                <lightning:button onclick="{!c.addTO}" label="Save" variant="brand"/>
+                            </footer>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop" aura:id="NewTransferOrderBackdrop"></div>
+                </div>
+            </aura:if>
+            
+            
+        </div>
+    </body>
+</aura:component>

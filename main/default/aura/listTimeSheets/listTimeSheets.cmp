@@ -1,0 +1,1235 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"  controller="TransactionManagement" access="global"><!-- controller="TransactionMeasurement" -->
+    
+    <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-dashboard.css"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="StartDate" type="Date"/>
+    <aura:attribute name="EndDate" type="Date"/>
+    <aura:attribute name="invList" type="Invoice__c[]"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="billList" type="Bill__c[]"/>
+    <aura:attribute name="payList" type="Payment__c[]"/>
+    <aura:attribute name="expList" type="Expense__c[]"/>
+    <aura:attribute name="cnList" type="Credit_Note__c[]"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/>
+    <aura:attribute name="selectedTab" type="String" default="Invoices"/>
+    <aura:handler name="change" value="{!v.selectedTab}" action="{!c.switchTab}"/>
+    <aura:attribute name="creditnoteList" type="Credit_Note__c[]"/>
+    <aura:attribute name="TransactionWrapper" type="object" default="{'sObjectType' : 'TransactionWrapper'}"/>
+    <div aura:id="body">
+        <div class="slds-container ">
+            <div class="slds-page-header bg-theme">
+                
+                <div class="card pb-4 mb-2">
+                    <div class="card-header pb-0 p-3">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0">User Details</h6>
+                            
+                        </div>
+                        <div class="slds-grid slds-wrap">
+                        
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                            <c:CustomInputLookUp objectAPIName="Account" label="Organisation" required="true" selectedRecord="{!v.Organisation}" NameValue="{!v.Organisation.Name}" IconName="standard:account" placeholder="Search Organisation" qry="AND ERP7__Account_Type__C = 'Organisation'" />
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="date" name="input1" label="Start Date" value="{!v.StartDate}" required="true"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="date" name="input1" label="End Date" value="{!v.EndDate}" required="true"/>
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="prMes1 slds-col slds-size_1-of-1 slds-large-size_2-of-12 slds-p-top_medium">
+                            <lightning:button variant="brand" label="Find" onclick="{!c.switchTab}"/>
+                        </div>
+                        
+                    </div>
+                    </div>
+                
+              </div>
+                
+                
+                
+                <div class="card">
+                    <div class="card-header d-flex pb-0 p-3">
+                        <h6 class="my-auto">Transactions</h6>
+                        <div class="nav-wrapper position-relative ms-auto w-50">
+                          <!-- <ul class="nav nav-pills nav-fill p-1" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1 active" data-bs-toggle="tab" href="#cam1" role="tab" aria-controls="cam1" aria-selected="true">
+                                        Invoices
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1" data-bs-toggle="tab" href="#cam2" role="tab" aria-controls="cam2" aria-selected="false">
+                                        Bills
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1" data-bs-toggle="tab" href="#cam3" role="tab" aria-controls="cam3" aria-selected="false">
+                                        Payments
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1" data-bs-toggle="tab" href="#cam3" role="tab" aria-controls="cam3" aria-selected="false">
+                                        Credit Notes
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1" data-bs-toggle="tab" href="#cam3" role="tab" aria-controls="cam3" aria-selected="false">
+                                        Debit Notes
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link mb-0 px-0 py-1" data-bs-toggle="tab" href="#cam3" role="tab" aria-controls="cam3" aria-selected="false">
+                                        Expenses
+                                    </a>
+                                </li>
+                                <div class="moving-tab position-absolute nav-link" >
+                                    <a class="nav-link mb-0 px-0 py-1 active" data-bs-toggle="tab" href="#cam1" role="tab" aria-controls="cam1" aria-selected="true">-</a>
+                                </div>
+                            </ul> -->
+                            <ul class="nav nav-pills nav-fill p-1 " role="tablist">
+                            <c:Tab label="Invoices" name="Invoices" selectedTab="{!v.selectedTab}" iconclass="fa fa-list-ol"  /> 
+                            <c:Tab label="Bills"  name="Bills" selectedTab="{!v.selectedTab}" iconclass="fa fa-file-text"/>
+                            <c:Tab label="Payments" name="Payments" selectedTab="{!v.selectedTab}" iconclass="fa fa-credit-card-alt"/> 
+                            <c:Tab label="Credit Notes" name="Credit_notes" selectedTab="{!v.selectedTab}" iconclass="fa fa-sticky-note"/>
+                            <c:Tab label="Debit Notes" name="Credit_Debit_notes" selectedTab="{!v.selectedTab}" iconclass="fa fa-sticky-note"/>
+                            <c:Tab label="Expenses" name="Expenses" selectedTab="{!v.selectedTab}" iconclass="fa fa-sticky-note"/>
+                        </ul>
+                        </div>
+                        
+                        </div>
+                                         
+                    <div class="slds-tabs--default theme-bg ">
+                        
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Invoices'),true)}">
+                            <div class="cardmaq red-left">
+                                <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Invoices without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransInvoices.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            	<!--<div class="slds-page-header divClass1">Invoices without Transaction <div class="floating">{!v.TransactionWrapper.noTransInvoices.length}</div></div>-->
+                            	<table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Invoice Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransInvoices}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            <div class="cardmaq orange-left">
+                                 <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Invoices with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-orange">{!v.TransactionWrapper.noEntriesInvoices.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            		<!--<div class="slds-page-header divClass2">Invoices with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesInvoices.length}</div></div>-->
+                            		<table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Invoice Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesInvoices}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            <div class="cardmaq blue-left">
+                                 <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Invoices with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchInvoices.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            		<!--<div class="slds-page-header divClass">Invoices with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchInvoices.length}</div></div>-->
+                            		<table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Invoice Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchInvoices}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Bills'),true)}">
+                             <div class="cardmaq red-left">
+                                 <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Bills without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransBills.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            		<!--<div class="slds-page-header divClass1">Bills without Transaction<div class="floating">{!v.TransactionWrapper.noTransBills.length}</div></div>-->
+                            		<table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Bill Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransBills}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                             <div class="cardmaq orange-left">
+                                 <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Bills with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-orange">{!v.TransactionWrapper.noEntriesBills.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                           		 <!--<div class="slds-page-header divClass2">Bills with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesBills.length}</div></div>-->
+                           		 <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Bill Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesBills}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                             <div class="cardmaq blue-left">
+                                  <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Bills with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchBills.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                          		  <!--<div class="slds-page-header divClass">Bills with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchBills.length}</div></div>-->
+                           		 <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Bill Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchBills}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                        
+                        
+                        
+                        
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Payments'),true)}">
+                            <div class="cardmaq red-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Payments without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransPayments.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass1">Payments without Transaction<div class="floating">{!v.TransactionWrapper.noTransPayments.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Payment Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransPayments}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            <div class="cardmaq orange-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Payments with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-orange">{!v.TransactionWrapper.noEntriesPayments.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass2">Payments with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesPayments.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Payment Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesPayments}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                            <div class="cardmaq blue-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Payments with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchPayments.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass">Payments with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchPayments.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Payment Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchPayments}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                        
+                        
+                        
+                        
+                        
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Credit_notes'),true)}">
+                            <div class="cardmaq red-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Credit Notes without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransCreditnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass1">Credit Notes without Transaction<div class="floating">{!v.TransactionWrapper.noTransCreditnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Credit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransCreditnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                            <div class="cardmaq orange-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Credit Notes with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-orange">{!v.TransactionWrapper.noEntriesCreditnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass2">Credit Notes with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesCreditnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Credit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesCreditnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                             <div class="cardmaq blue-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Credit Notes with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchCreditnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass">Credit Notes with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchCreditnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Credit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchCreditnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                        
+                        
+                        
+                        
+                        
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Credit_Debit_notes'),true)}">
+                            <div class="cardmaq red-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Debit Notes without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransDebitnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                            <!--<div class="slds-page-header divClass1">Debit Notes without Transaction<div class="floating">{!v.TransactionWrapper.noTransDebitnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Debit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransDebitnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                            <div class="cardmaq orange-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Debit Notes with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.noEntriesDebitnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                           <!-- <div class="slds-page-header divClass2">Debit Notes with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesDebitnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Debit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesDebitnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                            <div class="cardmaq blue-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Debit Notes with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchDebitnotes.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass">Debit Notes with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchDebitnotes.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Debit Note Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchDebitnotes}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Posted__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                        
+                        
+                        <aura:if isTrue="{!and(equals(v.selectedTab,'Expenses'),true)}">
+                            <div class="cardmaq red-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-red">
+                                            <a href="javascript:;">Expenses without Transaction</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-red">{!v.TransactionWrapper.noTransExpenses.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass1">Expenses without Transaction<div class="floating">{!v.TransactionWrapper.noTransExpenses.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Expense Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noTransExpenses}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Paid__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                             <div class="cardmaq orange-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-orange">
+                                            <a href="javascript:;">Expenses with Transaction and without Entries</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-orange">{!v.TransactionWrapper.noEntriesExpenses.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass2">Expenses with Transaction and without Entries<div class="floating">{!v.TransactionWrapper.noEntriesExpenses.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Expense Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.noEntriesExpenses}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Paid__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                            
+                             <div class="cardmaq blue-left">
+                            <div class="row align-items-center mb-3">
+                                    <div class="col-9">
+                                        <h5 class="mb-1 text-gradient gradient-blue">
+                                            <a href="javascript:;">Expenses with Ledger Entries Mismatch</a>
+                                        </h5>
+                                    </div>
+                                    <div class="col-3 text-end">
+                                        <div class="dropstart">
+                                            <a href="javascript:;" class="text-secondary" id="dropdownMarketingCard" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </a>
+                                            <h5 class="mb-1 text-gradient gradient-blue">{!v.TransactionWrapper.entryMismatchExpenses.length}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            <!--<div class="slds-page-header divClass">Expenses with Ledger Entries Mismatch<div class="floating">{!v.TransactionWrapper.entryMismatchExpenses.length}</div></div>-->
+                            <table class="table table-flush dataTable-table">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Expense Name</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Posted</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>
+                                        <!--<th scope="col" >
+                                            <div class="slds-truncate" title="">End Time</div>
+                                        </th>
+                                        <th scope="col" >
+                                            <div class="slds-truncate" title="">Created Date</div>
+                                        </th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.TransactionWrapper.entryMismatchExpenses}" var="item" indexVar="ind">
+                                        <tr>
+                                            <td data-label="">
+                                                <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                            </td>
+                                            <td data-label="">
+                                                {!item.ERP7__Paid__c}
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <!--<td data-label="">
+                                                <lightning:formattedDateTime value="{!item.EventRoK__End_Time__c}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>
+                                            <td data-label="">
+                                                <lightning:formattedDateTime value="{!item.CreatedDate}" year="numeric" month="numeric" day="numeric" hour="2-digit" minute="2-digit" hour12="True" timeZone="{!$Locale.timezone}"/>
+                                            </td>-->
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            </div>
+                         </aura:if>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <aura:if isTrue="{!v.showMmainSpin}">
+            <span class="spincls">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>
+    </div>
+</aura:component>

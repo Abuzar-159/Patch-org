@@ -1,0 +1,1186 @@
+<aura:component implements="lightning:actionOverride,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" access="global" controller="CreatePO">
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Createpurchaseorder.css"/> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/> 
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/> 
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}"/>    
+    
+    <aura:attribute name="prodRecordId" type="String"  />
+    <aura:attribute name="PoQty" type="Decimal" default="0"/>
+    <aura:attribute name="POType" type="List" />
+    <aura:attribute name="selectedRecType" type="String" default=""/>
+    <aura:attribute name="PO" type="PO__c" default="{sObjectType :'ERP7__PO__c',ERP7__Vendor__c:'',ERP7__Channel__r:'',ERP7__Channel__r:{Id:'',Name:''},ERP7__Distribution_Channel__r:'',ERP7__Distribution_Channel__r:{Id:'',Name:''}, ERP7__Distribution_Channel__c:'',ERP7__Shipping_Preference_type__c:'', ERP7__Customer__r:{'Id':'','Name':''},ERP7__Vendor__r:{'Id':'','Name':''},ERP7__Vendor_Address__c:'',ERP7__Vendor_Address__r:{Id:'',Name:''},ERP7__EmployeeRequester__c:'',ERP7__EmployeeRequester__r:{Id:'',Name:''},ERP7__FinalApprover__c:'',ERP7__FinalApprover__r:{Id:'',Name:''}}"/>
+    <aura:attribute name="POWrap" type="Object"/>
+    <aura:attribute name="orderId" type="String" default=""/>
+    <aura:attribute name="POStatusoptions" type="List" /> 
+    <aura:attribute name="POTypeoptions" type="List" /> 
+    <aura:attribute name="POShipmentoptions" type="List" />
+    <aura:attribute name="POShipmentSpeed" type="List" />
+    <aura:attribute name="dimensionList" type="object[]"  />
+    <aura:attribute name="poli" type="String[]" />
+    <aura:attribute name="cancelclick" type="Aura.Action" default="{!c.goBack}"/>
+    <aura:attribute name="saveclick" type="Aura.Action" default="{!c.savePO}"/>
+    <aura:attribute name="Index2del" type="Integer" default="-1"/>
+    <aura:attribute name="vendorId" type="String" default=""/>
+    <aura:handler name="change" value="{!v.TotalPrice}" action="{!c.updateTotalPrice}"/>
+    <aura:attribute name="MOId" type="String" default=""/>
+    <aura:attribute name="MPsMOId" type="String" default=""/>
+    <aura:attribute name="SOId" type="String" default=""/>
+    <aura:attribute name="WOId" type="String" default=""/>
+    <aura:attribute name="TotalPrice" type="Currency"/>
+    <aura:attribute name="fromMultiPO" type="boolean" default="false"/>
+    <aura:attribute name="ProjectAccess" type="boolean" default="false"/>
+    <aura:attribute name="DepartmentAccess" type="boolean" default="false"/>
+    <aura:attribute name="hidechannelRemove" type="boolean" default="false"/>
+    <aura:attribute name="fromCB" type="boolean" default="false"/>
+    <aura:attribute name="fromAP" type="boolean" default="false"/>
+    <aura:attribute name="showReceive" type="boolean" default="false"/>
+    <aura:attribute name="fromAPB" type="boolean" default="false"/>
+    <aura:attribute name="fromProject" type="boolean" default="false"/>
+    <aura:attribute name="ProjId" type="String" default=""/>
+    <aura:attribute name="recordId" type="String" default=""/>
+    <aura:attribute name="clonePOId" type="String" default=""/>
+    <aura:attribute name="HideHeader" type="Boolean" default="true"/>
+    <aura:attribute name="isFromNone" type="Boolean" default="true"/>
+    <aura:attribute name="isRecieved" type="Boolean" default="false"/>
+    <aura:attribute name="returnToVendor" type="Boolean" default="false"/>
+    <aura:attribute name="navigateToRecord" type="Boolean" default="true"/> 
+    <aura:attribute name="vId" type="String"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="Mtask" type="Actions_Tasks__c"/>
+    <aura:attribute name="projectId" type="String"/>
+    <aura:attribute name="currentMilestones" type = "object"/>
+    <aura:attribute name="currentProject" type = "Project__c"/>
+    <aura:attribute name="itemToDel" type="String[]"/>
+    <aura:attribute name="RFPsupplier" type="Request_Supplier__c"/>
+    <aura:attribute name="RFPrequest" type="Request__c"/>
+    <aura:attribute name="rmaliID" type="String" default=""/>
+    <aura:attribute name="mpslineId" type="String" default=""/>
+    <aura:attribute name="mrplineId" type="String" default=""/>
+    <aura:attribute name="quantityMultiplier" type="Decimal" default="1"/>
+    <aura:attribute name="RMALI" type="RMA_Line_Item__c"/>
+    <aura:attribute name="soliID" type="String" default=""/>
+    <aura:attribute name="isSalesOrder" type="Boolean" default="false"/>
+    <aura:attribute name="ispaymnetAccess" type="Boolean" default="false"/>
+    <aura:attribute name="versionAccess" type="Boolean" default="false"/>
+    <aura:attribute name="QuoteAccess" type="Boolean" default="false"/>
+    <aura:attribute name="AutoAccountAllocations" type="Boolean" default="false"/>
+    <aura:attribute name = "currentProj" type = "Project__c" default="{'sObjectType':'ERP7__Project__c',
+                                                                            'Name': '',
+                                                                            'ERP7__Status__c': '--none--',
+                                                                            'ERP7__Project_Manager__c': '',
+                                                                            'ERP7__Organisations__c' : '',
+                                                                            'ERP7__Default_Routing__c' : '',
+                                                                            'ERP7__Team__c' : '',
+                                                                            'ERP7__Account__c' : '',
+                                                                            'ERP7__Contact__c' : '',
+                                                                            'ERP7__Total_Expense_Amount__c' : '',
+                                                                            'ERP7__Total_Income__c' : ''
+                                                                            }"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.displayRecords}"/>
+    
+    <aura:method name="save_PO" action="{!c.savePO}" access="PUBLIC">
+        <aura:attribute name="callback" type="Function" />
+    </aura:method>  
+    <aura:dependency resource="force:showToast"/>
+    <aura:handler name="change" value="{!v.PO.ERP7__Vendor__c}" action="{!c.UpdatePO}"/>
+    <aura:handler name="change" value="{!v.PO.ERP7__Organisation__c}" action="{!c.UpdateOA}"/>
+    <aura:handler name="change" value="{!v.Index2del}" action="{!c.deletePoli}"/>
+    <aura:handler name="change" value="{!v.purchaseOrderId}" action="{!c.fetchDetailsonPO}"/>
+    <aura:attribute name="Tax" type="Currency"/>
+    <aura:attribute name="TotalTax" type="Currency" default="0.00"/>
+    <aura:attribute name="SubTotal" type="Currency" default="0.00"/>
+    <aura:attribute name="TotalAmount" type="Currency" default="0.00"/>
+    <aura:handler name="change" value="{!v.Tax}" action="{!c.updateTotalTax}"/>
+    <aura:attribute name="qmsg"  type="String" default=""/>
+    <aura:attribute name="isDelete"  type="Boolean" default="false"/>
+    <aura:attribute name="fromRequisition"  type="Boolean" default="false"/>
+    <aura:attribute name="interCompanyPO"  type="Boolean" default="false"/>
+    <aura:attribute name="isNewAddress"  type="Boolean" default="false"/>
+    <aura:attribute name="channelId" type="String" default=""/>
+    <aura:attribute name="purchaseOrderId" type="String" default=""/>
+    <aura:attribute name="dChannelId" type="String" default=""/>
+    <aura:attribute name="Channel"  type="Map" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="distributionChannel" type="sObject" default="{'Id':'','Name':''}"/>
+    <aura:handler name="change" value="{!v.isDelete}" action="{!c.deletePoli}"/>
+    <aura:handler name="change" value="{!v.dChannelId}" action="{!c.getDeliveryAdd}"/>
+    <aura:attribute name="proceedDeliveryAddChange" type="Boolean" default="true"/>
+    
+    <aura:handler name="change" value="{!v.PO.ERP7__Shipment_Type__c}" action="{!c.parentFieldChange}"/>
+    <aura:handler event="c:RequisitionToPurchaseOrderEvent" action="{!c.deletePoli}"/>
+    <aura:attribute name="showMainSpin" type="boolean" default="true"/>
+    <aura:attribute name="nameUrl" type="String"/>
+    <aura:attribute name="POExisting" type="list"/>
+    <aura:attribute name="ShipmentId" type="String"/> 
+    <aura:attribute name="PackIds" type="List"/>
+    <aura:attribute name="fromshipment" type="Boolean" default="false"/>
+    <aura:attribute name="showVenName" type="Boolean" default="false"/>
+    <aura:attribute name="POLINameAcc" type="Boolean" default="false"/>
+    <aura:attribute name="showTaxName" type="Boolean" default="false"/>
+    <aura:attribute name="showAllocations" type="Boolean" default="false"/>
+    <aura:attribute name="venAddressRequired" type="Boolean" default="false"/>
+    <aura:attribute name="venConRequired" type="Boolean" default="true"/>
+    <aura:attribute name="showTaxRate" type="Boolean" default="false"/>
+    <aura:attribute name="showpackageType" type="Boolean" default="false"/>
+    <aura:attribute name="showOrgName" type="Boolean" default="true"/>
+    <aura:attribute name="showDchannelBelow" type="Boolean" default="false"/>
+    <aura:attribute name="DcRequired" type="Boolean" default="true"/>
+    <aura:attribute name="rmaId" type="String" default="" />
+    <aura:attribute name="defaultVenAcc" type="object" />
+    <aura:attribute name="defaultVenCon" type="object"  />
+    <aura:attribute name="defaultVenAddress" type="object"  />
+    <aura:attribute name="ACCRecId" type="String" default=""/>
+    <aura:attribute name="ConRecId" type="String" default=""/>
+    
+    <aura:attribute name="prSelectedOrder" type="String" default=""/>
+    <aura:attribute name="salesOrder" type="Boolean" default="false"/> 
+    <aura:attribute name="preventChange" type="Boolean" default="true"/>
+    <aura:attribute name="QueryRecentRecord" type="Boolean" default="false"/> 
+    <aura:attribute name="ObjectAPIName" type="string" default="Account"/>
+    <aura:attribute name="FieldToAssign" type="String" default=""/>
+    <aura:attribute name="defaultcmpValue" type="object" />
+    <aura:handler name="change" value="{!v.PO.ERP7__Vendor_Address__c}" action="{!c.checkforTaxRate}"/>
+    
+    <!-- For Shipment Dependent Picklists -->
+    <aura:attribute name="objDetail" type="string" default="ERP7__PO__c" />
+    <aura:attribute name="controllingFieldAPI" type="string" default="ERP7__Shipment_Type__c" description="store field API name of Controller field"/>
+    <aura:attribute name="dependingFieldAPI" type="string" default="ERP7__Shipment_Preference_Speed__c" description="store field API name of dependent field"/>
+    <aura:attribute name="listDependingValues" type="list" default="" description="to store dependent field values"/>
+    <aura:attribute name="listControllingValues" type="list" default="" description="to store controller field values"/>
+    <aura:attribute name="bDisabledDependentFld" type="boolean" default="false"/> 
+    <aura:attribute name="depnedentFieldMap" type="object" description="map to store dependent values with controlling value"/>
+    <aura:attribute name="showchecklistvalue" type="boolean" default="false"/>
+    <aura:attribute name="ControllingValue" type="String" default="" description="to store controller field values"/>
+    <aura:attribute name="isMultiCurrency" type="Boolean" default="false"/>
+    <aura:attribute name="currencyList" type="List"/>
+    
+    <!-- For file Uplaod -->
+    <aura:attribute name="fillList" type="String[]" default="[]"/>
+    <aura:attribute name="showDelete" type="Boolean" default="false"/>
+    <aura:attribute name="showLoadingSpinner" type="boolean" default="false" />
+    <aura:attribute name="FileList" type="object"/>
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="showfileUpload" type="Boolean" default="false"/>
+    <aura:attribute name="successMsg" type="String" default=""/>
+    <aura:attribute name="uploadedFile" type="String[]" />
+    
+    <!-- For add product section -->
+    <aura:attribute name="showAddProducts" type="Boolean" default="false"/>
+    <aura:attribute name="allowCustomProd" type="Boolean" default="false"/>
+    <aura:attribute name="toggleChecked" type="Boolean" default="false"/>
+    <aura:attribute name="searchItem" type="String" default=""/>
+    <aura:attribute name="seachItemFmily" type="String" default=""/>
+    <aura:attribute name="Poructobj" type="string" default="Product2" />
+    <aura:attribute name="FamilycontrollingFieldAPI" type="string" default="Family" description="store field API name of Controller field"/>
+    <aura:attribute name="SubFamilydependingFieldAPI" type="string" default="ERP7__Product_Service_Family__c" description="store field API name of dependent field"/>
+    <aura:attribute name="bDisabledSubFamilyFld" type="boolean" default="true"/> 
+    <aura:attribute name="FamilydepnedentFieldMap" type="object" description="map to store dependent values with controlling value"/>    
+    <aura:attribute name="subItemFmily" type="String" default=""/>
+    <aura:attribute name="familylst" type="List" /> 
+    <aura:attribute name="subfamilylst" type="List" /> 
+    <aura:attribute name="showStandardProducts" type="Boolean" default="true"/>
+    <aura:attribute name="ClistOfProducts" type="List"/>
+    <aura:attribute name="listOfProducts" type="String[]" default="[]"/>
+    <aura:attribute name="addProductsMsg" type="String" default=""/>
+    <aura:attribute name="defaultTaxRate" type="Decimal" default="0"/>
+    <aura:attribute name="reRenderPOLIS" type="Boolean" default="true"/>
+    <aura:attribute name="globalProdSearch" type="Boolean" default="false"/>
+    <aura:attribute name="selectedListOfProducts" type="String[]" default="[]"/>
+    <aura:attribute name="SelectedcustomerOrders" type="List"/>
+    
+    <aura:attribute name="showPOType" type="Boolean" default="true"/>
+    <aura:attribute name="DropShipPOrecType" type="String" default="{!$Label.c.DropShipPOrecType}"/>
+    <aura:attribute name="ReturnPOrecType" type="String" default="{!$Label.c.ReturnPOrecType}"/>
+    <aura:attribute name="NonePicklistType" type="String" default="{!$Label.c.NonePicklistType}"/>
+    
+    <aura:handler name="change" value="{!v.PO.ERP7__Customer__c}" action="{!c.setDeliveryAdd}"/>
+    <aura:handler name="change" value="{!v.PO.ERP7__Order__c}" action="{!c.getOrderItemsforDropShip}"/>
+    
+    <aura:attribute name="proceedDefaultTaxRateChange" type="Boolean" default="true"/>
+    <aura:attribute name="CostCardFilter" type="String" default=""/>
+    
+    <!-- Added new attributes to shore the data OCR part -->
+            <aura:attribute name="billPayload" type="Object"/>
+    
+    <aura:attribute name="POCurrencyIsoCode" type="String" default=""/>
+    <aura:attribute name="filesData2Upload" type="String[]" default="[]"/>
+    <aura:attribute name="reRenderCustPOli" type="Boolean" default="true"/>
+    <!--SPINNER VALUES-->
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    
+    
+         
+           
+    
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <div class="erp_mark7 maqsood slds-p-bottom_large" aura:id="body">
+        <!--span class="cpo-class2"-->
+            <aura:if isTrue="{!v.showSpinner}">
+                <div class="custom-spinner slds-spinner_container ">
+                    <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                        
+                    </div>
+                    <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                </div>
+            </aura:if>
+            <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass" /-->
+        <!--/span-->
+        
+        <div class=" slds-container--fluid bg-white"> 
+            <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed cpo-class10','slds-notify_container slds-is-fixed cpo-class9')}">
+                <div class="slds-notify slds-notify_toast slds-theme_error cpo-class11" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.error}&nbsp;</span>
+                    <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.error}" title="{!$Label.c.error}" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small cpo-class12">{!v.exceptionError}&nbsp;
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close cpo-class13">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="{!$Label.c.Close_Timesheets}" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_Timesheets}" title="{!$Label.c.Close_Timesheets}" />
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}&nbsp;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="{!if(and(v.successMsg != '', v.successMsg != undefined),'slds-notify_container slds-is-fixed cpo-class10','slds-notify_container slds-is-fixed cpo-class9')}">
+                <div class="slds-notify slds-notify_toast slds-theme_success cpo-class11" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.error}&nbsp;</span>
+                    <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:success" variant="inverse" size="x-small" alternativeText="{!$Label.c.error}" title="{!$Label.c.error}" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small cpo-class12">{!v.successMsg}&nbsp;
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close cpo-class13">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="{!$Label.c.Close_Timesheets}" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_Timesheets}" title="{!$Label.c.Close_Timesheets}" />
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}&nbsp;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <aura:if isTrue="{!!v.showPOType}">
+                
+                <aura:if isTrue="{!!v.showAddProducts}">
+                    <aura:if isTrue="{!v.HideHeader}">
+                        <div class="slds-page-header">
+                            <div class="slds-grid">
+                                <div class="slds-col slds-has-flexi-truncate">
+                                    <div class="slds-media slds-no-space slds-grow">
+                                        <div class="slds-media__figure">
+                                            <lightning:icon iconName="standard:work_plan" variant="inverse" size="x-medium" alternativeText="{!$Label.c.work_plan}" title="" /><!--title="{!$Label.c.work_plan}"-->
+                                        </div>
+                                        <aura:if isTrue="{!(v.selectedRecType == v.DropShipPOrecType)}">
+                                            <div class="slds-media__body">
+                                                <p class="slds-text-title--caps slds-line-height--reset slds-m-bottom_xxx-small">{!$Label.c.Create_Drop_Ship_PO}</p>
+                                                <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-m-bottom_xxx-small" title="">{!$Label.c.Purchase_Order} </h1>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!v.returnToVendor}">
+                                                    <div class="slds-media__body">
+                                                        <p class="slds-text-title--caps slds-line-height--reset slds-m-bottom_xxx-small">{!$Label.c.Return}</p>
+                                                        <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-m-bottom_xxx-small" title="">{!$Label.c.Purchase_Order} </h1>
+                                                        
+                                                    </div>
+                                                    <aura:set attribute="else">
+                                                        <div class="slds-media__body">
+                                                            <p class="slds-text-title--caps slds-line-height--reset slds-m-bottom_xxx-small">{!$Label.c.Transfer_Order_Create}</p>
+                                                            <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-m-bottom_xxx-small" title="">{!$Label.c.Purchase_Order} </h1>
+                                                            
+                                                        </div>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>  
+                                    </div>
+                                    <aura:if isTrue="{!v.returnToVendor}">
+                                        <div class="cpo-class365">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__PO__c" IconName="standard:address" selectedRecordId="{!v.purchaseOrderId}" aura:Id="Po" />
+                                        </div>
+                                    </aura:if>
+                                </div>
+                                <div class="slds-col slds-no-flex slds-grid slds-align-top" >
+                                    <div class="slds-grid" >
+                                        <div class="slds-col slds-m-right--xx-small">
+                                            <div class="cpo-class3">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" IconName="custom:custom24" selectedRecordId="{!v.channelId}" label="{!$Label.c.Channel_StockTake}" hideRemove="{!v.hidechannelRemove}"                                                             />
+                                            </div>
+                                        </div>
+                                        <div class="slds-col">
+                                            <aura:if isTrue="{!and(!v.showDchannelBelow,v.selectedRecType != v.DropShipPOrecType)}">
+                                                
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                    <div class="cpo-class3"> 
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" aura:id="dcId" 
+                                                                             IconName="custom:custom32"  selectedRecordId="{!v.dChannelId}" label="{!$Label.c.Distribution_center_receiving}" qry="{!'And ERP7__Channel__c = \''+v.channelId+'\''}"
+                                                                             />
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                        </div>
+                                        
+                                    </div>      
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                    
+                    <div class="card shadow-custom MultiplePurchaseOrder-newClass6">
+                        <div class="card-body p-2">
+                            <aura:if isTrue="{!(empty(v.orderId) || empty(v.SOId))}" >
+                                <div class="epr_Mark7 cpo-class4" aura:id="POId">
+                                    
+                                    <aura:if isTrue="{!v.POExisting.length>0}">   
+                                        
+                                        <div class="slds-card__body cpo-class5">    
+                                            <table class="slds-table slds-table--bordered slds-table_cell-buffer" >
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label" scope="col"></th>
+                                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.Name_ManageLeave}</th>                                
+                                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.Order_RMA}</th>
+                                                        <th class="slds-text-heading--label" scope="col">Contact</th>                        
+                                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.To_Address}</th> 
+                                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.Status}</th>   
+                                                    </tr>  
+                                                </thead>
+                                                
+                                                <tbody>                    
+                                                    <aura:iteration items="{!v.POExisting}" var="PO" indexVar="index">      
+                                                        <tr>          
+                                                            <td data-label="">
+                                                                <div class="slds-truncate" title=""></div>
+                                                            </td>
+                                                            <td data-label="Name">
+                                                                <div class="slds-truncate" title="">
+                                                                    <a class="svg" target="_blank" onclick="{!c.showLogisticRecordDetailsPage}" href="{!v.nameUrl}" data-record="{!PO.Id}">{!PO.Name}</a>
+                                                                </div>
+                                                            </td>
+                                                            <td data-label="Order">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:formattedText value="{!PO.Order}"/>   
+                                                                </div>
+                                                            </td>
+                                                            <td data-label="Contact">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:formattedText value="{!PO.Contact}"/>     
+                                                                </div>
+                                                            </td>
+                                                            <td data-label="ToAddress">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:formattedText value="{!PO.ToAddress}"/>   
+                                                                </div>
+                                                            </td>
+                                                            <td data-label="Status">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:formattedText value="{!PO.Status}"/>    
+                                                                </div>
+                                                            </td>                   
+                                                        </tr>
+                                                    </aura:iteration>              
+                                                </tbody>
+                                                
+                                            </table>
+                                        </div>
+                                    </aura:if> 
+                                </div>
+                            </aura:if>
+                            
+                            <div class="epr_Mark7 cpo-class4"> 
+                                <div class="row padding-t-5 cpo-class6"> 
+                                    <aura:if isTrue="{!v.showReceive}">
+                                        <div class="col-md-3  slds-p-top--xx-small"> 
+                                            <div class="cpo-class7">
+                                                <label class="slds-form-element__label" style="margin-right: 0.5rem;">{!$Label.c.PO_Purchase_Order_Number}</label>
+                                                <lightning:helptext content="{!$Label.c.PO_Number_helptext}" class="customIcon"/>
+                                                <lightning:input type="text" variant="label-hidden"  label="{!$Label.c.PO_Purchase_Order_Number}" value="{!v.PO.Name}" aura:id="poName" oncommit="{!c.validateField}" maxlength="80"/>
+                                            </div>
+                                        </div> 
+                                    </aura:if>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <label class="slds-form-element__label" style="margin-right: 0.5rem;">{!$Label.c.POExpectedDate}</label>
+                                        <lightning:helptext content="{!$Label.c.Estimated_Delivery_Date}" class="customIcon"/>
+                                        <lightning:input type="date" variant="label-hidden" label="{!$Label.c.Expected_Date}" aura:id="Expecteddate"  value="{!v.PO.ERP7__Expected_Date__c}" />
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                        <lightning:select name="poStatus"  label="{!$Label.c.Status}" aura:id="poStatus" value="{!v.PO.ERP7__Status__c}" >
+                                            <aura:iteration items="{!v.POStatusoptions}" var="item">
+                                                <option text="{!item.label}" value="{!item.value}" selected="{!v.PO.ERP7__Status__c == item.value}"/>
+                                            </aura:iteration>
+                                        </lightning:select> 
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" required="true" IconName="utility:user" selectedRecordId="{!v.PO.ERP7__EmployeeRequester__c}" label="{!$Label.c.PO_Employee_Requester}"/>
+                                    </div> 
+                                </div>
+                                
+                                <div class="row padding-t-5 cpo-class6"> 
+                                    <aura:if isTrue="{!!v.showDchannelBelow}">
+                                        <div class="col-md-3 slds-p-top--xx-small" > 
+                                            <aura:if isTrue="{!(v.selectedRecType == v.DropShipPOrecType)}">
+                                                <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Customer__c}" label="{!$Label.c.PO_Customer_Manufacturer}" aura:Id="customerAccount" qry=" AND (ERP7__Account_Type__c = 'Customer' OR ERP7__Account_Type__c = 'Vendor' OR ERP7__Account_Type__c = 'Organisation/Vendor') " required="true"/>
+                                                <aura:set attribute="else">
+                                                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Customer__c}" label="{!$Label.c.PO_Customer_If_Applicable}" aura:Id="customerAccount" qry=" AND ERP7__Account_Type__c = 'Customer' " required="false"/>
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small"> 
+                                        <aura:if isTrue="{!and(or(v.recordId == null, v.recordId == ''),or(v.clonePOId == null, v.clonePOId == ''))}">
+                                            <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Vendor__c}" FieldValue="POV" POC="{!v.PO}" PoliItems ="{!v.poli}" label="{!$Label.c.InventoryConsole_Vendor}" required="true" aura:Id="vendorAccount" ShowNew="true" defaultvalues="{!v.defaultVenAcc}" cmpName="ERP7:CreatePurchaseOrder" objName="Vendor" APIName="Account" qry="{! v.PO.ERP7__Organisation__c != ''?' AND ERP7__Organisation__c =\''+ v.PO.ERP7__Organisation__c+'\''+ ' AND (ERP7__Account_Type__c =\'Vendor\' OR ERP7__Account_Type__c = \'Organisation/Vendor\')' : ' AND (ERP7__Account_Type__c =\'Vendor\' OR ERP7__Account_Type__c = \'Organisation/Vendor\')'}" /><!-- qry=" AND ERP7__Account_Type__c= 'Vendor'" -->
+                                            <aura:set attribute="else">
+                                                <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Vendor__c}" label="{!$Label.c.InventoryConsole_Vendor}" required="true" aura:Id="vendorAccount"  qry="{! v.PO.ERP7__Organisation__c != ''?' AND ERP7__Organisation__c =\''+ v.PO.ERP7__Organisation__c+'\''+ ' AND (ERP7__Account_Type__c =\'Vendor\' OR ERP7__Account_Type__c = \'Organisation/Vendor\')' : ' AND (ERP7__Account_Type__c =\'Vendor\' OR ERP7__Account_Type__c = \'Organisation/Vendor\')'}" />
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <aura:if isTrue="{!and(or(v.clonePOId == null, v.clonePOId == ''),and(v.PO.ERP7__Vendor__c != null, v.PO.ERP7__Vendor__c != ''),or(v.recordId == null, v.recordId == ''))}">
+                                            <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" selectedRecordId="{!v.PO.ERP7__Vendor_Contact__c}" label="{!$Label.c.Contact_Record_Name}" required="{!v.venConRequired}" aura:Id="vendorContact" FieldValue="POC" POC="{!v.PO}" PoliItems ="{!v.poli}" ShowNew="true" defaultvalues="{!v.defaultVenCon}" cmpName="ERP7:CreatePurchaseOrder" objName="Vendor Contact" APIName="Contact" qry="{!'And AccountId = \''+v.PO.ERP7__Vendor__c+'\''}"/> 
+                                            <aura:set attribute="else">
+                                                <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" selectedRecordId="{!v.PO.ERP7__Vendor_Contact__c}" label="{!$Label.c.Contact_Record_Name}" required="{!v.venConRequired}" aura:Id="vendorContact" qry="{!'And AccountId = \''+v.PO.ERP7__Vendor__c+'\''}"/> 
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <aura:if isTrue="{!and(and(v.PO.ERP7__Vendor__c != null, v.PO.ERP7__Vendor__c != ''),or(v.recordId == null, v.recordId == ''))}">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Vendor_Address__c}" aura:Id="vendorAddress" required="{!v.venAddressRequired}" label="{!$Label.c.InventoryConsole_Vendor_Address}"  qry="{!'And ERP7__Customer__c  = \''+v.PO.ERP7__Vendor__c+'\''}"/><!-- ShowNew="true" defaultvalues="{!v.defaultVenAddress}" cmpName="ERP7:CreatePurchaseOrder" objName="Vendor Address" APIName="ERP7__Address__c" -->
+                                            <aura:set attribute="else">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Vendor_Address__c}" aura:Id="vendorAddress" required="{!v.venAddressRequired}" label="{!$Label.c.InventoryConsole_Vendor_Address}"  qry="{!'And ERP7__Customer__c  = \''+v.PO.ERP7__Vendor__c+'\''}"/>
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                
+                                <div class="row padding-t-5 cpo-class6">
+                                    <aura:if isTrue="{!v.showOrgName}"> 
+                                        <div class="col-md-3  slds-p-top--xx-small">
+                                            <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Organisation__c}"  label="{!$Label.c.PO_Purchasing_Company}" required="true" aura:Id="organisationAccount" qry="{!'And (ERP7__Account_Type__c =\'Organisation\' OR ERP7__Account_Type__c = \'Organisation/Vendor\')'}"/> <!--NameValue="{!v.PO.ERP7__Organisation__r.Name}"  ' AND (ERP7__Account_Type__c= \''Organisation\'' OR ERP7__Account_Type__c = \''Organisation/Vendor\'')'-->
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Invoice_Address__c}" label="{!$Label.c.CreateCustomer_Billing_Address}" qry="{!'And (ERP7__Customer__c  = \''+v.PO.ERP7__Customer__c+'\' OR ERP7__Customer__c  = \''+v.PO.ERP7__Organisation__c+'\')'}"/>
+                                    </div>
+                                    <aura:if isTrue="{!v.showDchannelBelow}">
+                                        <div class="col-md-3   slds-p-top--xx-small">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c"  aura:id="dcId" IconName="custom:custom32"  selectedRecordId="{!v.dChannelId}" label="{!$Label.c.Receiving_Center_RMA}" />
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <aura:if isTrue="{!and(v.PO.ERP7__Customer__c != null, v.PO.ERP7__Customer__c != '')}">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Delivery_Address__c}" label="{!$Label.c.PurchaseOrderPDF_Delivery_Address}"  qry="{!'And ERP7__Customer__c  = \''+v.PO.ERP7__Customer__c+'\''}"/>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!and(and(or(v.clonePOId == null, v.clonePOId == ''),and(v.PO.ERP7__Vendor__c != null, v.PO.ERP7__Vendor__c != ''),or(v.recordId == null, v.recordId == '')))}">
+                                                    <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Delivery_Address__c}" label="{!$Label.c.PurchaseOrderPDF_Delivery_Address}"  FieldValue="POD" POC="{!v.PO}" PoliItems ="{!v.poli}" ShowNew="true" defaultvalues="{!v.defaultVenAddress}" cmpName="ERP7:CreatePurchaseOrder" objName="Delivery Address" APIName="ERP7__Address__c"/><!-- ShowNew="true" defaultvalues="{!v.defaultVenAddress}" cmpName="ERP7:CreatePurchaseOrder" objName="Vendor Address" APIName="ERP7__Address__c" -->
+                                                    <aura:set attribute="else">
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.PO.ERP7__Delivery_Address__c}" label="{!$Label.c.PurchaseOrderPDF_Delivery_Address}"  qry="{!'And ERP7__Customer__c  = \''+v.PO.ERP7__Vendor__c+'\''}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                    
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <aura:if istrue="{!v.ispaymnetAccess}">
+                                            <lightning:input type="number" value="{!v.PO.ERP7__Payment_Terms__c}" />
+                                        </aura:if>
+                                    </div>
+                                </div>  
+                                
+                                <div class="row padding-t-5 cpo-class6">
+                                    <aura:if isTrue="{!v.showDchannelBelow}">
+                                        <div class="col-md-3 slds-p-top--xx-small" > 
+                                            <aura:if isTrue="{!(v.selectedRecType == v.DropShipPOrecType)}">
+                                                <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Customer__c}" label="{!$Label.c.PO_Customer_Manufacturer}" aura:Id="customerAccount" qry=" AND (ERP7__Account_Type__c = 'Customer' OR ERP7__Account_Type__c = 'Vendor' OR ERP7__Account_Type__c = 'Organisation/Vendor') " required="true"/>
+                                                <aura:set attribute="else">
+                                                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.PO.ERP7__Customer__c}" label="{!$Label.c.PO_Customer_If_Applicable}" aura:Id="customerAccount" qry=" AND ERP7__Account_Type__c = 'Customer' " required="false"/>
+                                                </aura:set>
+                                            </aura:if>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <div class="col-md-3   slds-p-top--xx-small">
+                                        <aura:if isTrue="{!!v.isSalesOrder}"> 
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order__c" IconName="standard:orders" selectedRecordId="{!v.PO.ERP7__Sales_Order__c}" label="{!$Label.c.PO_Sales_Order_If_Applicable}" qry="{!'And (ERP7__Account__c  = \''+v.PO.ERP7__Customer__c+'\' OR ERP7__Organisation__c  = \''+v.PO.ERP7__Organisation__c+'\')'}"/>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.isSalesOrder}"> 
+                                            <aura:if isTrue="{!(v.selectedRecType == v.DropShipPOrecType)}">
+                                                <aura:if isTrue="{!and(and(v.PO.ERP7__Customer__c != '',v.PO.ERP7__Customer__c != null),and(v.recordId != '',v.recordId != null))}">
+                                                    <c:CustomInputLookUp objectAPIName="Order" IconName="standard:orders" selectedRecordId="{!v.PO.ERP7__Order__c}" label="{!$Label.c.Order_If_Applicable}" qry="{!'And (AccountId  = \''+v.PO.ERP7__Customer__c+'\')'}" hideRemove = "true"/><!-- required="true" -->
+                                                    <aura:set attribute="else">
+                                                        <c:CustomInputLookUp objectAPIName="Order" IconName="standard:orders" selectedRecordId="{!v.PO.ERP7__Order__c}" label="{!$Label.c.Order_If_Applicable}" qry="{!'And (AccountId  = \''+v.PO.ERP7__Customer__c+'\')'}" /><!-- required="true" -->
+                                                    </aura:set>
+                                                </aura:if>
+                                                <aura:set attribute="else">
+                                                    <c:CustomInputLookUp objectAPIName="Order" IconName="standard:orders" selectedRecordId="{!v.PO.ERP7__Order__c}" label="{!$Label.c.Order_If_Applicable}" qry="{!'And (AccountId  = \''+v.PO.ERP7__Customer__c+'\' OR ERP7__Organisation__c  = \''+v.PO.ERP7__Organisation__c+'\')'}" required="false"/>
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:if>
+                                    </div>
+                                    
+                                    <aura:if isTrue="{!v.ProjectAccess}"> 
+                                        <div class="col-md-3   slds-p-top--xx-small">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Project__c" IconName="standard:orders" selectedRecordId="{!v.PO.ERP7__Project__c}" label="Project"/>
+                                        </div>
+                                    </aura:if>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <lightning:textarea aura:id="description" name="Special Instructions"  value="{!v.PO.ERP7__Description__c}" placeholder="{!$Label.c.Add_Subscriptions_Special_Instructions}" label="{!$Label.c.Add_Subscriptions_Special_Instructions}" maxlength="32768" messageWhenTooLong="A maximum of 32768 characters are allowed." onchange="{!c.removeHtmltags}"/>
+                                    </div>
+                                    
+                                    <aura:if isTrue="{!(v.selectedRecType != v.DropShipPOrecType)}">
+                                        <aura:if isTrue="{!and(!v.fromMultiPO,v.showReceive)}">
+                                            <aura:if isTrue="{!!v.returnToVendor}">
+                                                <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                                    <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                                                        {!$Label.c.PO_Ready_To_Receive}</label><br/>
+                                                    <lightning:input type="checkbox" variant="label-hidden" checked="{!v.PO.ERP7__Ready_To_Receive__c}" disabled="{!v.isRecieved}"/>
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                                                            {!$Label.c.Ready_To_Ship}</label><br/>
+                                                        <lightning:input type="checkbox" variant="label-hidden" checked="{!v.PO.ERP7__Ready_To_Pick_Pack__c}"/>
+                                                    </div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </aura:if>
+                                    </aura:if>
+                    
+                                    <!--<div class="col-md-3 slds-p-top-xx-small cpo-class8">
+                                        <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}</label>
+                                        <lightning:formattedNumber value="{!v.PO.ERP7__Total_Amount__c}" class="currency" />
+                                    </div>-->
+                                </div>
+                                
+                                <div class="row padding-t-5 cpo-class6">
+                                    <aura:if isTrue="{!v.isMultiCurrency}">
+                                        <div class="col-md-3 slds-p-top--xx-small">
+                                            
+                                            <div class="slds-col slds-form-element">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                    <lightning:select  aura:id="stStatus" value="{!v.POCurrencyIsoCode}" label="{!$Label.c.Currency}" onchange="{!c.updatepocurrency}">
+                                                        <aura:iteration items="{!v.currencyList}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.POCurrencyIsoCode, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                       
+                                        </div>
+                                     </aura:if>
+                                    <aura:if isTrue="{!v.QuoteAccess}">
+                                        <div class="col-md-3 slds-p-top--xx-small">
+                                            <lightning:input type="text" label="{!$Label.c.PO_Quote_No}" value="{!v.PO.ERP7__Quote_no__c}" />
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!v.QuoteAccess}">
+                                        <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                            <lightning:select name="parentField" aura:id="parentField"
+                                                              value="{!v.PO.ERP7__Shipment_Type__c}"
+                                                              label="{!$Label.c.PO_Shipment_Type}"> <!-- onchange="{!c.parentFieldChange}"-->
+                                                <aura:iteration items="{!v.listControllingValues}" var="item">
+                                                    <option value="{!item.value}" selected="{!item.value == v.PO.ERP7__Shipment_Type__c}">{!item.label}</option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                        
+                                        <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                            <lightning:select name="childField"
+                                                              value="{!v.PO.ERP7__Shipment_Preference_Speed__c}"
+                                                              label="{!$Label.c.PO_Shipping_Speed_Preference}"
+                                                              disabled="{!v.bDisabledDependentFld}">
+                                                <aura:iteration items="{!v.listDependingValues}" var="item">
+                                                    <option value="{!item.value}" selected="{!item.value == v.PO.ERP7__Shipment_Preference_Speed__c}">{!item.label}</option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.showpackageType}">
+                                        <div class="col-md-3 slds-p-top--xx-small cpo-class8">
+                                            <lightning:select name="poStatus"  label="{!$Label.c.Package_Type}" aura:id="poStatus" value="{!v.PO.ERP7__Package_Type__c}" >
+                                                <aura:iteration items="{!v.POTypeoptions}" var="item">
+                                                    <option text="{!item.label}" value="{!item.value}" selected="{!v.PO.ERP7__Package_Type__c == item.value}"/>
+                                                </aura:iteration>
+                                            </lightning:select> 
+                                        </div>
+                                    </aura:if>
+                                </div>
+                                
+                                <aura:if isTrue="{!v.showfileUpload}">
+                                    <div class="slds-col slds-p-horizontal--medium slds-size--1-of-4 slds-p-top_small">
+                                        <div class="slds-grid">
+                                            <label lightning-input_input="" class="slds-form-element__label slds-no-flex" for="input-199" part="label">{!$Label.c.Attachment}</label>
+                                        </div>
+                                        <lightning:input aura:id="fileId" type="file" files="{!v.FileList}" onchange="{!c.handleFilesChange}" multiple="true" label="{!$Label.c.Upload_Attachment}" value="{!v.fillList}"/>
+                                        <aura:if isTrue="{!v.showDelete}">
+                                            <a onclick="{!c.removeAttachment}" title="{!$Label.c.NewCase_Remove_Attachment}" class="createbill-class6">
+                                                <i class="fa fa-minus-circle" aria-hidden="true"></i>
+                                            </a>                        
+                                        </aura:if>
+                                        <aura:iteration items="{!v.fillList}" var="file" indexVar='count'>
+                                            <div class="slds-text-body_small slds-text-color_error">{!file}&nbsp;&nbsp;&nbsp;
+                                            </div>
+                                        </aura:iteration>
+                                        <aura:if isTrue="{!v.showLoadingSpinner}">
+                                            <div class="slds-text-body_small slds-text-color_error">{!$Label.c.Uploading} 
+                                                <img src="/auraFW/resources/aura/images/spinner.gif" class="spinner-img" alt="Loading"/>'
+                                            </div>
+                                        </aura:if>
+                                        <br/>
+                                        
+                                    </div>
+                                    <div class="slds-col slds-p-horizontal--medium slds-size--1-of-4 slds-p-top_small">
+                                        <aura:if isTrue="{!and(or(v.recordId != null,v.recordId != ''),or(v.clonePOId != null,v.clonePOId != ''))}"> 
+                                            <aura:renderif isTrue="{!and(v.uploadedFile != null,v.uploadedFile.length > 0)}"> 
+                                                <aura:iteration items="{!v.uploadedFile}" var="file1" >
+                                                    
+                                                    <aura:if isTrue="{!(file1.Id != null)}"> 
+                                                        <div class="slds-grid slds-p-top_xxx-small"> 
+                                                            <div class="slds-col">
+                                                                <lightning:buttonIcon iconName="utility:delete" variant="bare" name="{!file1.Id}" onclick="{!c.DeleteRecordAT}" alternativeText="delete" title="{!v.recordId}" class="colorRed"/>
+                                                                &nbsp;
+                                                                <lightning:formattedUrl value="{!'/'+file1.Id}" label="{!file1.Name}" tooltip="{!file1.Name}" target="_blank" class="fcolor"/>
+                                                            </div>
+                                                            <div class="slds-col slds-hide">
+                                                                <img src="{!'/servlet/servlet.FileDownload?file='+file1.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:iteration>
+                                            </aura:renderif>
+                                        </aura:if>
+                                    </div>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!v.showTaxRate}">
+                                    <div class="row padding-t-5 cpo-class6">
+                                        <div class="col-md-4 slds-p-top--xx-small">
+                                            <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.QuotationPDF_Sub_Total}</label>
+                                            <div class="slds-form-element__control">
+                                                <lightning:formattedNumber value="{!v.SubTotal}" class="currency" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 slds-p-top--xx-small">
+                                            <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Expense_Tax_Amount}</label>
+                                            <div class="slds-form-element__control">
+                                                <lightning:formattedNumber value="{!v.TotalTax}" class="currency" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 slds-p-top--xx-small">
+                                            <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}</label>
+                                            <div class="slds-form-element__control">
+                                                <lightning:formattedNumber value="{!v.TotalAmount}" class="currency" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                
+                            </div>
+                            
+                            <div class="slds-tabs--card slds-tabs--default slds-m-top--small">
+                                <ul class="slds-tabs--default__nav" role="tablist">
+                                    <li class="slds-tabs--default__item slds-is-active"  title="{!$Label.c.PO_Items_Total}" role="presentation">
+                                        <a class="slds-tabs--default__link"   role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-default-1__item">
+                                            <i class="fa fa-tasks" aria-hidden="true"></i>&nbsp;{!$Label.c.PO_Items_Total}&nbsp; <lightning:formattedNumber value="{!v.PO.ERP7__Total_Amount__c}" />
+                                        </a>
+                                    </li>
+                                    <li class="position-sf2">
+                                        <aura:if isTrue="{!v.returnToVendor == false}">
+                                            <aura:if isTrue="{!and(v.orderId=='', v.SOId=='')}">
+                                                <lightning:button label="{!$Label.c.Add_ManageLeave}" disabled="{!v.isRecieved}" class="slds-button slds-button--brand" iconName="utility:add" onclick="{!c.addNew}"/>
+                                                <aura:if isTrue="{!v.allowCustomProd}">
+                                                    <lightning:button label="{!$Label.c.Custom_Product}" disabled="{!v.isRecieved}" class="slds-button slds-button--neutral" iconName="utility:add" onclick="{!c.addCustomproductNew}"/>
+                                                </aura:if>
+                                            </aura:if>
+                                        </aura:if>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="maqsood erp_Mark7">         
+                                <div class="table-responsive ProjectWorkbench-newClass50" tabindex="1">
+                                    <div>
+                                    </div>
+                                    <table class="slds-table slds-table_cell-buffer slds-no-row-hover cpo-class14"> <!-- slds-table_cell-buffer slds-no-row-hover cpo-class14-->
+                                        <thead>
+                                            <tr>
+                                                <th class="cpo-class15">
+                                                    
+                                                </th>
+                                                
+                                                <th class="slds-text-heading--label cpo-class17" scope="col"> {!$Label.c.CreatePOProduct}<!--<span class="cpo-class21">*</span>--></th>
+                                                <aura:if isTrue="{!v.versionAccess}">
+                                                    <th class="slds-text-heading--label cpo-class16" scope="col">{!$Label.c.PO_Revision}</th>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.POLINameAcc}">
+                                                    <th class="slds-text-heading--label cpo-class16" scope="col">{!$Label.c.Product_Code} <!--{!$Label.c.POLine}--></th>
+                                                </aura:if> 
+                                                <aura:renderif isTrue="{!v.showVenName}">                            
+                                                    <th class="slds-text-heading--label cpo-class16" scope="col"> {!$Label.c.PO_Vendor_part_no}<!--{!$Label.c.CreatePOVPN}--></th>
+                                                </aura:renderif>                                
+                                                <th class="slds-text-heading--label cpo-class18" scope="col">{!$Label.c.InventoryConsole_Cost_Card}</th>
+                                                <th class="slds-text-heading--label cpo-class19" scope="col">{!$Label.c.PackageSlip_List_Quantity} <span class="cpo-class21">*</span></th>  
+                                                <th class="slds-text-heading--label cpo-class19" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price} <span class="cpo-class21">*</span><!--<span class="cpo-class21">*</span>--></th>
+                                                <aura:if isTrue="{!v.showTaxRate}">
+                                                    <th class="slds-text-heading--label cpo-class19" scope="col">{!$Label.c.Tax_Label}</th>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.showTaxName}">
+                                                    <th class="slds-text-heading--label cpo-class19" scope="col">{!$Label.c.Tax_Amount}
+                                                        
+                                                        <lightning:helptext content="{!$Label.c.Tax_Amount_based_on_entered_tax}" ></lightning:helptext> 
+                                                        
+                                                    </th>
+                                                </aura:if>
+                                                <th class="slds-text-heading--label cpo-class19" scope="col">{!$Label.c.InventoryConsole_Total_Price}</th>
+                                                <aura:if isTrue="{!and(v.ProjectAccess, !v.showAllocations)}"> 
+                                                    <th class="slds-text-heading--label cpo-class19" scope="col">Chart Of Account</th>
+                                                    
+                                                </aura:if>
+                                                <aura:if isTrue="{!and(v.ProjectAccess, v.DepartmentAccess)}">
+                                                    <aura:if isTrue="{!and(v.PO.ERP7__Project__c!=null, v.PO.ERP7__Project__c!='')}">
+                                                    <th class="slds-text-heading--label cpo-class19" scope="col">Project Department</th>
+                                                    </aura:if>
+                                                </aura:if>
+                                                <th class="slds-text-heading--label cpo-class20" scope="col">{!$Label.c.ContractConsole_Description}</th>
+                                                <aura:if isTrue="{!and(v.showAllocations, v.PO.ERP7__Total_Amount__c >0)}">
+                                                    <th class="slds-text-heading--label cpo-class20" scope="col">
+                                                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                                                            {!$Label.c.Auto_Account}<br/> {!$Label.c.Allocation}</label><br/>
+                                                        <lightning:input type="checkbox" variant="label-hidden" checked="{!v.AutoAccountAllocations}"/>
+                                                    </th>
+                                                </aura:if>
+                                                
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:if isTrue="{!v.reRenderPOLIS}">
+                                                <aura:iteration items="{!v.poli}" var="item" indexVar="ind">
+                                                    <c:PurchaseOrderLineItem item="{!item}" aura:Id="poli" projectId="{!v.PO.ERP7__Project__c}" index="{!ind}" TotalPrice="{!v.TotalPrice}" deleteIndex="{!v.Index2del}" vendorId="{!v.PO.ERP7__Vendor__c}" showAllocation="{!v.showAllocations}" AutoAccountAllocation="{!v.AutoAccountAllocations}" showTax="{!v.showTaxName}" DepartmentAccess="{!v.DepartmentAccess}" ProjectAccess="{!v.ProjectAccess}" versionAccess="{!v.versionAccess}" showTaxRate="{!v.showTaxRate}" showVendor="{!v.showVenName}" POLINameAcc="{!v.POLINameAcc}"
+                                                                             poli="{!v.poli}" Tax="{!v.Tax}" isDelete="{!v.isDelete}" recId="{!v.recordId}" received="{!v.isRecieved}" dCId = "{!v.dChannelId}" DefTaxRate="{!v.defaultTaxRate}"/> 
+                                                </aura:iteration>
+                                            </aura:if>
+                                        </tbody>   
+                                    </table> 
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="slds-p-top--small"></div>
+                    
+                    <div class="slds-text-align--center slds-docked-form-footer "><!--slds-p-around-mmedium cpo-float-button-->
+                        <aura:if isTrue="{!and(v.prodRecordId != null,v.prodRecordId != '')}">
+                            <lightning:formattedUrl value="/lightning/n/ERP7__Inventory_Management_Report" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                            <aura:set attribute="else">
+                                <aura:if isTrue="{!v.Mtask}">
+                                    <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}"  class="slds-button slds-button--neutral" onclick="{!c.goBackTask}"/> &nbsp;
+                                    <aura:set attribute="else">
+                                        <aura:if isTrue="{!v.fromshipment}">
+                                            <lightning:button label="{!$Label.c.Cancel_ManageLeave}"  class="slds-button slds-button--neutral" onclick="{!c.gobacktoshipment}"/> &nbsp;
+                                            <aura:set attribute="else">
+                                                <lightning:button label="{!$Label.c.ShippingSlip_Back}"  class="slds-button slds-button--neutral" onclick="{!c.goToRecTypeSelection}"/> &nbsp;<!-- onclick="{!v.cancelclick}" changed by shaguftha on 28/07/23 to fix the issue of cancel -->
+                                            </aura:set> 
+                                        </aura:if>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+                        
+                        <lightning:button label="{!$Label.c.ContractConsole_Save}" variant="brand" class="slds-button slds-button--brand white" onclick="{!v.saveclick}"/><!-- disabled="{!v.isRecieved}" -->
+                    </div>
+                </aura:if>
+                
+                <aura:if isTrue="{!v.showAddProducts}">
+                    <div class="slds-page-header">
+                        <div class="slds-page-header__row">
+                            <div class="slds-page-header__col-title">
+                                <div class="slds-media">
+                                    <div class="slds-media__figure">
+                                        <span class="slds-icon_container slds-icon-standard-opportunity" title="{!$Label.c.AddSubscription_Product}">
+                                            <lightning:icon iconName="standard:products" size="large" ></lightning:icon>
+                                            <span class="slds-assistive-text">{!$Label.c.AddSubscription_Product}</span>
+                                        </span>
+                                    </div>
+                                    <div class="slds-media__body">
+                                        <div class="slds-page-header__name">
+                                            <div class="slds-page-header__name-title">
+                                                <h1>
+                                                    <span class="slds-page-header__title slds-truncate" title="{!$Label.c.Add_Products}">{!$Label.c.Add_Products}</span>
+                                                </h1>
+                                            </div>
+                                        </div>
+                                        <aura:if isTrue="{!v.showStandardProducts}">
+                                            <p class="slds-page-header__name-meta">
+                                                <div class="slds-grid slds-wrap">
+                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">  
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control">
+                                                                <label for="4909:0" class="slds-form-element__label">
+                                                                    {!$Label.c.RequisitionToPurchaseOrder_Search}&nbsp; {!$Label.c.CreatePOProduct}
+                                                                </label>
+                                                                <lightning:input type="text" variant="label-hidden" value="{!v.searchItem}" oncommit="{!c.fetchProducts}" class="no-input-lable" placeholder="{!$Label.c.Search_Product_by_Name_and_code}" maxlength="200" ></lightning:input>
+                                                            </div>
+                                                        </div> 
+                                                    </div>
+                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                                        <div class="slds-form-element__control">
+                                                            <label for="4909:0" class="slds-form-element__label">
+                                                                {!$Label.c.Select}&nbsp;{!$Label.c.Family}
+                                                            </label>
+                                                            <lightning:select  aura:id="family" value="{!v.seachItemFmily}"  class="no-label-cust no-label-cust2" onchange="{!c.fetchFamilyProducts}" >
+                                                                <aura:iteration items="{!v.familylst}" var="item">
+                                                                     <option value="{!item.value}" selected="{!item.value == v.seachItemFmily}">{!item.label}</option>
+                                                                   <!-- <option text="{!item}" value="{!item}" selected="{!v.seachItemFmily == item}"/> -->
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div> 
+                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                                        <div class="slds-form-element__control">
+                                                            <label for="4909:0" class="slds-form-element__label">
+                                                                {!$Label.c.Select}&nbsp;{!$Label.c.Sub_Family}
+                                                            </label>
+                                                            <lightning:select  aura:id="Subfamily" value="{!v.subItemFmily}"  class="no-label-cust no-label-cust2" disabled="{!v.bDisabledSubFamilyFld}" onchange="{!c.fetchSubFamilyProducts}" >
+                                                                <aura:iteration items="{!v.subfamilylst}" var="item">
+                                                                    <option value="{!item.value}" selected="{!item.value == v.subItemFmily}">{!item.label}</option>
+                                                                   <!-- <option text="{!item}" value="{!item}" selected="{!v.subItemFmily == item}"/>-->
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div>                                                     
+                                                </div>
+                                            </p>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-page-header__col-actions">
+                                <div class="slds-grid slds-wrap">
+                                    
+                                    <aura:if isTrue="{!v.allowCustomProd}">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right--small slds-p-top_medium">  
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <div class="slds-grid"> 
+                                                        <aura:if isTrue="{!v.toggleChecked}">
+                                                            <label for="4909:0" class="slds-form-element__label">
+                                                                {!$Label.c.Custom_Product}
+                                                            </label>
+                                                            <aura:set attribute="else">
+                                                                <label for="4909:0" class="slds-form-element__label ">
+                                                                    {!$Label.c.Standard_Product} 
+                                                                </label>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                        <lightning:input name="{!$Label.c.Custom_Product}" variant-label="hidden" type="toggle" messageToggleActive="" messageToggleInactive="" onchange="{!c.handletoggle}" checked="{!v.toggleChecked}"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="{!if(and(v.addProductsMsg != '', v.addProductsMsg != undefined),'slds-notify_container slds-is-fixed cpo-class-position30','slds-notify_container slds-is-fixed cpo-class9')}">
+                        <div class="slds-notify slds-notify_toast slds-theme_warning cpo-class11" role="status">
+                            <span class="slds-assistive-text">{!$Label.c.error}&nbsp;</span>
+                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                                <lightning:icon iconName="utility:warning" variant="inverse" size="x-small" alternativeText="{!$Label.c.error}" title="{!$Label.c.error}" />
+                            </span>
+                            <div class="slds-notify__content">
+                                <h2 class="slds-text-heading_x-small cpo-class12">{!v.addProductsMsg}&nbsp;
+                                </h2>
+                            </div>
+                            <div class="slds-notify__close cpo-class13">
+                                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="{!$Label.c.Close_Timesheets}" onclick="{!c.closeaddProductsMsg}">
+                                    <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_Timesheets}" title="{!$Label.c.Close_Timesheets}" />
+                                    <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}&nbsp;</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="card shadow-custom MultiplePurchaseOrder-newClass6">                    
+                            <table class="slds-table slds-table_bordered  slds-table_resizable-cols pb-50"> <!--slds-table_fixed-layout-->
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th width="5%">
+                                            <aura:if isTrue="{!!v.showStandardProducts}">
+                                                <lightning:button label="{!$Label.c.New_AddTimeCardEntry}" iconName ="utility:add" onclick="{!c.AddNewLine}" title='{!$Label.c.New_AddTimeCardEntry}'></lightning:button>
+                                            </aura:if>
+                                            
+                                        </th>
+                                        <aura:if isTrue="{!v.showStandardProducts}">
+                                            <th>
+                                                <span class="slds-truncate" title="{!$Label.c.Product_Code}">{!$Label.c.Product_Code}</span> 
+                                            </th> 
+                                        </aura:if>  
+                                        <aura:if isTrue="{!and(v.showVenName,v.showStandardProducts)}"><!--<aura:if isTrue="{!v.showVenName}">-->
+                                            <th>
+                                                <span class="slds-truncate" title="{!$Label.c.PO_Vendor_part_no}"> {!$Label.c.PO_Vendor_part_no}</span>
+                                            </th>
+                                        </aura:if>  
+                                        <th width="15%">
+                                            <span class="slds-truncate" title="{!$Label.c.Product_Name_StockTake}">{!$Label.c.Product_Name_StockTake}</span> <!--CreatePOProduct-->
+                                        </th>
+                                        <aura:if isTrue="{!v.showStandardProducts}">
+                                            <th>
+                                                <span class="slds-truncate" title="{!$Label.c.Stock}">{!$Label.c.Stock}</span> 
+                                            </th>
+                                        </aura:if>
+                                         <aura:if isTrue="{!v.showStandardProducts}">
+                                            <th>
+                                                <span class="slds-truncate" title="{!$Label.c.InventoryConsole_Cost_Card}">{!$Label.c.InventoryConsole_Cost_Card}</span> 
+                                            </th>
+                                        </aura:if>
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.AddSubscription_Quantity}">{!$Label.c.AddSubscription_Quantity}</span> 
+                                        </th>                                            
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.PurchaseOrder_Unit_Price}">{!$Label.c.PurchaseOrder_Unit_Price}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.Tax_Label}">{!$Label.c.Tax_Label} </span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.Expense_Tax_Amount}">{!$Label.c.Tax_Amount}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.Total_Price_RMA}">{!$Label.c.Total_Price_RMA}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="{!$Label.c.MOsetupProductName}">{!$Label.c.MOsetupProductName}</span> 
+                                        </th>
+                                    </tr>            
+                                </thead>
+                                <tbody>
+                                    <aura:if isTrue="{!v.showStandardProducts}">
+                                        <aura:iteration items="{!v.listOfProducts}" var="prod1" indexVar="index">
+                                            <tr>
+                                                <td scope="row" class="slds-text-align--right">                                            
+                                                    <div class="slds-form-element">
+                                                        <div class="slds-form-element__control">
+                                                            <lightning:input type="checkbox" variant="label-hidden" checked="{!prod1.checkSelected}" onchange="{!c.handleCheckbox}" name="{!prod1.prod.Id}"></lightning:input>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate truncate-overide-cpo">
+                                                        <lightning:formattedText value="{!prod1.prod.ProductCode}"></lightning:formattedText>
+                                                    </div>                                            
+                                                </td>
+                                                <aura:if isTrue="{!v.showVenName}"> 
+                                                    <td>
+                                                        <div class="slds-truncate">
+                                                            <lightning:formattedText value="{!prod1.VendorPartNumber}"></lightning:formattedText>
+                                                        </div>                                            
+                                                    </td>
+                                                </aura:if>
+                                                <td>
+                                                    <div class="slds-truncate truncate-overide-cpo">
+                                                        <lightning:formattedUrl label="{!prod1.prod.Name}" value="{!'/'+prod1.prod.Id}" target="_blank" title="{!prod1.prod.Name}"/>
+                                                    </div>   
+                                                </td>
+                                                <td>
+                                                    <div class="stock-pill">
+                                                        {!prod1.stock}                                               
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate-custom width180-cp0" data-index="{!index}" onclick="{!c.handleCostCardChange}">
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Cost_Card__c" IconName="standard:scan_card" selectedRecordId="{!prod1.selCostCardId}" qry="{!v.CostCardFilter + ' AND ERP7__Product__c =\''+ prod1.prod.Id+'\' AND ERP7__Supplier__c =\''+ v.PO.ERP7__Vendor__c+'\' '}" />
+                                                    </div>
+                                                </td> 
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" value="{!prod1.quantity}" oncommit="{!c.handleQuantity}" name="{!index}"  step="{!$Label.c.DecimalplacesinPOScreen}" variant="label-hidden" maxlength="5" ></lightning:input>
+                                                    </div>
+                                                </td> 
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" value="{!prod1.unitPrice}" oncommit="{!c.handleUnitPrice}"  name="{!index}"  step="{!$Label.c.DecimalplacesinPOScreen}" variant="label-hidden" ></lightning:input>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.taxPercent}" oncommit="{!c.handletaxPercent}" name="{!index}" variant="label-hidden"  step="{!$Label.c.DecimalplacesinPOScreen}" messageWhenStepMismatch="Invalid increment." ></lightning:input>
+                                                    </div>                                                        
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.taxAmount}" disabled="true" variant="label-hidden"  step="{!$Label.c.DecimalplacesinPOScreen}" ></lightning:input>
+                                                        
+                                                    </div>                                                        
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.TotalPrice}" disabled="true" step="{!$Label.c.DecimalplacesinPOScreen}" class="no-label-cust no-label-cust2"></lightning:input>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="width180-cp0">
+                                                        <lightning:textarea value="{!prod1.prod.Description}"  class='no-input-lable' maxlength="2500" ></lightning:textarea>
+                                                        
+                                                    </div> 
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:if>
+                                     <aura:if isTrue="{!v.reRenderCustPOli}">
+                                    <aura:if isTrue="{!!v.showStandardProducts}">
+                                        <aura:iteration items="{!v.ClistOfProducts}" var="prod1" indexVar="index2">
+                                            <tr>
+                                                <td scope="row" class="slds-text-align--center">                                            
+                                                    <div class="slds-form-element">
+                                                        <div class="slds-form-element__control" >
+                                                            <lightning:buttonIcon title='{!$Label.c.Delete_UserAvailabilities}' class="delete-iconcust" iconName="utility:delete" variant="destructive" name="{!index2}" onclick="{!c.deleteNewLine}"></lightning:buttonIcon>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                
+                                                <td>
+                                                    <div class="slds-truncate">
+                                                        <lightning:input type="text" value="{!prod1.Name}"  tabindex="0" onfocus="{!c.removeName}" name="{!index2}"  variant="label-hidden" maxlength="80" ></lightning:input>
+                                                    </div>   
+                                                    
+                                                </td>
+                                                
+                                                
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" value="{!prod1.quantity}" oncommit="{!c.handleProdQuantity}" name="{!index2}"  step="{!$Label.c.DecimalplacesinPOScreen}" variant="label-hidden" maxlength="5" ></lightning:input>
+                                                    </div>
+                                                </td> 
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" value="{!prod1.unitPrice}" oncommit="{!c.handleProdUnitPrice}" name="{!index2}"  step="{!$Label.c.DecimalplacesinPOScreen}" variant="label-hidden" ></lightning:input>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.taxPercent}" oncommit="{!c.handleProdtaxPercent}" name="{!index2}" variant="label-hidden"  step="{!$Label.c.DecimalplacesinPOScreen}" ></lightning:input>
+                                                    </div>                                                        
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.taxAmount}" disabled="true" data-index="{!index2}" variant="label-hidden"  step="{!$Label.c.DecimalplacesinPOScreen}"></lightning:input>
+                                                    </div>                                                        
+                                                </td>
+                                                <td>
+                                                    <div class="slds-grid">
+                                                        <lightning:input type="number" value="{!prod1.TotalPrice}" disabled="true" step="{!$Label.c.DecimalplacesinPOScreen}"></lightning:input>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <lightning:textarea value="{!prod1.Description}" data-index="{!index2}" class='no-input-lable' maxlength="2500" ></lightning:textarea>
+                                                    </div> 
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:if>
+                                    </aura:if>
+                                    <aura:if isTrue="{!and(v.showStandardProducts,v.listOfProducts.length == 0)}">
+                                        <tr>
+                                            <td colspan="10">
+                                                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                                    <i class="mdi mdi-alert-circle-check icon-size-warning mr-2"></i>
+                                                    <div>{!$Label.c.No_Products_Available} </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:if> 
+                                </tbody>
+                            </table>                   
+                        </div>
+                    </div> 
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.ShipmentManagement_Cancel}" onclick="{!c.backToMainPage}"></lightning:button>&nbsp;&nbsp;
+                        <lightning:button label="{!$Label.c.Add_Products}" onclick="{!c.addProducts}" variant="brand"></lightning:button>
+                    </div>
+                </aura:if>
+                
+                <aura:set attribute="else">
+                    <article class="slds-card">
+                        <div class="slds-card__header slds-grid">
+                            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-account" title="">
+                                        <lightning:icon iconName="standard:record" size="medium"></lightning:icon>
+                                        
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <h2 class="slds-card__header-title">
+                                        <a href="#" class="slds-card__header-link slds-truncate" title="{!$Label.c.Select_a_record_type}">
+                                            <span>{!$Label.c.Select_a_record_type}</span>
+                                        </a>
+                                    </h2>
+                                </div>
+                            </header>
+                        </div>
+                    </article>
+                    <div class=""><!-- slds-card -->
+                        <div class="slds-card__body slds-card__body_inner">
+                            <div class="slds-grid slds-wrap slds-m-around_large-cpo">
+                                <aura:iteration items="{!v.POType}" var="recordType">
+                                    <div class="slds-col slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_medium">
+                                        <div class="container">
+                                            <div class="card slds-grid card-extra-cpo">
+                                                <div class="card-content">
+                                                    <div class="card-body p-4">
+                                                        <div class="media d-flex slds-grid">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="utility:description" size="medium"></lightning:icon>
+                                                            </div>
+                                                            <div class="media-body p-left28 slds-p-top_x-small">
+                                                                <div class="slds-grid">
+                                                                    <div class="slds-form-element__control slds-truncate3 UPS-class13">
+                                                                        <lightning:input type="radio" variant="label-hidden" aura:id="Fr0" name="{!recordType.label}" checked="{!recordType.selected}" onchange="{!c.setSelectedRec}"/>
+                                                                    </div>  
+                                                                    <div class="slds-truncate3 label-selection-fsize15" title="">
+                                                                        <lightning:formattedText value="{!recordType.label}" title="{!recordType.label}" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.Cancel_ManageLeave}" onclick="{!v.cancelclick}" ></lightning:button>
+                        <lightning:button label="{!$Label.c.Next_UsersShiftMatch}" onclick="{!c.NextClicked}" variant="brand"></lightning:button>
+                    </div>
+                </aura:set>
+            </aura:if>  
+        </div>  
+    </div>
+</aura:component>

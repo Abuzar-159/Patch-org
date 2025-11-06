@@ -1,0 +1,427 @@
+<apex:page standardController="Payment__c" extensions="DoPaymentHandler" sidebar="false" showHeader="false" docType="html-5.0" id="paymentPage">
+    <style>
+   input[type=text], textarea {
+  -webkit-transition: all 0.30s ease-in-out;
+  -moz-transition: all 0.30s ease-in-out;
+  -ms-transition: all 0.30s ease-in-out;
+  -o-transition: all 0.30s ease-in-out;
+  outline: none;
+  padding: 3px 0px 3px 3px;
+  border: 1px solid #DDDDDD;
+}
+ 
+input[type=text]:focus, textarea:focus,select:focus {
+  box-shadow: 0 0 5px rgba(255, 0, 24, 1);
+  border: 1px solid rgba(255, 0, 24, 1);
+}
+.bdr{
+        -webkit-transition: all 0.30s ease-in-out;
+        -moz-transition: all 0.30s ease-in-out;
+        -ms-transition: all 0.30s ease-in-out;
+        -o-transition: all 0.30s ease-in-out;
+        outline: none;
+    
+    }
+ 
+    .bdr:focus,{
+        -webkit-box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+        box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+        -o-box-shadow: 0 0 0px rgba(255, 0, 24, 1); 
+    }
+    
+.erp-bg{
+                font-family:sans-serif;
+                background-color: #f62b2b;
+                background-image: -webkit-gradient(linear, left top, left bottom, from(#f62b2b), to(#d20202));
+                background-image: -webkit-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -moz-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -ms-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -o-linear-gradient(top, #f62b2b, #d20202);
+                background-image: linear-gradient(to bottom, #f62b2b, #d20202);filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#f62b2b, endColorstr=#d20202);
+                border-color: #ddd;
+                text-align:left;
+                padding-left:10px;
+                color: #ffffff;
+                font-weight: normal;
+               -webkit-border-top-left-radius:7px;
+                -moz-border-radius-topleft:7px;
+                border-top-left-radius:7px;
+                -webkit-border-top-right-radius:7px;
+                -moz-border-radius-topright:7px;
+                border-top-right-radius:7px;
+                -webkit-border-bottom-right-radius:7px;
+                -moz-border-radius-bottomright:7px;
+                border-bottom-right-radius:7px;
+                -webkit-border-bottom-left-radius:7px;
+                -moz-border-radius-bottomleft:7px;
+                border-bottom-left-radius:7px;
+            }
+    .headtxt{
+        font-family:Verdana;
+        color:#FFFFFF;
+        font-size:13px;
+        font-weight:normal;
+        padding-left:10px;
+    }
+    .namestxt{
+        font-family:Verdana;
+        color:#666;
+        font-size:12px;
+        font-weight:bold;
+    }
+    .textarea{
+        border-top: 1px solid #dddddd;
+        border-left:1px solid #dddddd;
+        border-right:1px solid #dddddd;
+        border-bottom:1px solid #dddddd;
+        -webkit-border-radius:3px;
+        -moz-border-radius:3px;
+        -webkit-transition: all 0.4s ease-in-out; /* fade in effect */
+        -moz-transition: all 0.4s ease-in-out;
+        -o-transition: all 0.4s ease-in-out;
+        height:15px;    
+        width: 150px;
+        
+          }
+    .button6{
+        width:80px;
+        height:40px;
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/addNC5.png')}) repeat;
+        border:none;
+        color:#fff;
+    }
+    .button4{
+        width:130px;
+        height:40px;      
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/addNC3.png')}) repeat;
+        border:none;
+        color:#fff;
+    }
+    .erp-bg2 {
+       font-family:sans-serif;
+       background-color: #54698d !important;
+      
+       color: #ffffff; 
+       font-weight: normal;
+      
+    }
+</style>
+    <script type="text/javascript"> 
+      function loading(val){ 
+          var paystatus = '';
+          if(val == 'true'){ paystatus = 'Completed' };
+           var FormTag = '{!JSENCODE(FormTag)}';
+                  
+          if((paystatus == 'Completed' || paystatus == 'SuccessWithWarning') && (FormTag == '')){
+              Back2Order();
+          }   
+          
+          else if((paystatus == 'Completed' || paystatus == 'SuccessWithWarning')){
+                closepopup(val)
+          } 
+      }     
+      
+      function closepopup(val){
+        var FormTag = '{!JSENCODE(FormTag)}';
+        var textBox = '{!JSENCODE(TextBox)}';
+        var textBoxId = '{!JSENCODE(TextBox)}' + '_lkid';
+        var currentSalesorderId = '{!JSENCODE(currentSalesorder.Id)}';
+        var currentSalesorderName = '{!JSENCODE(currentSalesorder.Name)}';
+        top.window.opener.lookupPick2(FormTag, textBoxId, textBox, currentSalesorderId, currentSalesorderName, false);
+      }
+  </script> 
+    <apex:form id="myform">
+     <apex:actionFunction action="{!Back2Order}" name="Back2Order" immediate="true"/>
+     <apex:actionFunction action="{!process}" name="callProcess" reRender="myform" oncomplete="loading('{!isSuccess}');" />
+     <apex:actionFunction name="assign_payment" reRender=";" oncomplete="callProcess();">
+     <apex:param assignTo="{!payment.ERP7__Amount__c}" name="Param1" value=""/>
+     </apex:actionFunction>
+     <apex:pagemessages ></apex:pagemessages>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td valign="middle" align="center" height="25" class="headtxt"><span style=" font-family:verdana; font-size:16px; font-weight:bold; color:#333;">{!$Label.Do_Payment_Do_Payment} </span></td>
+      </tr>
+      <tr><td><apex:inputField value="{!payment.Transaction_Status__c}" id="tst" style="display:none;"/></td></tr>
+      <tr>
+        <td align="center">
+         <span style="display:none;font-family:verdana; font-size:14px; color:red;" id="errMsg">Invalid Amount</span>
+            <apex:outputText value="{!errorMsg}" id="errm" style="font-family:verdana; font-size:14px; color:red;" />
+        </td>
+      </tr>
+      <apex:outputPanel rendered="true">
+       <tr>
+        <td align="left" height="25"  class="erp-bg2">{!$Label.DoPayment_Customer_Information} </td>
+      </tr>
+
+    <tr>
+    <td>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+            <td width="4%">&nbsp;</td>
+            <td width="15%">&nbsp;</td>
+            <td width="20%">&nbsp;</td>
+            <td width="1%">&nbsp;</td>
+            <td width="15%">&nbsp;</td>
+             <td width="45%">&nbsp;</td>
+        </tr>
+          <tr>
+          <td >&nbsp;</td>
+            <td align="left" class="namestxt" >{!$Label.DoPayment_First_Name} &nbsp;</td>
+            <td align="left"><apex:input type="text" styleClass="textarea" value="{!firstname}" id="fn" rendered="{!$ObjectType.Payment__c.fields.First_Name__c.Accessible}"/></td>
+            <td align="left" class="namestxt">&nbsp;</td>
+           <td valign="top" align="left" class="namestxt" >{!$Label.DoPayment_Last_Name} &nbsp;</td>
+             <td valign="top" align="left"><apex:input type="text" styleClass="textarea" value="{!lastname}" rendered="{!$ObjectType.Payment__c.fields.Last_Name__c.Accessible}"/></td>  
+          </tr>
+
+          <tr>
+          <td >&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+          <td >&nbsp;</td>
+            <td width="9%" align="left" class="namestxt">{!$Label.DoPayment_Email}&nbsp;</td>   
+            <td align="left" width="29%"><apex:input type="text" styleClass="textarea" value="{!email}" rendered="{!$ObjectType.Payment__c.fields.Email_Address__c.Accessible}"/></td>
+            <td valign="top" align="left" class="namestxt" >&nbsp;</td>
+            <td valign="top" align="left" class="namestxt" >{!$Label.DoPayment_Address} &nbsp;</td>
+            <td valign="top" align="left"><apex:input type="text" styleClass="textarea" value="{!address}" style="width:80%" rendered="{!$ObjectType.Payment__c.fields.Address_Line1__c.Accessible}"/></td>
+          </tr>
+          <tr>
+          <td >&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+          <td >&nbsp;</td>
+            <td align="left" class="namestxt">{!$Label.DoPayment_City}&nbsp;</td>
+            <td align="left" width="29%"><apex:input type="text" styleClass="textarea" value="{!city}" rendered="{!$ObjectType.Payment__c.fields.City__c.Accessible}"/></td>
+            <td valign="top" align="left" class="namestxt" >&nbsp;</td>
+            <td align="left" class="namestxt">{!$Label.DoPayment_State}&nbsp;</td>
+            <td align="left" width="23%"><apex:input type="text" styleClass="textarea" value="{!state}" rendered="{!$ObjectType.Payment__c.fields.State__c.Accessible}"/></td>       
+          </tr>
+
+          <tr>
+          <td >&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+          <tr>
+          <td >&nbsp;</td>
+            <td align="left" class="namestxt">{!$Label.DoPayment_Zipcode}&nbsp;</td>
+            <td align="left" width="23%"><apex:input type="text" styleClass="textarea" value="{!zip}" rendered="{!$ObjectType.Payment__c.fields.Zipcode__c.Accessible}"/></td> 
+          </tr>
+
+          <tr>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          </tr>
+
+        </table>
+     </td>
+    </tr>
+    </apex:outputPanel>
+        <tr>
+        <td align="left" height="25"  class="erp-bg2">{!$Label.DoPayment_Card_Information} </td>
+        </tr>
+    
+    <tr>
+    <td>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+    <td width="8%">&nbsp;</td>
+    <td width="23%">&nbsp;</td>
+    <td width="1%">&nbsp;</td>
+    <td width="10%">&nbsp;</td>
+     <td width="20%">&nbsp;</td>
+  </tr>
+  
+  <tr>
+    <td valign="top" align="right" class="namestxt" width="20%">{!$Label.DoPayment_Card_Holder_Name} &nbsp;</td>
+    <td valign="top" align="left" width="23%"><apex:input type="text" styleClass="textarea" value="{!cardholder}" required="true" rendered="{!$ObjectType.Payment_Method__c.fields.Name_on_Card__c.Accessible}"/></td>
+    <td align="right" class="namestxt" >&nbsp;</td>
+    <td valign="top" align="right" class="namestxt" width="15%">{!$Label.DoPayment_Card_Type} &nbsp;</td>
+    <td valign="top" align="left" width="23%">
+        <apex:selectList value="{!selectedCardType}" size="1" style="height:20px;" required="true" styleClass="textarea" rendered="{!$ObjectType.Payment_Method__c.fields.CardType__c.Accessible}">
+          <apex:selectOptions value="{!cardTypes}" />
+        </apex:selectList>
+    </td>                  
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>    
+    <td valign="top" align="right" class="namestxt" >{!$Label.DoPayment_Card_Number} &nbsp;</td>
+    <td valign="top" align="left" width="23%">
+        
+        <apex:input type="text" styleClass="textarea" value="{!cardnumber}" required="true" style="display:{!if(currMethod != Null && currMethod.size > 0,'none','')};" rendered="{!$ObjectType.Payment_Method__c.fields.Card_Number__c.Accessible}"/>
+        <apex:inputField value="{!currMethod[0].Card_Number__c}" required="true" styleClass="textarea" style="display:{!if(currMethod != Null && currMethod.size > 0,'','none')};"/>
+    </td> 
+    <td align="right" class="namestxt">&nbsp;</td> 
+    <td valign="top" width="9%" align="right" class="namestxt">{!$Label.DoPayment_CVV}&nbsp;</td>
+    <td valign="top" align="left" width="23%">
+    <apex:input type="text" styleClass="textarea" value="{!cardcvv}" required="true" rendered="{!$ObjectType.Payment__c.fields.CVV2_Code__c.Accessible}"/>
+    </td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>
+    <td valign="top" align="right" class="namestxt" >{!$Label.DoPayment_Expiry_Month} &nbsp;</td>
+    <td valign="top" align="left">
+        <apex:selectList value="{!cardmonth}" size="1" styleClass="textarea" style="height:20px;" required="true" rendered="{!$ObjectType.Payment_Method__c.fields.Card_Expiration_Month__c.Accessible}">
+          <apex:selectOptions value="{!months}" />
+        </apex:selectList>
+    </td>
+    <td valign="top" align="right" class="namestxt" >&nbsp;</td>
+    <td valign="top" align="right" class="namestxt">{!$Label.DoPayment_Expiry_Year}&nbsp;</td>
+    <td valign="top" align="left" width="20%">
+         <apex:selectList value="{!cardyear}" size="1" styleClass="textarea" style="height:20px;" required="true" rendered="{!$ObjectType.Payment_Method__c.fields.Card_Expiration_Year__c.Accessible}">
+          <apex:selectOptions value="{!years}" />
+         </apex:selectList>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>       
+    <td valign="top" align="right" class="namestxt">Actual {!$Label.DoPayment_Amount}&nbsp;</td>    
+    <td valign="top" align="left" ><apex:outputText value="{!actualAmount}" rendered="{!$ObjectType.Sales_Order__c.fields.Sales_Order_Amount__c.Accessible && $ObjectType.Sales_Order__c.fields.Amount_Paid__c.Accessible}"/></td>
+    <td>&nbsp;</td>
+    <td valign="top" align="right" class="namestxt">{!$Label.DoPayment_Amount}&nbsp;</td>    
+    <td valign="top" align="left" ><apex:inputField styleClass="textarea" id="paymentAmount" value="{!payment.Amount__c}"  required="true"/></td>
+  </tr> 
+  
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+ 
+  <apex:outputPanel rendered="false" id="tpanel">
+   <tr>
+    <td valign="top" align="right" class="namestxt" >{!$Label.DoPayment_Status} &nbsp;</td>
+     <td valign="top" align="left"><apex:outputText id="transtatus" styleClass="textarea" value="{!payment.Transaction_Status__c}" style="height:20px;" rendered="{!$ObjectType.Payment__c.fields.Transaction_Status__c.Accessible}"/></td>
+    <td valign="top" align="right" class="namestxt" >&nbsp;</td>
+     <td align="right" class="namestxt">{!$Label.DoPayment_Transaction_ID}&nbsp;</td>
+    <td align="left" width="20%"><apex:outputText styleClass="textarea" value="{!payment.Transaction_ID__c}" style="height:20px;" rendered="{!$ObjectType.Payment__c.fields.Transaction_ID__c.Accessible}"/></td>
+    
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+      <td align="right" class="namestxt">{!$Label.DoPayment_Correlation_ID}&nbsp;</td>
+      <td align="left" width="29%"><apex:outputText styleClass="textarea" value="{!payment.Correlation_ID__c}" rendered="{!$ObjectType.Payment__c.fields.Correlation_ID__c.Accessible}"/></td>
+      <td valign="top" align="right" class="namestxt" >&nbsp;</td>
+      <td valign="top" align="right" class="namestxt" >{!$Label.DoPayment_Error_Code} &nbsp;</td>
+     <td valign="top" align="left"><apex:outputText styleClass="textarea" value="{!payment.Error_Code__c}" style="height:20px;" rendered="{!$ObjectType.Payment__c.fields.Error_Code__c.Accessible}"/></td>
+  <tr>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  <tr>    
+    <td align="right" valign="top" class="namestxt">{!$Label.DoPayment_Error_Message}&nbsp;</td>
+    <td align="left" valign="top" width="20%"><apex:outputText styleClass="textarea" value="{!payment.sError__c}" style="height:20px;" rendered="{!$ObjectType.Payment__c.fields.sError__c.Accessible}"/></td>
+     <td valign="top" align="right" class="namestxt" >&nbsp;</td>
+    <td align="right" valign="top" class="namestxt">{!$Label.DoPayment_Description}&nbsp;</td>
+    <td align="left" valign="top" width="29%"><apex:outputText styleClass="textarea" value="{!payment.Error_Message__c}" rendered="{!$ObjectType.Payment__c.fields.Error_Message__c.Accessible}"/></td>
+  </tr>
+ </apex:outputPanel>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+  
+</table>
+ <tr>
+    <td align="left" height="5" class="erp-bg2"></td>
+  </tr>
+  <tr>
+    <td align="left" height="25" class="namestxt">
+    <table width="100%" border="0" cellspacing="0" cellpadding="0">  
+    <tr><td align="left" height="15" class="namestxt"></td></tr>
+      <tr>
+        <td align="center">
+            <table >
+                <tr>
+                <td>
+                <apex:commandLink value=" " onclick="validate(document.getElementById('paymentPage:myform:paymentAmount').value)"   style="padding: 13px 90px 10px 40px;display:{!if((FormTag != Null && FormTag != ''),'','none')};width:130px; height:40px; background:url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtn.png')}) repeat; border:none; color:#fff;" reRender=";" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtnh.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtn.png')})';"/>            
+                </td>
+            <td>
+            <apex:commandButton value=""  style="display:{!if((FormTag != Null && FormTag != ''),'','none')};width:130px; height:40px; background:url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')}) repeat; border:none; color:#fff;" onclick="closepopup('{!isSuccess}');" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtnh.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')})';" immediate="true"/>
+            </td>
+            <td>
+            <apex:commandButton value="" style="display:{!if((FormTag != Null && FormTag != ''),'none','')};width:130px; height:40px; background:url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')}) repeat; border:none; color:#fff;" action="{!Back2Order}" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtnh.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')})';" immediate="true"/>
+            </td>
+            <td>
+            <apex:commandButton value="" style="width:130px; height:40px; background:url({!URLFOR($Resource.SCM,'SCM/Images/backbtn.png')}) repeat; border:none; color:#fff;" action="{!goBack}" immediate="true" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/backbtnh.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/backbtn.png')})';" />
+            </td>
+           </tr>
+           </table>  
+        </td>        
+      </tr>
+    </table>
+    </td>
+    </tr>
+            </td>
+        </tr>
+</table>
+<script>
+    function valueConversationtoNumber(str) {
+        var arr = str.split(",");
+        var strNew = '';
+        for(var x=0;x<arr.length;x++) strNew += arr[x];
+        return strNew;
+    }
+    function validate(val){
+        val = valueConversationtoNumber(val);
+        if(!(isNaN(val)) && val <= parseFloat('{!actualAmount}')){
+            document.getElementById('errMsg').style.display='none';
+        assign_payment(val); 
+        }else{
+            document.getElementById('errMsg').style.display='';
+            document.getElementById('paymentPage:myform:paymentAmount').focus();
+        }
+    }
+</script>
+  </apex:form>
+</apex:page>

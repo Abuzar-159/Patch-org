@@ -1,0 +1,515 @@
+<apex:page standardController="Employee_Pay__c" extensions="Generatepayslip"  sidebar="False" showHeader="false" renderAs="{!if($CurrentPage.parameters.pdf == null, null, 'pdf')}" readOnly="false">
+    <!--
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script type="text/javascript"> 
+function setupclosepopup(){ 
+    top.window.returnValue = 1;
+    top.window.close();
+}
+</script>
+
+<style>
+#mainwrapper {
+width:680px;
+margin:0px auto;
+}
+
+.Txtalign{
+font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; text-align: center;
+}
+</style>
+</head>
+
+<body>
+<apex:form >
+<apex:pageMessages />
+<div id="mainwrapper">
+<apex:outputPanel rendered="{!if($CurrentPage.parameters.pdf == null, true, false)}">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" >
+<tr height="50">
+<td align="center">
+<apex:commandLink value="{!$Label.ERP7__PaySlip_Send_Payslip}" action="{!sendpayslip}" style="margin-right:20px; color:#ff0000;" rendered="{!$ObjectType.Employee_Pay__c.Accessible}"/>
+<apex:commandLink value="{!$Label.ERP7__PaySlip_Cancel}" style="color:#ff0000;" action="{!cancel}"/>
+</td>
+</tr>
+</table>
+</apex:outputPanel>
+
+<apex:outputPanel >
+<table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#666666">
+<tr>
+<td height="25" align="center" valign="middle"><span style="font: bold 100% sans-serif; letter-spacing: 0.5em; text-align: center; text-transform: uppercase; color:#FFFFFF">{!$Label.PaySlip_Salary_Slip}</span>
+</td>
+</tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td height="10"></td>
+</tr>
+<tr>
+<td width="42%"><span style="color:#000; font-family:Verdana, Geneva, sans-serif; font-size:12px; "><table width="100%">
+<tr>
+<th height="25" style="border-radius:.25em;" bgcolor="#eee"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">{!$Label.PaySlip_Employee_Name}</span>
+</th>
+<td height="25" style="border-radius:.25em; border:1px solid #CCC;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputText value="{!emppay.Employees__r.First_Name__c} {!emppay.Employees__r.Last_Name__c}"/></span>
+</td>
+</tr>
+<tr>
+<th height="25" style="border-radius:.25em;" bgcolor="#eee"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">{!$Label.PaySlip_Employee_Id}</span>
+</th>
+<td height="25" style="border-radius:.25em; border:1px solid #CCC;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputText value="{!emppay.Employees__r.Name}"/></span>
+</td>
+</tr>
+<tr>
+<th height="25" style="border-radius:.25em;" bgcolor="#eee"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">{!$Label.PaySlip_Designation}</span>
+</th>
+<td height="25" style="border-radius:.25em; border:1px solid #CCC;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputText value="{!emppay.Employees__r.Job_Title__c}"/></span>
+</td>
+</tr>
+<tr>
+<th height="25" style="border-radius:.25em;" bgcolor="#eee"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">{!$Label.Bank_details}</span>
+</th>
+<td height="25" style="border-radius:.25em; border:1px solid #CCC;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputText value="{!emppay.Employees__r.Bank_Details__c}"/></span>
+</td>
+</tr>
+</table>
+</span>
+</td>
+<td width="14%">&nbsp;</td>
+<td width="44%">
+<apex:image value="{!$Resource.Invoice_Logo}" width="150" height="55" style="margin-left:55px;"/>
+</td>
+</tr>
+<tr>
+<td height="10"></td>
+</tr>
+</table>
+<table width="100%"  border="0" cellspacing="0" cellpadding="0" bgcolor="#cccccc">
+<tr class="htext3">
+<td align="center" valign="middle" width="29%" height="30"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;">{!$Label.PaySlip_Earnings}</span>
+</td>
+<td align="center" valign="middle" width="19%"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;">{!$Label.PaySlip_Amount}</span>
+</td>
+<td align="center" valign="middle" width="33%"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;">{!$Label.PaySlip_Deductions}</span>
+</td>
+<td align="center" valign="middle" width="19%"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;">{!$Label.PaySlip_Amount}</span>
+</td>
+</tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<tr>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;">
+<span style="display:none;font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:12px;">
+<apex:outputText > {!$Label.ERP7__PaySlip_Calculated_Gross_Pay} </apex:outputText>
+</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="display:none;font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputtext value="{!emppay.Calculated_Gross_Pay__c}" ></apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;"><apex:outputText > {!$Label.ERP7__Payslip_Tax_Amount} </apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputText value="{!emppay.Tax_Amount__c}"></apex:outputText></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="25" width="29%" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"><span style="{!IF(AND(emppay.Commission_Amount__c != null, emppay.Commission_Amount__c > 0),'font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:12px;','display:none;')}"><apex:outputText > {!$Label.ERP7__PaySlip_Commission_Amount} </apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" width="19%" style="border-right:1px solid #cccccc;"><span style="{!IF(AND(emppay.Commission_Amount__c != null, emppay.Commission_Amount__c > 0),'font-family:Arial, Helvetica, sans-serif; font-size:12px;','display:none;')}"> <apex:outputtext value="{!emppay.Commission_Amount__c}"></apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" width="33%" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;"><apex:outputtext >{!$Label.ERP7__PT_Deduction}</apex:outputtext></span>
+</td>
+<td align="center" valign="middle" height="25" width="19%" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputtext value="{!emppay.Other_Tax_Amount__c}" ></apex:outputText></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;">
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<apex:variable value="{!0}" var="itemCounter"/>
+<apex:repeat var="addPali" value="{!wrapperListAddition}"  id="rp"> 
+<tr>
+<td height="25" align="center" valign="top">
+<span style="font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:12px;">
+<apex:outputText value="{!addPali.Category}" rendered="{!$ObjectType.Pay_Adjustment_Line_Item__c.Fields.Category_Type__c.Accessible}" />
+</span>
+</td>
+</tr>                              
+<apex:variable var="itemCounter" value="{!itemCounter + 1}" rendered="{!$ObjectType.Pay_Adjustment_Line_Item__c.Fields.Amount__c.Accessible}"/> 
+</apex:repeat>  
+</table>             
+
+</td>
+
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:0px solid #cccccc;">
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<apex:variable value="{!0}" var="itemCounter"/>
+<apex:repeat var="addPali" value="{!wrapperListAddition}"  id="rp1"> 
+<tr>
+<td height="25" align="center" valign="top">
+<span style="font-family:Arial, Helvetica, sans-serif;  font-size:12px;">
+<apex:outputText value="{!addPali.Amount}" rendered="{!$ObjectType.Pay_Adjustment_Line_Item__c.Fields.Amount__c.Accessible}"/>
+</span>
+</td>
+</tr>                              
+<apex:variable var="itemCounter" value="{!itemCounter + 1}"/> 
+</apex:repeat>  
+</table>             
+
+</td>
+
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:0px solid #cccccc;">
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<apex:variable value="{!0}" var="itemCounter"/>
+<apex:repeat var="dedPali1" value="{!wrapperListDeduction}"  id="rp2"> 
+<tr>
+<td height="25" align="center" valign="top">
+<span style="font-family:Arial, Helvetica, sans-serif; font-weight:bold; font-size:12px;">
+<apex:outputText value="{!dedPali1.Category}" rendered="{!$ObjectType.Pay_Adjustment_Line_Item__c.Fields.Category_Type__c.Accessible}"/>
+</span>
+</td>
+</tr>                              
+<apex:variable var="itemCounter" value="{!itemCounter + 1}"/> 
+</apex:repeat>  
+</table>             
+
+</td>
+
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:0px solid #cccccc;">
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+<apex:variable value="{!0}" var="itemCounter"/>
+<apex:repeat var="dedPali1" value="{!wrapperListDeduction}"  id="rp3"> 
+<tr>
+<td height="25" align="center" valign="top">
+<span style="font-family:Arial, Helvetica, sans-serif;  font-size:12px;">
+<apex:outputText value="{!dedPali1.Amount}" />
+</span>
+</td>
+</tr>                              
+<apex:variable var="itemCounter" value="{!itemCounter + 1}"/> 
+</apex:repeat>  
+</table>             
+
+</td>
+
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;font-weight:bold;"></span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr class="htext1">
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold;"></span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr class="htext1">
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:1px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr class="htext1">
+<td align="center" valign="middle" height="25" bgcolor="#eeeeee" style="border:1px solid #cccccc; border-left:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; color:#000000;"><apex:outputText >{!$Label.ERP7__PaySlip_Total_Addition} </apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" style="border:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputtext value="{!emppay.Total_Addition__c}" /></span>
+</td>
+<td align="center" valign="middle" height="25" bgcolor="#eeeeee" style="border:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; color:#000000;"><apex:outputText > {!$Label.ERP7__PaySlip_Total_Deduction} </apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" style="border:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><apex:outputtext value="{!emppay.Total_Deduction__c}" /></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:0px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:0px solid #cccccc;"></td>
+<td height="5" style="border-right:0px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr class="htext1">
+<td align="center" valign="middle" height="25" style="border-right:0px solid #cccccc; border-left:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:0px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:0px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"></span>
+</td>
+</tr>
+<tr>
+<td height="5" style="border-right:0px solid #cccccc; border-left:1px solid #cccccc;"></td>
+<td height="5" style="border-right:0px solid #cccccc;"></td>
+<td height="5" style="border-right:0px solid #cccccc;"></td>
+<td height="5" style="border-right:1px solid #cccccc;"></td>
+</tr>
+<tr class="htext1">
+<td align="center" valign="middle" height="25" style="border-right:0px solid #cccccc; border-left:1px solid #cccccc; "><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align="center" valign="middle" height="25" style="border-right:0px solid #cccccc;" ><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;">&nbsp;</span>
+</td>
+<td align= "center" height="25" style="border-radius:.25em;  border:1px solid #CCC;" bgcolor="#cccccc"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px; font-weight:bold; color:#000000;"><apex:outputText >{!$Label.ERP7__PaySlip_Net_Salary} </apex:outputText></span>
+</td>
+<td align="center" valign="middle" height="25" style="border:1px solid #cccccc;"><span style="font-family:Arial, Helvetica, sans-serif; font-size:12px;"><strong><apex:outputfield value="{!emppay.Net_Pay__c}" /></strong></span>
+</td>
+</tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="border:0px solid #cccccc;border-left:1px solid #cccccc;border-right:1px solid #cccccc;border-top:0px solid #cccccc;">
+<tr>
+<td height="10"></td>
+</tr>
+<tr>
+<td bgcolor="#666666" height="25">&nbsp;</td>
+</tr>
+</table>
+</apex:outputPanel>
+</div>
+</apex:form>
+</body>
+-->
+    <html>
+        <head>
+            <meta charset="utf-8" />
+            <title>Aqxolt Invoice</title>
+            
+        </head>
+        <style>
+            .wrapper {
+            width: 800px;
+            height: auto;
+            margin: 50px auto 50px;
+            padding: 10px;
+            }
+        </style>
+        
+        <body style="background: #fff;">
+            <apex:form >
+                <div class="wrapper" style="background:#fff;">
+                    <apex:outputPanel rendered="{!if($CurrentPage.parameters.pdf == null, true, false)}">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+                            <tr height="50">
+                                <td align="center">
+                                    <apex:commandLink value="{!$Label.ERP7__PaySlip_Send_Payslip}" action="{!sendpayslip}" style="margin-right:20px; color:#ff0000;" rendered="{!$ObjectType.Employee_Pay__c.Accessible}"/>
+                                    <apex:commandLink value="{!$Label.ERP7__PaySlip_Cancel}" style="color:#ff0000;" action="{!cancel}"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </apex:outputPanel>
+                    <div style="border:1px solid #333;padding:5px;padding:30px;">
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tbody>
+                                <tr>
+                                    <td width="70%">
+                                        <table>
+                                            <tr>
+                                                <td style="font: bold 16px 'Helvetica Neue',Helvetica,Arial,sans-serif;color:#333;text-align:left;padding-left:10px;">
+                                                    Axolt India Pvt Ltd
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font: normal 14px 'Helvetica Neue',Helvetica,Arial,sans-serif;color:#333;text-align:left;padding-left:10px;">
+                                                    Pay Slip
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font: normal 14px 'Helvetica Neue',Helvetica,Arial,sans-serif;color:#333;text-align:left;padding-left:10px;">
+                                                    {!currentMonthYear}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font: bold 14px 'Helvetica Neue',Helvetica,Arial,sans-serif;color:#333;text-align:left;padding-left:10px; padding-top:10px;">
+                                                    {!emppay.Employees__r.Name} 
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="30%" style="text-align:right;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td style="text-align:right;">
+                                                    <apex:image value="{!$Resource.Axolt_payslip_logo}" width="100"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding:10px;margin-top:10px;">
+                            <tbody>
+                                <tr>
+                                    <td valign="top" align="left" width="50%" style="font: normal 14px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;">
+                                        <strong>Employee Number:</strong> 110055<br/>
+                                        <strong>Function:</strong> {!emppay.Employees__r.Job_Title__c}<br/>
+                                        <strong>Location:</strong><br/>
+                                        <strong>Bank Details:</strong>{!emppay.Employees__r.Bank_Details__c}<br/>
+                                        <strong>Date of joining:</strong>
+                                    </td>
+                                    <td valign="top" align="left" width="50%" style="font: normal 14px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;">
+                                        <strong>Income Tax Number (PAN):</strong>{!emppay.Employees__r.Income_Tax_Number_PAN__c} <br/>
+                                        <strong>PF No:</strong>{!emppay.Employees__r.Employee_Provident_Fund__c}<br/>
+                                        <strong>ESI No:</strong>{!emppay.Employees__r.National_Insurance_Number__c}<br/>
+                                        <strong>PR Account No (PRAN):</strong>{!emppay.Employees__r.PR_Account_Number__c}<br/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td style="vertical-align:top;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding: 10px;padding-bottom: 0px;">
+                                        <thead>
+                                            
+                                            <tr bgcolor="f1f1f1">
+                                                <td align="left" width="15%" style="font:bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">Earnings</td>
+                                                <td align="left" width="19%" style="font:bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">Amount</td>
+                                            </tr>
+                                            
+                                        </thead>
+                                        <tbody>
+                                            <!--for addition-->
+                                            <apex:variable value="{!0}" var="itemCounter"/>
+                                            <apex:repeat var="addPali" value="{!wrapperListAddition}"  id="rp1">
+                                                <tr>
+                                                    <td valign="top" align="left" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!addPali.Category}</td>
+                                                    <td valign="top" align="left" width="19%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!addPali.Amount}</td>
+                                                </tr>
+                                                <apex:variable var="itemCounter" value="{!itemCounter + 1}" rendered="{!$ObjectType.Pay_Adjustment_Line_Item__c.Fields.Amount__c.Accessible}"/> 
+                                            </apex:repeat> 
+                                            
+                                            
+                                            
+                                        </tbody>
+                                    </table>
+                                </td>
+                                <td style="vertical-align:top;">
+                                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding: 10px;padding-bottom: 0px;">
+                                        <thead>
+                                            
+                                            <tr bgcolor="f1f1f1">
+                                                <td align="left" width="13%" style="font:bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">Deductions</td>
+                                                <td align="left" width="18%" style="font:bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;border-right: 1px solid #f7f7f7;">Amount</td>
+                                            </tr>
+                                            
+                                        </thead>
+                                        <tbody>
+                                            <!--for dedction-->
+                                            <apex:variable value="{!0}" var="itemCounter1"/>
+                                            <apex:repeat var="dedPali1" value="{!wrapperListDeduction}"  id="rp2"> 
+                                                <tr>
+                                                    <td valign="top" align="left" width="13%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!dedPali1.Category}</td>
+                                                    <td valign="top" align="left" width="18%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;border-right: 1px solid #f7f7f7;">{!dedPali1.Amount}</td>
+                                                </tr>
+                                                <apex:variable var="itemCounter1" value="{!itemCounter1 + 1}"/> 
+                                            </apex:repeat> 
+                                            
+                                        </tbody>
+                                        <tr>
+                                            <td valign="top" align="left" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">
+                                                Tax Amount</td>
+                                            <td valign="top" align="left" width="19%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!emppay.Tax_Amount__c}</td>
+                                        </tr>
+                                        <tr>
+                                            <td valign="top" align="left" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">
+                                                PT Deduction</td>
+                                            <td valign="top" align="left" width="19%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!emppay.Other_Tax_Amount__c}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding: 10px;padding-bottom: 0px;">
+                            <tr>
+                                <td valign="top" align="left" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">
+                                    <strong>Total Earnings</strong></td>
+                                <td valign="top" align="left" width="19%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;">{!emppay.Total_Addition__c}</td>
+                                <td valign="top" align="left" width="13%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;"><strong>Total Deductions</strong></td>
+                                <td valign="top" align="left" width="18%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;border-right: 1px solid #f7f7f7;">{!emppay.Total_Deduction__c}</td>
+                            </tr>
+                            <tr>
+                                <td valign="top" align="left" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;"></td>
+                                <td valign="top" align="left" width="19%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;"></td>
+                                <td valign="top" align="left" width="13%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;"><strong>Net Amount</strong></td>
+                                <td valign="top" align="left" width="18%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 1px solid #f7f7f7;border-top: 1px solid #f7f7f7;border-left: 1px solid #f7f7f7;border-right: 1px solid #f7f7f7;">{!emppay.Net_Pay__c}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" valign="top" align="right" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 0px solid #333;border-top: 0px solid #333;border-left: 0px solid #333;">
+                                    <strong>AXOLT INDIA PVT LTD</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" valign="top" align="right" width="15%" style="font:normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;padding:5px;border-bottom: 0px solid #333;border-top: 0px solid #333;border-left: 0px solid #333;padding-top:50px;">Authorized Signatory</td>
+                            </tr>
+                        </table>
+                        
+                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td width="100%" style="font:12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#333333;text-align:left;padding:10px;">
+                                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td>
+                                                <!--<strong>Amount in words:</strong><br/>
+                                                Indian Rupees -here- Only-->
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </apex:form>
+        </body>
+    </html>
+    
+    
+</apex:page>

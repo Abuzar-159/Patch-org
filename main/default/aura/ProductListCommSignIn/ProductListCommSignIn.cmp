@@ -1,0 +1,154 @@
+<aura:component controller="ProductListCommSignIn" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/bootstrap.custom.min.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css')}"/>
+     <ltng:require styles="{!$Resource.SupplierPoratalComm  + '/ProductListComm/css/account.css'}"/>
+    <aura:registerEvent name="ProductListCommEvent" type="c:ProductListCommEvent"/>
+    <aura:attribute name="errMsg" type="String" default="" access="global"/>
+    <aura:attribute name="securityQuestion" type="String" />
+    <aura:attribute name="isVisible" type="boolean" default="true"/>
+    <aura:attribute name="forgotPassword" type="boolean" default="false"/>
+    
+    <aura:attribute name="ResetUsername" type="String" />
+    <aura:attribute name="Username" type="String" />
+    <aura:attribute name="Password" type="String" />
+    <aura:attribute name="askForSecurityQuestion" type="boolean" default="false"/>
+    <aura:attribute name="randomQuesNumber" type="String" />
+    <aura:attribute name="securityAnswer" type="String" />
+    <aura:attribute name="mainURL" type="String" />
+    
+    <aura:attribute name="mylabel1" type="String"/>
+    <aura:attribute name="mylabel" type="String"/>    
+
+    <div class="erp_mark7">
+    <aura:if isTrue="{!!v.forgotPassword}">
+        <aura:if isTrue="{!!v.securityQuestion}">
+            <aura:if isTrue="{!v.isVisible}">
+                <aura:if isTrue="{!(v.errMsg != '')}"> 
+                    <div class="{!if((v.errMsg != 'Please check your email and proceed with further steps'),'PL-newClass1','PL-newClass2')}"> 
+                        {!v.errMsg}
+                    </div>        
+                </aura:if>
+                <div class="form_container p-4">
+                    <div class="form-group">
+                        <lightning:input messageWhenValueMissing="Please enter a valid email address" required="true" label="Username" aura:id="FormVal" value="{!v.Username}"/>
+                    </div>
+                    <div class="form-group">
+                        <lightning:input messageWhenValueMissing="Please enter password to login" type="password" required="true" label="Password" aura:id="FormVal" value="{!v.Password}"/>
+                    </div>
+                    
+                    <div class="clearfix add_bottom_15">
+                        <!--<div class="checkboxes float-left">
+                            <label class="container_check">Remember me
+                                <input type="checkbox"/>
+                                <span class="checkmark"></span>
+                            </label>
+                        </div>-->
+                        <div class="float-right">
+                            <a onclick="{!c.passwordReset}" data-Action="ForgotPassword" class="PL-newClass3">Forgot Password?</a>
+                        </div>
+                    </div>						
+                    <div class="text-center pb-2 PL-newClass5">
+                        <input type="submit" value="Sign In" class="btn_1 full-width mr-2" onclick="{!c.signIn}"/>
+                        <!--<input type="submit" value="Cancel" class="btn_1 gray half-width" onclick="{!c.hideSignIn}"/> -->                       
+                    </div>
+                </div>
+                
+                <div class="text-center pb-2">Don't have an account?<a onclick="{!c.registerNow}" data-Action="Register" class="PL-newClass3"> Register now</a></div>
+                
+            </aura:if>
+            <aura:set attribute="else">   
+                <aura:if isTrue="{!(v.errMsg != '')}"> 
+                    <div class="{!if((v.errMsg != 'Please check your email and proceed with further steps'),'PL-newClass1','PL-newClass2')}"> 
+                        {!v.errMsg}
+                    </div>        
+                </aura:if>
+                <!--Copy security question flow-->
+                <form class="slds-form--stacked getSomeSpace">                    
+                    <div id="error1"> 
+                        <lightning:formattedRichText value="{!v.mylabel1}"/>
+                    </div>
+                    <div class="form_container p-4">
+                        <div class="slds-form-element ">
+                            <label class="slds-form-element__label " for="SecurityAnswer"> 
+                                <abbr class="slds-required" title="required">*</abbr> 
+                                {!v.securityQuestion}
+                            </label>
+                            <div class="slds-form-element__control">
+                                <label class="slds-form-element__label " for="SecurityAnswer"> 
+                                    <abbr class="slds-required" title="required">*</abbr>Security Answer
+                                </label>
+                                <lightning:input type="password" variant="label-hidden" required="true"  value="{!v.securityAnswer}"  aura:id="SecurityAnswer"/>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div>
+                                <span class="slds-radio">
+                                    <input type="radio" aura:id = "nameRadioAuraId" id="nameRadioId" name="options" checked="Checked" />
+                                    <label class="slds-radio__label" for="nameRadioId">
+                                        <span class="slds-radio--faux"></span>
+                                        <span class="slds-form-element__label PL-newClass6">Ask me a security question each time I login using this device 
+                                            (recommended if you are using a public or shared device)</span>
+                                    </label>
+                                </span>
+                            </div>
+                            <div>
+                                <span class="slds-radio">
+                                    <input type="radio" aura:id = "tokenRadioAuraId" value = "tkn" id="tokenRadioId" name="options" />
+                                    <label class="slds-radio__label" for="tokenRadioId">
+                                        <span class="slds-radio--faux"></span>
+                                        <span class="slds-form-element__label PL-newClass6">Do not ask me a security question each time I login this device</span>
+                                    </label>
+                                </span>
+                            </div>
+                        </div>    
+                        <div class="text-center mt-2 mb-2">
+                            <div  class="slds-grid"> 
+                                <lightning:button label="Next" onclick="{!c.verifySequrityQuestion}" class="btn_1 full-width mr-2"/>
+                                <!--<button type="button" class="btn_1 gray half-width" onclick="{!c.hideSignIn}">Cancel</button> --> 
+                            </div> 
+                        </div>   
+                        
+                        <div class="modal-footer pt-0 pb-0">
+                            <div class="options text-center mt-1 PL-newClass7">
+                                <p class = "free-Text mb-2 PL-newClass8"> 
+                                    Forgot	<a href="{!'https://'+$Label.c.Host_PathCustomerPortal+'/'+$Label.c.UserProfile+'?UN='+v.Username}" role="menuitem" tabindex="0" class="PL-newClass9"> password/security question ?</a>
+                                </p>                                                      
+                            </div>                         
+                        </div>
+                    </div>
+                </form>
+            </aura:set>
+        </aura:if>
+        <aura:set attribute="else">
+            <!-- Forgot Password--> 
+            <!--<aura:if isTrue="{!v.Action=='ForgotPassword'}">   -->    
+            <div id="error1"> 
+                <lightning:formattedRichText value="{!v.mylabel1}"/>
+            </div>
+            <div class="" id="panel9" role="tabpanel">
+                <div class="modal-body mb-1 p-3">
+                    <div class="form_container p-4">
+                        <div class="form form-sm mb-3">                    
+                            <lightning:input aura:id="FormReset" 
+                                             name="Username"
+                                             type="email"
+                                             placeholder="Enter Username"
+                                             value="{!v.ResetUsername}"
+                                             required="true" label="User Name"
+                                             class=""                                     
+                                             />
+                        </div>
+                        <div class="text-center PL-newClass5">
+                            <input type="submit" value="Reset" class="btn_1 half-width mr-2" onclick="{!c.submitresetPass}"/>
+                            <input type="submit" value="Cancel" class="btn_1 gray half-width" onclick="{!c.hidereset}"/>                      
+                        </div>
+                    </div>
+                </div>   
+            </div>
+            <!--</aura:if>-->
+        </aura:set>
+    </aura:if>
+    </div>
+</aura:component>

@@ -1,0 +1,990 @@
+<aura:component Controller="ERP7.InboundNew" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"  access="global">
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/><!--added by asra -->
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{
+                                                                              'sobjectType' : 'Employees__c',
+                                                                              'ERP7__Channel__c' : '',
+                                                                              'Name' : '',
+                                                                              }" />
+    <aura:attribute name="logisticId" type="String" default=""/>
+    <aura:attribute name="filtertype" type="String" default="NonReceivedItems"/>
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="allLogis" type="object"/>
+    <aura:attribute name="nonReceivedItems" type="object"/>
+    <aura:attribute name="partialReceivedItems" type="object"/>
+    <aura:attribute name="fullReceivedItems" type="object"/>
+    <aura:attribute name="showAllLogs" type="Boolean" default="true"/>
+    <aura:attribute name="shownonReceivedLogs" type="Boolean" default="false"/>
+    <aura:attribute name="showpartialLogs" type="Boolean" default="false"/>
+    <aura:attribute name="showfullLogs" type="Boolean" default="false"/>
+    <aura:attribute name="TotalNonReceivedItems" type="Integer" default="0"/>
+    <aura:attribute name="TotalPartialReceivedItems" type="Integer" default="0"/>
+    <aura:attribute name="TotalFullReceivedItems" type="Integer" default="0"/>
+    <aura:attribute name="TotalQAItems" type="Integer" default="0"/>
+    <aura:attribute name="TotalQAItemsMO" type="Integer" default="0"/>
+    
+    <aura:attribute name="Logistics" type="object[]"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="show" type="String" default="100"/>
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="FileList" type="object[]"/>
+    <aura:attribute name="showBarcode" type="Boolean" default="true"/>    
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="getAllDetails" action="{!c.getAllDetails}"></aura:method>
+    <aura:method name="Back2Inbound" action="{!c.Back2Inbound}"></aura:method>
+    <aura:method name="Receive" action="{!c.Receive}"></aura:method>
+    <!--<aura:method name="Putaway" action="{!c.Putaway}"></aura:method>-->
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    <aura:handler name="change" value="{!v.currentEmployee.ERP7__Channel__c}" action="{!c.LoadChannelChange}"/>
+    <aura:attribute name="SiteOptions" type="List"/>
+    <aura:attribute name="ShowAttachment" type="Boolean" default="true"/>
+    <aura:attribute name="showInboundDescription" type="Boolean" default="false"/>
+     <!--SPINNER VALUES-->
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    
+<aura:attribute name="selectedTab" type="String" default="Inbound"/>    
+    <!-- MO QA flow-->
+    <aura:attribute name="enableQAforMO" type="Boolean" default="false"/>
+    <!-- for account filter-->
+     <aura:attribute name="selectedAccount" type="String" default=""/>
+     <aura:handler name="change" value="{!v.selectedAccount}" action="{!c.LoadAccountChange}"/>
+   
+    
+    
+    <head>  
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"  />
+        <!--<ltng:require styles="{!join(',',$Resource.ERP7__Order_Console + '/assets/styles/custom.css', $Resource.ERP7__Order_Console + '/assets/styles/font-awesome.css')}"  />-->
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <!--<apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />-->
+        <!--<ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>-->
+        
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/InboundLogistic.css"/>
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css" />
+        <!--<ltng:require styles="/resource/ERP7__maqcustom/css/maqmain.css" /> -->
+        <ltng:require styles="/resource/ERP7__maqcustom/css/maqmain-min.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Manufacturing_orders.css"/>
+        <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" />
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    </head> 
+    <!--span class="InboundLog-class3"> 
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}"/>
+    </span-->
+    <aura:if isTrue="{!v.showSpinner}">
+        <div class="custom-spinner slds-spinner_container ">
+            <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                <span class="slds-assistive-text">Loading</span>
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
+                
+            </div>
+            <div class="custom-loading-text">
+                {!v.spinnerContent}
+            </div>
+        </div>
+    </aura:if>
+    <body aura:id="body" class="InboundLog-class1" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}">
+        <div class="cpq erp_mark7 InboundLog-class2" id="er7" >
+            <div class="theme-bg">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item">
+                                            <div class="slds-button-group InboundLog-class7" role="group">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" aura:id="emp" IconName="standard:user" label="{!$Label.c.Channel_StockTake}" selectedRecordId="{!v.currentEmployee.ERP7__Channel__c}" />
+                                            </div>
+                                        </li>
+                                        <ul class=" InboundLog-class8" > 
+                                            <label for="lookup-348" class="slds-form-element__label" data-aura-rendered-by="486:0">{!$Label.c.Site}</label>
+                                             <div class="slds-button-group InboundLog-class9" role="group">
+                                                <a href="javascript:void(0);" class="slds-button slds-button--neutral nuetral-f InboundLog-class10" ><i class="fa fa-filter InboundLog-class11" aria-hidden="true"></i></a>
+                                                <li> 
+                                                    
+                                                    <lightning:select aura:id="Site" value="{!v.selectedSite}" onchange="{!c.Load}" label="{!$Label.c.Site}"  class="display-lable width200 custom-select" >
+                                                        <aura:iteration items="{!v.SiteOptions}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </li> 
+                                            </div>
+                                        </ul>
+                                        <li class="breadcrumb-item slds-p-left_small">
+                                            <c:CustomInputLookUp objectAPIName="Account" aura:id="account" label="{!$Label.c.Account_Outbound_logistics}" IconName="standard:account" selectedRecordId="{!v.selectedAccount}"  />
+                                        </li>
+                                    </ol>
+                                    <!--<ol class="breadcrumb m-0">
+         <li class="breadcrumb-item"><a href="javascript: void(0);">Hyper</a></li>
+         <li class="breadcrumb-item"><a href="javascript: void(0);">Pages</a></li>
+         <li class="breadcrumb-item active">Manufacturing Order</li>
+        </ol>-->
+                                </div>
+                                <h4 class="page-title card-pricing headermt">
+                                    
+                                    <i class="card-pricing-icon slds-icon-standard-budget-allocation"><img src="/resource/erp7__SLDS213/assets/icons/custom/Stock_receiving.png" width="58"/></i>&nbsp;{!$Label.c.Inbound_Logistics}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-page-header slds-page-header--object-home slds-hide" role="banner">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow"> 
+                            <div class="slds-media__figure">                                
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large InboundLog-class4" > 
+                                        <img src="/resource/erp7__SLDS213/assets/icons/custom/Stock_receiving.png" width="58"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod InboundLog-class5">
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate InboundLog-class6" title="Refresh Inbound Logistics" onclick="{!c.Back2Inbound}">{!$Label.c.Inbound_Logistics}</h1>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons">
+                        <div class="slds-button-group InboundLog-class7" role="group">
+                            <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.currentEmployee.ERP7__Channel__c}" />
+                        </div>
+                        <ul class="slds-grid--vertical-align-left InboundLog-class8" > 
+                            <div class="slds-button-group InboundLog-class9" role="group">
+                                <a href="javascript:void(0);" class="slds-button slds-button--neutral nuetral-f InboundLog-class10" ><i class="fa fa-filter InboundLog-class11" aria-hidden="true"></i></a>
+                                <li> 
+                                    <lightning:select aura:id="Site" value="{!v.selectedSite}" onchange="{!c.Load}" variant="label-hidden" class="display-lable width200 custom-select" label="Site"> 
+                                        <aura:iteration items="{!v.SiteOptions}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </li> 
+                            </div>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="epr_Mark7 erp_mark7" >
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-2">
+                            <div class="card-body p-1">
+                                <div  class="panel-collapse">
+                                    <div class="panel-body InboundLog-class12">
+                                        <!-- Nav tabs --> 
+                                        <ul class="nav nav-tabs " role="tablist">
+                                            <li class="nav-item active"><!-- /lightning/n/ERP7__Outbound_Logistic -->
+                                                <a class="nav-link InboundLog-class13" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Inbound}">
+                                                    <i class="fa fa-file-text InboundLog-class14" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.List}</a>
+                                            </li>    
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Receive}">
+                                                    <i class="fa fa-cart-arrow-down InboundLog-class14" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Inbound_Receive}</a>
+                                                
+                                            </li> 
+                                            
+                                            <!-- <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.showNonReceivedItems}">
+                                                    <i class="fa fa-level-down InboundLog-class25" aria-hidden="true" data-logisticId=""></i>&nbsp;No Items Received</a>
+                                                
+                                            </li>  
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.showPartialReceivedItems}">
+                                                    <i class="fa fa-level-down InboundLog-class27" aria-hidden="true" data-logisticId=""></i>&nbsp;Partially Received</a>
+                                                
+                                            </li>  
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.showFullReceivedItems}">
+                                                    <i class="fa fa-level-down InboundLog-class26" aria-hidden="true" data-logisticId=""></i>&nbsp;Fully Received</a>
+                                                
+                                            </li>  -->
+                                            <!--<li class="nav-item"> 
+                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Putaway}">
+                                    <i class="fa fa-level-up InboundLog-class14" aria-hidden="true"  data-logisticId=""></i>&nbsp;Putaway </a>
+                            </li>-->
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                                
+                                <aura:if isTrue="{!v.showAllLogs}">
+                                    <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed InboundLog-class49','slds-notify_container slds-is-fixed InboundLog-class48')}">
+                                        <div class="slds-notify slds-notify_toast slds-theme_error InboundLog-class16" role="status">
+                                            <span class="slds-assistive-text">{!$Label.c.error}</span>
+                                            <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                                <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                            </span>
+                                            <div class="slds-notify__content">
+                                                <h2 class="slds-text-heading_x-small InboundLog-class17" >{!v.exceptionError}
+                                                </h2>
+                                            </div>
+                                            <div class="slds-notify__close InboundLog-class18" >
+                                                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                    <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                                                    <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        
+                                    </div>
+                                    <div class="slds-p-around--small InboundLog-class15 nolabel">
+                                        <table border="0" width="100%" cellpadding="0" cellspacing="0" >
+                                            <tr>
+                                                <td align="left" valign="middle" width="100%">
+                                                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                        <tr>
+                                                            <td width="25%" class="scanMN "><lightning:input  value="{!v.searchText}" aura:id="ikt" placeholder="{!$Label.c.SalesOrderConsole_Search}"  class="scanMN mr-0" maxlength="80" oncommit="{!c.Load}"/></td>
+                                                            <td width="5%">
+                                                                <!--div class="maqdropdown slds-p-left_x-small pt1-6">  
+                                                                    <a class="slds-button slds-button_neutral dropdown-toggle" href="javascript:void(0)"> 
+                                                                        <i class="fa fa-filter" aria-hidden="true"></i> &nbsp; 
+                                                                    </a>
+                                                                    <div class="maqdropdown-content">
+                                                                        <ul class="pl-0">
+                                                                            <li class="myli"> 
+                                                                                <ERP7:CustomInputLookUp objectAPIName="Account" aura:id="account" label="{!$Label.c.Account_Outbound_logistics}" IconName="standard:account" selectedRecordId="{!v.selectedAccount}"  />
+                                                                            </li>      
+                                                                        </ul>
+                                                                    </div>
+                                                                </div--> 
+                                                                <!--
+                                                                <lightning:button variant="brand" onclick="{!c.Load}" class="slds-button slds-button-/-brand2 slds-m-left-/-xx-small fieldswidth100" aura:id="fnd" label="{!$Label.c.Find_StockTake}"/>
+                                                            	-->
+                                                            </td>
+                                                            
+                                                            <td width="10%">&nbsp;</td>
+                                                            <td width="60%" class="text-right">
+                                                                <button aura:id="NonReceivedItems" label="{!$Label.c.Inbound_No_Items_Received}" iconName="fa fa-level-down" iconPosition="left" class="slds-button slds-button_neutral active-receive-grey" onclick="{!c.showNonReceivedItems}" data-record="NonReceivedItems">
+                                                                    <i class="fa fa-level-down" aria-hidden="true" data-logisticId="NonReceivedItems"></i>&nbsp;{!$Label.c.Inbound_No_Items_Received}&nbsp; {!v.TotalNonReceivedItems}
+                                                                </button>
+                                                                
+                                                                <button aura:id="PartialReceivedItems" label="{!$Label.c.Partial_Items_Received}" iconName="fa fa-level-down" iconPosition="left" class="slds-button slds-button_neutral orange-receive" onclick="{!c.showPartialReceivedItems}" data-record="PartialReceivedItems">
+                                                                    <i class="fa fa-level-down" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Acc_Pay_Partially_Received}&nbsp; {!v.TotalPartialReceivedItems}
+                                                                </button>
+                                                                
+                                                                <button aura:id="FullReceivedItems" label="{!$Label.c.Full_Items_Received}" iconName="fa fa-level-down" iconPosition="left" class="slds-button slds-button_neutral green-receive" onclick="{!c.showFullReceivedItems}" data-record="FullReceivedItems">
+                                                                    <i class="fa fa-level-down" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Inbound_Fully_Received}&nbsp; {!v.TotalFullReceivedItems}
+                                                                </button>
+                                                                
+                                                                <button aura:id="AwaitingQualityCheck" label="{!$Label.c.Awaiting_Quality_Check}" iconName="fa fa-level-down" iconPosition="left" class="slds-button slds-button_neutral purple-receive" onclick="{!c.showAwaitingQAItems}" data-record="AwaitingQualityCheck">
+                                                                    <i class="fa fa-level-down" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Awaiting_Quality_Check}&nbsp; {!v.TotalQAItems}
+                                                                </button>
+                                                                <aura:if isTrue="{!v.enableQAforMO}">
+                                                                     <button aura:id="QualityCheckMO" label="Quality Check MO" iconName="fa fa-level-down" iconPosition="left" class="slds-button slds-button_neutral purple-receive" onclick="{!c.showQAItemsMO}" data-record="QualityCheckMO">
+                                                                         <i class="fa fa-level-down" aria-hidden="true" data-logisticId=""></i>&nbsp;Quality Check MO &nbsp; {!v.TotalQAItemsMO}
+                                                                    </button>
+                                                                </aura:if>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>                            
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="InboundLog-class19">                                    
+                                        <table id="example" class="table table--condensed  slds-no-row-hover InboundLog-class20" > 
+                                            <thead>
+                                                <tr class="slds-text-heading--label" bgcolor="#f3f3f3">
+                                                    <!-- <aura:If isTrue="{!(v.filtertype != 'FullReceivedItems')}">-->
+                                                    <th class="slds-cell-shrink" scope="col">
+                                                        <lightning:input type="checkbox" checked="{!v.checkAll}" onchange="{!c.checkAll}"/>
+                                                    </th> 
+                                                    <!-- </aura:If>-->
+                                                    <th class="slds-is-sortable" scope="col"> 
+                                                        <div class="slds-truncate" title="{!$Label.c.Name_ManageLeave}" > 
+                                                            <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Name">
+                                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="{!$Label.c.Sort_Outbound_logistics}" size="xx-small" class="cursor-pointer" />{!$Label.c.Name_ManageLeave}</span>
+                                                        </div> 
+                                                    </th>
+                                                    <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col"> 
+                                                        <div class="slds-truncate" title="{!$Label.c.Order_RMA}"> 
+                                                            <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Order__r.Name,ERP7__Transfer_Order__r.Name,ERP7__RMA__r.Name"> 
+                                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="{!$Label.c.Sort_Outbound_logistics}" size="xx-small" class="cursor-pointer" />{!$Label.c.Order_RMA}</span>
+                                                        </div> 
+                                                    </th>
+                                                    <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.Expected_Date}">
+                                                            <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Expected_Date__c,ERP7__Logistic_Expected_Date__c"> 
+                                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="{!$Label.c.Sort_Outbound_logistics}" size="xx-small" class="cursor-pointer" /> {!$Label.c.Expected_Date}</span>
+                                                        </div> 
+                                                    </th> 
+                                                    <aura:if isTrue="{!v.showBarcode}">
+                                                        <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">{!$Label.c.Barcode_Outbound_logistics}</th>
+                                                    </aura:if>
+                                                    <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.SalesOrderToPurchaseOrder_Customer_Organisation}" >
+                                                            <span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Account__r.Name"> 
+                                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="{!$Label.c.Sort_Outbound_logistics}" size="xx-small" class="cursor-pointer" /> {!$Label.c.SalesOrderToPurchaseOrder_Customer_Organisation} </span>
+                                                        </div> 
+                                                    </th>  
+                                                    <aura:if isTrue="{!v.showInboundDescription}">
+                                                        <th class="slds-is-sortable no-sort" scope="col">{!$Label.c.Inbound_Description}</th> 
+                                                    </aura:if>
+                                                    <th class="slds-is-sortable no-sort" scope="col"> {!$Label.c.AddSubscription_Action}</th> 
+                                                    
+                                                    <aura:if isTrue="{!v.ShowAttachment}">
+                                                        <th class="slds-is-sortable no-sort" scope="col"></th> 
+                                                    </aura:if>
+                                                </tr>    
+                                            </thead>  
+                                            
+                                            <tbody> 
+                                                <aura:if isTrue="{!v.Container.LogisticWrapperList.length > 0}">
+                                                    <aura:iteration var="sos" indexVar="SOCounter" items="{!v.Container.LogisticWrapperList}">
+                                                        
+                                                        <tr class="slds-hint-parent" id="{!sos.Logistic.Id}">
+                                                            <!-- <aura:If isTrue="{!(v.filtertype != 'FullReceivedItems')}">-->
+                                                            <td class="slds-cell-shrink" valign="top" data-label="Action" role="row"> 
+                                                                <lightning:input type="checkbox" checked="{!sos.isSelected}" />
+                                                            </td>
+                                                            <!-- </aura:If>-->
+                                                            <td data-label="Name" scope="row">
+                                                                <div class="slds-truncate2 InboundLog-class21" title="" id="{!sos.Logistic.Id}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.Id}" /> 
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                <div class="slds-truncate InboundLog-class22">
+                                                                    <aura:iteration var="orderWrap" indexVar="orderCounter" items="{!sos.orderWrapperList}">
+                                                                        <aura:if isTrue="{!orderCounter>0}">,&nbsp;</aura:if>
+                                                                        <lightning:formattedUrl value="{!'/'+orderWrap.OrderId}" label="{!orderWrap.OrderName}" tooltip="{!orderWrap.OrderName}" target="_blank" />
+                                                                    </aura:iteration>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                <div class="slds-truncate">
+                                                                    <aura:if isTrue="{!and(sos.Logistic.ERP7__Logistic_Expected_Date__c != '',sos.Logistic.ERP7__Logistic_Expected_Date__c != null)}">
+                                                                        <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Logistic_Expected_Date__c}" /> 
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!sos.Logistic.ERP7__Sales_Order__c || sos.Logistic.ERP7__Purchase_Order__c || sos.Logistic.ERP7__Transfer_Order__c}">
+                                                                                <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date__c}" />
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date_S__c}" />
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <aura:if isTrue="{!v.showBarcode}">
+                                                                <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Barcode">
+                                                                    <div class="slds-truncate">
+                                                                        <aura:if isTrue="{!and(sos.Logistic.ERP7__Barcode__c != '',sos.Logistic.ERP7__Barcode__c != null)}">
+                                                                            <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.ERP7__Barcode__c}"/>
+                                                                            <aura:set attribute="else">
+                                                                                <aura:if isTrue="{!sos.Logistic.ERP7__Barcode_S__c}">
+                                                                                    <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.ERP7__Barcode_S__c}"/>
+                                                                                    <aura:set attribute="else">
+                                                                                        <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.ERP7__Logistic_Barcode__c}"/>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+                                                                                
+                                                                                
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </td>
+                                                            </aura:if>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Account__c}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.ERP7__Account__r.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.ERP7__Account__c}" /> 
+                                                                </div> 
+                                                            </td>
+                                                            <aura:if isTrue="{!v.showInboundDescription}">
+                                                                <td data-label="" class="InboundLog-class23 scanMN" data-id="{!sos.Logistic.Id}" data-name="{!sos.Logistic.ERP7__Special_Instructions__c}" onkeyup="{!c.handleTextKeyUp}">
+                                                                    <lightning:textarea class="scanMN" value="{!sos.Logistic.ERP7__Special_Instructions__c}" variant="label-hidden" />
+                                                                </td>
+                                                            </aura:if>
+                                                            <td data-label="Action" class="InboundLog-class23">
+                                                                <div class="slds-truncate"> 
+                                                                    <table class="InboundLog-class20">
+                                                                        <tr>
+                                                                            
+                                                                            <td width="50%" class="p-0">
+                                                                                <div class="erp_Mark7 maqsood">
+                                                                                    <div class="card folder m-1 mb-0 mt-0 border-custom-m">
+                                                                                        <div class="card-body p-2">
+                                                                                            <div class="folder-icon">
+                                                                                                <aura:renderIf isTrue="{!and(sos.Logistic.ERP7__Putaway_Quantity__c == 0, sos.Logistic.ERP7__Total_Quantity__c > 0)}"> <i class="fa fa-level-down InboundLog-class25" aria-hidden="true" ></i></aura:renderIf>
+                                                                                                <aura:renderIf isTrue="{!and(sos.Logistic.ERP7__Putaway_Quantity__c > 0, sos.Logistic.ERP7__Total_Quantity__c > sos.Logistic.ERP7__Putaway_Quantity__c, sos.Logistic.ERP7__Total_Quantity__c > 0)}"> <i class="fa fa-level-down InboundLog-class27" aria-hidden="true" ></i></aura:renderIf>
+                                                                                                <aura:renderIf isTrue="{!and(sos.Logistic.ERP7__Total_Quantity__c == sos.Logistic.ERP7__Putaway_Quantity__c, sos.Logistic.ERP7__Total_Quantity__c > 0)}"> <i class="fa fa-level-down InboundLog-class26" aria-hidden="true" ></i></aura:renderIf>
+                                                                                                &nbsp;
+                                                                                            </div>
+                                                                                            <div class="folder-info">
+                                                                                                <aura:renderIf isTrue="{!(sos.Logistic.ERP7__Total_Quantity__c > sos.Logistic.ERP7__Putaway_Quantity__c)}">
+                                                                                                    <a class="InboundLog-class28" onclick="{!c.Receive}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Inbound_Receive}</a>
+                                                                                                </aura:renderIf>
+                                                                                                <aura:renderIf isTrue="{!and(sos.Logistic.ERP7__Total_Quantity__c == sos.Logistic.ERP7__Putaway_Quantity__c,sos.Logistic.ERP7__Closed__c == False)}">
+                                                                                                    <a class="InboundLog-class28" onclick="{!c.Receive}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Inbound_Receive}</a>
+                                                                                                </aura:renderIf>
+                                                                                                <aura:renderIf isTrue="{!and(sos.Logistic.ERP7__Closed__c,sos.Logistic.ERP7__Total_Quantity__c == sos.Logistic.ERP7__Putaway_Quantity__c)}">
+                                                                                                    <a class="InboundLog-class28" onclick="{!c.Receive}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Inbound_Receive}</a>  
+                                                                                                </aura:renderIf>
+                                                                                                <span><div class="InboundLog-class30" title="{!(sos.Logistic.ERP7__Putaway_Quantity__c) + ' /' + (sos.Logistic.ERP7__Total_Quantity__c)}">{!sos.Logistic.ERP7__Putaway_Quantity__c}/{!sos.Logistic.ERP7__Total_Quantity__c}</div></span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                    
+                                                                </div>
+                                                            </td> 
+                                                            <aura:if isTrue="{!v.ShowAttachment}">
+                                                                
+                                                                <td data-label="" class="InboundLog-class23" >
+                                                                    <div class="slds-col">
+                                                                        <lightning:input aura:id="fileik" type="file" files="{!v.FileList}" name="{!sos.Logistic.Id}" onchange="{!c.onFileUploaded}" onfocus="{!c.reRender}" oncomplete="{!c.reRender}" onblur="{!c.reRender}" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" multiple="true" class="InboundLog-class31"/>
+                                                                    </div>
+                                                                    <div class="scroll-wrap-height-cntl">
+                                                                        <aura:iteration var="attch" indexVar="attchIndex" items="{!sos.Attachments}">
+                                                                            <aura:if isTrue="{!(attch.Id != undefined)}">
+                                                                                
+                                                                                <div class="slds-grid slds-p-top_small">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:buttonIcon iconName="utility:delete" variant="bare" name="{!attch.Id}" onclick="{!c.DeleteRecordAT}" alternativeText="delete" title="{!sos.Logistic.Id}" class="colorRed"/>
+                                                                                        &nbsp;
+                                                                                        <lightning:formattedUrl value="{!'/'+attch.Id}" label="{!attch.Name}" tooltip="{!attch.Name}" target="_blank" class="fcolor"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col">
+                                                                                        <img src="{!'/servlet/servlet.FileDownload?file='+attch.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                            </aura:if>
+                                                                        </aura:iteration>
+                                                                    </div>
+                                                                </td>
+                                                            </aura:if>
+                                                        </tr>    
+                                                        
+                                                    </aura:iteration>
+                                                </aura:if>
+                                                 <aura:if isTrue="{!v.Container.MOWrapperList.length > 0}">
+                                                     <aura:iteration var="sos" indexVar="SOCounter" items="{!v.Container.MOWrapperList}">
+                                                          <tr class="slds-hint-parent" id="{!sos.MOrders.Id}">
+                                                            <td class="slds-cell-shrink" valign="top" data-label="Action" role="row"> 
+                                                                <lightning:input type="checkbox" checked="{!sos.isSelected}" />
+                                                            </td>
+                                                              <td data-label="Name" scope="row">
+                                                                <div class="slds-truncate2 InboundLog-class21" title="" id="{!sos.MOrders.Id}">
+                                                                    <lightning:formattedText value="{!sos.MOrders.Name}" onclick="{!c.NavRecord}" title="{!sos.MOrders.Id}" /> 
+                                                                </div>
+                                                            </td>
+                                                               <td data-label="Order" scope="row">
+                                                                   <div class="slds-truncate InboundLog-class22">
+                                                                       <aura:if isTrue="{!(sos.MOrders.ERP7__Order__c != null)}" >
+                                                                           <lightning:formattedUrl value="{!'/'+sos.MOrders.ERP7__Order__c}" label="{!sos.MOrders.ERP7__Order__r.Name}" tooltip="{!sos.MOrders.ERP7__Order__r.Name}" target="_blank" />
+                                                                       </aura:if>
+                                                                </div>
+                                                            </td>
+                                                              <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                  <div class="slds-truncate">
+                                                                      <lightning:formattedDateTime value="{!sos.MOrders.ERP7__ExpectedDate__c}" /> 
+                                                                  </div>
+                                                              </td>
+                                                               <aura:if isTrue="{!v.showBarcode}">
+                                                                   <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Barcode">
+                                                                       <div class="slds-truncate">
+                                                                           <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.MOrders.Name}"/>
+                                                                       </div>
+                                                                   </td>
+                                                              </aura:if>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" >
+                                                                     <aura:if isTrue="{!(sos.MOrders.ERP7__Order__c != null)}" >
+                                                                         <lightning:formattedText value="{!sos.MOrders.ERP7__Order__r.Account.Name}" onclick="{!c.NavRecord}" title="{!sos.MOrders.ERP7__Order__r.AccountId}" /> 
+                                                                    </aura:if>
+                                                                </div> 
+                                                            </td>
+                                                              <aura:if isTrue="{!v.showInboundDescription}">
+                                                                  <td data-label="" class="InboundLog-class23 scanMN" data-id="{!sos.MOrders.Id}">
+                                                                  </td>
+                                                              </aura:if>
+                                                              <td data-label="Action" class="InboundLog-class23">
+                                                                  <div class="slds-truncate"> 
+                                                                    <table class="InboundLog-class20">
+                                                                        <tr>
+                                                                            <td width="50%" class="p-0">
+                                                                                <div class="erp_Mark7 maqsood">
+                                                                                    <div class="card folder m-1 mb-0 mt-0 border-custom-m">
+                                                                                        <div class="card-body p-2">
+                                                                                            <div class="folder-icon">
+                                                                                                <i class="fa fa-level-down InboundLog-class26" aria-hidden="true" ></i>&nbsp;
+                                                                                            </div>
+                                                                                             <div class="folder-info">
+                                                                                                 <a class="InboundLog-class28" onclick="{!c.ReceiveClickedMO}" data-logisticId="{!sos.MOrders.Id}">{!$Label.c.Inbound_Receive}</a>  
+                                                                                                 <span><div class="InboundLog-class30" title="{!(sos.MOrders.ERP7__Quantity_Produced__c + sos.MOrders.ERP7__Scrap_Quantity__c) + ' /' + (sos.MOrders.ERP7__Quantity__c)}">{!(sos.MOrders.ERP7__Quantity_Produced__c + sos.MOrders.ERP7__Scrap_Quantity__c)}/{!sos.MOrders.ERP7__Quantity__c}</div></span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                      </table>
+                                                                  </div>
+                                                              </td>
+                                                              <aura:if isTrue="{!v.ShowAttachment}">
+                                                                  <td data-label="" class="InboundLog-class23" >
+                                                                      <div class="slds-col">
+                                                                          <lightning:input aura:id="fileik" type="file" files="{!v.FileList}" name="{!sos.MOrders.Id}" onchange="{!c.onFileUploaded}" onfocus="{!c.reRender}" oncomplete="{!c.reRender}" onblur="{!c.reRender}" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" multiple="true" class="InboundLog-class31"/>
+                                                                      </div>
+                                                                      <div class="scroll-wrap-height-cntl">
+                                                                        <aura:iteration var="attch" indexVar="attchIndex" items="{!sos.Attachments}">
+                                                                            <aura:if isTrue="{!(attch.Id != undefined)}">
+                                                                                
+                                                                                <div class="slds-grid slds-p-top_small">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:buttonIcon iconName="utility:delete" variant="bare" name="{!attch.Id}" onclick="{!c.DeleteRecordAT}" alternativeText="delete" title="{!sos.MOrders.Id}" class="colorRed"/>
+                                                                                        &nbsp;
+                                                                                        <lightning:formattedUrl value="{!'/'+attch.Id}" label="{!attch.Name}" tooltip="{!attch.Name}" target="_blank" class="fcolor"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col">
+                                                                                        <img src="{!'/servlet/servlet.FileDownload?file='+attch.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                            </aura:if>
+                                                                        </aura:iteration>
+                                                                    </div>
+                                                                  </td>
+                                                              </aura:if>
+                                                         </tr>
+                                                             
+                                                     
+                                                     </aura:iteration>
+                                                    <!-- <aura:set attribute="else">
+                                                       No records are available to view
+                                                     </aura:set>-->
+                                                </aura:if>
+                                            </tbody>                             
+                                        </table>
+                                    </div> 
+                                </aura:if>
+                                
+                                <!-- commented by Arshad 14/02/23
+                                <aura:if isTrue="{!v.shownonReceivedLogs}">
+                                    <aura:if isTrue="{!(v.nonReceivedItems.length>0)}">
+                                        <div class="InboundLog-class19">
+                                            <table id="example" class="table table-bordered  slds-no-row-hover InboundLog-class20" > 
+                                                <thead>
+                                                    <tr class="slds-text-heading-label" bgcolor="#f3f3f3">
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" id="Name"> 
+                                                                {!$Label.c.Name_ManageLeave}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Order_RMA}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Expected_Date}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.SalesOrderToPurchaseOrder_Customer_Organisation}
+                                                            </div>
+                                                        </th>
+                                                        
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.REMAINING_QUANTITY}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                Action
+                                                            </div>
+                                                        </th>
+                                                        
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration var="sos" indexVar="SOCounter" items="{!v.nonReceivedItems}">
+                                                        <tr class="slds-hint-parent" id="{!sos.Logistic.Id}">
+                                                            <td data-label="Name" scope="row">
+                                                                <div class="slds-truncate InboundLog-class21" title="" id="{!sos.Logistic.Id}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.Id}" /> 
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                <div class="slds-truncate InboundLog-class22">
+                                                                    <aura:iteration var="orderWrap" indexVar="orderCounter" items="{!sos.orderWrapperList}">
+                                                                        <aura:if isTrue="{!orderCounter>0}">,&nbsp;</aura:if>
+                                                                        <lightning:formattedUrl value="{!'/'+orderWrap.OrderId}" label="{!orderWrap.OrderName}" tooltip="{!orderWrap.OrderName}" target="_blank" />
+                                                                    </aura:iteration>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                <div class="slds-truncate">
+                                                                    <aura:if isTrue="{!and(sos.Logistic.ERP7__Logistic_Expected_Date__c != '',sos.Logistic.ERP7__Logistic_Expected_Date__c != null)}">
+                                                                        <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Logistic_Expected_Date__c}" /> 
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!sos.Logistic.ERP7__Sales_Order__c || sos.Logistic.ERP7__Purchase_Order__c || sos.Logistic.ERP7__Transfer_Order__c}">
+                                                                                <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date__c}" />
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date_S__c}" />
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Account__c}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.ERP7__Account__r.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.ERP7__Account__c}" /> 
+                                                                </div> 
+                                                            </td>
+                                                            
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Remaining_Quantity__c}">
+                                                                    <lightning:formattedNumber value="{!sos.Logistic.ERP7__Remaining_Quantity__c}"  /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td data-label="Action" class="InboundLog-class23">
+                                                                <div class="slds-truncate"> 
+                                                                    <table class="InboundLog-class20">
+                                                                        <tr>
+                                                                            <td width="50%" class="p-0">
+                                                                                <div class="erp_Mark7 maqsood">
+                                                                                    <div class="card folder m-1 mb-0 border-custom-m">
+                                                                                        <div class="card-body p-2">
+                                                                                            <div class="folder-info">
+                                                                                                <a class="InboundLog-class28" onclick="{!c.Receive}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Inbound_Receive}</a>
+                                                                                                <span><div class="InboundLog-class30" title="{!(sos.Logistic.ERP7__Putaway_Quantity__c) + ' /' + (sos.Logistic.ERP7__Total_Quantity__c)}">{!sos.Logistic.ERP7__Putaway_Quantity__c}/{!sos.Logistic.ERP7__Total_Quantity__c}</div></span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                    
+                                                                </div>
+                                                            </td> 
+                                                        </tr>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <aura:set attribute="else">
+                                            {!$Label.c.No_Items_available_to_be_Received}
+                                        </aura:set>
+                                        
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!v.showpartialLogs}">
+                                    <aura:if isTrue="{!(v.partialReceivedItems.length>0)}">
+                                        <div class="InboundLog-class19">
+                                            <table id="example" class="table table-bordered  slds-no-row-hover InboundLog-class20" > 
+                                                <thead>
+                                                    <tr class="slds-text-heading-label" bgcolor="#f3f3f3">
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" id="Name"> 
+                                                                {!$Label.c.Name_ManageLeave}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Order_RMA}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Expected_Date}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.SalesOrderToPurchaseOrder_Customer_Organisation}
+                                                            </div>
+                                                        </th>
+                                                        
+                                                        
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.REMAINING_QUANTITY}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                Action
+                                                            </div>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration var="sos" indexVar="SOCounter" items="{!v.partialReceivedItems}">
+                                                        <tr class="slds-hint-parent" id="{!sos.Logistic.Id}">
+                                                            <td data-label="Name" scope="row">
+                                                                <div class="slds-truncate InboundLog-class21" title="" id="{!sos.Logistic.Id}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.Id}" /> 
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                <div class="slds-truncate InboundLog-class22">
+                                                                    <aura:iteration var="orderWrap" indexVar="orderCounter" items="{!sos.orderWrapperList}">
+                                                                        <aura:if isTrue="{!orderCounter>0}">,&nbsp;</aura:if>
+                                                                        <lightning:formattedUrl value="{!'/'+orderWrap.OrderId}" label="{!orderWrap.OrderName}" tooltip="{!orderWrap.OrderName}" target="_blank" />
+                                                                    </aura:iteration>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                <div class="slds-truncate">
+                                                                    <aura:if isTrue="{!and(sos.Logistic.ERP7__Logistic_Expected_Date__c != '',sos.Logistic.ERP7__Logistic_Expected_Date__c != null)}">
+                                                                        <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Logistic_Expected_Date__c}" /> 
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!sos.Logistic.ERP7__Sales_Order__c || sos.Logistic.ERP7__Purchase_Order__c || sos.Logistic.ERP7__Transfer_Order__c}">
+                                                                                <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date__c}" />
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date_S__c}" />
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Account__c}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.ERP7__Account__r.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.ERP7__Account__c}" /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Total_Quantity__c}">
+                                                                    <lightning:formattedNumber value="{!sos.Logistic.ERP7__Total_Quantity__c}"  /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Putaway_Quantity__c}">
+                                                                    <lightning:formattedNumber value="{!sos.Logistic.ERP7__Putaway_Quantity__c}"  /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Remaining_Quantity__c}">
+                                                                    <lightning:formattedNumber value="{!sos.Logistic.ERP7__Remaining_Quantity__c}"  /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td data-label="Action" class="InboundLog-class23">
+                                                                <div class="slds-truncate"> 
+                                                                    <table class="InboundLog-class20">
+                                                                        <tr>
+                                                                            <td width="50%" class="p-0">
+                                                                                <div class="erp_Mark7 maqsood">
+                                                                                    <div class="card folder m-1 mb-0 border-custom-m">
+                                                                                        <div class="card-body p-2">
+                                                                                            <div class="folder-info">
+                                                                                                <a class="InboundLog-class28" onclick="{!c.Receive}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Inbound_Receive}</a>
+                                                                                                <span><div class="InboundLog-class30" title="{!(sos.Logistic.ERP7__Putaway_Quantity__c) + ' /' + (sos.Logistic.ERP7__Total_Quantity__c)}">{!sos.Logistic.ERP7__Putaway_Quantity__c}/{!sos.Logistic.ERP7__Total_Quantity__c}</div></span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+                                                                    
+                                                                </div>
+                                                            </td> 
+                                                        </tr>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <aura:set attribute="else">
+                                            {!$Label.c.No_partial_Items_available}
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!v.showfullLogs}">
+                                    <aura:if isTrue="{!(v.fullReceivedItems.length>0)}">
+                                        <div class="InboundLog-class19">
+                                            <table id="example" class="table table-bordered  slds-no-row-hover InboundLog-class20" > 
+                                                <thead>
+                                                    <tr class="slds-text-heading-label" bgcolor="#f3f3f3">
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" id="Name"> 
+                                                                {!$Label.c.Name_ManageLeave}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Order_RMA}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Expected_Date}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.SalesOrderToPurchaseOrder_Customer_Organisation}
+                                                            </div>
+                                                        </th>
+                                                        <th class="slds-is-sortable" scope="col">
+                                                            <div class="slds-truncate" title="Name" data-service="{!v.Order}" > 
+                                                                {!$Label.c.Acc_Pay_Total_Quantity}
+                                                            </div>
+                                                        </th>
+                                                        
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration var="sos" indexVar="SOCounter" items="{!v.fullReceivedItems}">
+                                                        <tr class="slds-hint-parent" id="{!sos.Logistic.Id}">
+                                                            <td data-label="Name" scope="row">
+                                                                <div class="slds-truncate InboundLog-class21" title="" id="{!sos.Logistic.Id}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.Id}" /> 
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                <div class="slds-truncate InboundLog-class22">
+                                                                    <aura:iteration var="orderWrap" indexVar="orderCounter" items="{!sos.orderWrapperList}">
+                                                                        <aura:if isTrue="{!orderCounter>0}">,&nbsp;</aura:if>
+                                                                        <lightning:formattedUrl value="{!'/'+orderWrap.OrderId}" label="{!orderWrap.OrderName}" tooltip="{!orderWrap.OrderName}" target="_blank" />
+                                                                    </aura:iteration>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                <div class="slds-truncate">
+                                                                    <aura:if isTrue="{!and(sos.Logistic.ERP7__Logistic_Expected_Date__c != '',sos.Logistic.ERP7__Logistic_Expected_Date__c != null)}">
+                                                                        <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Logistic_Expected_Date__c}" /> 
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!sos.Logistic.ERP7__Sales_Order__c || sos.Logistic.ERP7__Purchase_Order__c || sos.Logistic.ERP7__Transfer_Order__c}">
+                                                                                <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date__c}" />
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.ERP7__Expected_Date_S__c}" />
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Account__c}">
+                                                                    <lightning:formattedText value="{!sos.Logistic.ERP7__Account__r.Name}" onclick="{!c.NavRecord}" title="{!sos.Logistic.ERP7__Account__c}" /> 
+                                                                </div> 
+                                                            </td>
+                                                            <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Track No">
+                                                                <div class="slds-truncate InboundLog-class22" title="" id="{!sos.Logistic.ERP7__Total_Quantity__c}">
+                                                                    <lightning:formattedNumber value="{!sos.Logistic.ERP7__Total_Quantity__c}"  /> 
+                                                                </div> 
+                                                            </td>
+                                                            
+                                                        </tr>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <aura:set attribute="else">
+                                            {!$Label.c.No_Fully_Received_Items_available}
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:if>
+        						commented by Arshad 14/02/23 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>             
+            </div> 
+            
+            <aura:if isTrue="{!v.showAllLogs}">
+                <div class="epr_Mark7 InboundLog-class36">
+                    <div class="row InboundLog-class37">
+                        <aura:if isTrue="{!(v.Container.LogisticWrapperList.length>0)}">
+                            <div class="col-lg-2 InboundLog-class38">
+                                <div class="slds-grid" >
+                                    <div class="slds-col InboundLog-class39">
+                                        {!$Label.c.Acc_Recev_Show}&nbsp;&nbsp;
+                                    </div>
+                                    <div class="slds-col" >
+                                        <lightning:select value="{!v.show}" onchange="{!c.SetShow}" variant="label-hidden" class="display-lable" label="show">
+                                            <option value="100">100</option>
+                                            <option value="200">200</option>
+                                            <option value="500">500</option>
+                                            <option value="50">50</option>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 InboundLog-class40" >
+                                {!$Label.c.Acc_Recev_Showing}&nbsp;<span class="text-lightblue">{!v.Container.startCount}-{!v.Container.endCount}</span>&nbsp;{!$Label.c.Acc_Recev_of_total}&nbsp;<span class="text-lightblue">{!v.Container.recSize}</span>&nbsp;{!$Label.c.Acc_Recev_Records}
+                            </div>
+                            
+                            <div class="col-lg-5 InboundLog-class41">
+                                <nav aria-label="Page navigation example">
+                                    <ul class="pagination InboundLog-class42">
+                                        <li class="InboundLog-class43" >
+                                            <a class="{!if(1 >= v.Container.startCount,'InboundLog-class44','InboundLog-class45')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> 
+                                        </li>
+                                        <li class="InboundLog-class50" >
+                                            <a class="{!if(1 >= v.Container.startCount,'InboundLog-class44','InboundLog-class45')}"  onclick="{!c.Previous}">  {!$Label.c.Previous}</a> 
+                                        </li>
+                                        
+                                        <li class="InboundLog-class50" >
+                                            <a class="{!if(v.Container.endCount == v.Container.recSize,'InboundLog-class46','InboundLog-class47')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} </a> 
+                                        </li>
+                                        <li class="InboundLog-class51" >
+                                            <a class="{!if(v.Container.endCount == v.Container.recSize,'InboundLog-class46','InboundLog-class47')}" onclick="{!c.NextLast}">&gt;&gt; </a> 
+                                        </li>
+                                    </ul>
+                                </nav> 
+                            </div>
+                            
+                            <div class="col-lg-2 InboundLog-class38" >
+                                <div class="slds-grid">
+                                    <div class="slds-col InboundLog-class52 slds-p-top_xx-small text-center">
+                                          {!$Label.c.page}
+                                        
+                                    </div>
+                                    <div class="slds-col InboundLog-class52 slds-p-bottom_small ">
+                                         <lightning:input type="number" value="{!v.Container.PageNum}" variant="label-hidden" class="display-lable width125plx" oncommit="{!c.OfsetChange}"/>
+                                        
+                                    </div>
+                                    <div class="slds-col InboundLog-class52 slds-p-top_xx-small">
+                                         {!$Label.c.page_of}&nbsp;{!v.Container.PNS.length}
+                                        
+                                    </div>
+                                    
+                                    
+                                </div>
+                            </div> 
+                        </aura:if>
+                    </div> 
+                </div> 
+            </aura:if>
+        </div>
+    </body>
+</aura:component>

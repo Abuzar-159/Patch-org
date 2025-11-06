@@ -1,0 +1,92 @@
+<aura:component controller="InterCompanyInvoicing" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global">
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <aura:attribute name="item" type="Object" default="{ERP7__Cost_Card__c:'',ERP7__Product__c:'','ERP7__Unit_Price__c':0.00,ERP7__Product__r:{'Id':'','Name':''}, Accounts:{sObjectType :'ERP7__Dimension__c',ERP7__Allocation_Percentage__c:0.00,ERP7__Allocation_Amount__c:0.00, ERP7__Chart_of_Account__c : '', ERP7__Project__c : '' }}"/>
+    <aura:attribute name="checkValidation" type="Boolean" default="false"/>
+    <aura:attribute name="versionAccess" type="Boolean" default="false"/>
+    <aura:attribute name="ProjectAccess" type="Boolean" default="false"/>
+    <aura:attribute name="DepartmentAccess" type="Boolean" default="false"/>
+    <aura:attribute name="displayAccount" type="Boolean" default="true"/>
+    <aura:attribute name="index" type="Integer"/>
+    <aura:attribute name="vendorId" type="String"/>
+    <aura:attribute name="coaId" type="String"/>
+    <aura:attribute name="projId" type="String"/>
+    <aura:attribute name="projectId" type="String"/>
+    <aura:attribute name="qry" type="String" default=""/>
+    <aura:attribute name="Tax" type="Currency"/>
+    <aura:attribute name="TotalPrice" type="Currency"/>
+    <aura:attribute name="prodqry" type="String" default=""/>
+    <aura:attribute name="venqry" type="String" default=""/>
+    <aura:attribute name="deleteIndex" type="Integer" />
+    <aura:attribute name="row" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.getCategory}"/>
+    <aura:handler name="change" value="{!v.checkValidation}" action="{!c.validate}"/>
+    <aura:method name="callValidate" action="{!c.validate}"/>
+    <aura:attribute name="poli" type="Object" default="[]"/>
+    <aura:attribute name="showVendor" type="Boolean" default="false"/>
+    <aura:attribute name="AutoAccountAllocation" type="Boolean" default="false"/>
+    <aura:attribute name="showAllocation" type="Boolean" default="false"/>
+    <aura:attribute name="POLINameAcc" type="Boolean" default="false"/>
+    <aura:attribute name="showTax" type="Boolean" default="false"/> 
+    <aura:attribute name="showTaxRate" type="Boolean" default="false"/> 
+    <aura:attribute name="dCId" type="String" default=""/>
+    <aura:attribute name="defaultProdAccA" type="String" default=""/>
+    <aura:attribute name="defaultProdAnalA" type="String" default=""/>
+    <aura:attribute name="recId" type="String" default=""/>
+    <!--<aura:attribute name="approvedVendor" type="ERP7__Approved_Vendor__c" default="{sObjectType : 'ERP7__Approved_Vendor__c'}"/>-->
+    
+    <aura:handler name="change" value="{!v.item.ERP7__Product__c}" action="{!c.getProductCC}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Cost_Card__c}" action="{!c.getPrice}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Chart_of_Account__c}" action="{!c.getprojectBudgetdetails}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Organisation_Business_Unit__c}" action="{!c.getprojectBudgetdetails}"/>
+    <!-- <aura:handler name="change" value="{!v.approvedVendor}" action="{!c.getvencostcard}"/>-->
+    <aura:attribute name="getPriceBool" type="Boolean" default="true"/>
+    <aura:attribute name="alloweditPrice" type="Boolean" default="false"/>
+    <aura:attribute name="isDelete"  type="Boolean" default="false"/>
+    <aura:attribute name="received"  type="Boolean" default="false"/>
+    <aura:attribute name="deleteIndexPreviousAction" type="Integer" />
+    <aura:attribute name="defaultCCval" type="object" />
+    <aura:attribute name="PoliCategoryList" type="List" /> 
+    <aura:registerEvent name="RequisitionToPurchaseOrderEvent" type="c:RequisitionToPurchaseOrderEvent"/> 
+    <aura:registerEvent name="AccountDeleteEvent" type="c:AccountDeleteEvent"/>
+    <aura:handler event="c:AccountDeleteEvent" action="{!c.deleteAnalyAcc}"/>
+    <aura:attribute name="TotalAAPercentage" type="Decimal" default="0"/>
+    <aura:attribute name="DefTaxRate" type="Decimal" default="0"/>
+    <aura:attribute name="isAccCategoryChanged" type="Boolean" default="false"/>
+    
+    <tr class="slds-hint-parent"><!--cursor-pointer      draggable='true' ondragstart='{!c.start}' ondragover='{!c.dragover}'-->
+        <td  class="valigntop"  data-label="Action">
+            <center>
+                <div >
+                    <lightning:buttonIcon alternativeText="{!$Label.c.Delete_UserAvailabilities}" onclick='{!c.deletePoli}' iconName="utility:delete"  variant="destructive" title="{!v.item.Id}" class="{!if(v.received,'delete-icon-disable','delete-icon')}" disabled="{!v.received}"/>
+                </div>
+            </center>
+        </td>
+        <td  class="valigntop creaorder-pill"  data-label="Product">
+            <c:CustomInputProduct objectAPIName="Product2" IconName="standard:product" selectedRecordId="{!v.item.Product2Id}" aura:id="product" qry="{!v.prodqry}"/><!--'AND ERP7__Issue_Purchase_Order__c = true'-->
+        </td>
+        <td  class="valigntop"  data-label="Name">
+                <lightning:input type="text" variant="label-hidden" value="{!v.item.Description}"  disabled="true" aura:id="poli_Name"/>
+            </td>
+        
+        
+        <td  class="valigntop"  data-label="Quantity"> <!-- qty -->
+            <lightning:input type="number" aura:id="qty" variant="label-hidden" value="{!v.item.Quantity}" onchange="{!c.updateTotalPrice}" maxlength="10" step="{!$Label.c.DecimalplacesinPOScreen}"/> <!-- change="{!c.updateTotalPrice}"  -->
+        </td> 
+        <td  class="valigntop"  data-label="Unit Price" title="">
+            <lightning:input type="number" variant="label-hidden" aura:id="amount" value="{!v.item.UnitPrice}" onchange="{!c.updateTotalPrice}" step="{!$Label.c.DecimalplacesinPOScreen}"/><!--  disabled="{!and(v.item.ERP7__Cost_Card__c!='',!v.alloweditPrice)}" -->
+        </td> 
+        <td  class="valigntop"  data-label="Tax Rate" title="">
+                <lightning:input type="number" variant="label-hidden" aura:id="Taxrate" value="{!v.item.TaxRate}" onchange="{!c.UpdateTax}" step="{!$Label.c.DecimalplacesinPOScreen}"/>
+            </td> 
+        <td class="valigntop" data-label="Tax Amount" title="">
+                <lightning:input type="number" variant="label-hidden" aura:id="Taxamount" value="{!v.item.ERP7__VAT_Amount__c}" step="{!$Label.c.DecimalplacesinPOScreen}" disabled="true"/>
+            </td>
+        <td class="valigntop" data-label="Total Price"  title="">
+            <lightning:input type="number" variant="label-hidden" aura:id="Totalamount" value="{!v.item.ERP7__Total_Price__c}"  step="{!$Label.c.DecimalplacesinPOScreen}" messageWhenStepMismatch="" disabled="{!and(and(v.item.ERP7__Cost_Card__c != '',v.item.ERP7__Cost_Card__c != undefined),v.item.ERP7__Cost_Card__c != null)}"/>
+        </td>
+        
+        <td width="15%" class="valigntop" data-label="Description">
+            <lightning:textarea placeholder="{!$Label.c.Enter_Description}" value="{!v.item.ERP7__Detailed_Description__c}" maxlength="4000" messageWhenTooLong="A maximum of 4000 characters are allowed." class="customwidth200"/>
+        </td>
+    </tr>
+</aura:component>

@@ -1,0 +1,284 @@
+<apex:component controller="CreatePO"  access="global" id="poComp" allowDML="true">
+<apex:attribute access="global" assignTo="{!SOID}" name="sID" type="String"  description="Single Sales Order Id or to Create New Purchase Order don't set any attribute"  />
+<apex:attribute access="global" assignTo="{!soIds}" name="sIds" type="ID[]"  description="Multiple Sales Order Id or to Create New Purchase Order don't set any attribute"  />
+<apex:attribute access="global" assignTo="{!retUrl}" name="rUrl" type="String"  description="Return Url for navigation"  />
+<html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}" />
+
+        <style>
+.input{    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    width: 95%;
+    }
+        .epr_Mark7 .row {
+    margin-right: 0px;
+    margin-left: 0px;
+}
+         .dateFormat {
+                padding: 0 2px;
+                display: none;
+            }
+            .epr_Mark7 .nav > li > a:hover, .epr_Mark7 .nav > li > a:focus{
+               background-color:transparent !important;
+            }
+            
+            .epr_Mark7 .navbar-default .navbar-nav > .active > a,
+            .epr_Mark7 .navbar-default .navbar-nav > .active > a:hover,
+            .epr_Mark7 .navbar-default .navbar-nav > .active > a:focus {
+                color: #555;
+                background-color: #ffffff;
+            }            
+            .epr_Mark7 .active {
+                background: none;
+            }
+            input {
+                padding-top: 0;
+                border: 1px solid #ddd;
+                border-radius : 5px;
+                padding: 5px;
+            }
+        </style>
+    </head>
+
+    <body>
+            
+            <apex:actionFunction name="goBack" action="{!back}" immediate="true"/>
+             <apex:actionFunction name="CalculateTotalPrice" action="{!TotalPriceCalculation}" reRender="tpc"/>
+             <apex:actionFunction name="populateUnitPrice" action="{!getUnitPriceByVendor}" reRender="poliPnl"/>
+                <div class="erp_mark7">
+                    <div class="slds-page-header">
+  <div class="slds-grid">
+    <div class="slds-col slds-has-flexi-truncate">
+      <div class="slds-media slds-no-space slds-grow">
+        <div class="slds-media__figure">
+          <svg class="slds-icon slds-icon-standard-opportunity slds-p-around--xx-small" aria-hidden="true">
+            <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/action-sprite/svg/symbols.svg#record')}"></use>
+          </svg>
+        </div>
+        <div class="slds-media__body">
+          <p class="slds-text-title--caps slds-line-height--reset">Order</p>
+          <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">Purchase Order</h1>
+         
+        </div>
+      </div>
+    </div>
+     <div class="slds-col slds-no-flex slds-grid slds-align-top">
+      <button class="slds-button slds-button--brand">
+        <a href="#" style="text-decoration:none;color:#ffffff;" onclick="goBack();"><i class="fa fa-chevron-left" aria-hidden="true"></i> Back</a>
+      </button>
+      </div>
+  </div>
+</div>
+
+                  <!--  <nav class="navbar  slds-theme--shade slds-m-bottom--x-small" style="margin-bottom: 0px;">
+                        <div class="container-fluid" style="padding-left:10px;">
+                            <ul class="nav navbar-nav navbar-left">
+                                <li><h4 style="line-height: 28px;"><i class="fa fa-list-alt" aria-hidden="true"  style="color:#fe8f60;"></i> Purchase Order</h4></li>
+                            </ul>
+                            
+                            <ul class="nav navbar-nav navbar-right"> 
+                                <li><a href="#" style="text-decoration:none;" onclick="goBack();"><i class="fa fa-chevron-left" aria-hidden="true" style="color:#fe8f60;"></i> Back</a></li>
+                            </ul> 
+                          
+                        </div>
+                    </nav> -->
+                </div>  
+            <div class="erp_mark7 slds-container--fluid">
+                <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xx-small">
+                    <p>Purchase Order Details</p>
+                </div>
+
+                <!-- Row 1 -->
+                <div class="epr_Mark7" style="padding:10px;">
+                <div class="row padding-t-5">
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Name</p>
+                        <div class="slds-form-element">
+                            <div class="slds-form-element__control">
+                                <apex:inputField value="{!PO.Name}"  html-placeholder="PO Name" style="width:100%;"/>
+                            </div>
+                        </div>  
+                    </div>
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Vendor </p>
+                        <div class="slds-form-element">
+                            <div class="slds-form-element__control">
+                                <apex:inputField value="{!PO.Vendor__c}" style="width:100%" onchange="populateUnitPrice();"/> 
+                            </div>
+                        </div>
+                    </div>
+                      <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Order Date</p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.Order_Date__c}" style="width:100%;"/>
+                        </div>
+                    </div>
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;"> Vendor Contact</p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.Vendor_Contact__c}" html-placeholder="Vendor Name" style="width:100%"/>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <div class="row padding-t-5">    
+                  
+                    
+                    
+                    <div class="col-md-3 slds-p-top--xx-small ">
+                        <p class="greyhead" style="font-size:14px;">Vendor Address</p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.Vendor_Address__c}" style="width:100%"/> 
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Status</p>
+                        <div class="slds-form-element__control">
+                            <div class="slds-select_container">
+                                <apex:inputField value="{!PO.Status__c}" styleClass="slds-select"/>
+                            </div>
+                        </div>
+                    </div>
+                    
+                      <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Employee Requester</p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.EmployeeRequester__c}" html-placeholder="Requester Name" style="width:100%"/> 
+                        </div>
+                    </div>
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;"> Final Approver </p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.FinalApprover__c}" html-placeholder="Approver Name" style="width:100%"/> 
+                        </div>
+                    </div>
+                    
+              </div>
+                <div class="row padding-t-5">  
+                  <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Expected Date </p>
+                        <div class="slds-form-element__control">
+                            <apex:inputField value="{!PO.Expected_Date__c}" styleClass="slds-input" html-placeholder="Expected Date" rendered="{!$ObjectType.PO__c.fields.Expected_Date__c.Accessible}"/>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 slds-p-top--xx-small">
+                        <p class="greyhead" style="font-size:14px;">Description </p>
+                        <div class="slds-form-element__control">
+                            <apex:inputTextarea value="{!PO.Description__c}" styleClass="slds-textarea" html-placeholder="Description" rendered="{!$ObjectType.PO__c.fields.Description__c.Accessible}"/>
+                        </div>
+                    </div>
+                    <div class="col-md-2 slds-p-top--xx-small"></div>
+                    <div class=" col-md-4 slds-p-top--xx-small" style="padding-top: 14px; text-align:left;"></div>
+                </div>
+                
+                
+            </div>
+                <!-- @end of Responsive SOLI Table -->
+               <div class="" style="float:left;width:100%;">
+                    <div class="slds-theme--info slds-m-top--small slds-p-around--xx-small">
+                        <table border="0" width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td><p style="color: #ffffff;">Purchase Order Line Items</p></td>
+                                <td width="5%" align="center" valign="middle">
+                                    <apex:actionStatus id="spinnerA">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus> 
+                                </td>                                
+                                <td width="5%" align="center" valign="middle">
+                                    <apex:commandLink action="{!addPoliWrapperRows}"  status="spinnerA"  ><!--rendered="{!if($CurrentPage.parameters.backOrder=='1'|| $CurrentPage.parameters.backOrder=='',true,false)}"-->
+                                        <apex:param name="addCount" value="1" assignTo="{!addRow}"/> 
+                                         <button style="width:113px;height:30px;margin-bottom:2px;" class="slds-button slds-button--neutral slds-button--small" >Add New <svg  style="height:13.6px;width:13.6px" class="slds-button__icon" aria-hidden="true" ><use xmlns:xlink="https://www.w3.org/1999/xlink" xlink:href="{!URLFOR($Resource.SLDS0121,'/assets/icons/utility-sprite/svg/symbols.svg#add')}"></use></svg></button>
+                                     </apex:commandLink> 
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <apex:outputPanel id="poliPnl">
+                    <div class="slds-card">
+                        <div class="slds-card__body">
+                            
+                                <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                    <thead>
+                                        <tr>
+                                            <th class="slds-text-heading--label" scope="col">Action</th>
+                                            <th class="slds-text-heading--label" scope="col">Name</th>
+                                            <th class="slds-text-heading--label" scope="col">Product</th>
+                                            <th class="slds-text-heading--label" scope="col">Sales Order</th>
+                                            <th class="slds-text-heading--label" scope="col">Quantity</th>
+                                            <th class="slds-text-heading--label" scope="col">Unit Price</th>
+                                            <th class="slds-text-heading--label" scope="col">Total Price</th>
+                                            <th class="slds-text-heading--label" scope="col">Special Instruction</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <apex:outputPanel id="polis">
+                                        <apex:variable var="poliCounter" value="{!0}"/>                        
+                                        <apex:repeat value="{!poliWrapperList}" var="pl">
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <td  data-label="Action">
+                                               <apex:commandLink action="{!delPoliWrapperRow}" status="spinnerA"><!-- rerender="poliPnl" immediate="true"  -->
+                                                 <apex:image url="{!URLFOR($Resource.SLDS0121,'/assets/icons/action/delete_60_red.png')}" height="18" width="18"/>
+                                                    <apex:param name="toDelIdent" value="{!pl.ident}" assignTo="{!toDelIdent}"/> 
+                                                </apex:commandLink>
+                                            </td>
+                                            <td  data-label="Name">
+                                                <apex:inputField value="{!pl.poli.Name}" styleClass="input" required="true"/> 
+                                            </td>
+                                            <td data-label="Product">
+                                                <apex:inputField value="{!pl.poli.Product__c}" required="True"/> 
+                                            </td>
+                                            <td  data-label="Sales Order">
+                                                <apex:inputField value="{!pl.poli.Sales_Order__c}" /> 
+                                            </td>
+                                            <td  data-label="Quantity">
+                                                <apex:inputField value="{!pl.poli.Quantity__c}" id="quan" styleClass="input" required="true"/> 
+                                            </td>
+                                            <td  data-label="Unit Price">
+                                                <apex:inputField value="{!pl.poli.Unit_Price__c}" id="upc" required="true" onchange="CalculateTotalPrice();"/> 
+                                            </td>
+                                            <td  data-label="Total Price">
+                                                <apex:inputField value="{!pl.poli.Total_Price__c}" id="tpc" styleClass="input" /> 
+                                            </td>
+                                            <td  data-label="Special Instruction">
+                                                <apex:inputTextarea value="{!pl.poli.Special_Instruction__c}" styleClass="input" rows="1" cols="15" rendered="{!$ObjectType.Purchase_Line_Items__c.fields.Special_Instruction__c.Accessible}"/> 
+                                            </td>
+                                        </tr>
+                                        
+                                        <apex:variable var="poliCounter" value="{!poliCounter+1}"/>
+                                        </apex:repeat>
+                                        </apex:outputPanel>
+                                    </tbody>
+                                </table>
+                            
+                        </div>
+
+                    </div>
+                    </apex:outputPanel>
+                    <div class="slds-p-top--small"></div>
+                    <div class="slds-text-align--center slds-p-around--medium">                           
+                        <apex:commandButton value="Save" action="{!savePO}" styleClass="slds-button slds-button--brand"  rendered="{!$ObjectType.PO__c.Createable && $ObjectType.PO__c.Updateable && $ObjectType.Purchase_Line_Items__c.Createable && $ObjectType.Purchase_Line_Items__c.Updateable}"/>
+                        <apex:commandButton styleClass="slds-button slds-button--neutral" value="Cancel" action="{!back}" immediate="true"/>                         
+                    </div>
+                </div>
+            </div>
+
+    </body>
+
+    <script>
+        function setFocus() {}
+    </script>
+
+    </html>
+</apex:component>

@@ -621,6 +621,8 @@
                                     component.NOerrors =  true;
                                     helper.validation_Check(component,event);
                                     
+                                             
+                                    
                                     var isErrorsAA = helper.AnalyticalAccountCheck(component, event, helper); 
                                     var isErrorsAACOA = helper.AnalyticalAccountCoaCheck(component, event, helper); 
                                     
@@ -687,6 +689,9 @@
                                         }
                                         // end Saqlain changes
                                           var fillList11=component.get("v.fillList");
+
+
+
                                         //Moin removed and added below code if(component.get("v.recordId") != null && component.get("v.recordId") ==  undefined &&  component.get("v.recordId") ==  ''){
                                         if(component.get("v.recordId") != null && component.get("v.recordId") !=  undefined &&  component.get("v.recordId") !=  ''){
                                             if(component.get("v.isAttRequired") && (component.get("v.uploadedFile") == null || component.get("v.uploadedFile").length == 0) && component.get('v.setRT')!='Advance to vendor'){
@@ -742,6 +747,8 @@
                                             return;
                                         }
                                     }*/
+
+
                                     console.log('Outside PO Bill tolernace');
                                     if(billList.length > 0 && !(showError) ){
                                         if(!isErrorsAA &&!isErrorsAACOA){
@@ -1437,6 +1444,12 @@
                         return;
                     }
                     
+
+                                            // added 14-11-2025 for deleting docs before save by Saqlain khan
+                                          helper.SaveButtonForManageBillDoc(component);
+                                         
+
+                                          console.log('Save Bill button called line 620 after SaveButtonForManageBillDoc');
                     //Moin removed and added below code if(component.get("v.recordId") != null && component.get("v.recordId") ==  undefined &&  component.get("v.recordId") ==  ''){
                     if(component.get("v.recordId") != null && component.get("v.recordId") !=  undefined &&  component.get("v.recordId") !=  ''){
                         if(component.get("v.isAttRequired") && (component.get("v.uploadedFile") == null || component.get("v.uploadedFile").length == 0) && component.get('v.setRT')!='Advance to vendor'){
@@ -3334,74 +3347,163 @@ removeAttachment: function(component, event, helper) {
     // },
     
 
-        DeleteRecordAT: function(component, event) {
-            var result = confirm("Are you sure?");
-            console.log('result : ', result);
 
-            var RecordId = event.getSource().get("v.name");   
-            var parentId = event.getSource().get("v.title"); 
-            console.log('RecordId : ', RecordId);
-            console.log('parentId : ', parentId);
+    //**************************************the working one with fetch after delete************************************************
+        // DeleteRecordAT: function(component, event) {
+        //     var result = confirm("Are you sure?");
+        //     console.log('result : ', result);
 
-            if (result) {
-                try {
-                    // Call the Apex delete method
-                    var action = component.get("c.DeleteAttachment");
-                    action.setParams({
-                        attachId: RecordId || '',   
-                        parentId: parentId || ''
-                    });
+        //     var RecordId = event.getSource().get("v.name");   
+        //     var parentId = event.getSource().get("v.title"); 
+        //     console.log('RecordId : ', RecordId);
+        //     console.log('parentId : ', parentId);
 
-                    action.setCallback(this, function(response) {
-                        var state = response.getState();
-                        console.log("DeleteRecordAT state: ", state);
+        //     if (result) {
+        //         try {
+        //             // Call the Apex delete method
+        //             var action = component.get("c.DeleteAttachment");
+        //             action.setParams({
+        //                 attachId: RecordId || '',   
+        //                 parentId: parentId || ''
+        //             });
 
-                        if (state === "SUCCESS") {
-                            console.log("DeleteRecordAT resp: ", JSON.stringify(response.getReturnValue()));
+        //             action.setCallback(this, function(response) {
+        //                 var state = response.getState();
+        //                 console.log("DeleteRecordAT state: ", state);
 
-                            // Hide spinner
-                            $A.util.addClass(component.find('mainSpin'), "slds-hide");
+        //                 if (state === "SUCCESS") {
+        //                     console.log("DeleteRecordAT resp: ", JSON.stringify(response.getReturnValue()));
+        //                     $A.util.addClass(component.find('mainSpin'), "slds-hide");
 
-                            if (RecordId) {
-                                alert("File deleted successfully!");
-                            } else {
-                                alert("All files deleted successfully!");
-                            }
+        //                     var fetchAction = component.get("c.getAllDocs");
+        //                     fetchAction.setParams({ parentId: parentId });
+        //                     fetchAction.setCallback(this, function(fetchResponse) {
+        //                         var fetchState = fetchResponse.getState();
+        //                         if (fetchState === "SUCCESS") {
+        //                             var allDocs = fetchResponse.getReturnValue();
+        //                             console.log("All Docs & Attachments (JSON): ", JSON.stringify(allDocs, null, 2));
+        //                         } else {
+        //                             console.error("Error fetching docs: ", JSON.stringify(fetchResponse.getError()));
+        //                         }
+        //                     });
+        //                     $A.enqueueAction(fetchAction);
+        //                     // 🔼 END NEW PART
 
-                            // 🔽 NEW PART: Call Apex to fetch & log all docs in JSON
-                            var fetchAction = component.get("c.getAllDocs");
-                            fetchAction.setParams({ parentId: parentId });
-                            fetchAction.setCallback(this, function(fetchResponse) {
-                                var fetchState = fetchResponse.getState();
-                                if (fetchState === "SUCCESS") {
-                                    var allDocs = fetchResponse.getReturnValue();
-                                    console.log("All Docs & Attachments (JSON): ", JSON.stringify(allDocs, null, 2));
-                                } else {
-                                    console.error("Error fetching docs: ", JSON.stringify(fetchResponse.getError()));
-                                }
-                            });
-                            $A.enqueueAction(fetchAction);
-                            // 🔼 END NEW PART
+        //                     // Update file list if needed
+        //                     component.set('v.uploadedFile', response.getReturnValue());
+        //                 } 
+        //                 else {
+        //                     $A.util.addClass(component.find('mainSpin'), "slds-hide");
+        //                     var errors = response.getError();
+        //                     console.error("Server error in DeleteRecordAT: ", JSON.stringify(errors));
+        //                     component.set("v.exceptionError", (errors && errors[0] && errors[0].message) || 'Unknown error');
+        //                 }
+        //             });
 
-                            // Update file list if needed
-                            component.set('v.uploadedFile', response.getReturnValue());
-                        } 
-                        else {
-                            $A.util.addClass(component.find('mainSpin'), "slds-hide");
-                            var errors = response.getError();
-                            console.error("Server error in DeleteRecordAT: ", JSON.stringify(errors));
-                            component.set("v.exceptionError", (errors && errors[0] && errors[0].message) || 'Unknown error');
-                        }
-                    });
+        //             $A.enqueueAction(action);
+        //         } 
+        //         catch (err) {
+        //             console.error('Exception in DeleteRecordAT: ', err);
+        //             alert('Unexpected error: ' + err.message);
+        //         }
+        //     }
+        // },
+//************************************************************************************************ 
 
-                    $A.enqueueAction(action);
-                } 
-                catch (err) {
-                    console.error('Exception in DeleteRecordAT: ', err);
-                    alert('Unexpected error: ' + err.message);
-                }
-            }
-        },
+    DeleteRecordAT: function(component, event) {
+        var ok = confirm("Are you sure?");
+        if (!ok) return;
+
+        var recordId = event.getSource().get("v.name");   // the file/attachment Id (string)
+        var parentId = event.getSource().get("v.title");  // record Id (if you need to log)
+        console.log('[DeleteRecordAT] mark for delete:', recordId, 'parent:', parentId);
+
+        // 1) stash for later delete
+        var pending = component.get('v.deletedFiles') || [];
+        if (recordId && !pending.includes(recordId)) {
+            pending.push(recordId);
+            component.set('v.deletedFiles', pending);
+            component.set('v.deleteRequested', true); // flag
+            console.log('Pending deletes updated:', pending);
+            
+        }
+
+        // // 2) remove from UI list (uploadedFile is String[])
+        // var files = component.get('v.uploadedFile') || [];
+        // files = files.filter(function(id){ return id !== recordId; });
+        // component.set('v.uploadedFile', files);
+
+        // console.log('Updated uploadedFile list:', files);
+
+        // // 3) log JSON
+        // console.log('Pending deletes JSON:', JSON.stringify({ deletedFiles: pending }, null, 2));
+        // 2) Remove from UI list (uploadedFile is String[])
+      // 1) Get current file Id and existing list
+var recordId = event.getSource().get("v.name");
+var files = component.get("v.uploadedFile") || [];
+
+// 2) Normalize to plain IDs (since uploadedFile is String[])
+var fileIds = files.map(function(item){
+    if (typeof item === "string") {
+        return item.trim();
+    } else if (item && typeof item === "object") {
+        // convert object to its Id
+        return (item.Id || item.ContentDocumentId || '').trim();
+    }
+    return '';
+}).filter(Boolean);
+
+// 3) Remove the one we "deleted"
+var updated = fileIds.filter(function(id){
+    return id !== recordId;
+});
+
+// 4) Update component value (forces rerender)
+component.set("v.uploadedFile", updated);
+console.log("UI updated. New uploadedFile list:", JSON.stringify(updated));
+
+
+    },
+
+
+    // SaveButtonForManageBillDoc: function(component, event, helper) {
+    //     var parentId = component.get('v.recordId'); // or however you store it
+    //     var queue = (component.get('v.deletedFiles') || []).slice(); // copy
+
+    //     if (!queue.length) {
+    //         console.log('[SaveButton] nothing to delete');
+    //         return;
+    //     }
+
+    //     console.log('[SaveButton] deleting:', JSON.stringify(queue));
+
+    //     var next = function() {
+    //         if (!queue.length) {
+    //             component.set('v.deletedFiles', []); // clear after success
+    //             console.log('[SaveButton] delete complete');
+    //             return;
+    //         }
+    //         var idToDelete = queue.shift();
+    //         var action = component.get('c.DeleteAttachment'); // SAME Apex
+    //         action.setParams({
+    //             attachId: idToDelete,
+    //             parentId: parentId || ''
+    //         });
+    //         action.setCallback(this, function(r){
+    //             var st = r.getState();
+    //             if (st !== 'SUCCESS') {
+    //                 console.error('[SaveButton] failed for', idToDelete, r.getError && r.getError());
+    //                 // continue regardless
+    //             } else {
+    //                 console.log('[SaveButton] deleted on server:', idToDelete);
+    //             }
+    //             next(); // process next
+    //         });
+    //         $A.enqueueAction(action);
+    //     };
+
+    //     next();
+    // },
 
 
     
@@ -3442,6 +3544,15 @@ removeAttachment: function(component, event, helper) {
     },
     
 handleFilesChange: function (component, event, helper) {
+
+    
+    // 1️⃣ Clear any previously uploaded files
+    var existingFiles = component.get('v.uploadedFile');
+    if (existingFiles && existingFiles.length > 0) {
+        console.log('[handleFilesChange] clearing old uploaded files:', JSON.stringify(existingFiles));
+        component.set('v.uploadedFile', []); // clear the list
+    }
+
     const isReadBillChecked = component.get("v.isReadBillChecked");
     const setRT = component.get("v.setRT");
     const isactive = component.get("v.isActive");

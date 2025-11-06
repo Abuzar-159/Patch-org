@@ -1,0 +1,978 @@
+<aura:component implements="force:appHostable" controller="ManageProjects"> 
+    <head>
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Milestones.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    
+    <aura:attribute name = "qry" type = "String" default = ""/>
+    <aura:attribute name = "currencySymbol" type = "String" default = ""/>
+    <aura:attribute name = "projectStatusOpts" type = "list[]"/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:attribute name = "isresetProject" type = "boolean" default = "false"/>
+    <aura:attribute name = "newProj" type = "boolean" default = "true"/>
+    <aura:attribute name = "isNewMS" type = "boolean" default = "true"/>
+    <aura:attribute name = "ShowTab1" type = "Boolean" default="true" />
+    <aura:attribute name = "ShowTab2" type = "boolean"/>
+    <aura:attribute name = "allowSchedule" type = "boolean"/>
+    <aura:attribute name = "opened" type = "boolean" default = "false"/>
+    <aura:attribute name = "PoTypeRecord" type = "boolean" default = "true"/>
+    <aura:attribute name="selectedTab" type="String" default="Profit/Loss"/>
+    <aura:handler name="change" value="{!v.selectedTab}" action="{!c.switchTab}"/>
+    <aura:attribute name = "projectId" type = "Id" />
+    <aura:attribute name = "proRouting" type = "Id" />
+    <aura:attribute name = "milestonesWP" type = "object"/>
+    <aura:attribute name = "projectOptions" type = "list[]"/>
+    <aura:attribute name = "milestoneOptions" type = "list[]"/>
+    <aura:attribute name = "milestoneTasks" type = "Actions_Tasks__c[]"/>
+    <aura:attribute name = "currentProj" type = "Project__c" default="{'sObjectType':'ERP7__Project__c',
+                                                                            'Name': '',
+                                                                            'ERP7__Status__c': '--none--',
+                                                                            'ERP7__Project_Manager__c': '',
+                                                                            'ERP7__Organisations__c' : '',
+                                                                            'ERP7__Default_Routing__c' : '',
+                                                                            'ERP7__Team__c' : '',
+                                                                            'ERP7__Account__c' : '',
+                                                                            'ERP7__Contact__c' : '',
+                                                                            'ERP7__Total_Expense_Amount__c' : '',
+                                                                            'ERP7__Total_Income__c' : ''
+                                                                            }"/>
+    <aura:attribute name = "newMilestone" type = "Milestone__c" default="{'sObjectType':'ERP7__Milestone__c',
+                                                                               'Name': '',
+                                                                               'ERP7__Status__c': '--none--',
+                                                                               'ERP7__Resourse__c': '',
+                                                                               'ERP7__Project__c' : '',
+                                                                               'ERP7__Process__c' : '',
+                                                                               }"/>
+    <aura:attribute name = "editMilestone" type = "Milestone__c" default="{'sObjectType':'ERP7__Milestone__c',
+                                                                                'Name': '',
+                                                                                'Id' : '',
+                                                                                'ERP7__Status__c': '--none--',
+                                                                                'ERP7__Resourse__c': '',
+                                                                                'ERP7__Project__c' : '',
+                                                                                'ERP7__Process__c' : '',
+                                                                                }"/>
+    
+    <aura:handler name = "init" value = "{!this}" action = "{!c.doInit}"/>
+    <aura:method name="refreshMsPage" action="{!c.setProjectDetails}"/>
+    <aura:attribute name="today" type="Date" default=""/>
+    <aura:attribute name="isRefresh" type="Boolean" default="false"/>
+    <body  aura:id="body">
+        <aura:if isTrue="{!v.PoTypeRecord}">
+        <div class="maqsood erp_mark7 Milestones-class1" id="milestonePage">
+            <span class="Milestones-class2">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+            
+            <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed Milestones-class3','slds-notify_container slds-is-fixed Milestones-class4')}">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="status" >
+                    <span class="slds-assistive-text">{!$Label.c.error}</span>
+                    <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small Milestones-class6">{!v.exceptionError}
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close" >
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+          
+            <div class="container-fluid pb-1 mt-2">	 
+                <div class="slds-page-header mb-0 bg-white">
+                    <div class="slds-page-header__row">
+                        <div class="slds-page-header__col-title">
+                            <div class="slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-cotact">
+                                        <lightning:icon iconName="standard:contact" size="medium"></lightning:icon>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h4 class="mb-0 slds-page-header__title slds-truncate">
+                                                <span>{!v.currentProj.Name}</span>
+                                            </h4> 
+                                        </div>
+                                        <div class="slds-page-header__name-switcher">
+                                            <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-page-header__col-actions">
+                            <div class="slds-page-header__controls">
+                                <div class="slds-page-header__control">
+                                    <ul class="slds-button-group-list">
+                                        <li>
+                                            
+                                            <lightning:button variant="neutral" label="New"  onclick="{!c.AddProjectType}" iconName="utility:add" disabled="{!!v.projectId}"/>
+                                        </li>
+                                        <li>
+                                            <lightning:button variant="neutral" label="Allocate Budget" onclick="{!c.CreateBudget}" iconName="utility:budget_category_value" disabled="{!!v.projectId}"/>
+                                            
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="slds-m-around_x-small">
+                    <div class="card shadow-custom Milestones-class8">
+                        <div class="card-body pt-0 p-0">
+                            <div class="maqsood erp_Mark7 Milestones-class9">
+                                <aura:if isTrue="{!v.projectId}">
+                                    
+                                    
+                                    <div class="container-fluid Milestones-class10 mb-0 pb-0">  
+                                        <ul class="nav nav-pills nav-fill p-1 " role="tablist">
+                                            <c:Tab label="Profit/Loss" name="Profit/Loss" selectedTab="{!v.selectedTab}" iconclass="fa fa-list-ol"  /> 
+                                            <c:Tab label="Budgeting"  name="Budgeting" selectedTab="{!v.selectedTab}" iconclass="fa fa-file-text"/>
+                                            
+                                        </ul>
+                                        <aura:if isTrue="{!and(equals(v.selectedTab,'Profit/Loss'),true)}">
+                                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectincome shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5 Milestones-class11">{!$Label.c.Income}</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0  Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Income__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectexpense shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5 Milestones-class11">{!$Label.c.Expense}</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0  Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Expense_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <aura:if isTrue="{!greaterthan(v.currentProj.ERP7__Total_Income__c - v.currentProj.ERP7__Total_Expense_Amount__c,0)}">
+                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                        <div class="support-box2 text-center l-bg-projectprofit shadow-custom slds-grid">
+                                                            <div class="slds-col slds-p-around_xxx-small">
+                                                                <div class="text-left m-b-0 mr-5 Milestones-class11">{!$Label.c.Profit}</div>
+                                                            </div>
+                                                            <div class="slds-col slds-p-around_xxx-small">
+                                                                <h3 class="m-b-0  Milestones-class12">
+                                                                    {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Income__c - v.currentProj.ERP7__Total_Expense_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                                </h3>
+                                                            </div>     
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!greaterthan(v.currentProj.ERP7__Total_Expense_Amount__c - v.currentProj.ERP7__Total_Income__c,0)}">
+                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                        <div class="support-box2 text-center l-bg-projectloss shadow-custom slds-grid">
+                                                            <div class="slds-col slds-p-around_xxx-small">
+                                                                <div class="text-left m-b-0 mr-5 Milestones-class11">{!$Label.c.Loss}</div>
+                                                            </div>
+                                                            <div class="slds-col slds-p-around_xxx-small">
+                                                                <h3 class="m-b-0   Milestones-class12">
+                                                                    {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Expense_Amount__c - v.currentProj.ERP7__Total_Income__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                                </h3>
+                                                            </div>     
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!equals(v.currentProj.ERP7__Total_Income__c - v.currentProj.ERP7__Total_Expense_Amount__c,0)}">
+                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                        <div class="support-box2 text-center l-bg-projectprofit shadow-custom slds-grid">
+                                                            <div class="slds-col slds-p-around_xxx-smalll">
+                                                                <div class="text-left m-b-0 mr-5 Milestones-class11">{!$Label.c.ProfitLoss}</div>
+                                                            </div>
+                                                            <div class="slds-col slds-p-around_xxx-small">
+                                                                <h3 class="m-b-0 Milestones-class12">
+                                                                    {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Income__c - v.currentProj.ERP7__Total_Expense_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2" />
+                                                                </h3>
+                                                            </div>     
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                            </div>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!and(equals(v.selectedTab,'Budgeting'),true)}">
+                                            <div class="slds-grid slds-wrap slds-p-top_small">
+                                                <div class="slds-col slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectincome shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5  Milestones-class11">Budget</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0   Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Total_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col  slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectexpense shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5  Milestones-class11">Committed</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0   Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Committed_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col  slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-consumed shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5  Milestones-class11">Consumed</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0   Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Consumed_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectloss shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5 Milestones-class11">Returned</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0   Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Returned_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2"/>
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-p-right_small">
+                                                    <div class="support-box2 text-center l-bg-projectprofit shadow-custom slds-grid">
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <div class="text-left m-b-0 mr-5 Milestones-class11">Remaining</div>
+                                                        </div>
+                                                        <div class="slds-col slds-p-around_xxx-small">
+                                                            <h3 class="m-b-0   Milestones-class12">
+                                                                {!v.currencySymbol}&nbsp;<lightning:formattedNumber value="{!v.currentProj.ERP7__Remaining_Amount__c}" style="decimal" minimumFractionDigits="2" maximumFractionDigits="2" />
+                                                            </h3>
+                                                        </div>     
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                    
+                                </aura:if>
+                                <div class="container-fluid Milestones-class10 slds-p-top_small">   
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control">
+                                                <label class="slds-form-element__label" for="unique-id-of-input">{!$Label.c.Name_ManageLeave}<span class="Milestones-class13">*</span></label>
+                                                <lightning:input type="text" variant="label-hidden" aura:id="projectName" required="true"  value="{!v.currentProj.Name}" maxlength="30" />
+                                            </div>
+                                        </div>
+                                        <aura:if isTrue="{!not(v.isresetProject)}">
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <c:CustomInputLookUp aura:id="projectManager" objectAPIName="ERP7__Resource_Allocation__c" IconName="standard:user" selectedRecordId="{!v.currentProj.ERP7__Project_Manager__c}" required="true" label="{!$Label.c.Manager}"/> <!-- qry="{!AND ERP7__Account_Type__c= 'Organisation'}"-->
+                                                </div> 
+                                            </div>
+                                        </aura:if>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control">
+                                                <lightning:input type="date" label="{!$Label.c.AddSubscription_Start_Date}" aura:id="projectStartDate"  value="{!v.currentProj.ERP7__Start_Date__c}" /> 
+                                            </div> 
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control">
+                                                <lightning:input type="date" label="{!$Label.c.CreateClubcard_End_Date}" aura:id="projectEndDate" value="{!v.currentProj.ERP7__End_Date__c}"/> 
+                                            </div> 
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control">
+                                                <lightning:select value="{!v.currentProj.ERP7__Status__c}" label="{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}">
+                                                    <aura:iteration items="{!v.projectOptions}" var="option">
+                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.currentProj.ERP7__Status__c, option.value)}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                            </div> 
+                                        </div>
+                                        <aura:if isTrue="{!not(v.isresetProject)}">
+                                            <!--<div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <ERP7:CustomInputLookUp objectAPIName="ERP7__Routing__c" aura:id="projectRouting" IconName="standard:environment_hub" selectedRecordId="{!v.currentProj.ERP7__Default_Routing__c}" label="{!$Label.c.Routing}" /> <!-/-qry="{!v.qry}"-/->
+                                                </div> 
+                                            </div>  -->
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.currentProj.ERP7__Organisations__c}" label="Organisation" required="true" aura:Id="projectOrganisation" qry=" AND ERP7__Account_Type__c= 'Organisation'"/>
+                                                </div> 
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.currentProj.ERP7__Account__c}" label="{!$Label.c.Account_Outbound_logistics}" aura:Id="projectAccount"/>
+                                                </div> 
+                                            </div>  
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" qry="{!' AND AccountId = \''+v.currentProj.ERP7__Account__c+'\''}" selectedRecordId="{!v.currentProj.ERP7__Contact__c}" label="Contact" aura:Id="projectContact"/>
+                                                </div> 
+                                            </div>  
+                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                                <div class="slds-form-element__control">
+                                                    <c:CustomInputLookUp objectAPIName="ERP7__Team__c" IconName="standard:user" selectedRecordId="{!v.currentProj.ERP7__Team__c}" label="{!$Label.c.Team_ProjectWB}" aura:Id="projectTeam"/>
+                                                </div> 
+                                            </div>
+                                        </aura:if>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small slds-m-top_small">
+                                            <lightning:inputRichText label="Description" aura:id="projectDescription" value="{!v.currentProj.ERP7__Description__c}" placeholder="{!$Label.c.Enter_Description}"/>
+                                        </div>
+                                    </div>
+                                    <aura:if isTrue="{!not(v.newProj)}">
+                                        <!-- Milestones Tab --> 
+                                        <div id="tab-default-1" class="slds-tabs--default__content slds-show" role="tabpanel" aria-labelledby="tab-default-1__item">
+                                            
+                                            
+                                            <div class="milestonesTab mt-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <h6 class="card-title">{!$Label.c.Project_Milestones}</h6>
+                                                    
+                                                    <lightning:buttonGroup class="h40">
+                                                        <aura:if isTrue="{!v.projectId != undefined}">
+                                                          <!--  <lightning:button label="Traveller">
+                                                                <a href="{!'/apex/ERP7__ProjectDoc?ra=pdf&amp;projId='+v.currentProj.Id}"  target="_blank" title="Document">
+                                                                    <i title="Traveller" class="fa fa-file-pdf-o Milestones-class15" aria-hidden="true" ></i>
+                                                                </a>
+                                                                &nbsp;Download
+                                                            </lightning:button>-->
+                                                            <lightning:button label="Traveller" onclick="{!c.openPDF}" iconName="utility:download" />
+                                                        </aura:if>
+                                                        <aura:if isTrue = "{!not(empty(v.milestonesWP))}">
+                                                            <lightning:button label="Edit">
+                                                                <a href="" class="mr-0 Milestones-class16" aura:id="refreshMilestone" onclick = "{!c.setProjectDetails}">
+                                                                    <i class="fa fa-refresh"></i>
+                                                                </a>    
+                                                            </lightning:button>
+                                                        </aura:if>
+                                                    </lightning:buttonGroup>
+                                                    <div class="slds-grid slds-hide">
+                                                        <aura:if isTrue="{!v.projectId != undefined}">
+                                                            <div class="slds-col  slds-no-flex slds-grid slds-align-top Milestones-class14" >
+                                                                <div class="slds-button" role="group">
+                                                                    <a href="{!'/apex/ERP7__ProjectDoc?ra=pdf&amp;projId='+v.currentProj.Id}"  target="_blank" title="Document">
+                                                                        <i title="Traveller" class="fa fa-file-pdf-o Milestones-class15" aria-hidden="true" ></i>&nbsp; 
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </aura:if> &nbsp;
+                                                        <aura:if isTrue = "{!not(empty(v.milestonesWP))}">
+                                                            <a href="javascript:void(0);" class="mr-0 Milestones-class16" aura:id="refreshMilestone" onclick = "{!c.setProjectDetails}">
+                                                                <i class="fa fa-refresh"></i>
+                                                            </a>
+                                                        </aura:if>
+                                                    </div>
+                                                </div>
+                                                <div class="table-responsive Milestones-class20" tabindex="1">
+                                                    <table class="table">
+                                                        <thead class="projectThead">
+                                                            <tr>
+                                                                <th class="text-center Milestones-class17">
+                                                                    <a data-target="#myModal" onclick="{!c.openModal}" data-record="Add" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                        <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                        &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                    </a>
+                                                                </th>
+                                                                <th>{!$Label.c.Name_ManageLeave}</th>
+                                                                <th class="text-left">{!$Label.c.Requirements}</th>
+                                                                <th class="text-left">{!$Label.c.TimeLine_ManageLeave}</th>
+                                                                <th class="text-center">{!$Label.c.Team_ProjectWB}</th>
+                                                                <th class="text-center">{!$Label.c.CreateClubcard_Status}</th>
+                                                                <th class="text-right"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <aura:if isTrue = "{!not(empty(v.milestonesWP))}">
+                                                                <aura:iteration items="{!v.milestonesWP}" var="MWP" indexVar="milestonwIndex">
+                                                                    <tr>
+                                                                        <td class="text-center Milestones-class21 customcactionedit">
+                                                                            <a class="svg Milestones-class22" onclick="{!c.EditMs}" data-index="{!milestonwIndex}" data-record-id="{!MWP.milestone.Id}">
+                                                                                <lightning:icon iconName="action:edit" size="xx-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                            </a>&nbsp;
+                                                                            <a class="svg Milestones-class22" onclick="{!c.deleteMs}" data-index="{!milestonwIndex}" data-record-id="{!MWP.milestone.Id}">
+                                                                                <lightning:icon iconName="action:delete" size="xx-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                            </a>
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="Milestones-class28" aura:id="milestoneName">
+                                                                                <div class="slds-truncate Milestones-class36" title="{!MWP.milestone.Name}">
+                                                                                    <lightning:formattedText value = "{!milestonwIndex + 1 + '. '}"/>
+                                                                                    <a class="svg Milestones-class23" onclick="{!c.selectMilestone}" data-index="{!milestonwIndex}" data-record-id="{!MWP.milestone.Id}" >
+                                                                                        <lightning:formattedText value="{!MWP.milestone.Name}"/>
+                                                                                    </a>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td>
+                                                                            <div class="scroll-bar-wrap">
+                                                                                <div class="scroll-box Milestones-class24">
+                                                                                    <div class="slds-truncate Milestones-class25">
+                                                                                        <lightning:formattedRichText value="{!MWP.milestone.ERP7__Requirement__c}" />
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="cover-bar"></div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-left">
+                                                                            <div class="startime-maq Milestones-class26"> <lightning:formattedDateTime value="{!MWP.milestone.ERP7__Start_Date__c}"/></div>
+                                                                            <div class="endime-maq Milestones-class27"> <lightning:formattedDateTime value="{!MWP.milestone.ERP7__Due_Date__c}"/></div>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <div class="avatar-group">
+                                                                                <aura:iteration items="{!MWP.resourceGList}" var="ResourcePhoto" indexVar = "groupIndex">
+                                                                                    <aura:if isTrue = "{!lessthan(groupIndex, 5)}">
+                                                                                        <figure class="avatar avatar-sm">
+                                                                                            <img src="{!ResourcePhoto.FullPhotoUrl}" class="rounded-circle Milestones-class28" title="{!ResourcePhoto.Name}" alt="{!ResourcePhoto.Name}" />
+                                                                                        </figure>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                                <aura:if isTrue="{!greaterthan(MWP.resourceGList.length, 5)}">
+                                                                                    <figure class="avatar avatar-sm Milestones-class29">
+                                                                                        <div class="rounded-circle"  alt="avatar">+&nbsp;<b>{!MWP.resourceGList.length - 5}</b></div>
+                                                                                    </figure>
+                                                                                </aura:if>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Planned')}">
+                                                                                <span class="badge badge-planned">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'In Progress')}">
+                                                                                <span class="badge badge-inprogress">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Completed')}">
+                                                                                <span class="badge badge-completed">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Backlog')}">
+                                                                                <span class="badge badge-warning">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Rejected')}">
+                                                                                <span class="badge badge-warning">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Cancelled')}">
+                                                                                <span class="badge badge-warning">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Review')}">
+                                                                                <span class="badge badge-inprogress">
+                                                                                    <lightning:formattedText value="{!MWP.milestone.ERP7__Status__c}"/>
+                                                                                </span>
+                                                                            </aura:if>
+                                                                        </td>
+                                                                        <td>
+                                                                            <small class="">
+                                                                                <lightning:formattedNumber value="{!MWP.milestone.ERP7__Percentage__c+ ' '}" style="decimal" maximumFractionDigits="2"/>%
+                                                                            </small>
+                                                                            <div class="Milestones-class30"><small class="ml-2 pb-2">{!$Label.c.Progress_ProjectWB}</small></div>
+                                                                            <div class="d-flex align-items-center pt-1">
+                                                                                
+                                                                                <div class="progress flex-grow-1 Milestones-class31">
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Planned')}">
+                                                                                        <div class="progress-bar bg-planned" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'In Progress')}">
+                                                                                        <div class="progress-bar bg-inprogress" id = "projectProgressBar"></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Completed')}">
+                                                                                        <div class="progress-bar bg-completed" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Backlog')}">
+                                                                                        <div class="progress-bar bg-pending" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Rejected')}">
+                                                                                        <div class="progress-bar bg-warning" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Submitted for Approval')}">
+                                                                                        <div class="progress-bar bg-planned" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Approved')}">
+                                                                                        <div class="progress-bar bg-completed" id = "projectProgressBar" ></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Awaiting Exec Approval')}">
+                                                                                        <div class="progress-bar bg-inprogress" id = "projectProgressBar"></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!equals(MWP.milestone.ERP7__Status__c, 'Awaiting Financial Approval')}">
+                                                                                        <div class="progress-bar bg-inprogress" id = "projectProgressBar"></div> <!--{! 'width:'+ MWP.milestone.ERP7__Percentage__c +'%;'}-->
+                                                                                    </aura:if>
+                                                                                </div>
+                                                                                
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                    
+                                                                    <aura:if isTrue="{!MWP.isCurrentM}">
+                                                                        <td></td>
+                                                                        <td colspan="7">
+                                                                            <!--    <aura:if isTrue="{!not(empty(v.milestoneTasks))}">-->
+                                                                            <div class="table-responsive Milestones-class20" tabindex="1">
+                                                                                <table class="table">
+                                                                                    
+                                                                                    <thead>
+                                                                                        <tr class="slds-line-height_reset">
+                                                                                            <th class="text-center Milestones-class32">
+                                                                                                <a data-target="#myModal" onclick="{!c.addTask}" data-record="Add" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                    <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                    &nbsp;{!$Label.c.Task}
+                                                                                                </a>
+                                                                                            </th>
+                                                                                            <th class="" scope="col">
+                                                                                                <div class="slds-truncate" title="">{!$Label.c.Name_ManageLeave}</div>
+                                                                                            </th>
+                                                                                            <th class="" scope="col">
+                                                                                                <div class="slds-truncate" title="">{!$Label.c.Due_Date}</div>
+                                                                                            </th>
+                                                                                            <th class="" scope="col">
+                                                                                                <div class="slds-truncate" title="">{!$Label.c.Owner}</div>
+                                                                                            </th>
+                                                                                            <th class="" scope="col">
+                                                                                                <div class="slds-truncate" title="">{!$Label.c.Type_ManageLeave}</div>
+                                                                                            </th>
+                                                                                            <th class="text-center" scope="col">
+                                                                                                <div class="slds-truncate" title="">{!$Label.c.CreateClubcard_Status}</div>
+                                                                                            </th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        <aura:iteration items="{!MWP.TaskList}" var="taskM" indexVar="taskIndex">
+                                                                                            <tr class="table-center Milestones-class21">
+                                                                                                <td class="text-center Milestones-class21 customcactionedit" >
+                                                                                                    <a class="svg" onclick="{!c.openTask}" data-index="{!taskIndex}" data-record-id="{!taskM.Id}">
+                                                                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                                    </a>&nbsp;
+                                                                                                    <a class="svg" onclick="{!c.deleteTsk}" data-record="{!milestonwIndex}" data-index="{!taskIndex}" data-record-id="{!taskM.Id}">
+                                                                                                        <lightning:icon iconName="action:delete" size="xx-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                                    </a>
+                                                                                                </td>
+                                                                                                <td>
+                                                                                                    <div aura:id="milestoneName">
+                                                                                                        <lightning:formattedText value = "{!taskIndex + 1 + '. '}"/><lightning:formattedText value="{!taskM.Name}"/>
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td data-label="Account Name">
+                                                                                                    <div class="slds-truncate"><lightning:formattedDateTime value="{!taskM.ERP7__End_Date__c}"/></div>
+                                                                                                </td>
+                                                                                                <td data-label="Prospecting">
+                                                                                                    <div class="slds-truncate" title=""><lightning:formattedText value="{!taskM.ERP7__Owner__r.Name}"/></div>
+                                                                                                </td>
+                                                                                                <td data-label="Prospecting">
+                                                                                                    <div class="slds-truncate" title=""><lightning:formattedText value="{!taskM.ERP7__Type__c}"/></div>
+                                                                                                </td>
+                                                                                                <td data-label="Close Date text-center">
+                                                                                                    <div class="slds-truncate" title="">
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'New')}">
+                                                                                                            <span class="badge badge-planned">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'In-Progress')}">
+                                                                                                            <span class="badge badge-inprogress">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Completed')}">
+                                                                                                            <span class="badge badge-completed">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'On-Hold')}">
+                                                                                                            <span class="badge badge-warning">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Cancelled')}">
+                                                                                                            <span class="badge badge-warning">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Rejected')}">
+                                                                                                            <span class="badge badge-warning">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Review')}">
+                                                                                                            <span class="badge badge-planned">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Backlog')}">
+                                                                                                            <span class="badge badge-warning">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Clocked In')}">
+                                                                                                            <span class="badge badge-inprogress">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!equals(taskM.ERP7__Status__c, 'Clocked Out')}">
+                                                                                                            <span class="badge badge-inprogress">
+                                                                                                                <lightning:formattedText value="{!taskM.ERP7__Status__c}"/>
+                                                                                                            </span>
+                                                                                                        </aura:if>
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        </aura:iteration>
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                            <!--</aura:if>-->
+                                                                        </td>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </aura:if>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Milestones Tab End-->
+                                    </aura:if>
+                                </div>
+                            </div>    
+                        </div>
+                    </div>
+                </div>
+                <aura:if isTrue = "{!v.ShowTab1}">
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}" class="slds-button slds-button--neutral" onclick="{!c.goBack}"/> &nbsp;
+                        <lightning:button label="{!$Label.c.ContractConsole_Save}" variant="brand" class="slds-button slds-button--brand white" onclick="{!c.saveProject}"/>
+                    </div>
+                </aura:if>
+            </div>
+            
+            
+            <div class="newMSmodal">
+                <section aura:id="NewMilestone" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeModal}" variant="bare-inverse" size="large"/> 
+                            <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate Milestones-class34">{!$Label.c.Add_Milestone}</h2>
+                        </header>
+                        <div class="slds-grid slds-wrap Milestones-class35">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">{!$Label.c.Name_ManageLeave}<span class="Milestones-class13">*</span></label>
+                                    <lightning:input type="text" variant="label-hidden" aura:id="newMilestoneName" required="true"  value="{!v.newMilestone.Name}" maxlength="30" />
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <lightning:select value="{!v.newMilestone.ERP7__Status__c}" label="{!$Label.c.CreateClubcard_Status}">
+                                        <aura:iteration items="{!v.milestoneOptions}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div> 
+                            </div><!--
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <ERP7:CustomInputLookUp objectAPIName="ERP7__Resource__c" IconName="standard:user" selectedRecordId="{!v.newMilestone.ERP7__Resource__c}" required="true" label="milestoneResource" aura:id="milestoneResource"/>--> <!-- qry="{!AND ERP7__Account_Type__c= 'Organisation'}"
+                            </div> 
+                        </div>-->
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <lightning:input type="date" label="{!$Label.c.AddSubscription_Start_Date}" aura:id="newMilestoneStartdate" value="{!v.newMilestone.ERP7__Start_Date__c}" />
+                                </div> 
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                     <lightning:input type="date" label="{!$Label.c.Due_Date}" aura:id="newMilestoneEnddate" value="{!v.newMilestone.ERP7__Due_Date__c}" /> 
+                                </div> 
+                            </div>
+                            <aura:if isTrue="{!not(v.isresetProject)}">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Group}</label>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Resource_Group__c" IconName="standard:user" selectedRecordId="{!v.newMilestone.ERP7__Resource_Group__c}"  aura:id="newMilestoneTeam" /> <!-- qry="{!'AND ERP7__Team__c= \'v.currentProj.ERP7__Team__c\''}" -->
+                                    </div> 
+                                </div>
+                                <aura:if isTrue="{!v.newMilestone.ERP7__isSerialized__c}">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                        <div class="slds-form-element__control">
+                                            <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Prev_Milestone}</label>
+                                            <c:CustomInputLookUp aura:id="prevNewMilestone" objectAPIName="ERP7__Milestone__c" required="true" IconName="standard:product" placeholder="Search Milestone.." selectedRecordId="{!v.newMilestone.ERP7__Previous_Milestone__c}" qry="{!'AND ERP7__Project__c = \''+v.projectId+'\''}"/>
+                                        </div> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                        <div class="slds-form-element__control">
+                                            <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Next_Milestone}</label>
+                                            <c:CustomInputLookUp aura:id="nextNewMilestone" objectAPIName="ERP7__Milestone__c" required="true" IconName="standard:product" placeholder="Search Milestone.." selectedRecordId="{!v.newMilestone.ERP7__Next_Milestone__c}" qry="{!'AND ERP7__Project__c = \''+v.projectId+'\''}"/>
+                                        </div> 
+                                    </div>
+                                </aura:if>
+                            </aura:if>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Requirement}</label>
+                                    <lightning:inputRichText aura:id="newMSDescription" value="{!v.newMilestone.ERP7__Requirement__c}" placeholder="{!$Label.c.Enter_Requirements}"/>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer text-center">
+                            <center>
+                                <lightning:button  label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.closeModal}" variant="neutral"/>
+                                <lightning:button onclick="{!c.addMilestone}" label="{!$Label.c.ContractConsole_Save}" variant="brand"/>
+                            </center>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop" aura:id="NewMilestoneBackdrop"></div>
+            </div>
+            
+            <div class="editMSmodal">
+                <section aura:id="EditMilestone" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.editcloseModal}" variant="bare-inverse" size="large"/> 
+                            <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate Milestones-class34">{!$Label.c.Edit_Milestone}</h2>
+                        </header>
+                        <div class="slds-grid slds-wrap Milestones-class35">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">{!$Label.c.Name_ManageLeave}<span class="Milestones-class13">*</span></label>
+                                    <lightning:input type="text" variant="label-hidden" aura:id="editMilestoneName" required="true"  value="{!v.editMilestone.Name}" maxlength="30" />
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <lightning:select value="{!v.editMilestone.ERP7__Status__c}" label="{!$Label.c.CreateClubcard_Status}">
+                                        <aura:iteration items="{!v.milestoneOptions}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div> 
+                            </div><!--
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                            <div class="slds-form-element__control">
+                                <ERP7:CustomInputLookUp objectAPIName="ERP7__Resource__c" IconName="standard:user" selectedRecordId="{!v.newMilestone.ERP7__Resource__c}" required="true" label="milestoneResource" aura:id="milestoneResource"/>--> <!-- qry="{!AND ERP7__Account_Type__c= 'Organisation'}"
+                            </div> 
+                        </div>-->
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <lightning:input type="date" label="{!$Label.c.AddSubscription_Start_Date}" aura:id="editMilestoneStartdate" value="{!v.editMilestone.ERP7__Start_Date__c}"/> 
+                                </div> 
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <lightning:input type="date" label="{!$Label.c.AddSubscription_Start_Date}" aura:id="editMilestoneEnddate" value="{!v.editMilestone.ERP7__Due_Date__c}"  /> 
+                                </div> 
+                            </div>
+                            <aura:if isTrue="{!not(v.isresetProject)}">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Group}</label>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Resource_Group__c" IconName="standard:user" selectedRecordId="{!v.editMilestone.ERP7__Resource_Group__c}"  aura:id="editMilestoneTeam" /> <!-- qry="{!'AND ERP7__Team__c= \'v.currentProj.ERP7__Team__c\''}" -->
+                                    </div> 
+                                </div>
+                                <aura:if isTrue="{!v.editMilestone.ERP7__isSerialized__c}">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                        <div class="slds-form-element__control">
+                                            <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Prev_Milestone}</label>
+                                            <c:CustomInputLookUp aura:id="prevEditMilestone" objectAPIName="ERP7__Milestone__c" required="true" IconName="standard:product" placeholder="Search Milestone.." selectedRecordId="{!v.editMilestone.ERP7__Previous_Milestone__c}" qry="{!'AND ERP7__Project__c = \''+v.projectId+'\''}"/>
+                                        </div> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                        <div class="slds-form-element__control">
+                                            <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Next_Milestone}</label>
+                                            <c:CustomInputLookUp aura:id="nextEditMilestone" objectAPIName="ERP7__Milestone__c" required="true" IconName="standard:product" placeholder="Search Milestone.." selectedRecordId="{!v.editMilestone.ERP7__Next_Milestone__c}" qry="{!'AND ERP7__Project__c = \''+v.projectId+'\''}"/>
+                                        </div> 
+                                    </div>
+                                </aura:if>
+                            </aura:if>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                <div class="slds-form-element__control">
+                                    <label class="slds-form-element__label" for="form-element-01">{!$Label.c.Requirement}</label>
+                                    <lightning:inputRichText aura:id="editMSDescription" value="{!v.editMilestone.ERP7__Requirement__c}" placeholder="{!$Label.c.Enter_Requirements}"/>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer text-center">
+                            <center>
+                                <lightning:button  label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.editcloseModal}" variant="neutral"/>
+                                <lightning:button onclick="{!c.addMilestone}" label="{!$Label.c.ContractConsole_Save}" variant="brand"/>
+                            </center>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop" aura:id="EditMilestoneBackdrop"></div>
+            </div>
+            
+        </div>
+            <aura:set attribute="else">
+                <div class="erp_Mark7 ">
+                    <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-modal_medium slds-fade-in-open">
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">
+                                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="{!$Label.c.Close_Timesheets}" onclick="{!c.cancelclick}">
+                                    <lightning:icon iconName="utility:close" variant="inverse" size="small" alternativeText="{!$Label.c.Close_Timesheets}" title="{!$Label.c.Close_Timesheets}" />
+                                    
+                                    <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                                </button>
+                                <h1 id="modal-heading-01" class="slds-modal__title slds-hyphenate" tabindex="-1">Create</h1>
+                            </header>
+                            <div class="slds-modal__content" id="modal-content-id-1">
+                                <div class="container-fluid ">
+                                    <div class="slds-grid slds-wrap slds-p-around--small createbill-class9">
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-po" aura:id="pOcheckbox" data-billType='PO' onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:bill_of_materials" size="medium"></lightning:icon>
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                
+                                                                <span class="pofsize-16">Purchase Order</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-eb"  aura:id="billcheckbox" data-billType="Bill" onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:expense" size="medium"></lightning:icon>
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                <span class="pofsize-16">Bill</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-atv"  aura:id="Advcheckbox" data-billType="DebitNote" onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:bundles_pricing" size="medium"></lightning:icon>
+                                                                
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                <span class="pofsize-16">Debit Note</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-atv"  aura:id="Advcheckbox" data-billType="SalesOrder" onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:customer_portal_users" size="medium"></lightning:icon>
+                                                                
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                <span class="pofsize-16">Sales Order</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-atv"  aura:id="Advcheckbox" data-billType="Invoice" onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:record" size="medium"></lightning:icon>
+                                                                
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                <span class="pofsize-16">Invoice</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card cursor-pointer card-extra-atv"  aura:id="Advcheckbox" data-billType="TimeSheet" onclick="{!c.onCheck}">
+                                                <div class="card-content">
+                                                    <div class="card-body p-3">
+                                                        <div class="media d-flex">
+                                                            <div class="align-self-center">
+                                                                <lightning:icon iconName="standard:time_period" size="medium"></lightning:icon>
+                                                                
+                                                            </div>
+                                                            <div class="media-body text-center pt-1">
+                                                                <span class="pofsize-16">Time Sheet</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div> 
+                                    
+                                </div>
+                                <footer class="slds-modal__footer slds-text-align_center">
+                                    <lightning:button label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                                </footer>
+                                
+                            </div> 
+                        </div>
+                        
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open"></div>
+                </div>
+            </aura:set>
+        </aura:if>
+    </body>
+</aura:component>

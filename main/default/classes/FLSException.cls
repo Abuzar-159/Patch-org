@@ -1,0 +1,1 @@
+public class FLSException extends Exception{}

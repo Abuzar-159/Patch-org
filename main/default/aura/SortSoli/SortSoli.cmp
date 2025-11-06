@@ -1,0 +1,142 @@
+<aura:component controller="SortLineItems" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+	<ltng:require styles="/resource/ERP7__CMP_CSS/CSS/SortSoli.css"/>
+    <aura:attribute name="salesId" type="String" default=""/>
+    <aura:attribute name="invoiceId" type="String" default=""/>
+    <aura:attribute name="errorMsg" type="String" default=""/>
+    <aura:attribute name="salesName" type="String"/>
+    <aura:attribute name="listOfSOLI" type="Object"/>
+    <aura:attribute name="DragIndex" type="String"/>
+    
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    
+    <aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>        
+    </aura:if>
+    
+    <div class="slds-page-header cl1">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <lightning:icon iconName="action:quote" alternativeText="{!$Label.c.Order_Console_Sales_Order}" title="Sales Order" size="x-small"/>                                
+                    </div>
+                    <div class="slds-media__body">
+                        <p class="slds-text-title--caps slds-line-height--reset">{!v.salesName}</p>
+                        <h1 class="slds-page-header__title slds-m-right--small slds-align-middle cl2">Drag and drop to sort the products into the desired order.</h1>                        
+                    </div>
+                </div>
+            </div>                    
+        </div>
+    </div>
+    
+    <div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),'slds-notify_container slds-is-fixed cl3','slds-notify_container slds-is-fixed cl4')}">
+        <div class="slds-notify slds-notify_toast slds-theme_error cl5" role="status">
+            <span class="slds-assistive-text">{!$Label.c.error}</span>
+            <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                <lightning:icon iconName="utility:error" alternativeText="Error!" title="Error" size="x-small"/>
+            </span>
+            <div class="slds-notify__content">
+                <h2 class="slds-text-heading_x-small cl6">{!v.errorMsg}</h2>
+            </div>
+            <div class="slds-notify__close cl7">
+                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                    <lightning:buttonIcon iconName="utility:close"  variant="bare-inverse" title="Close" alternativeText="{!$Label.c.Close_window}"/>
+                    <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 cl8">
+            <article class="slds-card slds-p-around--small">
+                <div class="scroll-bar-wrap">
+                    <div class="scroll-box cl9">
+                        <p class="mb-0">  
+                            <table class="slds-table slds-table_bordered slds-m-top_small">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th>
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">{!$Label.c.AddSubscription_Product}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">{!$Label.c.PackageSlip_List_Quantity}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">Base Price</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">{!$Label.c.Expense_Tax_Amount}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">{!$Label.c.InventoryConsole_Total_Price}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Code">{!$Label.c.ContractConsole_Description}</span> 
+                                        </th>
+                                    </tr>            
+                                </thead>
+                                
+                                <tbody>
+                                    <aura:if isTrue="{!v.listOfSOLI.length > 0}">
+                                        <aura:iteration items="{!v.listOfSOLI}" var="soli" indexVar="count">
+                                            <tr id="{!count}" class="cl11" draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleDrop}" ondragover="{!c.allowDrop}" data-index="{!count}">
+                                                <td class="options cl10">
+                                                    <div class="cl11">
+                                                        :: 
+                                                    </div>
+                                                </td>
+                                                <td class="cl10">
+                                                    <div title="Product" class="slds-truncate cl12">
+                                                        <lightning:formattedText value="{!soli.ERP7__Product__r.Name}"/>
+                                                    </div>                                        
+                                                </td>
+                                                <td class="cl10">
+                                                    <div class="slds-truncate cl12">
+                                                        <lightning:formattedNumber value="{!soli.ERP7__Quantity__c}" />
+                                                    </div>
+                                                </td>
+                                                <td class="cl10">
+                                                    <div class="slds-truncate cl12">
+                                                        <lightning:formattedNumber value="{!soli.ERP7__Base_Price__c}" style='currency'/>
+                                                    </div>
+                                                </td>
+                                                <td class="cl10">
+                                                    <div class="slds-truncate cl12">
+                                                        <lightning:formattedNumber value="{!soli.ERP7__Total_Tax__c}" style='currency'/>                                                                                              
+                                                    </div>
+                                                </td>
+                                                <td class="cl10">
+                                                    <div class="slds-truncate cl12">
+                                                        <lightning:formattedNumber value="{!soli.ERP7__Total_Price__c}" style='currency'/>   
+                                                    </div>
+                                                </td>
+                                                <td class="cl10">
+                                                    <div class="slds-truncate cl12">
+                                                        <lightning:formattedRichText value="{!soli.ERP7__Detailed_Description__c}" />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </aura:if>
+                                </tbody>
+                            </table>
+                        </p>
+                    </div>
+                    <div class="cover-bar"></div>
+                </div>
+                <div class="slds-card__footer cl13">
+                    <div class="slds-form-element">
+                        <lightning:button onclick="{!c.cancelLine}">{!$Label.c.Cancel_ManageLeave}</lightning:button>
+                        <lightning:button label="Update" class="slds-button slds-button--brand" onclick="{!c.updateLine}"/>   
+                    </div>
+                </div>
+            </article>
+        </div>
+</aura:component>

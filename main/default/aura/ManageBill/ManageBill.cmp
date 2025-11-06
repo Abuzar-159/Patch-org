@@ -1,0 +1,395 @@
+<aura:component implements="lightning:actionOverride,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" controller="CreateBill" access="global">
+    <ltng:require styles="{!join(',',$Resource.SLDS + 'assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + 'assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}"/>    
+    <aura:attribute name="Bill" type="Bill__c" default="{sobjectType:'Bill__c','ERP7__Vendor__c':''}"/>
+    <aura:attribute name="billItems" type="List" default="[]"/>
+    <aura:attribute name="fillList" type="String[]" default="[]"/>
+    <aura:attribute name="isAttRequired" type="Boolean" default="false"/>
+    <aura:attribute name="Itemtype" type="List" default="[]"/>
+    <aura:attribute name="advBillList" type="Object"/>
+    <aura:attribute name="pId" type="String"/>
+    <aura:attribute name="bbId" type="String" default=""/>
+    <aura:attribute name="bbName" type="String" default=""/>
+    <aura:attribute name="fromAP" type="boolean" default='false'/>
+    <aura:attribute name="clone" type="boolean" default="false"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="Expensetype" type="List" default="[]"/>
+    <aura:attribute name="Index2Delete" type="Integer" />
+    <aura:attribute name="navigateToRecord" type="Boolean" default="true"/>
+    <aura:attribute name="cancelclick" type="Aura.Action" default="{!c.cancelclick}"/>
+    <aura:attribute name="TotalPrice" type="Currency"/>
+    <aura:attribute name="AccId" type="String" default=""/>
+    <aura:attribute name="Discount" type="Currency"/>
+    <aura:attribute name="TDS_Amount" type="Currency"/>
+    <aura:attribute name="TDS_Rate" type="Currency" />
+    <aura:attribute name="supplier" type="Boolean" default="false"/>
+   <aura:handler name="change" value="{!v.TotalPrice}" action="{!c.updateTotalPrice}"/>
+    <aura:handler name="change" value="{!v.Discount}" action="{!c.updateTotalDiscount}"/>
+    <aura:handler name="change" value="{!v.TDS_Amount}" action="{!c.updateTDS}"/>
+    <aura:handler name="change" value="{!v.TDS_Rate}" action="{!c.updateTDS}"/>
+    <aura:handler name="change" value="{!v.Bill.ERP7__Amount__c}" action="{!c.updateTDS}"/>
+    <aura:handler name="change" value="{!v.Tax}" action="{!c.updateTotalTax}"/>
+    <aura:attribute name="Tax" type="Currency"/> 
+    <aura:attribute name="saveclick" type="Aura.Action" default="{!c.saveBill}"/>
+    <aura:method name="BillSave" action="{!c.saveBill}" access="PUBLIC">
+        <aura:attribute name="callback" type="Function" />
+    </aura:method> 
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.Index2del}" action="{!c.delete_Item}"/>
+    
+    <aura:handler name="change" value="{!v.Bill.Id}" action="{!c.fetchPoli}"/>
+    
+    <aura:attribute name="deleteIndex" type="Integer"/>
+    <aura:handler event="c:RequisitionToPurchaseOrderEvent" action="{!c.deleteLineItem}"/>
+    <aura:attribute name="showExpenseAccount" type="Boolean" default="true"/>
+    <aura:attribute name="ShowBillType" type="Boolean" default="false"/>
+    <aura:attribute name="showPage" type="Boolean" default="false"/>
+    <aura:attribute name="showDelete" type="Boolean" default="false"/>
+    <aura:attribute name="setRT" type="String" default="Expense Bill"/>
+    <aura:attribute name="setBillPost" type="Boolean" default="false"/>
+    <aura:attribute name="fetchBill" type="Boolean" default="true"/>
+    <aura:attribute name="Attachments"          type="object[]"/>
+    <aura:attribute name="Attach"          type="Attachment"/>
+    <aura:attribute name="BillId" type="Id" default="" />
+    <aura:attribute name="parentId" type="Id" default="" />
+    <aura:attribute name="showLoadingSpinner" type="boolean" default="false" />
+    <aura:attribute name="duplicate" type="boolean" default="false" />
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="CreateBillFLSCheck" type="object" default="{'sObjectType' : 'CreateBillFLSCheck'}"/>
+    <aura:attribute name="FieldAccess" type="Boolean" default="true"/>
+    <aura:attribute name="Compare" type="String" default="True"/>
+    <aura:attribute name="BId" type="String" default=""/>
+    <aura:attribute name="advPayment" type="Decimal" default="0.00"/>
+    <aura:attribute name="isMultiCurrency" type="Boolean" default="false"/>
+    <aura:attribute name="currencyList" type="List"/>
+     <div aura:id="body">
+    <div class="erp_mark7 managebill-class1">
+        <lightning:spinner variant="brand" size="small" aura:id="spinner" class="slds-hide"/>
+        <div class="slds-page-header">
+            <div class="slds-grid">
+                <aura:if isTrue="{!!v.clone}">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <lightning:icon iconName="standard:record"  size="large" alternativeText="{!$Label.c.record}" title="record" />
+                            </div>
+                            <div class="slds-media__body">
+                                <p class="slds-text-title-caps slds-line-height-reset">{!$Label.c.Manage_UsersShiftMatch}</p>
+                                <h1 class="slds-page-header__title slds-m-right-small slds-align-middle slds-truncate" title="">{!$Label.c.Acc_Pay_Bill}</h1>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <aura:set attribute="else">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:record"  size="large" alternativeText="{!$Label.c.record}" title="record" />
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title-caps slds-line-height-reset">{!$Label.c.Transfer_Order_Create}</p>
+                                    <h1 class="slds-page-header__title slds-m-right-small slds-align-middle slds-truncate" title="">{!$Label.c.Acc_Pay_Bill}</h1>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </aura:set>
+                </aura:if>
+                <div class="slds-col slds-no-flex slds-grid slds-align-top">
+                    
+                </div>
+            </div>
+        </div>
+         
+        <div class="slds-grid slds-wrap slds-m-top-small">
+           <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                    <div class="slds-form-element">
+                        <c:CustomInputLookUp objectAPIName="ERP7__Bill__c" IconName="standard:address" selectedRecord="{!v.Bill}" label="{!$Label.c.Acc_Pay_Bill}" qry="AND RecordType.DeveloperName = 'Expense_Bill' " hideRemove="true"/> 
+                        
+                    </div>
+                </div>
+            
+            <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="input-unique-id"> {!$Label.c.InventoryConsole_Vendor} <span class="managebill-class2">*</span></label>
+                    
+                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.Bill.ERP7__Vendor__c}" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Vendor'"  required="true" />
+                </div>
+            </div>
+            
+            <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Contact_Record_Name}</label>
+                        
+                        <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" selectedRecordId="{!v.Bill.ERP7__Vendor_Contact__c}" NameValue="{!v.Bill.ERP7__Vendor_Contact__r.Name}"   aura:Id="vendorContact" qry="{!' AND AccountId = \''+v.Bill.ERP7__Vendor__c+'\''}"/>
+                    </div>
+                </div>
+            </div>
+              <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.Bill.ERP7__Vendor_Address__c}" NameValue="{!v.Bill.ERP7__Vendor_Address__r.Name}" label="{!$Label.c.InventoryConsole_Vendor_Address}"  aura:Id="vendorAddress" qry="{!' AND ERP7__Customer__c   = \''+v.Bill.ERP7__Vendor__c+'\''}"/>  
+                    </div>
+                </div>
+            </div>
+              <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Vendor_Bill_Number}</label>
+                        
+                        <ui:inputText aura:id="VBNumber"  value="{!v.Bill.ERP7__Vendor_Bill_Number__c}"  class="slds-input"/>
+                    </div>
+                </div>
+            </div>
+             <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Vendor_Bill_Date}</label>
+                        
+                        <ui:inputDate aura:id="VBdate"  value="{!v.Bill.ERP7__Vendor_Bill_Date__c}" displayDatePicker="true"  class="slds-input"/>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.EmployeeReviewV2_Due_Date}</label>
+                       
+                        <ui:inputDate aura:id="Duedate"  value="{!v.Bill.ERP7__Due_Date__c}" displayDatePicker="true"  class="slds-input"/>
+                    </div>
+                </div>
+            </div>
+              
+            
+            <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <c:CustomInputLookUp objectAPIName="Account" IconName="standard:address" selectedRecordId="{!v.Bill.ERP7__Organisation__c}" label="Organisation"  aura:Id="Org" qry=" AND ERP7__Account_Type__c = 'Organisation'"/> 
+                </div>
+            </div>
+        </div>
+       
+        
+        <div class="slds-grid slds-wrap  slds-m-top-small">
+            
+            <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                
+                12<div class="slds-form-element__label" title="">{!$Label.c.Attachment}<aura:if isTrue="{!v.isAttRequired}"><span class="createbill-class5">&nbsp;*</span></aura:if></div>
+                123<lightning:input aura:id="fileId" onchange="{!c.handleFilesChange}" type="file" name="file" label="{!$Label.c.Upload_Attachment}" multiple="true"/>
+                <aura:iteration items="{!v.fillList}" var="file">
+                <div class="slds-text-body_small slds-text-color_error">{!file}&nbsp;
+                    <aura:if isTrue="{!v.showDelete}">
+                       1234 <a onclick="{!c.removeAttachment}" title="Remove Attachment" class="managebill-class3">
+                           12345 <i class="fa fa-minus-circle" aria-hidden="true"></i>
+                        </a>
+                        
+                    </aura:if>
+                </div>
+                </aura:iteration>
+                <aura:if isTrue="{!v.showLoadingSpinner}">
+                    <div class="slds-text-body_small slds-text-color_error">{!$Label.c.Uploading} 
+                        <img src="/auraFW/resources/aura/images/spinner.gif" class="spinner-img" alt="Loading"/>'
+                    </div>
+                </aura:if>
+                <br/>
+            </div>
+            <div class="col-md-3 slds-p-top-xx-small">
+                    <aura:if isTrue="{!v.isMultiCurrency}">
+                        <div class="slds-col slds-form-element">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon-right">
+                                <lightning:select  aura:id="stStatus" value="{!v.Bill.CurrencyIsoCode}" label="{!$Label.c.Currency}">
+                                    <aura:iteration items="{!v.currencyList}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Bill.CurrencyIsoCode, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </aura:if>
+                </div>
+            
+            </div>            
+        
+        
+        <div class="slds-grid slds-wrap  slds-m-top-small">
+         
+         <div class="slds-col slds-p-horizontal-medium slds-size-1-of-1">
+             <div class="slds-grid">
+                                 
+                 <div class="slds-col slds-p-horizontal-medium slds-form-element slds-size-1-of-4">                     
+                         <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.PaySlip_Amount}</label>
+                                 <div class="slds-form-element__control">
+                                     <lightning:formattedNumber value="{!v.Bill.ERP7__Amount__c}" style="currency" />
+                                 </div>
+                 </div>
+                 
+                 <aura:if isTrue="{!v.CreateBillFLSCheck.DiscountAccess}">
+                 <div class="slds-col slds-p-horizontal-medium slds-form-element slds-size-1-of-4">
+                     <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Add_Subscription_Discount}</label>
+                     <div class="slds-form-element__control">
+                         <lightning:formattedNumber value="{!v.Bill.ERP7__Discount_Amount__c}" style="currency" />
+                     </div>
+                 </div>
+                 </aura:if>
+                 <div class="slds-col slds-p-horizontal-medium  slds-form-element slds-size-1-of-4">
+                     <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Expense_Tax_Amount}</label>
+                     <div class="slds-form-element__control">
+                         <lightning:formattedNumber value="{!v.Bill.ERP7__VAT_TAX_Amount__c}" style="currency" />
+                     </div>
+                 </div>
+                 <aura:if isTrue="{!v.CreateBillFLSCheck.TDSAccess}">
+                  
+             <div class="slds-col slds-p-horizontal-medium slds-size-1-of-4">
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.TDS_Amount}</label>
+                    <div class="slds-form-element__control">
+                        <lightning:formattedNumber value="{!v.Bill.ERP7__TDS_Amount__c}" style="currency" />
+                    </div>
+                </div>
+            </div>
+                     </aura:if>
+             </div>
+            </div>
+        </div>
+        
+        
+        
+        
+        <div class="slds-grid slds-wrap  slds-m-top-small">
+          
+        </div>
+        <div class="slds-tabs-card slds-tabs-default slds-m-top-small">
+            <ul class="slds-tabs-default__nav" role="tablist">
+                <li class="slds-tabs-default__item slds-is-active"  title="Items" role="presentation">
+                    <a class="slds-tabs-default__link"   role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-default-1__item">
+                        <i class="fa fa-tasks" aria-hidden="true"></i>&nbsp;{!$Label.c.PO_Items_Total}&nbsp; <ui:outputCurrency value="{!(v.Bill.ERP7__Amount__c - v.Bill.ERP7__Discount_Amount__c) + v.Bill.ERP7__VAT_TAX_Amount__c}" />
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+            <div>
+                <table class="slds-table slds-table-bordered slds-table_cell-buffer">
+                    <thead>
+                        <tr class="slds-text-title-caps">
+                            <th scope="col" > &nbsp;
+                                <aura:if isTrue="{!and(v.setRT=='Expense Bill',not(v.Bill.ERP7__Posted__c))}">
+                                    <aura:if isTrue="{!!v.clone}">
+                                    <lightning:button label="{!$Label.c.Add_ManageLeave}" class="slds-button slds-button-neutral" onclick="{!c.addNew}"/>
+                                    </aura:if>
+                                </aura:if>
+                                <aura:if isTrue="{!v.clone}">
+                                	<lightning:button label="{!$Label.c.Add_ManageLeave}" class="slds-button slds-button-neutral" onclick="{!c.addNew}"/>
+                                </aura:if>
+                            </th>
+                            <aura:if isTrue="{!or(v.setRT=='PO Bill',v.setRT=='Advance to vendor')}">
+                            <th scope="col" >
+                                <div class="slds-truncate" title="">{!$Label.c.AddSubscription_Product}</div>
+                            </th>
+                            </aura:if>
+                             <aura:if isTrue="{!v.setRT=='Expense Bill'}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Contact">{!$Label.c.Expense_Account}</div>
+                            </th>
+                            </aura:if>
+                             
+                            <th scope="col">
+                                <div class="slds-truncate" title="">{!$Label.c.Qty_Pick}</div>
+                            </th>
+                           
+                            <th scope="col">
+                                <div class="slds-truncate" title="Amount">{!$Label.c.PaySlip_Amount}</div>
+                            </th>
+                            <aura:if isTrue="{!v.CreateBillFLSCheck.DiscountAccess}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Amount">{!$Label.c.Add_Subscription_Discount}</div>
+                            </th>
+                            </aura:if>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Amount">{!$Label.c.Tax_Label}</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Amount">{!$Label.c.Tax_Amount}</div>
+                            </th>
+                           <aura:if isTrue="{!v.CreateBillFLSCheck.OtherTaxAccess}">
+                            <th scope="col">
+                                 <div class="slds-truncate" title="Amount">{!$Label.c.Other_Tax_Percentage}</div>
+                            </th>
+                            </aura:if>
+                            <aura:if isTrue="{!v.CreateBillFLSCheck.OtherTaxAccess}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Amount">{!$Label.c.Other_Tax_Amount}</div>
+                            </th>
+                            </aura:if>
+                            <aura:if isTrue="{!or(v.setRT=='PO Bill',v.setRT=='Advance to vendor')}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Contact">{!$Label.c.ACCOUNT}</div>
+                            </th>
+                            </aura:if> 
+                            <aura:if isTrue="{!v.CreateBillFLSCheck.TDSAccess}">
+                            <aura:if isTrue="{!v.setRT=='Expense Bill'}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Contact">{!$Label.c.TDS}</div>
+                            </th>
+                             <th scope="col">
+                                <div class="slds-truncate" title="Contact">{!$Label.c.TDS_Amount}</div>
+                            </th>
+                            </aura:if> 
+                             <aura:if isTrue="{!v.setRT=='Expense Bill'}">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Contact">{!$Label.c.TDS_Account}</div>
+                            </th>
+                            </aura:if> 
+                            </aura:if>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Sub Total">{!$Label.c.Invoice_Sub_Total}</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Description">Description</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.billItems}" var="item" indexVar="ind">
+                            <c:Add_My_TimeSheet clone="{!v.clone}" RT="{!v.setRT}" showExpenseAccount="{!v.showExpenseAccount}" aura:id="billItems" Item="{!item}" typeOpts="{!v.Itemtype}" ExpenseTypeOpts="{!v.Expensetype}" index="{!ind}" deleteIndex="{!v.deleteIndex}" TDS_Amount="{!v.TDS_Amount}" Field_Display="{!v.CreateBillFLSCheck.OtherTaxAccess}" TDS_Display="{!v.CreateBillFLSCheck.TDSAccess}" Discount_Display="{!v.CreateBillFLSCheck.DiscountAccess}" TDS_Rate="{!v.TDS_Rate}" TotalPrice="{!v.TotalPrice}" Discount="{!v.Discount}" Tax="{!v.Tax}" aura:Id="bill_Items" hideRemove="{#not(empty(v.Bill.ERP7__Purchase_Order__c))}"/>
+                        </aura:iteration>
+                            
+                    </tbody>
+                </table>   
+                
+            </div>
+            
+        
+        <div class="slds-p-top-small"></div>
+        <div class="slds-grid slds-grid_align-center slds-p-around-small">
+        <div class="slds-grid slds-gutters">
+            
+            
+            
+            <div class="slds-col-1">
+                <span>
+                    <aura:if isTrue="{!and(not(v.Bill.ERP7__Posted__c),not(v.clone))}">
+                        <div onmouseover="{!c.setpostFalse}">
+                            <lightning:button label="{!$Label.c.ContractConsole_Save}" class="slds-button slds-button__brand" onclick="{!v.saveclick}" variant="brand" />
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.clone}">
+                        <div onmouseover="{!c.setpostFalse}">
+                            <lightning:button label="{!$Label.c.ContractConsole_Save}" class="slds-button slds-button__brand" onclick="{!v.saveclick}" variant="brand" />
+                        </div>
+                    </aura:if>
+                </span>
+            </div>
+            <div class="slds-col-1">
+                <span>       
+                    <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" class="slds-button slds-button-neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                </span>
+            </div>
+        </div>
+        </div>
+     </div>
+    </div>
+    <aura:if isTrue="{!v.showMmainSpin}">
+        <span class="AccountsPayable-newClass33">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+    </aura:if>
+</aura:component>
