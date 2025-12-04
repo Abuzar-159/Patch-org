@@ -1,0 +1,520 @@
+<apex:page controller="UPS_Setup"  cache="false" showHeader="false" sidebar="false" id="mainpg" docType="html-5.0" tabStyle="Product2">    
+     <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1"/> 
+        <apex:stylesheet value="{!URLFOR($Resource.UPS, 'UPS/css/ups.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+     </head>
+    
+    <style>
+    input[type=text], textarea, select {
+        -webkit-transition: all 0.30s ease-in-out;
+        -moz-transition: all 0.30s ease-in-out;
+        -ms-transition: all 0.30s ease-in-out;
+        -o-transition: all 0.30s ease-in-out;
+        outline: none;
+        padding: 3px 0px 3px 3px;
+        border: 1px solid #DDDDDD;
+    } 
+    input[type=text]:focus, textarea:focus,select:focus {
+        box-shadow: 0 0 5px rgba(255, 0, 24, 1);
+        border: 1px solid rgba(255, 0, 24, 1);
+     }         
+    .bdr {
+        -webkit-transition: all 0.30s ease-in-out;
+        -moz-transition: all 0.30s ease-in-out;
+        -ms-transition: all 0.30s ease-in-out;
+        -o-transition: all 0.30s ease-in-out;
+        outline: none;    
+    } 
+    .bdr:focus,{
+        -webkit-box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+        box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+        -o-box-shadow: 0 0 0px rgba(255, 0, 24, 1); 
+    }    
+    .textfield {
+        width:90%;
+        height:29px;
+        padding: .45em .6em;
+        display: inline-block;
+        border: 1px solid #dddddd;
+        font-size: 1.0em;
+        border-radius: 4px;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        color: #9b9b9b;
+        background-color:#ffffff;
+        text : bold;
+    }        
+    .right {
+        float:left;
+        width:50%;
+        height:445px;
+        border-radius:7px;
+        box-shadow:0px 3px 5px 0px rgba(0,0,0, .2);
+        background:#f9f9f9;
+    }
+    .left {
+        float:left;
+        width:100%; 
+        border-radius:7px;
+        box-shadow:0px 3px 5px 0px rgba(0,0,0, .2);
+        background:#f9f9f9;
+        height:445px;
+    }
+    .titlescn {
+        font-family:Arial;
+        font-size:11px;
+        color:#666666;
+        font-weight:bold;
+        text-align:center;
+        background:#f2f2f2;                
+    }
+    .titlescn:hover {
+        font-family:Arial;
+        font-size:12px;
+        color:red;        
+        font-weight:bold;
+        text-align:center;
+        background:#f2f2f2;            
+    }
+    #resultsB {
+        width:100%;
+        min-height:30px;
+        max-height:475px;
+        overflow:auto;
+    }
+    </style>
+    
+    <script type="text/javascript">
+    
+    function preventEdit() {                        
+        var stage = "{!JSENCODE(upsSetup.Stage__c)}";    
+        var accNumber = "{!JSENCODE(upsSetup.UPS_Account_Number__c)}";
+        var invDetails = "{!JSENCODE(upsSetup.Invoice_Number__c)}";
+      
+        document.getElementById('{!$Component.mainform.IPaddress}').disabled = true;
+        document.getElementById('{!$Component.mainform.stage}').disabled = true;
+        
+        if(stage == 'Registered') { document.getElementById('{!$Component.mainform.InvDet}').disabled = true; }
+        
+        if(stage == 'Processed') {                    
+            document.getElementById('{!$Component.mainform.custName}').disabled = true;
+            document.getElementById('{!$Component.mainform.compName}').disabled = true;          
+            document.getElementById('{!$Component.mainform.title}').disabled = true;
+            document.getElementById('{!$Component.mainform.mobileNo}').disabled = true;
+            document.getElementById('{!$Component.mainform.email}').disabled = true;
+            document.getElementById('{!$Component.mainform.street}').disabled = true;
+            document.getElementById('{!$Component.mainform.city}').disabled = true;
+            document.getElementById('{!$Component.mainform.country}').disabled = true;
+            document.getElementById('{!$Component.mainform.postCode}').disabled = true;
+            document.getElementById('{!$Component.mainform.province}').disabled = true;         
+            document.getElementById('{!$Component.mainform.comurl}').disabled = true;  
+            document.getElementById('{!$Component.mainform.InvDet}').disabled = true;                
+        }                  
+        
+        
+    }
+   
+    function colorToggle(){
+        var cl = document.getElementById("mycustomheader").className;
+        if(cl == "salesorderdetailsNew") { document.getElementById("mycustomheader").className = "salesorderdetails"; }
+        else { document.getElementById("mycustomheader").className = "salesorderdetailsNew"; }    
+    }                            
+    </script>
+    
+    <body style="margin:9px; auto;" onload="preventEdit();">  
+        <div class="erp_mark7">
+            <div class="slds-page-header">
+                <div class="slds-media">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-opportunity" title="UPS Logo">
+                            <span class="slds-icon slds-page-header__icon" aria-hidden="true">
+                                 <img src="{!URLFOR($Resource.UPS,'UPS/LOGO_S1.png')}" width="40" height="40" alt="ups" /> 
+                            </span>
+                        </span>
+                    </div>
+                <div class="slds-media__body">
+                    <h1 class="slds-page-header__title slds-truncate slds-align-middle" title="">UPS</h1>
+                    <p class="slds-text-body_small slds-line-height_reset">Setup</p>
+                </div>
+                    </div>
+                </div>
+        </div>  
+        <apex:form id="mainform">       
+            <div id="wrapper" style="margin-top:21px;">                           
+                <!--<div class="logo" align="left" style="width:160px;height:52px;background:#f8f8f8; box-shadow:0px 1px 2px #ccc; border-top:1px solid #ff0000; border-radius: 0px 53px 0px 0px;">
+                    <div style="margin-left:35px; margin-top:2px;">
+                       <img src="{!URLFOR($Resource.UPS,'UPS/LOGO_S1.png')}" width="40" height="48" alt="ups" />                        
+                    </div>
+                </div>-->
+                <div>
+                    
+                    <!-- Registration Details Section -->  
+                    <div class="erp_mark7">
+                   
+                   
+                   <div class="epr_Mark7">
+                   <div class="container-fluid">
+                   <fieldset class="slds-form-element">   
+                       <legend class="slds-form-element__label slds-text-title_caps">{!$Label.UPS_Setup_Registration}</legend>  
+                   </fieldset>
+                     <apex:outputPanel id="registrationSection" >  <!-- rendered="{!registerSection}" -->
+                       <div class="row">
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Customer_Name}</label>
+                                <div class="slds-form-element__control">
+                                <apex:inputField id="custName" value="{!upsSetup.Shipper_Name__c}" styleclass="textfield" required="true"/>
+                                </div>
+                                </div>
+                           </div>
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Email_Address}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField value="{!upsSetup.Shipper_Email__c}" id="email" styleClass="textfield" required="true"/>
+                                </div>
+                                </div>
+                           </div>
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Mobile_Number}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField value="{!upsSetup.Shipper_Phone_Number__c}" id="mobileNo" styleClass="textfield" required="true"/>
+                                </div>
+                                </div>
+                           </div>
+                           
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Designation}</label>
+                                <div class="slds-form-element__control">
+                                <apex:inputField value="{!upsSetup.Title__c}" id="title" styleClass="textfield" required="true"/>
+                                </div>
+                                </div>
+                           </div>
+                           
+                       </div>
+                       
+                       <div class="row slds-m-top--xx-small">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Company_Name}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField id="CompName" value="{!upsSetup.Shipper_Company_Name__c}" styleClass="textfield" required="true"/>                                               
+                                </div>
+                                </div>
+                            </div>
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Company_URL}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField value="{!upsSetup.Company_URL__c}" id="comurl" styleClass="textfield" required="true"/>
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Street}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField id="street" value="{!upsSetup.Shipper_Street__c}" styleClass="textfield" required="true"/>  
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_City}</label>
+                                <div class="slds-form-element__control">
+                                <apex:inputfield id="city" value="{!upsSetup.Shipper_City__c}" styleClass="textfield" required="true"/>  
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+                       <div class="row slds-m-top--xx-small">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Province}</label>
+                                <div class="slds-form-element__control">
+                                <apex:inputField value="{!upsSetup.Shipper_Province__c}" id="province" styleClass="textfield" required="true"/>
+                                </div>
+                                </div>
+                            </div>
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Postal_Code}</label>
+                                <div class="slds-form-element__control">
+                                <apex:inputField value="{!upsSetup.Shipper_Postal_Code__c}" id="postCode" styleClass="textfield" required="true"/>   
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Country}</label>
+                                <div class="slds-form-element__control">
+                                  <apex:inputField value="{!upsSetup.Shipper_Country__c}" id="country" styleClass="textfield" required="true"/>                            
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Stage}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputfield value="{!upsSetup.Stage__c}" id="stage" styleClass="textfield"/> 
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+                       
+                       <div class="row slds-m-top--xx-small">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_User_IP_Address}</label>
+                                <div class="slds-form-element__control">
+                                <!-- <apex:inputText value="{!upsSetup.End_User_IP_Address__c}" id="IPaddress" styleClass="textfield" disabled="true" rendered="{!$ObjectType.Credentials__c.fields.End_User_IP_Address__c.Accessible}"/> -->
+                                                <apex:inputText value="{!User_IPaddress}" id="IPaddress" styleClass="textfield" disabled="true" rendered="{!$ObjectType.Credentials__c.fields.End_User_IP_Address__c.Accessible}"/>
+                                </div>
+                                </div>
+                            </div>
+                           <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Details_Exist}</label>
+                                <div class="slds-form-element__control">
+                                  <apex:inputField id="InvDet" value="{!upsSetup.Invoice_Details__c}" required="true"/>
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+                       </apex:outputPanel>  
+                       
+                       <fieldset class="slds-form-element slds-m-top--small slds-m-bottom-small">   
+                                 <legend class="slds-form-element__label slds-text-title_caps">{!$Label.ERP7__UPS_Setup_Add_Account_Details}</legend>  
+                        </fieldset>
+                       <apex:outputText value="{!errorMsg}" style="color:red;"></apex:outputText>
+                         <!-- Registration Add Account & Invoice Details Section --> 
+                                                    
+                <apex:outputPanel id="addAccountDetails" > <!-- rendered="{!accountDetailSection}" -->
+                             <div class="row">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Account_Number}</label>
+                                <div class="slds-form-element__control">
+                               <apex:inputField id="addAccNo" value="{!upsSetup.UPS_Account_Number__c}" styleclass="textfield"/>
+                                </div>
+                                </div>
+                            </div>
+                           <div class="col-md-3">
+                               <apex:outputPanel id="accNote" style="display:{!if(accMsg,'','none')};"> 
+                                                    <apex:outputLabel style="color:red; font-weight:bold;">Note : &nbsp; </apex:outputLabel>
+                                                    <apex:outputText value="{!addAccErrMsg}"></apex:outputText>
+                                                </apex:outputPanel>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+             </apex:outputPanel>                   
+                       
+                       
+                                           
+                       <fieldset class="slds-form-element slds-m-top--small slds-m-bottom-small">   
+                                 <legend class="slds-form-element__label slds-text-title_caps">{!$Label.ERP7__UPS_Setup_Invoice_Details}</legend>  
+                        </fieldset>
+                       <apex:outputText value="{!errorMsg}" style="color:red;"></apex:outputText>
+                           <!-- Registration Invoice Details Section --> 
+                           
+                                <apex:outputPanel id="invoicesection"  > <!-- rendered="{!invoiceSection}" -->
+                     <div class="row slds-m-top--xx-small">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Number}</label>
+                                <div class="slds-form-element__control">
+                                  <apex:inputField id="InvoiceNo" value="{!upsSetup.Invoice_Number__c}" styleclass="textfield"/>
+                                </div>
+                                </div>
+                            </div>
+                         
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Date} </label>
+                                <div class="slds-form-element__control">
+                                  <apex:inputField id="InvoiceDate" value="{!upsSetup.Invoice_Date__c}" styleclass="textfield" style="width:70%;"/>
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Amount}</label>
+                                <div class="slds-form-element__control">
+                                 <apex:inputField id="InvoiceAmt" value="{!upsSetup.Invoice_Amount__c}" styleClass="textfield" />
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Currency_Code}</label>
+                                <div class="slds-form-element__control">
+                                  <apex:inputField id="InvoiceCurrCode" value="{!upsSetup.Invoice_Currency_Code__c}" styleclass="textfield" />            
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+                           
+                            <div class="row slds-m-top--xx-small">
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id">{!$Label.ERP7__UPS_Setup_Invoice_Control_ID}</label>
+                                <div class="slds-form-element__control">
+                                   <apex:inputField value="{!upsSetup.Invoice_Control_Id__c}" id="InvoiceCntrId" styleClass="textfield"/>  
+                                </div>
+                                </div>
+                            </div>
+                         
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"> </label>
+                                <div class="slds-form-element__control">
+                                  
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                 
+                                </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                               <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="input-unique-id"></label>
+                                <div class="slds-form-element__control">
+                                  
+                                </div>
+                                </div>
+                            </div>
+                       </div>
+                           
+                               </apex:outputPanel>         
+                   </div>
+                    </div>  
+                 </div>                
+                                                                                         
+                     </div>
+                
+                <!-- Results Section -->
+                
+                <div id=""  style="height:368px;width:100%; margin-top:10px;" >
+                   
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" >
+                       <tr>
+                            <td height="10" align="left" valign="middle" class="" style="text-decoration:none;">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td height="10" align="center" valign="middle" class="" style="text-decoration:none;">                                
+                               <apex:commandButton style="display:{!if(backBtn,'','none')}; width:88px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="{!$Label.ERP7__UPS_Setup_Back}" styleClass="titlescn" action="{!backAction}"/>
+                               <apex:commandButton style="display:{!if(registerBtn,'','none')}; width:88px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="{!$Label.ERP7__UPS_Setup_Register}" styleClass="titlescn" action="{!Register}" rendered="{!$ObjectType.Credentials__c.Accessible}"/> 
+                            <apex:commandButton style="width:88px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="Get License Key" styleClass="titlescn" action="{!AccessLicenseRequest}" rendered="{!$ObjectType.Credentials__c.Accessible}"/> 
+                               <apex:commandButton style="display:{!if(agreementBtn,'','none')}; width:200px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="{!$Label.ERP7__UPS_Setup_Access_License_Agreement}" styleClass="titlescn" action="{!AccessLicenseAgreement}" rendered="{!$ObjectType.Country_Codes__c.Accessible}"/>                                                             
+                               <apex:commandButton style="display:{!if(addAccountBtn,'','none')}; width:130px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="{!$Label.ERP7__UPS_Setup_Add_Account_Number}" styleClass="titlescn" action="{!ManageAccount}" rendered="{!$ObjectType.Credentials__c.Accessible}"/>  
+                               <apex:commandButton style="display:{!if(updateInvoiceBtn,'','none')}; width:135px; height:35px; background: #31d0e5; border:none; color:#fff; font-size:12px; font-weight:normal;" value="{!$Label.ERP7__UPS_Setup_Update_Invoice_Details}" styleClass="titlescn" action="{!ManageInvoice}" rendered="{!$ObjectType.Credentials__c.Accessible}"/>                                                                                                                 
+                            </td>
+                            <script>
+                                function accessLicensekey(){
+                                    alert('registered');
+                                }
+                            </script>
+                        </tr>
+                        <tr>
+                            <td height="10" align="left" valign="middle" class="" style="text-decoration:none;">
+                            </td>
+                        </tr>
+                    </table> 
+                    
+                    <div id="resultsB" > 
+                        <table width="100%">
+                            
+                            <tr >
+                                <td class="titlese" align="center"><b><apex:outputText value="{!errorMsg1}" style="color:red;"></apex:outputText></b></td>                           
+                            </tr>
+                            
+                            <tr >
+                                <td class="titlese" align="center"><b><apex:outputText value="{!result}" style="color:green;"></apex:outputText></b></td>
+                            </tr>
+                            
+                           <tr >
+                                <td class="titlese" align="center"><apex:outputText value="{!License_Text}" id="p3" rendered="{!LicenseShow && $ObjectType.Account.fields.Agreement_Text__c.Accessible}"></apex:outputText></td>                               
+                            </tr>
+                           
+                            <tr >
+                                <td class="titlese" align="center">&nbsp;</td>
+                            </tr>
+                            
+                            <tr >
+                                <td class="titlese" align="center">
+                                    <apex:commandButton value="{!$Label.ERP7__UPS_Setup_Accept}" id="p1" rendered="{!LicenseShow && $ObjectType.Credentials__c.Accessible}" style="margin-right:20px;" action="{!acceptLicense}"/>
+                                    <apex:commandButton value="{!$Label.ERP7__UPS_Setup_Decline}" rendered="{!LicenseShow}" id="p2" style="margin-right:20px;" action="{!declineLicense}"/>
+                                    <apex:outputLink value="{!$Page.UPS_Agreement}?agreementId={!acct.Id}" target="_blank" styleClass="titlesB" style="color:red;" rendered="{!LicenseShow}">Print Agreement</apex:outputLink>
+                                </td>
+                            </tr>                            
+                        </table>
+                    </div> 
+                    
+                    <!-- UPS Trade Mark Text -->
+                    
+                    <div id=""  style="height:50px;width:100%;margin-top:10px;" >
+                    <table width="100%" border="0" align="left">
+                     
+                        
+                        <tr>
+                            <td align="center">{!$Label.UPS_Setup_UPS_the_UPS_Shield_trademark_the_UPS_Ready_mark_the_UPS_Developer_K}</td>
+                        </tr>  
+                        <tr>
+                            request : {!request} <br/>
+                            response : {!response} <br/>
+                        </tr>
+                    </table>
+                    </div>
+                                        
+                </div>
+            </div>
+        </apex:form>
+       
+         </body>
+  </html>  
+    
+</apex:page>

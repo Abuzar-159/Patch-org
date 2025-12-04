@@ -1,0 +1,198 @@
+<apex:page controller="StockTransferDoc" standardStylesheets="false" title="ABC" applyBodyTag="false" contentType="application/pdf#ABC.pdf" applyHtmlTag="false"  sidebar="false" showHeader="false" renderAs="pdf">
+    <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+    <html>
+        <head>
+            <title>Stock Transfer</title>
+            <style type="text/css">
+                @page{
+                    size:A4;
+                }
+                .leadTable{
+                margin: 10px !important;
+                }        
+                @page {
+                //  margin-top: 150px;
+                padding:0px;
+                //  margin-bottom: 90px;
+                
+                @top-left {
+                content: element(header);
+                }                           
+                @bottom-left {
+                
+                content: element(footer);
+                
+                }
+                
+                }        
+                /* div.header {
+                margin-top:10px;
+                position: running(header);
+                width: 100%;
+                margin-right: 10px;
+                }*/
+                div.footer {
+                display: block;
+                padding: 10px;
+                position: running(footer);
+                }
+                
+                div.last-page {
+                page: last_page;
+                }
+                
+                @page last_page {
+                @top-left {
+                content: none;
+                }
+                @bottom-left {
+                content: none;
+                }
+                }
+                
+                @page:last{
+                @top-left {
+                content: none;
+                }
+                @bottom-left {
+                content: none;
+                }
+                }
+                table {-fs-table-paginate: paginate;}
+            </style>            
+        </head>
+        <body style="font-family:SansSerif !important;margin-left:12px;margin-right:12px;" >
+            <!--  <div class="header"> -->
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tbody>
+                    <tr>
+                        <td colspan="4" style="font: bold 18px 'Helvetica Neue',Helvetica,Arial,sans-serif; color:#000000;text-align:center;padding-bottom:5px;height:20px;">
+                            {!$Label.Stock_Transfer_Document} 
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  width="40%" valign="top" style="text-align: left;font: normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#000000;">
+                            <apex:image url="{!imageURl}" height="70" width="170" /><br/>
+                            <!--
+Phone: &nbsp;1-877-763-6169<br/>
+Local: &nbsp;905-939-9858<br/>
+Email: &nbsp;info@northernwideplank.ca<br/> <br/><br/>
+-->
+                        </td>
+                        <td style="font: normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#000000;" width="30%" valign="top">
+                            <strong>{!$Label.Origin_Site}</strong><br/>
+                            <apex:outputText id="sitename" value="{!SourceSitedetails.Name}" /> <br/>
+                            <apex:outputText id="addcountry" value="{!SourceSitedetails.ERP7__Address__r.Address_Line1__c}" />
+                            <apex:outputText id="accbilcity" value="{!SourceSitedetails.ERP7__Address__r.City__c}" /> &nbsp; <apex:outputText id="accbilstate" value="{!SourceSitedetails.ERP7__Address__r.State__c}" /> <br/>
+                            <apex:outputText id="accbilcountry" value="{!SourceSitedetails.ERP7__Address__r.Country__c}" /> &nbsp; <apex:outputText id="accbilpc" value="{!SourceSitedetails.ERP7__Address__r.Postal_Code__c}" /> <br/>
+                            <apex:outputText id="accbillnamed" value="{!SourceSitedetails.ERP7__Address__r.ERP7__Contact__r.Name}" /> <br/>
+                            <apex:outputText id="accshipConPhone2" value="{!SourceSitedetails.ERP7__Address__r.ERP7__Contact__r.Phone}" /> <br/>
+                            <apex:outputText id="accshipConEmail2" value="{!SourceSitedetails.ERP7__Address__r.ERP7__Contact__r.Email}" />
+                            
+                        </td>
+                        <td style="font: normal 12px 'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;color:#000000;" width="30%" valign="top">
+                            <strong>{!$Label.Destination_Site}</strong><br/>
+                            <apex:outputText id="Dsitename" value="{!DescSitedetails.Name}" /> <br/>
+                            <apex:outputText id="adcountry" value="{!DescSitedetails.ERP7__Address__r.Address_Line1__c}" />
+                            <apex:outputText id="acbilcity" value="{!DescSitedetails.ERP7__Address__r.City__c}" /> &nbsp; <apex:outputText id="acbilstate" value="{!DescSitedetails.ERP7__Address__r.State__c}" /> <br/>
+                            <apex:outputText id="acbilcountry" value="{!DescSitedetails.ERP7__Address__r.Country__c}" /> &nbsp; <apex:outputText id="acbilpc" value="{!DescSitedetails.ERP7__Address__r.Postal_Code__c}" /> <br/>
+                            <apex:outputText id="acbillnamed" value="{!DescSitedetails.ERP7__Address__r.ERP7__Contact__r.Name}" /> <br/>
+                            <apex:outputText id="acshipConPhone2" value="{!DescSitedetails.ERP7__Address__r.ERP7__Contact__r.Phone}" /> <br/>
+                            <apex:outputText id="acshipConEmail2" value="{!DescSitedetails.ERP7__Address__r.ERP7__Contact__r.Email}" />
+                            
+                        </td>
+                    </tr>
+                </tbody>                    
+            </table> 
+            <!-- </div> -->  
+            <apex:variable var="counter" value="{!1}"/>
+            <div class="leadTable">
+                <table border="0" class="repeatTableHeader" cellpadding="0" cellspacing="0" width="100%">
+                    <thead>
+                        <tr style="background:#ddd">
+                            <td valign="top" width="5%" style="font:bold 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-bottom: 1px solid #000000; border-left: 1px solid #000000; border-right: 1px solid #000000;" >
+                                {!$Label.Sl_No}
+                            </td>
+                            <td valign="top"  width="2%" style="font:bold 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
+                                {!$Label.ProductBundleManagement_Product}
+
+                            </td>
+                            <td valign="top"  width="5%" style="font:bold 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
+                                {!$Label.From_Location}
+                            </td>
+                            <td valign="top" width="5%" style="font: bold 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;" >
+                                {!$Label.Quotation_Quantity}
+                            </td>
+                            <td valign="top" width="5%" style="font: bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;" >
+                                {!$Label.UOM}
+                            </td>
+                            <td valign="top" width="5%" style="font: bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;" >
+                                {!$Label.To_Location}
+                            </td>
+                            <td valign="top" width="5%" style="font: bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;" >
+                                {!$Label.Serial}<br/>/{!$Label.Batch_No}
+                            </td>
+                            <td valign="top" width="18%" style="font: bold 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-top: 1px solid #000000; border-right: 1px solid #000000; border-bottom: 1px solid #000000;" >
+                                {!$Label.Transferred_Date}
+                            </td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <apex:repeat value="{!solis}" var="item">
+                            <tr id='z'>
+                                <td valign="top" width="5%" style="font:300; 12px; Helvetica Neue,Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:3px;text-align:center;border-left:1px solid #000000;border-right:1px solid #000000;border-bottom:1px solid #000000;">
+                                    {!counter}
+                                    <apex:variable var="counter" value="{!counter+1}"/>
+                                </td>
+                                <td valign="top" style="font: 300 13px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; color:#000000;padding:5px;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="40%">
+                                    <apex:outputField value=" {!item.ERP7__Cart_Item__r.ERP7__Product__r.Name}"/>
+                                </td>
+                                 <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px; color:#000000;text-align:center;padding:5px;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="13%">
+                                    <apex:outputField value=" {!item.ERP7__Cart_Item__r.ERP7__From_Location__r.Name}"/>
+                                </td>
+                                <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="5%">
+                                    <!--apex:outputText value="{!FLOOR(item.Picked_Quantity__c)}" /-->
+                                    <apex:outputPanel rendered="{!MOD(item.Putaway_Quantity__c, 1) == 0}">
+                                        <!-- If the decimal portion is 0, it's an integer -->
+                                        <apex:outputText value="{0, number, #}" rendered="{!MOD(item.Putaway_Quantity__c, 1) == 0}">
+                                            <apex:param value="{!item.Putaway_Quantity__c}" />
+                                        </apex:outputText>
+                                    </apex:outputPanel>
+                                    
+                                    <apex:outputPanel rendered="{!MOD(item.Putaway_Quantity__c, 1) != 0}">
+                                        <!-- If the decimal portion is not 0, it's a decimal -->
+                                        <apex:outputText value="{0, number, #.##}" rendered="{!MOD(item.Putaway_Quantity__c, 1) != 0}">
+                                            <apex:param value="{!item.Putaway_Quantity__c}" />
+                                        </apex:outputText>
+                                    </apex:outputPanel>
+
+                                </td>
+                                <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="10%">
+                                    <apex:outputText value="{!item.ERP7__Cart_Item__r.ERP7__Product__r.QuantityUnitOfMeasure}" />
+                                </td>
+                                <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="13%">
+                                    <apex:outputText value="{!(item.ERP7__To_Location__r.Name)}" />
+                                </td>
+                                <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="10%">
+                                    <apex:outputText rendered="{!item.ERP7__Cart_Item__r.ERP7__Product__r.Lot_Tracked__c}">
+                                        {!item.ERP7__Cart_Item__r.Batch_Lot__r.Name}
+                                    </apex:outputText>
+                                    <apex:outputText rendered="{!item.ERP7__Cart_Item__r.ERP7__Product__r.Serialise__c}">
+                                        {!item.ERP7__Cart_Item__r.Serial_Number__r.Name}
+                                    </apex:outputText>
+                                </td>
+                                <td valign="top" style="font: 300 12px 'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:12px; color:#000000;padding:5px;text-align:center;border-right:1px solid #000000;border-bottom:1px solid #000000;" width="15%">
+                                    <apex:outputText value="{0, date, MMM dd','  yyyy}">
+                                        <apex:param value="{!item.CreatedDate}" />
+                                    </apex:outputText>
+                                </td>
+                                
+                            </tr>
+                        </apex:repeat>
+                    </tbody>
+                </table>
+            </div> 
+            
+        </body>
+    </html>
+</apex:page>

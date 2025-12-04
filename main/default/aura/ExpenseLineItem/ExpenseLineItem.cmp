@@ -1,0 +1,444 @@
+<aura:component Controller="ERP7.ExpenseSheetLC" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" /> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ExpenseLineItem.css"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    
+    <aura:attribute name="isExpUpdate" type="Boolean" default="false"/>
+    <aura:attribute name="SplitExpensePopup" type="Boolean" default="false"/>
+    <aura:attribute name="expenseWrap1" type="Object"/>
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="expenseReciept" type="Attachment[]"/>
+    <aura:attribute name="displayCategory" type="Boolean" default="false"/>
+    <aura:attribute name="Aname" type="String"/>
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="parentId" type="Id"/>
+    <aura:attribute name="FileList" type="Object[]"/>
+    <aura:attribute name="isSetCategory" type="Boolean" default="false"/>
+    <aura:attribute name="AttachId" type="Expense_Line_Item__c[]"/>
+    <aura:attribute name="AddExpenseFLSCheck" type="Object"/>
+    
+    <aura:registerEvent name="IndexingEvent" type="c:IndexingEvent"/>
+    
+    <aura:attribute name="splitExpense" type="Expense_Line_Item__c"/>
+    
+    <!-- REMOVE defaults with [] -->
+    <aura:attribute name="expli" access="global" type="List"/>
+    <aura:attribute name="expline" access="global" type="List"/>
+    <aura:attribute name="splittedExpLine" type="Expense_Line_Item__c[]"/>
+    
+    <aura:attribute name="eLineItem" access="global" type="Expense_Line_Item__c" 
+                    default="{ 'sobjectType' : 'Expense_Line_Item__c' }"/>
+    
+    <aura:attribute name="expenseComp" type="Expense__c" access="global"/>
+    
+    <!-- SAFER: no complex default in markup -->
+    <aura:attribute name="Expense" type="Expense__c"/>
+    
+    <aura:attribute name="index" type="Integer"/>
+    <aura:attribute name="parentIndex" type="Integer" />
+    
+    <!-- list / map types with NO literal defaults -->
+    <aura:attribute name="listControllingValues" type="List" description="to store controller field values"/>
+    <aura:attribute name="listDependingValues" type="List" description="to store dependent field values"/>
+    <aura:attribute name="depnedentFieldMap" type="Map" description="map to store dependent values with controlling value"/>
+    
+    <aura:attribute name="bDisabledDependentFld" type="Boolean" default="true"/> 
+    <aura:attribute name="expliiret" type="Boolean" default="false"/> 
+    
+    <!-- type name fix: Contact, not contact -->
+    <aura:attribute name="objDetail" type="Contact" default="{ 'sobjectType' : 'Contact' }"/>
+    
+    <aura:attribute name="controllingFieldAPI" type="String" 
+                    default="ERP7__Expense_Category__c"
+                    description="store field API name of Controller field"/>
+    
+    <aura:attribute name="dependingFieldAPI" type="String" 
+                    default="ERP7__Expense_Type__c"
+                    description="store field API name of dependent field"/>
+    
+    <!-- Map type, init in JS -->
+    <aura:attribute name="aItem" type="Map"/>
+    
+    <aura:attribute name="ExpenseCategoryOptions" type="List"/>
+    <aura:attribute name="ExpenseTypeOptions" type="List"/>
+    <aura:attribute name="showexpli" type="Boolean" default="true"/> 
+    <aura:attribute name="Org" type="Map"/>
+	<aura:attribute name="accList" access="global" type="List"/>
+    
+    <span class="span-width35">
+        <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass slds-hide"/>
+    </span>
+    <tr class="slds-hint-parent">
+        <aura:if isTrue="{!v.showexpli}">
+            <td align="left" class="vertical-align-top slds-p-top_small" >
+                <div class="slds-p-left_small">
+                    <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+                         <a onclick="{!c.deleteExpliWpmulti}">
+                                <img src="/resource/ERP7__SLDS0121/assets/icons/action/delete_60_red.png" height="24" width="24" />
+                            </a>
+                        <aura:set attribute="else">
+                            <a onclick="{!c.deleteExpliWp}">
+                                <img src="/resource/ERP7__SLDS0121/assets/icons/action/delete_60_red.png" height="24" width="24" />
+                            </a>
+                        </aura:set>
+                    </aura:if>
+                    <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+                        <aura:if isTrue="{!and(v.expli.ERP7__Expense_Type__c =='Split', v.expli.Id != null)}">
+                            &nbsp;<i class="fa fa-cogs createbill-class3" onclick="{!c.openPopupMultiple}" data-record="{!v.expli.Id}" title="Split Expense"/>   
+                        </aura:if> 
+                        <aura:set attribute="else">    
+                            <aura:if isTrue="{!and(v.aItem.ExpLI.ERP7__Expense_Type__c =='Split', v.aItem.ExpLI.Id != null)}">
+                                &nbsp;<i class="fa fa-cogs createbill-class3" onclick="{!c.openPopup}" data-record="{!v.aItem.ExpLI.Id}" title="Split Expense"/>   
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </div>
+                
+            </td>
+        </aura:if>
+        <!--<aura:renderIf isTrue="{!v.isExpUpdate}"> 
+            <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Name">
+                <lightning:input type="checkbox" checked="{!v.aItem.ExpLI.ERP7__Split_Total__c}" name="input2"/>
+            </td>
+        </aura:renderIf>-->
+        <aura:if isTrue="{!v.AddExpenseFLSCheck.nameAccess}">
+            <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+                
+                <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Name">
+                    <lightning:input type="text" value="{!v.expli.Name}" variant="label-hidden"   class="display-lable" placeholder="Name"/>
+                    
+                </td>
+                <aura:set attribute="else">
+                    <aura:if isTrue="{!v.showexpli}">
+                        <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Name">
+                            <lightning:input type="text" value="{!v.aItem.ExpLI.Name}" variant="label-hidden"   class="display-lable" placeholder="Name"/>
+                            
+                        </td>
+                    </aura:if>
+                </aura:set>
+            </aura:if>   
+        </aura:if>
+        <aura:if isTrue="{!v.AddExpenseFLSCheck.CategoryAccess}">
+            <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Expense Category">
+                <div class="slds-form-element">
+                    <!--
+                <lightning:select name="controllerFld"
+                                  value="{!v.aItem.ExpLI.ERP7__Expense_Category__c}"
+                                  onchange="{!c.onControllerFieldChange}">
+                    <aura:iteration items="{!v.listControllingValues}" var="val">
+                        <option value="{!val}">{!val}</option>
+                    </aura:iteration>
+                </lightning:select>-->
+                    <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+                        <lightning:select aura:id="ExpenseCategory" value="{!v.expli.ERP7__Expense_Category__c}" variant="label-hidden" class="display-lable width150">
+                            <aura:iteration items="{!v.ExpenseCategoryOptions}" var="option">
+                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.expli.ERP7__Expense_Category__c, option.value)}"/>
+                            </aura:iteration>
+                        </lightning:select>
+                        <aura:set attribute="else">
+                            <aura:if isTrue="{!v.showexpli}">
+                                <lightning:select aura:id="ExpenseCategory" value="{!v.aItem.ExpLI.ERP7__Expense_Category__c}" variant="label-hidden" class="display-lable width150">
+                                    <aura:iteration items="{!v.ExpenseCategoryOptions}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.aItem.ExpLI.ERP7__Expense_Category__c, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </div>
+                
+            </td>
+        </aura:if>
+        <aura:if isTrue="{!v.AddExpenseFLSCheck.TypeAccess}">
+            <td valign="top" class="vertical-align-top slds-p-top_small" data-label="Expense Type">
+                
+                <!--<lightning:select name="dependentFld"
+                          value="{!v.aItem.ExpLI.ERP7__Expense_Type__c }"
+                          disabled="{!v.bDisabledDependentFld}">
+            <aura:iteration items="{!v.listDependingValues}" var="val">
+                <option value="{!val}">{!val}</option>
+            </aura:iteration>
+        </lightning:select>-->
+                <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+                    <lightning:select aura:id="ExpenseType" value="{!v.expli.ERP7__Expense_Type__c }" variant="label-hidden" class="display-lable" onchange="{!c.addLineItem}">
+                        <aura:iteration items="{!v.ExpenseTypeOptions}" var="option">
+                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.expli.ERP7__Expense_Type__c, option.value)}" />
+                        </aura:iteration>
+                    </lightning:select>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!v.showexpli}">
+                            <lightning:select aura:id="ExpenseType" value="{!v.aItem.ExpLI.ERP7__Expense_Type__c }" variant="label-hidden" class="display-lable" onchange="{!c.addLineItem}">
+                                <aura:iteration items="{!v.ExpenseTypeOptions}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.aItem.ExpLI.ERP7__Expense_Type__c, option.value)}" />
+                                </aura:iteration>
+                            </lightning:select>
+                        </aura:if>
+                    </aura:set>
+                </aura:if>
+        </td>
+        </aura:if>
+       <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+            <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Expense Date">
+			<lightning:input type="date" variant="label-hidden"  class="display-lable" value="{!v.expli.ERP7__Expense_Date__c}" placeholder="Expense Date"/>
+        </td>
+      
+        
+        <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Amount Submitted">
+            <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.expli.ERP7__Expensed_Submitted__c}" aura:id="SubmittedAmount" step="any" onchange="{!c.updateTotalsAmount}" placeholder="Sub Total"/> 
+        </td>
+        <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="VAT Amount">
+            <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.expli.ERP7__VAT_Amount__c}" step="any" onchange="{!c.updateTotalsAmount}" placeholder="Tax"/> 
+        </td>
+        <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+        <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Claimed Amount">
+            <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.expli.ERP7__Claimed_Amount__c}" aura:id="ClaimedAmount" step="any" placeholder="Total Amount"/>  
+        </td>
+        </aura:if>
+        <td valign="top" data-label="" class="vertical-align-top">
+            
+            <div class="width150"> <c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:product" selectedRecordId="{!v.expli.ERP7__Chart_Of_Account__c}"  /></div>
+           
+        </td>
+           <aura:set attribute="else">
+               <aura:if isTrue="{!and(v.expliiret == false)}">
+                   <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Expense Date">
+                       <lightning:input type="date" variant="label-hidden"  class="display-lable" value="{!v.aItem.ExpLI.ERP7__Expense_Date__c}" placeholder="Expense Date"/>
+                   </td>
+                   
+                   
+                   <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Amount Submitted">
+                       <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.aItem.ExpLI.ERP7__Expensed_Submitted__c}" aura:id="SubmittedAmount" step="any" onchange="{!c.updateTotalAmount}" placeholder="Sub Total"/> 
+                   </td>
+                   <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="VAT Amount">
+                       <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.aItem.ExpLI.ERP7__VAT_Amount__c}" step="any" onchange="{!c.updateTotalAmount}" placeholder="Tax"/> 
+                   </td>
+                   <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                       <td valign="top" class="vertical-align-top slds-p-top_small"  data-label="Claimed Amount">
+                           <lightning:input type="number" variant="label-hidden"  class="display-lable" value="{!v.aItem.ExpLI.ERP7__Claimed_Amount__c}" aura:id="ClaimedAmount" step="any" placeholder="Total Amount"/>  
+                       </td>
+                   </aura:if>
+                   <td valign="top" data-label="" class="vertical-align-top">
+                       <div class=""> <c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:product" selectedRecordId="{!v.aItem.ExpLI.ERP7__Chart_Of_Account__c}"  qry="{! ' AND ERP7__Organisation__c = \''+ v.Org.Id+'\''+ ' '}"/></div>
+                       
+                   </td>
+               </aura:if>
+           </aura:set>
+        </aura:if>
+        
+        <!--Attachment Dispaly-->
+        <aura:renderIf isTrue="{!v.isExpUpdate}"> 
+           <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" > 
+                <td valign="top"  data-label="Receipt" class="vertical-align-top slds-p-top_small">
+                <aura:renderIf isTrue="{!not(empty(v.expli.Id))}"><!--<aura:renderIf isTrue="{!(v.expli.Id != undefined)}">-->
+                    <div class="slds-col" cursor="pointer">
+                        <lightning:input cursor="pointer" aura:id="fileik" type="file" files="{!v.FileList}" name="{!v.expli.Id}" onchange="{!c.onFileUploadedAKMulti}" onfocus="{!c.reRender}" oncomplete="{!c.reRender}" onblur="{!c.reRender}" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" multiple="true" class="fsize-10"/>
+                    </div>
+                </aura:renderIf>
+                    <aura:renderIf isTrue="{!not(empty(v.expli.Id))}"><!--<aura:renderIf isTrue="{!(v.expli.Id != undefined)}">-->
+                        
+                       <!-- <aura:renderIf isTrue="{!not(empty(v.aItem.Attach.Id))}">
+                            <div class="slds-grid">
+                                <div class="slds-col slds-truncate3">
+                                    &nbsp;
+                                    <a href="{!'/'+v.aItem.Attach.Id}" target="_blank" class="fcolor">
+                                        {!v.aItem.Attach.Name}
+                                    </a>
+                                </div>
+                                <div class="slds-col">
+                                    <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC"
+                                                      name="{!v.aItem.Attach.Id}" title="Attachment">
+                                        <a href="javascript:void(0)" title="delete2" class="afsize-12">
+                                            <i class="fa fa-close ifsize-13" aria-hidden="true"></i>  
+                                        </a>
+                                    </lightning:button>
+                                </div>
+                            </div>
+                        </aura:renderIf>-->
+                        <aura:iteration items="{!v.accList}" var="att">
+                            <aura:if isTrue="{!att.ParentId == v.expli.Id}">
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-truncate3">
+                                        &nbsp;
+                                        <a href="{!'/'+att.Id}" target="_blank" class="fcolor">
+                                            {!att.Name}
+                                        </a>
+                                    </div>
+                                    <div class="slds-col">
+                                        <lightning:button onclick="{!c.DeleteRecordATMulti}"
+                                                          class="neutralC"
+                                                          name="{!att.Id}"
+                                                          title="Attachment">
+                                            <a href="javascript:void(0)" title="delete2" class="afsize-12">
+                                                <i class="fa fa-close ifsize-13" aria-hidden="true"></i>
+                                            </a>
+                                        </lightning:button>
+                                    </div>
+                                </div>
+                            </aura:if>
+                        </aura:iteration>
+
+                </aura:renderIf>
+            </td>
+               <aura:set attribute="else">
+                   <aura:if isTrue="{!v.showexpli}">
+                       <td valign="top"  data-label="Receipt" class="vertical-align-top slds-p-top_small">
+                          <aura:renderIf isTrue="{!(v.aItem.ExpLI.Id != undefined)}">
+                               <div class="slds-col" cursor="pointer">
+                                   <lightning:input cursor="pointer" aura:id="fileik" type="file" files="{!v.FileList}" name="{!v.aItem.ExpLI.Id}" onchange="{!c.onFileUploadedAK}" onfocus="{!c.reRender}" oncomplete="{!c.reRender}" onblur="{!c.reRender}" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" multiple="true" class="fsize-10"/>
+                               </div>
+                           </aura:renderIf>
+                          <!-- <aura:renderIf isTrue="{!(v.aItem.Attach.Id != undefined)}">
+                               <div class="slds-grid">
+                                   <div class="slds-col slds-truncate3">
+                                      
+                                       &nbsp;
+                                       <a href="{!'/'+v.aItem.Attach.Id}" target="_blank" class="fcolor">{!v.aItem.Attach.Name}</a>
+                                       
+                                   </div>
+                                   <div class="slds-col">
+                                       <lightning:button onclick="{!c.DeleteRecordAT}"  class="neutralC" name="{!v.aItem.Attach.Id}" title="Attachment">
+                                           <a href="javascript:void(0)" title="delete2" class="afsize-12">
+                                               <i class="fa fa-close ifsize-13" aria-hidden="true"></i>  
+                                           </a>
+                                       </lightning:button>
+                                   </div>
+                               </div>
+                           </aura:renderIf>-->
+                           <aura:iteration items="{!v.aItem.Attachments}" var="att">
+                               <div class="slds-grid slds-p-vertical_x-small">
+                                   <div class="slds-col slds-truncate">
+                                       <a href="{!'/servlet/servlet.FileDownload?file='+att.Id}" target="_blank" title="{!att.Name}" class="fcolor">{!att.Name}</a>
+                                   </div>
+                                   <div class="slds-col">
+                                       <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC" name="{!att.Id}" title="Attachment">
+                                           <i class="fa fa-close ifsize-13" aria-hidden="true"></i>
+                                       </lightning:button>
+                                   </div>
+                               </div>
+                           </aura:iteration>
+                       </td>
+                   </aura:if>
+               </aura:set>
+            </aura:if>
+        </aura:renderIf>
+        <aura:if isTrue="{!and(v.expliiret, v.showexpli)}" >
+            <td valign="top" data-label="" class="vertical-align-top slds-p-top_small">
+                <div class="width150"> <c:CustomInputLookUp objectAPIName="Account"  IconName="standard:product" selectedRecordId="{!v.expli.ERP7__Vendor__c}" qry="AND ERP7__Account_Type__C = 'Vendor'"/></div>
+            </td>
+            <td valign="top" class="vertical-align-top"  data-label="name" >
+                <div class="width150"> 
+                    <lightning:inputRichText disabledCategories="FORMAT_TEXT,FORMAT_FONT,FORMAT_BODY,ALIGN_TEXT,REMOVE_FORMATTING" placeholder="Enter Description..." value="{!v.expli.ERP7__Description__c}" />
+                    <!--<lightning:input type="text" value="{!v.expli.ERP7__Description__c}" variant="label-hidden"   class="display-lable"/> -->
+                </div>
+            </td>
+            <aura:set attribute="else">
+                <aura:if isTrue="{!v.showexpli}">
+                    <td valign="top" data-label="" class="vertical-align-top slds-p-top_small">
+                        <div class=""> <c:CustomInputLookUp objectAPIName="Account"  IconName="standard:product" selectedRecordId="{!v.aItem.ExpLI.ERP7__Vendor__c}" qry="AND ERP7__Account_Type__C = 'Vendor'"/></div>
+                    </td>
+                    <!--<td data-label="" class="width150">
+              <ERP7:CustomInputLookUp objectAPIName="ERP7__Bill__c" IconName="standard:product_item" selectedRecordId="{!v.aItem.ExpLI.ERP7__Bill__c}"  aura:id="bill" />
+        </td>
+        <td data-label="">
+            <lightning:input type="checkbox" checked="{!v.aItem.ExpLI.ERP7__Refund__c}"/> 
+        </td>-->
+                    <td valign="top" class="width150 vertical-align-top"  data-label="name" >
+                        <lightning:inputRichText disabledCategories="FORMAT_TEXT,FORMAT_FONT,FORMAT_BODY,ALIGN_TEXT,REMOVE_FORMATTING" placeholder="Enter Description..." value="{!v.aItem.ExpLI.ERP7__Description__c}" />
+                        <!--<lightning:input type="text" value="{!v.aItem.ExpLI.ERP7__Description__c}" variant="label-hidden"   class="display-lable"/> -->
+                    </td>
+                </aura:if>
+            </aura:set>
+        </aura:if>
+    </tr>
+    
+    <aura:if isTrue="{!not(empty(v.exceptionError))}">
+        <div class="{!if(and(v.exceptionError != null, v.exceptionError != undefined),'slds-notify_container slds-is-fixed display-err','slds-notify_container slds-is-fixed display-none')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error err-width20" role="status" >
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small showErr" >{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close top-25rem">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+    
+    <aura:if isTrue="{!v.SplitExpensePopup}">
+        <tr class="slds-hint-parent">
+            <td style="height:500px;" colspan="11">
+                
+                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large" aria-labelledby="modal-heading-01" aria-modal="true">
+                    <div class="slds-modal__container">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!v.cancelclick}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="small" alternativeText="close" title="close" />
+                            
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <div class="slds-modal__header">
+                            <h1 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Split Expense Line Item</h1>
+                        </div>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1"  style="min-height:300px;">
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-col slds-p-right_small">
+                                    <lightning:input type="text" value="{!v.splitExpense.Name}" label="Name" disabled="true"/>&nbsp;
+                                </div>
+                                <div class="slds-col slds-p-right_small">
+                                    <lightning:input type="date"  value="{!v.splitExpense.ERP7__Expense_Date__c}" label="Expense Date" disabled="true"/>&nbsp;
+                                </div>
+                                <div class="slds-col slds-p-right_small">
+                                    <lightning:input type="number"  value="{!v.splitExpense.ERP7__Expensed_Submitted__c}" label="Sub Total" disabled="true"/>&nbsp;
+                                </div>
+                                <div class="slds-col slds-p-right_small">
+                                    <lightning:input type="number"  value="{!v.splitExpense.ERP7__VAT_Amount__c}" label="Tax" disabled="true"/>&nbsp;
+                                </div>
+                                <div class="slds-col slds-p-right_small">
+                                    <lightning:input type="number"  value="{!v.splitExpense.ERP7__Claimed_Amount__c}" label="Total" disabled="true"/>
+                                </div>
+                            </div>
+                            <table class="slds-table slds-table_bordered slds-table_fixed-layout">
+                                <thead>
+                                    <tr>
+                                        <th width="10%"> <span class="slds-truncate" title="Name">&nbsp; <a onclick="{!c.addSplit}" data-record="Add" data-target="#myModal" class="AddExpense-newClass19" data-toggle="modal" title="Add"> <i class="fa fa-plus AddExpense-newClass20" aria-hidden="true"></i>&nbsp;New</a></span></th>
+                                        <th>Amount <span class="cpo-class21">*</span></th>
+                                        <th>Chart of Account <span class="cpo-class21">*</span></th>
+                                        <th>Description <span class="cpo-class21"></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.splittedExpLine}" var="exm" indexVar="in">
+                                        <tr>
+                                            <td width="10%">
+                                                <a onclick="{!c.deleteSplitExpense}" data-record="{!exm.Id}" data-index="{!in}">
+                                                    <img src="/resource/ERP7__SLDS0121/assets/icons/action/delete_60_red.png" height="18" width="18" />
+                                                </a>&nbsp;&nbsp;&nbsp;&nbsp;{!in+1}
+                                            </td>
+                                            <td><lightning:input type="number"  value="{!exm.ERP7__Claimed_Amount__c}" placeholder="Amount" /></td>
+                                            <td><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:product" selectedRecordId="{!exm.ERP7__Chart_Of_Account__c}"  qry="{! ' AND ERP7__Organisation__c = \''+ v.Org.Id+'\''+ ' '}"/>/> </td>
+                                            <td><lightning:inputRichText disabledCategories="FORMAT_TEXT,FORMAT_FONT,FORMAT_BODY,ALIGN_TEXT,REMOVE_FORMATTING" placeholder="Enter Description..." value="{!exm.ERP7__Description__c}" /></td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="slds-modal__footer createbill-class10">
+                            <button class="slds-button slds-button_neutral" aria-label="Cancel" onclick="{!c.CancelCalled}">Cancel</button>
+                            <button class="slds-button slds-button_brand" onclick="{!c.saveRecords}">Save</button>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+            </td>
+        </tr>
+    </aura:if>
+    
+</aura:component>

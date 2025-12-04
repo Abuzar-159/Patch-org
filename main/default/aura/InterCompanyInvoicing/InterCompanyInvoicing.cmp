@@ -1,0 +1,550 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"  controller="InterCompanyInvoicing" access="global"><!-- controller="TransactionMeasurement" -->
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <!--ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-dashboard.css"/-->
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>   
+    
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.organisationId}" action="{!c.switchTabOrganisation}"/>
+    <aura:handler name="change" value="{!v.procurementOrgId}" action="{!c.switchTabOrganisation}"/>
+    <aura:attribute name="StartDate" type="Date"/>
+    <aura:attribute name="EndDate" type="Date"/>
+    <aura:attribute name="invList" type="Invoice__c[]"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="billList" type="Bill__c[]"/>
+    <aura:attribute name="payList" type="Payment__c[]"/>
+    <aura:attribute name="expList" type="Expense__c[]"/>
+    <aura:attribute name="cnList" type="Credit_Note__c[]"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/>
+    <aura:attribute name="organisationId" type="String" default=""/>
+    <aura:attribute name="procurementOrgId" type="String" default=""/>
+    <aura:attribute name="selectedTab" type="String" default="Customer_Orders"/>
+    <aura:handler name="change" value="{!v.selectedTab}" action="{!c.switchTab}"/>
+    <aura:attribute name="creditnoteList" type="Credit_Note__c[]"/>
+    <aura:attribute name="SelectedcusOrders" type="List"/>
+    <aura:attribute name="SelectedpoOrders" type="List"/>
+    <aura:attribute name="TransactionWrapper" type="object" default="{'sObjectType' : 'TransactionWrapper'}"/>
+    <aura:attribute name="TransactionAmountWrapper" type="object" default="{'sObjectType' : 'TransactionAmountWrapper'}"/>
+    <div aura:id="body">
+        <div class="erp_mark7 erp" style="background:#f7f8f9;">
+            
+           
+                
+                <div aura:id="myHeader" class="d-flex align-items-start slds-grid slds-wrap myHeader pt-2 pl-2 bg-white" >
+                    <aura:if isTrue="{!and(equals(v.selectedTab,'Customer_Orders'),true)}">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:work_plan" variant="inverse" size="x-medium" alternativeText="{!$Label.c.work_plan}" title="" /><!--title="{!$Label.c.work_plan}"-->
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps mb-0">Inter Company</p>
+                                    <p class="slds-page-header__title slds-m-right--small slds-align-middle slds-m-bottom_xxx-small" title="">Orders</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="card-body">
+                                <c:CustomInputLookUp objectAPIName="Account" label="Organisation" required="true" selectedRecordId="{!v.organisationId}" IconName="standard:account" placeholder="Search Organisation" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>
+                            </div>
+                        </div>
+                        
+                        
+                        <aura:set attribute="else">
+                            <div class="slds-col slds-has-flexi-truncate">
+                                <div class="slds-media slds-no-space slds-grow">
+                                    <div class="slds-media__figure">
+                                        <lightning:icon iconName="standard:work_plan" variant="inverse" size="x-medium" alternativeText="{!$Label.c.work_plan}" title="" /><!--title="{!$Label.c.work_plan}"-->
+                                    </div>
+                                    <div class="slds-media__body">
+                                        <p class="slds-text-title--caps mb-0">Inter Company</p>
+                                        <p class="slds-page-header__title slds-m-right--small slds-align-middle slds-m-bottom_xxx-small" title="">Orders</p>
+                                    </div>
+                                </div>
+                            </div>
+							<div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 text-sm-left slds-p-right_small">
+                                <!--<div class="card l-bg-cvd mb-2 mt-3">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start" >
+                                            <div class="color-card" >
+                                                <p class="mb-0 color-card-head">Total Receivable Amount</p>
+                                                <h5 class="text-left mb-0 pt-1">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!v.TransactionAmountWrapper.recievableAmount}"/><span class="h5"></span>
+                                                </h5>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-file-text bg-inverse-icon-ap mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div> -->  
+                                
+                            </div>
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 text-center text-sm-left slds-p-right_small"> 
+                                <!--<div class="card l-bg-cvd mb-2 mt-3">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start" >
+                                            <div class="color-card" >
+                                                <p class="mb-0 color-card-head">Total Payable Amount</p>
+                                                <h5 class="text-left mb-0 pt-1">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!v.TransactionAmountWrapper.payableAmount}"/><span class="h5"></span>
+                                                </h5>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-file-text bg-inverse-icon-ap mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div>-->   
+                                
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-right_small">
+                                <div class="card-body">
+                                    <c:CustomInputLookUp objectAPIName="Account" label="Organisation" required="true" selectedRecordId="{!v.organisationId}" IconName="standard:account" placeholder="Search Organisation" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                                <div class="card-body">
+                                    <c:CustomInputLookUp objectAPIName="Account" label="Procurement Organisation" required="true" selectedRecordId="{!v.procurementOrgId}" IconName="standard:account" placeholder="Search Procurement Organisation" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>
+                                </div>
+                            </div>
+                            
+                        </aura:set>
+                    </aura:if>
+                </div>
+            <div class="card shadow-sm m-2">
+                <div class="card-body p-1">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="card m-2 border-0">
+                                
+                                <div class="slim-navbar">
+                                    <div class="slds-container">
+                                        
+                                        <ul class="nav">
+                                            <li class="{!v.selectedTab == 'Customer_Orders' ? 'nav-item active' : 'nav-item '}" label="Customer Orders" name="Customer_Orders"  onclick="{!c.fetchOrdersCMP}" title="Customer Orders">
+                                                <a class="nav-link" href="javascript:void(0);"  >
+                                                    <i class="icon fa fa-list-ol"></i>
+                                                    <span>Customer Orders</span>
+                                                </a>
+                                                
+                                            </li>
+                                            <li  class="{!v.selectedTab == 'Purchase_Orders' ? 'nav-item  active' : 'nav-item '}" label="Purchase Orders" name="Purchase_Orders" onclick="{!c.fetchPurchaseOrdersCMP}" title="Purchase Orders">
+                                                <a class="nav-link" href="javascript:void(0);">
+                                                    <i class="icon fa fa-file-text-o"></i>
+                                                    <span>Purchase Orders</span>
+                                                </a>
+                                                
+                                            </li>
+                                            
+                                            <li class="{!v.selectedTab == 'Inter_Company_Orders' ? 'nav-item  active' : 'nav-item '}" onclick="{!c.fetchOrdersInterCompany}" title="Inter Company Orders">
+                                                <a class="nav-link" href="javascript:void(0);">
+                                                    <i class="icon fa fa-file-text"></i>
+                                                    <span>Inter Company Orders</span>
+                                                </a>
+                                                
+                                            </li>
+                                            
+                                            <li class="{!v.selectedTab == 'Invoices' ? 'nav-item  active' : 'nav-item'}" onclick="{!c.fetchInvoice}" title="Invoices">
+                                                <a class="nav-link" href="javascript:void(0);" data-toggle="dropdown">
+                                                    <i class="icon fa fa-file-o"></i>
+                                                    <span>Invoices</span>
+                                                </a>
+                                                
+                                            </li>
+                                            <li class="{!v.selectedTab == 'Bills' ? 'nav-item  active' : 'nav-item'}" onclick="{!c.fetchBill}" title="Bills">
+                                                <a class="nav-link" href="javascript:void(0);" data-toggle="dropdown">
+                                                    <i class="icon fa fa-credit-card-alt"></i>
+                                                    <span>Bills</span>  
+                                                </a>
+                                                
+                                            </li>
+                                            
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="slds-tabs--default theme-bg ">
+                                    
+                                    <aura:if isTrue="{!and(equals(v.selectedTab,'Customer_Orders'),true)}">
+                                        <div class="cardmaq">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-9">
+                                                    <h5 class="mb-1">
+                                                        {!v.TransactionWrapper.orders.length}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-3 text-end">
+                                                    <div class="dropstart">
+                                                        <h5 class="mb-1"></h5>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="heightctrlcvd cvdsticky">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps icv-postionsticky">
+                                                            <th scope="col" width="5%" >
+                                                                <div class="slds-truncate" title=""></div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Order Number</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Order Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Amount Paid</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Due Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Expected Date</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Organisation</div>
+                                                            </th>
+                                                            <!--<th scope="col" width="6%">
+                                                                <div class="slds-truncate" title="">Action</div>
+                                                            </th>-->
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.TransactionWrapper.orders}" var="item" indexVar="ind">
+                                                            <tr>
+                                                                <td data-label="">
+                                                                    <ui:inputCheckbox label="" aura:id="cbox_bill" class="slds-checkbox" name="{!item.Id}" change="{!c.selectedCustomerOrders}" updateOn="change"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Order_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Amount_Paid__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Due_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedDateTime value="{!item.EffectiveDate}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    {!item.ERP7__Organisation__r.Name}
+                                                                </td>
+                                                                <!--<td data-label="">
+                                                                    <lightning:buttonMenu alternativeText="Create Purchase Order" iconSize="small" variant="border-filled" menuAlignment="right" onselect="{!c.handledebitmenu}">
+                                                                        <lightning:menuItem label="Create Purchase Order" value="{!item.Name}" title="{!item.Id}"/>
+                                                                    </lightning:buttonMenu>
+                                                                </td>-->
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="slds-docked-form-footer">
+                                            <lightning:button iconName="utility:chevronright" iconPosition="right" variant="brand" label="Create Purchase Order" onclick="{!c.handleClick}" disabled="{!v.SelectedcusOrders.length==0?true:false}"/>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    
+                                    <aura:if isTrue="{!and(equals(v.selectedTab,'Purchase_Orders'),true)}">
+                                        <div class="cardmaq">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-9">
+                                                    <h5 class="mb-1">
+                                                        {!v.TransactionWrapper.pos.length}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-3 text-end">
+                                                    <div class="dropstart">
+                                                        
+                                                        <h5 class="mb-1"></h5>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="heightctrlcvd cvdsticky">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps icv-postionsticky">
+                                                            <th scope="col" width="5%">
+                                                                <div class="slds-truncate" title=""></div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">PO Name</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">PO Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Due Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Order Date</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Organisation</div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.TransactionWrapper.pos}" var="item" indexVar="ind">
+                                                            <tr>
+                                                                <td data-label="">
+                                                                    <ui:inputCheckbox label="" aura:id="cbox_bill" class="slds-checkbox" name="{!item.Id}" change="{!c.selectedPurchaseOrders}" updateOn="change"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Total_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Total_Due__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedDateTime value="{!item.ERP7__Order_Date__c}" year="numeric" month="numeric" day="numeric"  timeZone="{!$Locale.timezone}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    {!item.ERP7__Organisation__r.Name}
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                                <div class="slds-docked-form-footer">
+                                                    <lightning:button iconName="utility:chevronright" iconPosition="right" variant="brand" label="Create Order" onclick="{!c.handleClickOrder}" disabled="{!v.SelectedpoOrders.length==0?true:false}"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!and(equals(v.selectedTab,'Inter_Company_Orders'),true)}">
+                                        <div class="cardmaq">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-9">
+                                                    <h5 class="mb-1">
+                                                        {!v.TransactionWrapper.procorders.length}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-3 text-end">
+                                                    <div class="dropstart">
+                                                        <h5 class="mb-1"></h5>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="heightctrlcvd cvdsticky">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps icv-postionsticky">
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Order Number</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Order Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Amount Paid</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Due Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Expected Date</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Organisation</div>
+                                                            </th>
+                                                            <th scope="col" width="6%">
+                                                                <div class="slds-truncate" title="">Action</div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.TransactionWrapper.procorders}" var="item" indexVar="ind">
+                                                            <tr>
+                                                                <td data-label="">
+                                                                    <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Order_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Amount_Paid__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Due_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedDateTime value="{!item.EffectiveDate}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    {!item.ERP7__Organisation__r.Name}
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:buttonMenu alternativeText="Create Invoice" iconSize="small" variant="border-filled" menuAlignment="right" onselect="{!c.handleinvoicemenu}">
+                                                                        <lightning:menuItem label="Create Invoice" value="{!item.Name}" title="{!item.Id}"/>
+                                                                    </lightning:buttonMenu>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!and(equals(v.selectedTab,'Invoices'),true)}">
+                                        <div class="cardmaq">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-9">
+                                                    <h5 class="mb-1 ">
+                                                        {!v.TransactionWrapper.invoices.length}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-3 text-end">
+                                                    <div class="dropstart">
+                                                        <h5 class="mb-1"></h5>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="heightctrlcvd cvdsticky">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps icv-postionsticky">
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Invoice Name</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Invoice Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Due Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Invoice Date</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Organisation</div>
+                                                            </th>
+                                                            <th scope="col" width="6%">
+                                                                <div class="slds-truncate" title="">Action</div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.TransactionWrapper.invoices}" var="item" indexVar="ind">
+                                                            <tr>
+                                                                <td data-label="">
+                                                                    <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Invoice_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Total_Due__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedDateTime value="{!item.ERP7__Invoice_Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    {!item.ERP7__Organisation__r.Name}
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:buttonMenu alternativeText="Send Invoice Payment Remainder" iconSize="small" variant="border-filled" menuAlignment="right" onselect="{!c.handleinvDocmenu}">
+                                                                        <lightning:menuItem label="Send Invoice Payment Remainder" value="{!item.Name}" title="{!item.ERP7__Customer_Id__c}"/>
+                                                                        <lightning:menuItem label="Record Payment" value="{!item.Id}" title="{!item.ERP7__Customer_Id__c}"/>
+                                                                    </lightning:buttonMenu>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        
+                                    </aura:if>
+                                    <aura:if isTrue="{!and(equals(v.selectedTab,'Bills'),true)}">
+                                        <div class="cardmaq">
+                                            <div class="row align-items-center mb-3">
+                                                <div class="col-9">
+                                                    <h5 class="mb-1">
+                                                        {!v.TransactionWrapper.bills.length}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-3 text-end">
+                                                    <div class="dropstart">
+                                                        
+                                                        <h5 class="mb-1"></h5>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="heightctrlcvd cvdsticky">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps icv-postionsticky">
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Bill Name</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Bill Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Due Amount</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Bill Date</div>
+                                                            </th>
+                                                            <th scope="col" >
+                                                                <div class="slds-truncate" title="">Organisation</div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.TransactionWrapper.bills}" var="item" indexVar="ind">
+                                                            <tr>
+                                                                <td data-label="">
+                                                                    <a href="{!'/'+item.Id}" target="__blank">{!item.Name}</a>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Total_Amount__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency" value="{!item.ERP7__Amount_Due__c}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    <lightning:formattedDateTime value="{!item.ERP7__Vendor_Bill_Date__c}" year="numeric" month="numeric" day="numeric"  timeZone="{!$Locale.timezone}"/>
+                                                                </td>
+                                                                <td data-label="">
+                                                                    {!item.ERP7__Organisation__r.Name}
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <aura:if isTrue="{!v.showMmainSpin}">
+            <span class="spincls">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>
+    </div>
+</aura:component>

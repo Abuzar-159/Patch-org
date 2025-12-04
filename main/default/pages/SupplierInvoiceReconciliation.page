@@ -1,0 +1,993 @@
+<apex:page controller="SupplierInvoiceReconciliation" docType="html-5.0" sidebar="false" showHeader="true" id="spage">
+<apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.SLDS0121,'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.SLDS0121,'assets/styles/salesforce-lightning-design-system-vf-min.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.SLDS0121,'assets/styles/salesforce-lightning-design-system-scoped-min.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/ERPMark7main_style.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/ERPMark7custom-style.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/style.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/ERP_MARK7__bootstrap.min.css')}"/>
+<html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <apex:outputPanel id="MainScriptPanel">
+        <script>
+            var $j = jQuery.noConflict();
+            $j(document).ready(function() {
+                    $j('[id$=master]').dataTable({
+                       "fixedHeader": true,
+                    responsive : false,
+                    "lengthMenu": [ [5,10, 25, 50, -1], [5,10, 25, 50, "All"] ],
+                    "order": [[ 3, "desc" ]],
+                    columnDefs: [
+                            { responsivePriority: 1, targets: 0 },
+                            { responsivePriority: 4, targets: -2 }
+                        ]
+                    });
+                       
+             $j('[id$=startdate]').datepicker({
+            dateFormat: "dd/mm/yy",
+            onSelect: function (date) {
+                var dt2 = $j('[id$=enddate]');
+                var startDate = $j(this).datepicker('getDate');
+                var minDate = $j(this).datepicker('getDate');
+                dt2.datepicker('setDate', minDate);
+                dt2.datepicker('option', 'minDate', minDate);
+                $j(this).datepicker('option', 'minDate', minDate);
+            }
+        });
+        $j('[id$=enddate]').datepicker({
+            dateFormat: "dd/mm/yy"
+        });
+                       
+              });
+              function datepickforED(val){
+                   $j('[id$=enddate]').datepicker({ dateFormat: 'dd/mm/yy' ,minDate:val}); 
+              }
+        </script>
+    </apex:outputPanel>
+    
+    <script>
+        var clickflag = true;
+        var dArray = new Array();
+        var SelectPoArray = new Array();
+        var ReconciledQty =0.0;
+        var TotalPOQuantity =0.0;
+        var poRowref;
+        var purchaseId ;
+    function CreateDiv(id,recid,MainPOQty) {
+            var det =''; 
+            ReconciledQty =0.0;
+            TotalPOQuantity = MainPOQty;
+            purchaseId = id;
+            if(dArray[id] == undefined )dArray[id]=true;
+            else dArray[id] = false;
+            if(dArray[id]){
+        Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.SupplierInvoiceReconciliation.getPOLIList}',
+                    recid, 
+                    function(result, event){
+                        if (event.status) {
+                        //parent row of the input or whatever is the click trigger
+                         var thisRow =  $j('#'+id).closest('tr');
+                         poRowref = thisRow ;
+                         //DisplayObject('CreateDiv',thisRow);
+                        for(var i=0;i<result.length;i++){
+                       
+                        var RemainingQty = parseFloat(result[i]["ERP7__Quantity__c"]) - parseFloat(result[i]["ERP7__Quantity_Received__c"]);
+                        ReconciledQty +=RemainingQty;
+                         det += '<div class="RowM" id=tr'+result[i]["Id"]+' onclick="selectRow(\''+result[i]["Id"]+'\',\''+result[i]["ERP7__Quantity__c"]+'\');"> <div class="CellM1">'+result[i]["Name"]+'</div><div class="CellM2">'+result[i]["ERP7__Product__r"]["Name"]+'</div><div class="CellM3">'+result[i]["ERP7__Quantity__c"]+'</div><div class="CellM3">'+RemainingQty+'</div><div class="CellM4">'+result[i]["ERP7__Total_Price__c"]+'</div></div>';  
+                             }
+                        
+                        var details='<div class="text-center blue1" style="color:#fff; padding:10px;font-weight:normal;text-transform:uppercase;">'+$j('#'+id).text()+'</div>';
+                        details += '<div class="TableM"><div class="HeadingM"><div class="CellM1"><p>Item Name</p></div><div class="CellM2"><p>Product</p></div><div class="CellM3"><p>Order Quantity</p></div><div class="CellM3"><p>Remaining Quantity</p></div><div class="CellM4"><p>Amount</p></div></div>';
+                        details += det+'</div>';
+                       
+                        $j('<tr id=tr'+id+'> <td style="border:none;height:212px;vertical-align:top;" colspan="7"><div class="erp_mark7"><div class="container-fluid"><div class="col-md-12 span_4" style="padding-left:0px;padding-right:0px;"><div class="col_2"><div class="box_1"><div class="col-md-12" style="padding-left:0px;padding-right:0px;"><a class="tiles_info"><div class="tiles-head red1">'+details+'</div></a></div><div class="clearfix"> </div></div><div class="box_1"><div class="clearfix"> </div></div></div></div></div></td></tr>').insertAfter(thisRow);
+                         }
+                         else if (event.type === 'exception') {
+                        } else {
+                        }
+                    }, 
+                    {escape: true}
+                );
+         
+             }
+            else{
+                dArray[id] =undefined;
+                removeTrById('tr'+id);
+            }
+            var x;
+            for(x in dArray)
+            if(x != id.valueOf() && dArray[x] ){
+                removeTrById('tr'+x);
+                dArray[x] =undefined;
+            }
+        }
+        
+        function removeTrById(eleId){
+            $j('#'+eleId).remove();
+        }
+        
+        function selectRow(eleid,poliqty){
+                sinv = new Array();
+                spliarray = new Array();
+                var poliid = eleid;
+                
+                eleid ='tr'+eleid;
+               
+                if(SelectPoArray[eleid] == undefined )SelectPoArray[eleid]=true;
+                else SelectPoArray[eleid] = false;
+                if(SelectPoArray[eleid]){
+                    $j('#'+eleid).addClass("SelectedRowM");
+                    $j('#'+eleid).removeClass("RowM");
+                    CreateChildNode(poliid,poliqty);
+                }
+                else{
+                     $j('#'+eleid).addClass("RowM");
+                    $j('#'+eleid).removeClass("SelectedRowM");
+                    removeTrById('sili'+eleid);
+                    delete SelectPoArray[eleid] ;
+                }
+                var x;
+                for(x in SelectPoArray)
+                if(x != eleid.valueOf() && SelectPoArray[x] ){
+                   
+                     $j('#'+x).addClass("RowM");
+                    $j('#'+x).removeClass("SelectedRowM");
+                    removeTrById('sili'+x);
+                    delete SelectPoArray[x];
+                }
+        }
+        
+            function CreateChildNode(poliid,poqty){
+                var TotalQtySpli = 0.0;
+                var TotalQtySili = 0.0;
+                
+                var id ='tr'+poliid;
+                var SiliData = '';
+                var SpliData = '';
+                var sili = '';
+                 var thisRow = $j('#'+id).closest('.TableM'); 
+                Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.SupplierInvoiceReconciliation.getSILIList}',
+                poliid, 
+                function(result, event){
+                    if (event.status) {
+                     for(var i=0;i<result.length;i++){
+                            SiliData += ' <div class="Row" id=\''+result[i]["Id"]+'\'><div class="Cell1"><input type="checkbox" id="cbox'+result[i]["Id"]+'" data-id='+result[i]["Id"]+' data-record='+result[i]["ERP7__Quantity__c"]+' class="supInvcbGrp" title="Select" onclick="reconcileSInvRow(this.checked,\''+result[i]["Id"]+'\',\''+result[i]["ERP7__Quantity__c"]+'\','+poqty+');"></div><div class="Cell2">'+result[i]["Name"]+'</div><div class="Cell3">'+result[i]["ERP7__Purchase_Line_Items__r"]["ERP7__Product__r"]["Name"]+'</div><div class="Cell4">'+result[i]["ERP7__Quantity__c"]+'</div><div class="Cell5">'+result[i]["ERP7__Total_Price__c"]+'</div></div>';
+                            if(!isNaN(parseFloat(result[i]["ERP7__Quantity__c"])))
+                                TotalQtySili += parseFloat(result[i]["ERP7__Quantity__c"]);
+                        }
+                       
+                 sili += '<div class="text-center blue1" style="color:#fff; padding:10px;font-weight:normal;">('+$j('#'+id).children()[0].innerHTML+')Supplier Invoice Line Item</div><div class="Table"><div class="Heading"><div class="Cell1"><input type="checkbox" onclick="checkAll(this.checked,\'supInvcbGrp\','+poqty+');" id="selectAllsupinv" title="Select All" ></div><div class="Cell2">Name</div><div class="Cell3">Product</div><div class="Cell4">Quantity</div><div class="Cell5">Amount</div></div> '; //<div class="Cell6">Date</div>
+                    sili += SiliData+'</div>'; 
+                    
+              
+                    }
+                    else if (event.type === 'exception') {
+                    } else {
+                    }
+                }, 
+                {escape: true}
+            );
+          Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.SupplierInvoiceReconciliation.getSPLIList}',
+                poliid, 
+                function(result, event){
+                    if (event.status) {
+                     for(var i=0;i<result.length;i++){
+                            SpliData += '<div class="Row" id=\''+result[i]["Id"]+'\'><div class="Cell1"><input type="checkbox" id="cbox'+result[i]["Id"]+'" data-id='+result[i]["Id"]+' data-record='+result[i]["ERP7__Quantity__c"]+' class="spLicbGrp" title="Select" onchange="reconcileSPurchaseRow(this.checked,\''+result[i]["Id"]+'\',\''+result[i]["ERP7__Quantity__c"]+'\','+poqty+');" ></div><div class="Cell2">'+result[i]["Name"]+'</div><div class="Cell3">'+result[i]["ERP7__Product__r"]["Name"]+'</div><div class="Cell4">'+result[i]["ERP7__Quantity__c"]+'</div><div class="Cell5">'+result[i]["ERP7__Amount__c"]+'</div></div>';//<div class="Cell6">undefined</div>
+                        if(!isNaN(parseFloat(result[i]["ERP7__Quantity__c"])))
+                                TotalQtySpli += parseFloat(result[i]["ERP7__Quantity__c"]);
+                        
+                        }
+                        
+                            var spli='<div class="text-center blue1" style="color:#fff; padding:10px;font-weight:normal;">('+$j('#'+id).children()[0].innerHTML+')Site Purchase Line Item</div><div class="Table"><div class="Heading"><div class="Cell1"><input type="checkbox"  onclick="checkAll(this.checked,\'spLicbGrp\','+poqty+');" id="selectAllspli" title="Select All" ></div><div class="Cell2">Name</div><div class="Cell3">Product</div><div class="Cell4">Quantity</div><div class="Cell5">Amount</div></div> '; //<div class="Cell6">Date</div>
+                                spli += SpliData+'</div>';
+               
+                $j('<div id=sili'+id+' class="erp_mark7"><div class="container-fluid"><div class="col-md-12 span_4" style="margin-top:10px;padding-left:0px;padding-right:0px;"><div class="col_2"><div class="box_1"><div class="col-md-6 col_1_of_2 span_1_of_2" style="padding-left:0px;padding-right:0px;border-right: 2px solid #fff;"><a class="tiles_info"><div class="tiles-head red1">'+sili+'</div></a></div><div class="col-md-6 col_1_of_2 span_1_of_2" style="padding-left:0px;padding-right:0px;"><a class="tiles_info tiles_blue"><div class="tiles-head red1">'+spli+'</div></a></div><div class="clearfix"> </div></div><div class="box_1"><div class="clearfix"> </div></div></div></div> <div class="row"><div class="col-md-12" style="text-align:center;margin-bottom:10px;"><button type="button" id="reconcilebtn" onclick="checkQtyEqual(\''+poliid+'\','+poqty+');" class="glyphicon glyphicon-ok-sign btn btn_5 btn-lg btn-primary" disabled="true"></button></div></div></div></div>').insertAfter(thisRow);
+            
+                    }
+                    else if (event.type === 'exception') {
+                    } else {
+                    }
+                }, 
+                {escape: true}
+            );
+               
+               }
+        function checkAll(val,clsName,mainQty) {
+          
+          $j('input:checkbox.'+clsName).prop('checked',val);
+              if(val){
+                    $j('input:checkbox.'+clsName).each(function(){
+                          
+                           if(clsName == 'supInvcbGrp') reconcileSInvRow(val,$j(this).attr('data-id'),$j(this).attr('data-record'),mainQty);
+                           else reconcileSPurchaseRow(val,$j(this).attr('data-id'),$j(this).attr('data-record'),mainQty);
+                    });
+           
+                }else{
+                    $j('input:checkbox.'+clsName).each(function(){
+                            
+                           if(clsName == 'supInvcbGrp') reconcileSInvRow(val,$j(this).attr('data-id'),$j(this).attr('data-record'),mainQty);
+                           else reconcileSPurchaseRow(val,$j(this).attr('data-id'),$j(this).attr('data-record'),mainQty);
+                    });
+                
+                }
+        }
+        var sinv = new Array();
+        var spliarray = new Array();
+        function reconcileSInvRow(flag,rid,qty,mainQty){
+            if(flag){
+                sinv[rid] = qty;
+           var sumSIqty = 0.0; ;
+            var sumSitePurQty =0.0;;
+             var arrayids = new Array();
+            for(var x in spliarray){
+                
+               if(!isNaN(parseFloat(spliarray[x]))){ sumSitePurQty += parseFloat(spliarray[x]);}
+                arrayids[arrayids.length]=x;
+            }
+            for(var y in sinv){
+                 if(!isNaN(parseFloat(sinv[y])))sumSIqty += parseFloat(sinv[y]);
+                arrayids[arrayids.length]=y;
+            }
+
+            if(sumSitePurQty == sumSIqty && sumSitePurQty <= parseFloat(mainQty) && sumSIqty <= parseFloat(mainQty) ){
+                   
+               $j('#reconcilebtn').prop('disabled', false);
+                $j('#reconcilebtn').removeClass("btn-primary");
+                $j('#reconcilebtn').addClass("btn-reconcile");
+                sumSitePurQty = 0.0;
+                sumSIqty = 0.0;
+            }
+            }else{
+                $j('#reconcilebtn').prop('disabled', true);
+                $j('#reconcilebtn').removeClass("btn-reconcile");
+                $j('#reconcilebtn').addClass("btn-primary");
+               delete sinv[rid];
+            }
+            
+           
+        }
+        
+        function reconcileSPurchaseRow(flag,rid,qty,mainQty){
+            if(flag){
+                spliarray[rid] = qty;
+                var sumSIqty = 0.0; ;
+            var sumSitePurQty =0.0;;
+             var arrayids = new Array();
+            for(var x in spliarray){                
+               if(!isNaN(parseFloat(spliarray[x]))){ sumSitePurQty += parseFloat(spliarray[x]);}
+                arrayids[arrayids.length]=x;
+            }
+            for(var y in sinv){
+                 if(!isNaN(parseFloat(sinv[y])))sumSIqty += parseFloat(sinv[y]);
+                arrayids[arrayids.length]=y;
+            }
+          
+            if(sumSitePurQty == sumSIqty && sumSitePurQty <= parseFloat(mainQty) && sumSIqty <= parseFloat(mainQty) ){
+               
+                $j('#reconcilebtn').prop('disabled', false);
+                $j('#reconcilebtn').removeClass("btn-primary");
+                $j('#reconcilebtn').addClass("btn-reconcile");
+                sumSitePurQty = 0.0;
+                sumSIqty = 0.0;
+            }
+            }else{
+                delete spliarray[rid];
+                $j('#reconcilebtn').removeClass("btn-reconcile");
+                $j('#reconcilebtn').addClass("btn-primary");
+                $j('#reconcilebtn').prop('disabled', true);
+            }
+           
+           
+        
+        }
+        function checkQtyEqual(polid,mainQty){
+           
+            var sumSIqty = 0.0; ;
+            var sumSitePurQty =0.0;;
+             var supplierarrayids = new Array();
+             var sitearrayids = new Array();
+            for(var x in spliarray){
+                
+               if(!isNaN(parseFloat(spliarray[x]))){sumSitePurQty += parseFloat(spliarray[x]);sitearrayids[sitearrayids.length] = x;}
+                
+            }
+            for(var y in sinv){
+                 if(!isNaN(parseFloat(sinv[y]))){sumSIqty += parseFloat(sinv[y]);supplierarrayids[supplierarrayids.length] = y;};
+                 
+            }
+           
+            if(sumSitePurQty == sumSIqty && sumSitePurQty <= parseFloat(mainQty) && sumSIqty <= parseFloat(mainQty) ){
+                ReconciledQty += parseFloat(mainQty);
+                
+                    if(sumSitePurQty == sumSIqty && sumSitePurQty == parseFloat(mainQty) && sumSIqty == parseFloat(mainQty)){
+                        Visualforce.remoting.Manager.invokeAction( 
+                    '{!$RemoteAction.SupplierInvoiceReconciliation.updateSupplierAndSite_Items}',
+                   supplierarrayids.toString(),sitearrayids.toString(), 
+                    function(result, event){
+                        if (event.status) {
+                                 Visualforce.remoting.Manager.invokeAction(
+                    '{!$RemoteAction.SupplierInvoiceReconciliation.updateReconcile}',
+                    polid, 
+                    function(result, event){
+                        if (event.status) {
+                            
+                            if(parseFloat(ReconciledQty) == parseFloat(TotalPOQuantity)){
+                                    DisplayObject('checkQtyEqual',poRowref);
+                                    $j('#tr'+purchaseId).fadeOut();  
+                                    poRowref.fadeOut(); 
+                                    $j('#tr'+purchaseId).remove();
+                                    poRowref.remove(); 
+                             }
+                             var arrayids= $j.extend({}, supplierarrayids, sitearrayids);
+                             for(var i in supplierarrayids){
+                                    if(typeof supplierarrayids[i] == 'string')$j('#'+supplierarrayids[i]).fadeOut();
+                                  } 
+                                   for(var i in sitearrayids){
+                                    if(typeof sitearrayids[i] == 'string')$j('#'+sitearrayids[i]).fadeOut();
+                                  } 
+                                $j('#tr'+polid).fadeOut();
+                                $j('#silitr'+polid).fadeOut();
+                                $j('#tr'+polid).remove();
+                                $j('#silitr'+polid).remove();
+               
+                         }
+                         else if (event.type === 'exception') {
+                        } else {
+                        }
+                    }, 
+                    {escape: true}
+                );
+                            } 
+                         else if (event.type === 'exception') {
+                        } else {
+                        }
+                    }, 
+                    {escape: true}
+                );
+                        
+                 
+                
+            }
+             else{
+                    ReconciledQty += parseFloat(mainQty);
+                    
+                         Visualforce.remoting.Manager.invokeAction( 
+                    '{!$RemoteAction.SupplierInvoiceReconciliation.updateSupplierAndSite_Items}',
+                    supplierarrayids.toString(),sitearrayids.toString(), 
+                    function(result, event){
+                        if (event.status) {
+                             var arrayids= $j.extend({}, supplierarrayids, sitearrayids);
+                             for(var i in supplierarrayids){
+                                    if(typeof supplierarrayids[i] == 'string')$j('#'+supplierarrayids[i]).fadeOut();
+                                  } 
+                                   for(var i in sitearrayids){
+                                    if(typeof sitearrayids[i] == 'string')$j('#'+sitearrayids[i]).fadeOut();
+                                  } 
+                                  var rqty = $j('#RemQty').text();
+                                   $j('#silitr'+polid).fadeOut();
+                                   $j('#silitr'+polid).remove();
+                                    $j('#tr'+polid).addClass('RowM');
+                                    $j('#tr'+polid).removeClass('SelectedRowM');
+                                   
+                        }
+                         else if (event.type === 'exception') {
+                        } else {
+                        }
+                    }, 
+                    {escape: true}
+                );
+             
+             
+             }       
+                sinv = new Array();
+                spliarray = new Array();
+                sumSitePurQty = 0.0;
+                sumSIqty = 0.0;
+        
+        }
+}
+        
+        function DisplayObject(src,obj){
+            for(var i in obj){
+                    }
+                      
+        }
+    </script>
+ <style>
+
+ .slds .slds-page-header {
+    padding: 14px 24px 12px;
+    border-bottom: 1px solid #d8dde6;
+    border-radius: 5px;
+}
+ 
+    .dataTables_wrapper {
+    position: relative;
+    clear: both;
+    zoom: 1;
+    margin-top: 17px;
+}
+    .slds .slds-text-heading--label {
+    font-size: 12px;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: .0625em;
+    color: #54698d;
+    background: #f8f8f8;
+}
+    .slds button, .slds select {
+    text-transform: none;
+    border: 1px solid #ddd;
+    padding: 2px 16px 2px 16px;
+}
+    table.dataTable.no-footer {
+    border-bottom: 1px solid #dddddd;
+}
+  table.dataTable thead th, table.dataTable thead td {
+    padding: 10px 18px;
+    border-bottom: 1px solid #DDDDDD;
+}
+  .dataTables_wrapper .dataTables_filter input {
+    margin-left: 0.5em;
+    border: 1px solid #ddd;
+    padding: 5px;
+    margin-bottom: 5px;
+}  
+    
+        @media (min-width: 992px){
+.erp_mark7 .col-md-2 {
+    width: 19.66666667%;
+}
+.erp_mark7 .col-md-1 {
+    width: 9.66666667%;
+}
+}
+ 
+        .closeIcon{
+            display:none;
+        }
+        .dataTables_scrollBody{
+            height:500px !important;
+        }
+        .classMainTab {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .classMainTab td {
+            border: 1px solid #000; 
+            padding: 5px; 
+            vertical-align: top;
+        }
+        #table-wrap {
+            position: relative;
+            }
+
+        .anchorclass{
+            color:blue;
+        }
+    </style>
+    <div class="slds">
+                
+                    
+                <div class="slds-page-header " role="banner">
+                      <div class="slds-media">
+                     
+
+                          <div class="slds-media__figure">
+                              <svg aria-hidden="true" class="slds-icon slds-icon--large slds-icon-standard-task">
+                                <use xlink:href="{!URLFOR($Resource.SLDS0121,'/assets/icons/standard-sprite/svg/symbols.svg#task')}"></use>
+                              </svg>
+                           </div>
+                        <div class="slds-media__body">
+                          <p class="slds-page-header__title slds-truncate slds-align-middle" title="Supplier Invoice Re-Conciliation" style="padding-top:5px;font-size:1.25em;">Supplier Invoice Re-Conciliation</p>
+                            
+                        </div>
+                      </div>
+                </div>
+                
+         <apex:form styleClass="slds-form--inline" id="mainForm">
+         <apex:pageMessages />
+         <apex:actionFunction name="vendorpay" action="{!paymentProcess}" immediate="true" />
+                 <apex:actionFunction name="GetPO" action="{!supplierPO}" reRender="mainForm,MainScriptPanel"/>
+                 <apex:actionFunction name="updateLI" action="{!updatePOLI}" reRender="mainForm,MainScriptPanel">
+                    <apex:param assignTo="{!Poli_Id}" name="param1" value="" />
+                 </apex:actionFunction>
+                <div class="erp_mark7" style=" min-height:115px; height:auto;">
+                        <div class="container-fluid">
+                            <div style="position: relative;z-index: 2; margin-top:8px;" class="panel-row-style">
+                                <div class="erpmark7-search-slot" >
+                                    <div id="erp-finance-management-search" class="erp-finance-management-search">
+                                        <div class="row " style="background:#fff;padding: 30px; box-shadow: 0 0 5px 0 rgba(0, 0, 0, .15);">
+                                              <!--  <div class="col-md-2">
+                                                    <div class="fm-form-field-input">
+                                                        <apex:inputField value="{!SupplierOrganisation.Organisation__c}" id="org" required="true" html-placeholder="Select Organisation" style="width:100%;margin-bottom: 10px;font-size:15px;height:40px;background-color:#FFF"/>
+                                                       </div>         
+                                                </div>
+                                                -->
+                                                 <div class="col-md-2">
+                                                  <div class="fm-form-field-input">
+                                                         <apex:inputField value="{!SupplierOrganisation.Vendor__c}" id="sup" required="true" html-placeholder="Select Supplier" style="width:100%;margin-bottom: 10px;font-size:15px;height:40px;"/>
+                                                       </div>       
+                                                </div>
+                                               
+                                                <div class="col-md-2">
+                                                    
+                                                        <apex:input type="datetime" id="startdate" Value="{!startDate}" styleClass="startyear,clearable" html-placeholder="Start Date" style="width:100%;margin-bottom: 10px;" rendered="{!$ObjectType.PO__c.fields.Order_Date__c.Accessible}"/>
+                                                 
+                                                </div>
+                                                 <div class="col-md-2">
+                                                    
+                                                    <apex:input type="datetime" Value="{!endDate}" id="enddate"  label="End Date" styleClass="slds-input" html-placeholder="End Date" style="width:100%;margin-bottom: 10px;" rendered="{!$ObjectType.PO__c.fields.Order_Date__c.Accessible}"/>
+                                                    
+                                                </div>
+                                                 <div class="col-md-1">
+                                                  
+                                                            <button class="slds-button slds-button--brand" type="button" onclick="GetPO();" style="width:100%;min-width:130px;">Refresh</button>
+
+                                                </div>  
+                                                <div class="col-md-1">
+                                                   
+                                                            <button class="slds-button slds-button--brand" type="Reset" onclick="location.reload();" style="width:100%;min-width:130px;">Reset</button>
+                                                
+                                                </div>          
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <apex:outputPanel id="MainPanel">   
+                     
+                     <div class="erp_mark7" style="display:{!if(SupplierOrganisation.Vendor__c != null, '','none')}"> <button type="button" class="slds-button slds-button--brand right" onclick="vendorpay();"><b>Vendar Payment</b></button> </div>
+                    
+                                    <apex:variable var="item" value="{!0}"/>
+                                    <apex:dataTable value="{!poList}" var="po"   id="master" styleClass="classMainTab-dataTable no-footer" headerClass="slds-text-heading--label" columnClasses="slds-cell-shrink"> 
+                                       <apex:column >
+                                                        <apex:facet name="header" >Name</apex:facet>
+                                                        <a id="poid{!item}"  class="anchorclass" ><apex:outputText value="{!po.Name}" rendered="{!$ObjectType.PO__c.fields.Name.Accessible}"/> </a>
+                                                        <apex:variable var="item" value="{!item + 1}"/>
+                                            </apex:column>
+                                            <apex:column >
+                                                <apex:facet name="header">PO Number</apex:facet>           
+                                                <apex:outputText value="{!po.Code__c}"   />
+                                            </apex:column> 
+                                               <apex:column styleClass="datatableCell" headerClass="datatableCell">
+                                                <apex:facet name="header">Status</apex:facet>           
+                                                <apex:outputText value="{!po.Status__c}" rendered="{!$ObjectType.PO__c.fields.Status__c.Accessible}"/>
+                                            </apex:column>  
+
+                                            <apex:column styleClass="datatableCell" headerClass="datatableCell">
+                                                <apex:facet name="header">Quantity</apex:facet>           
+                                                <apex:outputText value="{!po.Total_Quantity__c}" rendered="{!$ObjectType.PO__c.fields.Total_Quantity__c.Accessible}"/>
+                                            </apex:column> 
+                                            <apex:column styleClass="datatableCell" headerClass="datatableCell">
+                                                <apex:facet name="header">Amount</apex:facet>           
+                                                <apex:outputText value="{!po.Amount__c}" rendered="{!$ObjectType.PO__c.fields.Amount__c.Accessible}"/>
+                                            </apex:column>
+                                            <apex:column styleClass="datatableCell" headerClass="datatableCell" >
+                                                <apex:facet name="header">Order Date</apex:facet>           
+                                                <apex:outputText value="{0,date,dd/MM/yyyy}" rendered="{!$ObjectType.PO__c.fields.Order_Date__c.Accessible}">
+                                                     <apex:param value="{!po.Order_Date__c}"/>
+                                                   </apex:outputText>
+                                            </apex:column>         
+                                        <apex:variable var="item" value="{!item + 1}"/>
+                                                
+                                     </apex:dataTable> 
+                    </apex:outputPanel>       
+         </apex:form>
+     </div>
+     </html>
+  <style type="text/css">
+    .Table
+    {
+        display: table;
+        width:100%;
+    }
+    .Title
+    {
+        display: table-caption;
+        text-align: center;
+        font-weight: normal;
+        font-size: larger;
+    }
+    .Heading
+    {
+        display: table-row;
+        font-weight: normal;
+        text-align: left;
+        background: #f8f8f8;
+        border-bottom:1px solid #dddddd;
+    }
+    .Row
+    {
+        display: table-row;
+    }
+    .Cell1
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell2
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell3
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell4
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell5
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell6
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell
+    {
+        display: table-cell;
+        
+        
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+        .TableM
+    {
+        display: table;
+        width:100%;
+        border-collapse: collapse;
+    }
+    .TitleM
+    {
+        display: table-caption;
+        text-align: center;
+        font-weight: normal;
+        font-size: larger;
+    }
+    .HeadingM
+    {
+        display: table-row;
+        font-weight: normal;
+        text-align: left;
+        background: #f8f8f8;
+        border-bottom:1px solid #dddddd;
+    }
+    .RowM
+    {
+        display: table-row;
+         background-color:#FFF;
+    }
+    .SelectedRowM{
+        display: table-row;
+        background-color:#b3d1ff;
+    }
+    .RowM:hover{
+         background-color:rgb(0, 200, 135);
+         color:#fff;
+    }
+    .CellM
+    {
+        display: table-cell;
+        border: none;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM6
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM1
+    {
+        display: table-cell;
+       
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM2
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM3
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM4
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .CellM5
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    @media only screen and (min-width: 768px) {
+    .slds{
+        padding:0px;
+    }
+.Cell1
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell2
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell3
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell4
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell5
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    .Cell6
+    {
+        display: table-cell;
+        
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+}/*End Media 768px*/
+@media All and (max-width: 480px) {
+    #master{
+        margin-bottom:130px;
+    }
+    .Cell1
+    {
+        display: table-cell;
+        
+        font-size:10px;
+        padding:5px;
+        text-align:center;
+    }
+    .Cell2
+    {
+        display: none;
+        
+        
+        padding-left: 1px;
+        padding-right: 1px;
+    }
+    .Cell3
+    {
+        display: table-cell;
+        
+        font-size:12px;
+        font-weight:bold;
+       
+    }
+
+    .Cell4
+    {
+        display:table-cell;
+        
+        font-size:12px;
+        font-weight:bold;
+        
+    }
+    .Cell6
+    {
+        display:none;
+        
+        font-size:12px;
+        font-weight:bold;
+        padding-left: 0px;
+        padding-right: 0px;
+    }
+    .Cell5
+    {
+        display: none;
+        
+        
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+    .CellM1{
+        padding: 10px;
+        font-size:14px;
+    }
+    .CellM2{
+        padding: 10px;
+        font-size:14px;
+    }
+    .CellM3{
+        padding: 10px;
+        font-size:14px;
+    }
+     .CellM4
+    {
+        display: none;
+        border: 1px solid #f8f9fb;
+        
+        padding: 10px;
+    }
+    .CellM5
+    {
+        display: none;
+        border: 1px solid #f8f9fb;
+        
+            padding: 10px;
+    }
+    
+    .datatableCell
+    {
+        display: none;
+        border: 1px solid #f8f9fb;
+        
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+    
+}
+.btn-primary{
+    background-color: #337ab7 !important;;
+    border-color: #2e6da4 !important;
+    cursor:not-allowed !important;
+}
+.btn-reconcile{
+    background-color: rgb(0, 200, 135) !important;
+    border-color: rgb(0, 200, 135) !important;
+    color: #fff !important;
+}
+.erp_mark7 a:hover {
+    color: #23527c;
+    text-decoration: none;
+    cursor:pointer;
+   
+}
+@media (max-width: 768px){
+.col_1_of_2.span_1_of_2 {
+    width: 100%;
+    float: left;
+}
+}
+</style>
+  <style>
+ .erp_mark7 .left,
+.erp_mark7 .right {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  height: 2.5em;
+  margin: auto;
+  background: #0070d2;
+  z-index:1000;
+  border:0px solid #fff;
+}
+
+.erp_mark7 .left {
+  left: 0;
+  -webkit-transform-origin: 0 50%;
+     -moz-transform-origin: 0 50%;
+      -ms-transform-origin: 0 50%;
+       -o-transform-origin: 0 50%;
+          transform-origin: 0 50%;
+  -webkit-transform: rotate(-90deg) translate(-50%, 50%);
+     -moz-transform: rotate(-90deg) translate(-50%, 50%);
+      -ms-transform: rotate(-90deg) translate(-50%, 50%);
+       -o-transform: rotate(-90deg) translate(-50%, 50%);
+          transform: rotate(-90deg) translate(-50%, 50%);
+}
+
+.erp_mark7 .right {
+   right: 0;
+   -webkit-transform-origin: 100% 50%;
+      -moz-transform-origin: 100% 50%;
+       -ms-transform-origin: 100% 50%;
+        -o-transform-origin: 100% 50%;
+           transform-origin: 100% 50%;
+   -webkit-transform: rotate(90deg) translate(50%, 50%);
+      -moz-transform: rotate(90deg) translate(50%, 50%);
+       -ms-transform: rotate(90deg) translate(50%, 50%);
+        -o-transform: rotate(90deg) translate(50%, 50%);
+           transform: rotate(90deg) translate(50%, 50%);
+}
+
+.erp_mark7.slideOutTab {
+     width: 150px;
+    height: 43px;
+   position: fixed;
+top: 0px;
+right:-110px;
+-webkit-transition-duration: 1s;
+ -moz-transition-duration: 1s;
+ -o-transition-duration: 1s;
+ transition-duration: 1s;
+}
+
+.erp_mark7.slideOutTab:hover {
+    
+right:0px;
+}
+.erp_mark7.slideOutTab a {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    text-indent: -999em;
+    background: 0 0 url('https://erp-mark7-dev-ed--erp-mark7.eu2.visual.force.com/resource/1460056757000/_BankReconcile/img/vendor_payment.gif') no-repeat;
+}
+
+.erp_mark7.slideOutTab a:hover {
+    background-position: 0 -43px;
+}
+  </style>
+
+</apex:page>

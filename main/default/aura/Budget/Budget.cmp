@@ -1,0 +1,338 @@
+<aura:component controller="BudgetPlanner" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/manageleave.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/main-leavemanagement.css"/>
+    </head>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="fetchRecordsBool" type="Boolean" default="true"/>
+    <aura:handler name="change" value="{!v.Organisation.Id}" action="{!c.getOrganisedRecords}"/> 
+    <aura:attribute name="Organisation" type="Map" default="{}"/> 
+    <aura:attribute name="SearchString" type="String" default=""/>
+    <aura:attribute name="recordId" type="String" default=""/>
+    <aura:attribute name="BudgetName" type="String" default=""/>
+    <aura:attribute name="NoSlotsMessage" type="String"/>
+    <aura:attribute name="BudgetList" type="Budget_Plan__c[]"/>
+    <aura:attribute name="BudgetListDum" type="Budget_Plan__c[]"/>
+    <aura:attribute name="showPOPUp" type="Boolean" default="false"/>
+    <aura:attribute name="showBudgetConfirmation" type="Boolean" default="false"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/> 
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="0"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="pageNumbers" type="String[]" default="1"/> 
+    <aura:attribute name="nextDisa" type="Boolean" default="false"/>
+    <aura:attribute name="prevDisa" type="Boolean" default="true"/>
+    <aura:attribute name="fromProject" type="Boolean" default="false"/>
+    <aura:attribute name="fromProjectWB" type="Boolean" default="false"/>
+    <aura:attribute name = "currentProj" type = "Project__c" default="{'sObjectType':'ERP7__Project__c',
+                                                                            'Name': '',
+                                                                            'ERP7__Status__c': '--none--',
+                                                                            'ERP7__Project_Manager__c': '',
+                                                                            'ERP7__Organisations__c' : '',
+                                                                            'ERP7__Default_Routing__c' : '',
+                                                                            'ERP7__Team__c' : '',
+                                                                            'ERP7__Account__c' : '',
+                                                                            'ERP7__Contact__c' : '',
+                                                                            'ERP7__Total_Expense_Amount__c' : '',
+                                                                            'ERP7__Total_Income__c' : ''
+                                                                            }"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUserRecord}"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUser}"/>
+    <aura:attribute name="ItemTOdelete" type="String"/>
+    <body  style="background-color: #f3f4f7;height:100vh;">
+        <!-- Header Section Start -->
+        <div class="slds-p-around_small">
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        
+                        <div class="slds-media__figure">
+                            <lightning:icon iconName="standard:record"  size="large" alternativeText="record!" title="record" />
+                        </div>
+                        <div class="slds-media__body">
+                            
+                            <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-p-top_small" title="">Budget Planner</h1>
+                            
+                        </div>
+                        <div class="slds-p-right_small slds-p-top_small" >
+                            <a onclick="{!c.CreateBudget}" data-record="Add" class="slds-button slds-button_neutral" title="Add" href="javascript:void(0);">
+                                &nbsp;<i class="fa fa-plus myExpenese-newClass13" aria-hidden="true"></i>
+                                &nbsp;&nbsp;<strong>Budget Plan</strong>
+                            </a>
+                        </div>
+                        <div class="slds-p-top_small" >
+                            <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                    IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>                               
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </div>
+        </div>
+        <aura:if isTrue="{!v.showBudgetConfirmation}">
+            <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open mbr-class19">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-p-around_large" id="modal-content-id-1">
+                        <span class="slds-f-size14">Are you sure you want to submit {!v.BudgetName} for Approval?</span>
+                    </div>
+                    <footer class="slds-modal__footer slds-text-align_center">
+                        <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-record="delete" value="Yes"  aura:id="yesId" onclick="{!c.submitForApproval}">Yes</button> 
+                        <button type="button" value="No" class="slds-button slds-button--neutral" data-record="NO"  aura:id="noId" onclick="{!c.cancelSubmit}">No</button> 
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+        </aura:if>
+        <!-- Header Section Start -->
+        <!-- Table Section Start -->
+        <div class="erp_Mark7 mbr-class6 pb100"> 
+            <div class="card shadow-sm m-2"> 
+                <div class="card-body mbr-class8">
+                    <div class="row padding-t-5" >
+                        <div class="col-md-4">
+                            <c:SearchRecord searchString="{!v.SearchString}" Placeholder="Budget" aura:id="Bank_Reconciliation_Id" />
+                        </div>
+                        <div class="table-responsive mbr-class9" tabindex="1">
+                            <table class="slds-table slds-table_condensed slds-table_fixed-layout">         
+                                <thead>
+                                    <tr class="slds-text-title--caps slds-line-height_reset">
+                                        <th class="" scope="col" width="7%">
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Name">{!$Label.c.Name_ManageLeave}<span class="mbr-class11">*</span></div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Start Date">{!$Label.c.AddSubscription_Start_Date}</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="End Date">{!$Label.c.CreateClubcard_End_Date}</div>
+                                        </th>
+                                        <th class="" scope="col" width="10%">
+                                            <div class="slds-truncate2" title="Approver">Scheduled Type</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Category</div> 
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Approved</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Committed</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Consumed</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Balance</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Consumed(%)</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="Approver">Status</div>
+                                        </th>
+                                        <th class="" scope="col" width="5%">
+                                            
+                                        </th>
+                                    </tr> 
+                                </thead> 
+                                <tbody>
+                                    
+                                    <aura:iteration var="sos" indexVar="STCounter" items="{!v.BudgetList}">
+                                        <tr class="slds-hint-parent">
+                                            <td name="{!STCounter}" style="white-space: nowrap;">
+                                                <lightning:button class="slds-button slds-button_neutral neutralC" name="{!sos.Id}" onclick="{!c.removeItem}" >
+                                                    <a title="Remove Item">
+                                                        <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                                    </a>
+                                                </lightning:button>
+                                                <aura:if isTrue="{!sos.ERP7__Approved__c}">
+                                                    <div data-service="{!sos.Name}" data-record="{!sos.Id}" data-name="{!sos.ERP7__Budget_Type__c}" onclick="{!c.BudgetForecast}" class="slds-truncate2" title="Forecasting" style="display: inline-block;">
+                                                        <a class="mbr-class14 slds-p-left_xx-small"><lightning:icon iconName="standard:calibration" size="small" ></lightning:icon></a> 
+                                                    </div>
+                                                 </aura:if>
+                                            </td>
+                                            <td data-label="" scope="row">
+                                                <div class="slds-truncate">
+                                                    <aura:if isTrue="{!and(sos.ERP7__Status__c!='Submitted for Approval', sos.ERP7__Budget_Category__c!='Fixed Budget')}">
+                                                        
+                                                    <div data-category="{!sos.ERP7__Budget_Category__c}" data-service="{!sos.Name}" data-record="{!sos.Id}" data-name="{!sos.ERP7__Budget_Type__c}" onclick="{!c.ManageBudget}" class="slds-truncate2" title="Name"  >
+                                                        <a class="mbr-class14"><lightning:formattedText value="{!sos.Name}" title="{!sos.Name}" /></a> 
+                                                    </div>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!and(sos.ERP7__Status__c=='Submitted for Approval', sos.ERP7__Budget_Category__c!='Fixed Budget')}">
+                                                     {!sos.Name}
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!and(sos.ERP7__Approved__c, sos.ERP7__Budget_Category__c=='Fixed Budget')}">
+                                                        {!sos.Name}
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!and(sos.ERP7__Status__c!='Submitted for Approval', sos.ERP7__Budget_Category__c=='Fixed Budget')}">
+                                                        <aura:if isTrue="{!!sos.ERP7__Approved__c}">
+                                                            <div data-category="{!sos.ERP7__Budget_Category__c}" data-service="{!sos.Name}" data-record="{!sos.Id}" data-name="{!sos.ERP7__Budget_Type__c}" onclick="{!c.ManageBudget}" class="slds-truncate2" title="Name"  >
+                                                                <a class="mbr-class14"><lightning:formattedText value="{!sos.Name}" title="{!sos.Name}" /></a> 
+                                                            </div>
+                                                        </aura:if>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Start Date">
+                                                    <lightning:formattedDateTime value="{!sos.ERP7__Start_Date__c}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="End Date">
+                                                    <lightning:formattedDateTime value="{!sos.ERP7__End_Date__c}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    {!sos.ERP7__Budget_Type__c}
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    {!sos.ERP7__Budget_Category__c}
+                                                </div>
+                                            </td>
+											
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!sos.ERP7__Total_Budget_Amount__c}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    <aura:if isTrue="{!sos.ERP7__Committed__c!=null}">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!sos.ERP7__Committed__c}" />
+                                                	<aura:set attribute="else">
+                                                        <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="0" />
+                                                    </aura:set>
+                                                    </aura:if>
+                                                    </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!sos. ERP7__Consumed_Amount__c}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!sos.ERP7__Remaining_Amount__c}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="Budget Type">
+                                                    {!sos.ERP7__Budget_Used__c}
+                                                </div>
+                                            </td>
+                                            
+                                            <td data-label="">
+                                                <div class="slds-truncate" title="{!sos.ERP7__Status__c}">
+                                                    <aura:if isTrue="{!sos.ERP7__Approved__c}">
+                                                        	<div class="slds-badge slds-theme_success slds-badge-buget-cs">Approved</div>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!sos.ERP7__Status__c=='Rejected'}">
+                                                        <div class="slds-badge slds-theme_error slds-badge-buget-cs">
+                                                            {!sos.ERP7__Status__c}
+                                                        </div>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!sos.ERP7__Status__c=='Draft'}">
+                                                        <div class="slds-badge slds-theme_warning slds-badge-buget-cs">
+                                                            {!sos.ERP7__Status__c}
+                                                        </div>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!sos.ERP7__Status__c=='Submitted for Approval'}">
+                                                        <div class="slds-badge slds-theme_info slds-badge-buget-cs">
+                                                            Submitted for <br/>Approval
+                                                        </div>
+                                                    </aura:if>
+                                                    
+                                                </div>
+                                            </td>
+                                            <td data-label="">
+                                                <aura:if isTrue="{!sos.ERP7__Status__c=='Draft'}">
+                                                    <lightning:buttonMenu alternativeText="{!$Label.c.Show_menu}" iconSize="small" variant="border-filled" onselect="{!c.submitForConfirmation}" menuAlignment="right" value="{!sos.Id}">
+                                                        <lightning:menuItem label="Submit for Approval" value="{!sos.Id}" title="{!Index}"/>
+                                                    </lightning:buttonMenu>
+                                                </aura:if>
+                                            </td>
+                                        </tr>                        
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.fromProject}">
+            <div class="slds-docked-form-footer">
+                <lightning:button label="Back to Project" class="slds-button slds-button__brand" onclick="{!c.backToProject}" variant="brand"/>
+            </div>
+            </aura:if>
+            <aura:if isTrue="{!v.fromProjectWB}">
+            <div class="slds-docked-form-footer">
+                <lightning:button label="Back to Project Workbench" class="slds-button slds-button__brand" onclick="{!c.backToProjectWB}" variant="brand"/>
+            </div>
+            </aura:if>
+        </div>
+        <aura:if isTrue="{!and(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')}">
+                            <div class="slds-notify_container slds-is-relative mbr-class15" aura:id="criteriaMsgId">
+                                <div class="slds-notify slds-notify_toast slds-theme_warning mbr-class16" role="alert">
+                                    <span class="slds-assistive-text">warning</span>
+                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                    <div class="slds-notify__content mbr-class17">
+                                        <h2 class="slds-text-heading_small mbr-class18">
+                                            {!v.NoSlotsMessage}
+                                        </h2>
+                                    </div>
+                                </div>
+                            </div>     
+                        </aura:if>
+                        <aura:if isTrue="{!v.showPOPUp}">
+                            <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open mbr-class19">
+                                <div class="slds-modal__container">
+                                    <div class="slds-modal__content slds-p-around_large" id="modal-content-id-1">
+                                           <span class="slds-f-size14">Are you sure you want to delete?</span>
+                                       </div>
+                                    <footer class="slds-modal__footer slds-text-align_center">
+                                        <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-record="delete" value="Yes"  aura:id="yesId" onclick="{!c.DeleteRecordById}">Yes</button> 
+                                        <button type="button" value="No" class="slds-button slds-button--neutral" data-record="NO"  aura:id="noId" onclick="{!c.CancelDelete}">No</button> 
+                                        
+                                    </footer>
+                                </div>
+                            </section>
+                            <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+                        </aura:if>
+        <!-- Table Section Start -->
+        <aura:if isTrue="{!v.showMmainSpin}">
+            <span class="mbr-class37">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>
+        <aura:if isTrue="{!v.BudgetList.length>10}">
+            <div class="mbr-class36"> 
+                <lightning:button  label="Previous" onclick="{!c.Previous}" disabled="{!v.prevDisa}" /> &nbsp;&nbsp;&nbsp;&nbsp;     
+                <aura:iteration items="{!v.pageNumbers}" var="pn">          
+                    <a title="Click" class="mbr-class37" data-pageNumber="{!pn}" onclick="{!c.getRecordOnPageNumber}" aura:id="PNIds">{!pn}</a> &nbsp;   
+                </aura:iteration>       
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                <lightning:button label="Next" onclick="{!c.Next}" disabled="{!v.nextDisa}" aura:id="AllNextId"/>              
+            </div>
+        </aura:if>
+    </body>
+</aura:component>

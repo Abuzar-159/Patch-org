@@ -1,0 +1,707 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global" controller="MatchBill">
+    
+    <!--<ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}"/>-->    
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/AccountsPayable.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/AccountsReceivable.css"/> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Matchbill.css"/> 
+    <aura:attribute name="IsApprovedShow" type="Boolean"/>
+    <aura:attribute name="isTotalAmtShow" type="Boolean"/>
+    <aura:attribute name="disCurrency" type="Boolean" default="false"/>
+    <aura:attribute name="multipleLineItem" type="Boolean" default="false"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:method name="matchBill" action="{!c.Match_Bill}" access="PUBLIC"/>
+    <aura:attribute name="SelectedVendorId" type="String"/>
+    <aura:attribute name="POID" type="String"/>
+    <aura:attribute name="BillId" type="String"/>
+    <aura:attribute name="SelectedBillIds" type="List"/>
+    <aura:attribute name="SelectedPOs" type="List"/>
+    <aura:attribute name="filterCond" type="String" default=''/>
+    <aura:attribute name="dueDate" type="Date"/>
+    <aura:attribute name="bstartInd" type="Integer" default="0"/>
+    <aura:attribute name="bEndInd" type="Integer" default="5"/>
+    <aura:attribute name="startInd" type="Integer" default="0"/>
+    <aura:attribute name="EndInd" type="Integer" default="5"/>
+    <aura:attribute name="BillList" type="Object[]" default=''/>
+    <aura:attribute name="selecteBillList" type="Object[]" default=''/>
+    <aura:attribute name="offSet" type="Integer" default='0'/>
+    <aura:attribute name="TotalSelected" type="Decimal" default="0.00"/>
+    <aura:attribute name="qtyTolerance" type="Decimal" default="0.00"/>
+    <aura:attribute name="unitPrTolerance" type="Decimal" default="0.00"/>
+    <aura:attribute name="item" type="Object" default=''/>
+    <aura:attribute name="organisation" type="Map" default="{}"/>
+    <aura:attribute name="Selected" type="Boolean" default='false'/>
+    <aura:attribute name="itemList" type="Object[]"/>
+    <aura:attribute name="invoiceReconcileList" type="Object[]"/>
+    <aura:attribute name="serviceReconcileList" type="Object[]"/>
+    <aura:attribute name="autoInvReconcileList" type="Object[]"/>
+    <aura:attribute name="invoiceReconcile" type="Object" />
+    <aura:attribute name="showHeader" type="Boolean" default="true"/>
+    <aura:handler name="change" value="{!v.dueDate}" action="{!c.fetchBillsWithCond}"/>
+    <aura:handler name="change" value="{!v.SelectedVendorId}" action="{!c.fetchBillsWithCond}"/>
+    <aura:handler name="change" value="{!v.POID}" action="{!c.fetchBillsWithCond}"/>
+    <aura:handler name="change" value="{!v.BillId}" action="{!c.fetchBillsWithCond}"/>
+    <aura:attribute name="stockInwarditems" type="Object[]"/>
+    <aura:attribute name="SelectedItem" type="Object"/>
+    <aura:attribute name="SelectedBillItems" type="Object"/>
+    <aura:attribute name="voucherCreate" type="Aura.Action"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.handleComponentEvent2}"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/> 
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="show" type="Integer" default="10"/>
+    <aura:attribute name="BillsSL" type="List"/>
+    <aura:attribute name="displayPage" type="Boolean" default="true"/>
+    <aura:attribute name="tabular" type="Boolean" default="true"/>
+    <aura:attribute name="grid" type="Boolean" default="false"/>
+    <aura:attribute name="approvalProcess" type="Boolean" default="false"/>
+    <aura:handler name="SortRecord" event="c:SortRecord" action="{!c.SortRecodEventHandler}"/>  
+    
+    <lightning:spinner aura:id="spinner" variant="brand" size="large"/>
+    <div class="maqsood erp_mark7 erp_Mark7 matchB-class1 erp" >
+        <aura:if isTrue="{!v.showHeader}">
+            <div class="slds-page-header matchB-class2">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <lightning:icon iconName="standard:orders" size="large" alternativeText="{!$Label.c.orders}" title="orders" />
+                            </div>
+                            <div class="slds-media__bod matchB-class3">
+                                <p class="slds-text-title--caps slds-line-height--reset"></p>
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger--hover matchB-class4" aria-haspopup="true">
+                                            <a href="javascript:void(0);" class="slds-context-bar__label-action matchB-class5" title="Menu Item">
+                                                <span class="slds-truncate"><h1 class="slds-page-header__title slds-truncate" title="Match Vendor Bill's">{!$Label.c.Acc_Pay_Match_Bill}</h1></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top">
+                        <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.SelectedVendorId}"  IconName="standard:account" placeholder="{!$Label.c.Search_Vendors}" qry="AND ERP7__Account_Type__c = 'Vendor'" />
+                    </div>
+                </div>
+            </div> 
+            <div class="epr_Mark7 ">
+                <div class="row slds-grid slds-m-around--small matchB-class6">
+                    <div class="col-md-3 col-xs-3">
+                        <c:CustomInputLookUp objectAPIName="ERP7__PO__c" selectedRecordId="{!v.POID}"  IconName="standard:orders" placeholder="{!$Label.c.Search_Purchase_Orders}" qry="{!'AND ERP7__Vendor__c = \''+v.SelectedVendorId+'\''}" label="{!$Label.c.Purchase_Order}"/>
+                        
+                    </div> 
+                    <div class="col-md-3 col-xs-3">
+                        <c:CustomInputLookUp objectAPIName="ERP7__Bill__c" selectedRecordId="{!v.BillId}"  IconName="standard:record" placeholder="{!$Label.c.Search_Bills}" qry="{!empty(v.SelectedVendorId)? empty(v.POID)? '' : ' AND ERP7__Purchase_Order__c =\''+v.POID+'\'' : empty(v.POID)? 'AND ERP7__Vendor__c=\''+v.SelectedVendorId+'\'' : ' AND ERP7__Vendor__c=\''+v.SelectedVendorId+'\' AND ERP7__Purchase_Order__c =\''+v.POID+'\''}" aura:id="BillId" label="{!$Label.c.Acc_Pay_Bill}"/>
+                        
+                    </div> 
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                            <strong>{!$Label.c.EmployeeReviewV2_Due_Date} </strong> : <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="dueDate" value="{!v.dueDate}"/>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right"><br/>
+                            <lightning:button variant="brand" label="Match" onclick="{!c.Match_Bill}" class="{!empty(v.selecteBillList)?'slds-show slds-button slds-button--brand':'slds-hide'}"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <br/>
+            
+        </aura:if>
+        <aura:if isTrue="{!v.grid}">
+            <div  class="{!if(empty(v.BillList),'','matchB-class24')}">
+                <div colspan="13" class="matchB-class7">
+                    <div class="slds-notify_container slds-is-relative matchB-class8">
+                        <div class="slds-notify slds-notify_toast slds-theme_warning matchB-class9" role="alert">
+                            <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                            <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                            <div class="slds-notify__content matchB-class10">
+                                <h2 class="slds-text-heading_small matchB-class11">{!$Label.c.Acc_Pay_No_Items_in_Table}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div aura:id="gridData">
+                <div class="row m-0" >
+                    <aura:iteration items="{!v.BillList}" var="item" indexVar="ind">
+                        <c:MatchBillItem SelectedBillIds="{!v.SelectedBillIds}" approvalProcess="{!v.approvalProcess}" tabularMatchBill="{!v.tabular}" gridMatchBill="{!v.grid}" item="{!item}" index="{!ind+1}" displCurrency="{!v.disCurrency}" org="{!v.organisation}"/>  
+                    </aura:iteration>
+                </div>
+            </div>
+            <aura:set attribute="else">
+                <div aura:id="tablurdata" >
+                    <div class="maqsood erp_Mark7">
+                        <div class=" matchB-class12"> <!--card shadow-custom-->
+                            <div class="card-body matchB-class13">
+                                <div class="table-responsive matchB-class14" tabindex="1">
+                                    <table class="slds-table">  
+                                        <thead>
+                                            <tr class="slds-line-height_reset"> 
+                                                <th class="slds-is-sortable" scope="col">&nbsp;</th>
+                                                <th class="slds-text-align_center matchB-class15" scope="col"> 
+                                                    <div class="slds-th__action slds-th__action_form"> 
+                                                        
+                                                    </div>
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Bill}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="Name" Label="{!$Label.c.Bill}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="Name" Label="{!$Label.c.Bill}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Name" title="Sort" class="matchB-class16">
+                                       Bill#<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Purchase_Order}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Purchase_Order__r.Name" Label="{!$Label.c.Purchase_Order}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Purchase_Order__r.Name" Label="{!$Label.c.Purchase_Order}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Order__r.Name" title="Sort" class="matchB-class16">
+                                       Purchase Order<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.InventoryConsole_Vendor}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Vendor__r.Name" Label="{!$Label.c.InventoryConsole_Vendor}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Vendor__r.Name" Label="{!$Label.c.InventoryConsole_Vendor}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Vendor__r.Name" title="Sort" class="matchB-class16">
+                                       Vendor<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <aura:if isTrue="{!v.isTotalAmtShow}">
+                                                    <th class="slds-is-sortable" scope="col" title="{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}">
+                                                        <div class="slds-truncate2" >                                                         
+                                                            <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Total_Amount__c" Label="{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                                <aura:set Attribute="else">
+                                                                    <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Total_Amount__c" Label="{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                      Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                                </aura:set>   
+                                                            </aura:if> 
+                                                        </div>
+                                                        <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Total_Amount__c" title="Sort" class="matchB-class16">
+                                           Total Amount<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                 
+                                       </span>  -->                                 
+                                                    </th>
+                                                    <th class="slds-is-sortable" scope="col" title="{!$Label.c.Acc_Recev_Paid_Amount}">
+                                                        <div class="slds-truncate2" >                                                         
+                                                            <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Amount_Paid__c" Label="{!$Label.c.Acc_Recev_Paid_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                                <aura:set Attribute="else">
+                                                                    <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Amount_Paid__c" Label="{!$Label.c.Acc_Recev_Paid_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                      Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                                </aura:set>   
+                                                            </aura:if> 
+                                                        </div>
+                                                        <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Total_Amount__c" title="Sort" class="matchB-class16">
+                                           Paid Amount<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                    
+                                       </span> -->                                  
+                                                    </th>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.IsApprovedShow}">
+                                                    <th class="slds-is-sortable" scope="col" title="{!$Label.c.Acc_Pay_Due_Amount}">
+                                                        <div class="slds-truncate2" >                                                         
+                                                            <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Amount_Due__c" Label="{!$Label.c.Acc_Pay_Due_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                                <aura:set Attribute="else">
+                                                                    <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Amount_Due__c" Label="{!$Label.c.Acc_Pay_Due_Amount}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                      Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                                </aura:set>   
+                                                            </aura:if> 
+                                                        </div>
+                                                        <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Total_Amount__c" title="Sort" class="matchB-class16">
+                                           Due Amount<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                      
+                                       </span>-->
+                                                    </th>
+                                                </aura:if>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Acc_Pay_Bill_Date}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Bill_Date__c" Label="{!$Label.c.Acc_Pay_Bill_Date}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Bill_Date__c" Label="{!$Label.c.Acc_Pay_Bill_Date}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Bill_Date__c" title="Sort" class="matchB-class16">
+                                       Bill Date<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->                                   
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.EmployeeReviewV2_Due_Date}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Due_Date__c" Label="{!$Label.c.EmployeeReviewV2_Due_Date}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0  AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Due_Date__c" Label="{!$Label.c.EmployeeReviewV2_Due_Date}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0  AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Due_Date__c" title="Sort" class="matchB-class16">
+                                       Due Date<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span> -->                                  
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Aging_Days}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Due_Date_Days__c" Label="{!$Label.c.Aging_Days}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Due_Date_Days__c" Label="{!$Label.c.Aging_Days}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Due_Date__c" title="Sort" class="matchB-class16">
+                                       Due Date<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span> -->                                  
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.ContractConsole_Type}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="RecordType.DeveloperName" Label="{!$Label.c.ContractConsole_Type}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="RecordType.DeveloperName" Label="{!$Label.c.ContractConsole_Type}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Total_Amount__c" title="Sort" class="matchB-class16">
+                                       Type<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.DoPayment_Status}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="RecordType.DeveloperName" Label="{!$Label.c.DoPayment_Status}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="RecordType.DeveloperName" Label="{!$Label.c.DoPayment_Status}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Total_Amount__c" title="Sort" class="matchB-class16">
+                                       Type<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Match}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Matched__c" Label="{!$Label.c.Match}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Matched__c" Label="{!$Label.c.Match}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Matched__c" title="Sort" class="matchB-class16">
+                                       Match<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                       
+                                   </span>-->
+                                                </th>
+                                                
+                                                <th class="slds-is-sortable" scope="col" title="{!$Label.c.Acc_Recev_Posted}">
+                                                    <div class="slds-truncate2" >                                                         
+                                                        <aura:if isTrue="{!v.organisation.Id != ''}">   
+                                                            <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Posted__c" Label="{!$Label.c.Acc_Recev_Posted}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                              Query="{! ' AND ERP7__Organisation__c = \''+ v.organisation.Id+'\''+ ' AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c != Null AND RecordTypeId != null'}"/>
+                                                            <aura:set Attribute="else">
+                                                                <c:SortRecords ObjectAPIName="ERP7__Bill__c" OrderBy="ERP7__Posted__c" Label="{!$Label.c.Acc_Recev_Posted}" show="{!v.show}" Fields=",RecordType.DeveloperName,ERP7__Vendor__r.Id,ERP7__Vendor__r.Name,ERP7__Purchase_Order__r.Name"
+                                                                                  Query=" AND ERP7__Amount_Due__c>0 AND ERP7__Vendor__c!=Null AND RecordTypeId != null"/>
+                                                            </aura:set>   
+                                                        </aura:if> 
+                                                    </div>
+                                                    <!--<span onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Posted__c" title="Sort" class="matchB-class16">
+                                       Posted<lightning:icon iconName="utility:sort" size="x-small" alternativeText="sort!" title="sort" />                                     
+                                   </span>-->
+                                                    
+                                                </th>
+                                                <th class="slds-cell-shrink" scope="col">{!$Label.c.Clone}</th>
+                                                <th class="slds-is-sortable" scope="col"></th>
+                                            </tr>    
+                                        </thead>  
+                                        <tbody>
+                                            <tr  class="{!if(empty(v.BillList),'','matchB-class24')}">
+                                                <td colspan="13" class="matchB-class7">
+                                                    <div class="slds-notify_container slds-is-relative matchB-class8">
+                                                        <div class="slds-notify slds-notify_toast slds-theme_warning matchB-class17" role="alert">
+                                                            <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                            <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                            <div class="slds-notify__content matchB-class10">
+                                                                <h2 class="slds-text-heading_small matchB-class18">{!$Label.c.Acc_Pay_No_Items_in_Table}</h2>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr> 
+                                            <aura:iteration items="{!v.BillList}" var="item" indexVar="ind">
+                                                <c:MatchBillItem SelectedBillIds ="{!v.SelectedBillIds}" item="{!item}" index="{!ind+1}" org="{!v.organisation}"/>  
+                                            </aura:iteration>
+                                            
+                                        </tbody> 
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aura:set>
+        </aura:if>
+        
+        <div aura:id="autoReconcileBills">
+            <div class="card-body p-2">
+                <h5 class="mb-2"><strong>Auto Match</strong></h5>
+                <table class="table">         
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="" scope="col">
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate2" title="Transaction Summary">Bill Name</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate2" title="Transaction Summary">Product Name</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate2" title="Transaction Summary">Stock Inward Name</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate2" title="Transaction Date">Quantity</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate2" title="Salesforce Transaction Reference">Unit Price</div>
+                            </th>
+                        </tr> 
+                    </thead> 
+                    <tbody>
+                        <aura:iteration var="bt" indexVar="STCounter" items="{!v.autoInvReconcileList}">
+                            <tr class="slds-hint-parent">
+                                <td name="{!STCounter}">
+                                    <lightning:button class="slds-button slds-button_neutral neutralC" name="{!STCounter}" onclick="{!c.delete_Item}">
+                                        <a title="Remove Item">
+                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                        </a>
+                                    </lightning:button>
+                                </td>
+                                <td data-label="">
+                                    <div class="slds-truncate2" title="Start Date">
+                                        <a href="{!'/'+bt.inventoryRecon.ERP7__Bill_Line_Item__c}" target="__blank">{!bt.billName}</a>
+                                    </div>
+                                </td>
+                                <td data-label="">
+                                    <div class="slds-truncate2" title="Beginning Balance">
+                                        <a href="{!'/'+bt.inventoryRecon.ERP7__Product__c}" target="__blank">{!bt.productName}</a>
+                                    </div>
+                                </td>
+                                <td data-label="">
+                                    <div class="slds-truncate2" title="Beginning Balance">
+                                        <a href="{!'/'+bt.inventoryRecon.ERP7__Stock_Inward_Line_Item__c}" target="__blank">{!bt.soliName}</a>
+                                    </div>
+                                </td>
+                                <td data-label="">
+                                    <div class="slds-truncate2" title="Beginning Balance">
+                                        <lightning:formattedNumber value="{!bt.inventoryRecon.ERP7__Quantity__c}" />
+                                    </div>
+                                </td>
+                                <td data-label="">
+                                    <div class="slds-truncate2" title="Ending Balance">
+                                        <lightning:formattedNumber value="{!bt.inventoryRecon.ERP7__Price__c}" />
+                                    </div>
+                                </td>
+                            </tr>                        
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="slds-docked-form-footer">
+                <lightning:button class="slds-button slds-button_neutral" onclick="{!c.closeAuto}" label="Cancel Auto Match"></lightning:button>
+                <lightning:button variant="brand" iconName="utility:change_record_type" label="Match Items" onclick="{!c.saveAutoReconcile}"></lightning:button>
+                
+            </div>
+        </div>
+        <div aura:id="selectedBills">
+            <aura:iteration items="{!v.selecteBillList}" var="itemBill" >
+                <div class="epr_Mark7 row m-0 pb-100">
+                    <div class="col-md-6 slds-m-bottom--small">
+                        <article class="slds-card slds-m-top--small">
+                            <header class="slds-card__header p-0">
+                                <div class="slds-media slds-media--center slds-has-flexi-truncate">
+                                    <div class="slds-media__figure">
+                                    </div>
+                                    <div class="slds-media__body slds-truncate">
+                                        <div class="slds-grid">
+                                            <div class="slds-col">
+                                                <h4 class="matchB-class19">
+                                                    <span>{!$Label.c.bill_line_items}(#<a href="{!'/'+itemBill.key.Id}" target="__blank">{!itemBill.key.Name}</a>)</span>
+                                                </h4>
+                                            </div>
+                                            <div class="slds-col">
+                                                <div class="float-right">
+                                                    <aura:if isTrue="{!itemBill.value.length>0}">
+                                                        <lightning:button variant="brand" iconName="utility:change_record_type" label="Auto Match" onclick="{!c.fetchReconciliationRecords}"></lightning:button>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                            <!--<span>{!$Label.c.Acc_Pay_Bill}(#<a href="{!'/'+itemBill.key.Id}" target="__blank">{!itemBill.key.Name}</a>) {!$Label.c.Line_Items}</span> --> 
+                                        
+                                    </div>
+                                </div>
+                                <div class="slds-no-flex">
+                                </div>
+                            </header>
+                            <div class="slds-card__body" >
+                                <!--div  class="matchB-class20" -->
+                                <div class="maquiScroller">
+                                    <table class="slds-table slds-table_fixed-layout slds-no-row-hover slds-table--cell-buffer">
+                                        <thead >
+                                            <tr class="slds-text-heading--label">
+                                                
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.Line_Item}">{!$Label.c.Line_Item}</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.AddSubscription_Product}">{!$Label.c.AddSubscription_Product}</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.MO_ReqQty}">{!$Label.c.MO_ReqQty}</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.PurchaseOrderPDF_Unit_Price}">{!$Label.c.PurchaseOrderPDF_Unit_Price}</div>
+                                                </th>
+                                                
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.InventoryConsole_Total_Price}">{!$Label.c.InventoryConsole_Total_Price}&nbsp;<lightning:helptext content="{!$Label.c.With_VAT}" class="helptextcustom"></lightning:helptext></div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="{!$Label.c.Select}">{!$Label.c.Select}</div>
+                                                </th>
+                                                
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration items="{!itemBill.value}" var="lineItem">
+                                                <tr class="slds-hint-parent">
+                                                    
+                                                    <td valign="top">
+                                                        <div class="slds-truncate matchB-class21" title="{!lineItem.Name}">
+                                                            <a href="{!'/'+lineItem.Id}" target="_blank">{!lineItem.Name}</a>
+                                                        </div>
+                                                    </td>
+                                                    <td valign="top">
+                                                        <div class="slds-truncate matchB-class21" title="{!lineItem.ERP7__Product__r.Name}">
+                                                            <a href="{!'/'+lineItem.ERP7__Product__c}" target="_blank"> {!lineItem.ERP7__Product__r.Name}</a>
+                                                        </div>
+                                                    </td>
+                                                    <td valign="top">
+                                                        <div class="slds-truncate" title="Quantity">
+                                                            {!lineItem.ERP7__Quantity__c}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate" title="Unit Price">
+                                                            <lightning:formattedNumber  value="{!lineItem.ERP7__Amount__c}"/>
+                                                            <aura:if isTrue="{!and(lineItem.ERP7__Debit_Line_Item_Unit_Price__c!=null, lineItem.ERP7__Debit_Line_Item_Unit_Price__c>0)}">
+                                                                (-{!lineItem.ERP7__Debit_Line_Item_Unit_Price__c})
+                                                            </aura:if>
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td valign="top">
+                                                        <div class="slds-truncate" title="Total Price">
+                                                            <lightning:formattedNumber   value="{!lineItem.ERP7__Total_Amount__c}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td valign="top">
+                                                        <div class="{!if(equals(lineItem.ERP7__Purchase_Order_Line_Items__r.ERP7__Match_Type__c ,'Three-Way'),'slds-show','slds-hide')}">
+                                                            <lightning:button onclick="{!c.searchStockInWard}" name="{!lineItem.Id}" value="{!itemBill.key.Id}" class="{!if(lineItem.Id == v.SelectedItem.Id,'slds-button--brand roll','slds-button--neutral roll')}"/>
+                                                        </div>	
+                                                    </td>
+                                                    
+                                                </tr>
+                                            </aura:iteration>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!--/div-->
+                            </div>
+                        </article>
+                    </div>
+                    
+                    <div class="col-md-6 slds-m-bottom--small">
+                        <article class="slds-card slds-m-top--small">
+                            <header class="slds-card__header slds-grid">
+                                <div class="slds-media slds-media--center slds-has-flexi-truncate">
+                                    <div class="slds-media__figure">
+                                    </div>
+                                    <div class="slds-media__body slds-truncate">
+                                        <h4 class="matchB-class19">
+                                            <span>{!equals(v.SelectedItem.ERP7__Product__r.ERP7__Item_Type__c,'Service')? $Label.c.Work_Order: $Label.c.Stock_Inward_List}</span>
+                                        </h4>
+                                    </div>
+                                </div>
+                                <div class="slds-no-flex">
+                                </div>
+                            </header>
+                            <div class="slds-card__body" >
+                                <div class="matchB-class22">
+                                    <div class="maquiScroller" >
+                                        <table class="slds-table slds-table_fixed-layout slds-no-row-hover slds-table--cell-buffer">
+                                            <thead>
+                                                <tr class="slds-text-heading--label">
+                                                    <th scope="col">
+                                                        <aura:if isTrue="{!v.stockInwarditems.length>0}">
+                                                            <div class="slds-truncate" title="Action"><lightning:input type="checkbox" aura:id="checkbox" checked="{!v.Selected}" onchange="{!c.selectAll}"/></div>
+                                                        </aura:if>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.Line_Item}">{!equals(v.SelectedItem.ERP7__Product__r.ERP7__Item_Type__c,'Service')? $Label.c.Work_Order: $Label.c.Stock_Inward_List}</div>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.MO_ReqQty}">{!$Label.c.MO_ReqQty}</div>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.PurchaseOrderPDF_Unit_Price}">{!$Label.c.PurchaseOrderPDF_Unit_Price}</div>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.AddSubscription_Product}">{!$Label.c.AddSubscription_Product}</div>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.Serial}">{!$Label.c.Serial}</div>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="{!$Label.c.Lot_Number}">{!$Label.c.Lot_Number}</div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.stockInwarditems}" var="item" >
+                                                    <aura:if isTrue="{!if(and(equals(v.SelectedItem.ERP7__Bill__c,itemBill.key.Id),equals(item.key.Id,v.SelectedItem.Id)),true,false)}">
+                                                        <aura:iteration items="{!item.value}" var="inward" start="{!v.startInd}" end="{!v.EndInd}"> 
+                                                            <tr class="{!if(inward.varianceExists,'slds-text-heading--label varinaceRow','slds-text-heading--label')}">
+                                                                <td width="5%" scope="col" valign="top">
+                                                                    <div class="slds-truncate" title="Action">
+                                                                        <aura:if isTrue="{!v.Selected}">
+                                                                            <lightning:input type="checkbox" aura:id="checkbox" checked="true" disabled="true"/>
+                                                                            <aura:set attribute="else">
+                                                                                <lightning:input type="checkbox" aura:id="checkbox" value="{!inward.Id}"  checked="{!inward.isSelect}" onchange="{!c.validationcheck}" disabled="{!if(and(v.TotalSelected >= v.SelectedItem.ERP7__Quantity__c,not(inward.isSelect),not(inward.varianceExists)),true,false)}"/>
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="slds-truncate matchB-class21" title="{!inward.Name}" ><a href="{!'/'+inward.Id}" target="_blank">{!inward.Name}</a></div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="slds-truncate" title="Quantity">{!inward.ERP7__Quantity__c}</div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="{!(inward.varianceExists)?'epr_Mark7 slds-show':'slds-hide'}">
+                                                                        <!--a href="javascript:void(0);" >< Moin Coomented this on 07th july aura:id="pricePopup" title="Price Variance"  data-toggle="popover" onclick="{!c.showpopup}" onmouseover="{!c.showpopup}" data-placement="right" data-content="{!'Bill Price :'+v.SelectedItem.ERP7__Amount__c}" data-trigger="hover" -->
+                                                                        <lightning:formattedNumber  value="{!inward.ERP7__Unit_Price__c}"/>
+                                                                        <!--/a-->
+                                                                    </div>
+                                                                    <div class="{!(inward.varianceExists)?'epr_Mark7 slds-hide':'slds-show'}">
+                                                                        <!--a href="javascript:void(0);" -->
+                                                                        <lightning:formattedNumber  value="{!inward.ERP7__Unit_Price__c}"/>
+                                                                        <!--/a-->
+                                                                    </div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="slds-truncate matchB-class21" title="{!inward.ERP7__Product__r.Name}" >{!inward.ERP7__Product__r.Name}</div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="slds-truncate matchB-class21" title="{!inward.ERP7__Serial_Number__c}" ><a href="{!'/'+inward.ERP7__Serial__c}" target="_blank">{!inward.ERP7__Serial_Number__c}</a></div>
+                                                                </td>
+                                                                <td scope="col" valign="top">
+                                                                    <div class="slds-truncate" title="Quantity">{!inward.ERP7__Material_Batch_Lot__r.Name}</div>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                        <tr>
+                                                            <td colspan="7">
+                                                                <div class="{!(item.value.length > 5)?'slds-show':'slds-show'}">
+                                                                    
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                                                        </div>
+                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                                            <div class="matchB-class23" >
+                                                                                <button class="slds-button slds-button_brand"  type="button" onclick="{!c.showlessstockInwards}" disabled="{!if(v.startInd == 0, true,false)}"> {!$Label.c.Previous}</button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                                            <div class="matchB-class23" >
+                                                                                <button class="slds-button slds-button_brand "  type="button" onclick="{!c.showMorestockInwards}" disabled="{!if(and(item.value.length>5,v.EndInd le item.value.length), false,true)}"> {!$Label.c.Next_UsersShiftMatch}</button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </aura:if>
+                                                </aura:iteration>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    
+                    <div class="slds-docked-form-footer h60px">
+                        <lightning:button class="slds-button slds-button--neutral" onclick="{!c.cancel}" label="{!$Label.c.Cancel_ManageLeave}"/>
+                        <aura:if isTrue="{!v.invoiceReconcileList.length>0}">
+                            <lightning:button class="slds-button slds-button--brand" onclick="{!c.save}" label="{!$Label.c.ContractConsole_Save}"/>
+                        </aura:if>
+                    </div>
+                </div>
+            </aura:iteration>
+        </div>
+    </div>
+</aura:component>

@@ -1,0 +1,120 @@
+<aura:component >
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="subTotalPrice" type="Decimal"/>
+    <aura:attribute name="taxPerQuantity" type="Decimal"/>
+    <aura:attribute name="totalTax" type="Decimal"/>
+    <aura:attribute name="invoiceLineItem" type="Object"/>
+    <aura:attribute name="validate" type="Boolean" default="true"/>
+    <aura:attribute name="manageCOGS" type="Boolean" default="true"/>
+    <aura:method name="checkValidation" action="{!c.validate}"/> 
+    <aura:attribute name="vatTax" type="Decimal"/>
+    <aura:attribute name="otherTax" type="Decimal"/>
+    <aura:attribute name="discount" type="Decimal"/>
+    <aura:attribute name="callToupdatePrice" type="Decimal" />
+    <aura:attribute name="Qty" type="Decimal" default="0.00"/>
+    <aura:attribute name="SOId" type="String" default=""/>
+    <aura:attribute name="recordType" type="String" default=""/>
+    <aura:attribute name="StdId" type="String" default=""/>
+   <aura:attribute name="Index" type="Integer"/>
+    <aura:attribute name="MultiOrder" type="Boolean" default="false"/>
+    <aura:attribute name="downPaymentAmount" type="Decimal" />
+	<aura:attribute name="downPaymentPercentage" type="Decimal" />
+
+   	<!--<aura:attribute name="GenOrder" type="Boolean" default="true"/>-->
+     
+    <td>  
+        
+        <div class="slds-p-top--xx-small slds-grid"> 
+          <!-- <aura:if isTrue="{!v.GenOrder}"> -->
+            <aura:if isTrue="{!v.invoiceLineItem.ERP7__Sales_Order_Line_Item__c != undefine}">
+                <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order_Line_Item__c"  selectedRecordId="{!v.invoiceLineItem.ERP7__Sales_Order_Line_Item__c}"   placeholder="Search" />
+                <aura:set attribute="else">
+                    <lightning:input value="{!v.invoiceLineItem.ERP7__Order_Product__c}" class="nolble" disabled="true" aura:id="" placeholder="Search.."/> 
+                </aura:set>
+            </aura:if>
+            
+               <!--<aura:set attribute="else">
+               <ERP7:CustomInputLookUp objectAPIName="OrderItem"  selectedRecordId="{!v.invoiceLineItem.ERP7__Order_Product__c}"   placeholder="Search" />
+               </aura:set>
+           </aura:if>-->
+            
+             
+            
+        </div>
+    </td>
+    <aura:if isTrue="{!v.MultiOrder==true}">
+        <td> 
+            <div class="slds-p-top--xx-small" >
+                <aura:if isTrue="{!v.invoiceLineItem.ERP7__Sales_Order_Line_Item__c != undefine}">
+                    <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order__c"  selectedRecordId="{!v.invoiceLineItem.ERP7__Sales_Order_Line_Item__r.ERP7__Sales_Order__c}"  placeholder="Search" hideRemove="true"/>  
+                    <aura:set attribute="else">
+                        <c:CustomInputLookUp objectAPIName="Order"  selectedRecordId="{!v.invoiceLineItem.ERP7__Order_Product__r.OrderId}"  placeholder="Search" hideRemove="true"/>  
+                    </aura:set>
+                </aura:if>
+            </div>
+        </td>
+    </aura:if>
+    <td> 
+        <div class="slds-p-top--xx-small" >
+            <c:CustomInputLookUp objectAPIName="Product2"  selectedRecordId="{!v.invoiceLineItem.ERP7__Product__c}"  placeholder="Search" hideRemove="true"/>   
+        </div>
+    </td>
+    <td>  
+        <aura:if isTrue="{!and(v.Qty!=0,v.Qty==1)}">
+        <div class="slds-p-top--xx-small">
+            <lightning:input type="number" aura:id="requiredField"  variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Quantity__c}" max="{!v.Qty}"  onchange="{!c.updateCalculations}" step="any" messageWhenRangeOverflow="{!'Qty should be equal to '+v.Qty}"/>
+        </div>
+            <aura:set attribute="else">
+            <lightning:input type="number" aura:id="requiredField"  variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Quantity__c}" max="{!v.Qty}"  onchange="{!c.updateCalculations}" step="any" messageWhenRangeOverflow="{!'Qty should be less than or equal to '+v.Qty}"/>
+            </aura:set>
+        </aura:if>
+    </td>                                  
+    <td>   
+        <div class="slds-p-top--xx-small">
+            <lightning:input type="number"   variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Unit_Price__c}"  formatter="currency" step="any" readonly="true"/>
+            
+        </div>
+    </td> 
+    <td>   
+        <div class="slds-p-top--xx-small">
+            <lightning:input type="number"  variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Sub_Total__c}"  formatter="currency" step="any" readonly="true"/>
+            
+        </div>
+    </td> 
+    <td>   
+        <div class="slds-p-top--xx-small" >
+            <lightning:input type="number"  variant="label-hidden" value="{!(v.invoiceLineItem.ERP7__VAT_Amount__c+v.invoiceLineItem.ERP7__Other_Tax__c)}"  formatter="currency" step="any" readonly="true"/>
+            
+        </div>
+    </td>
+      <td>   
+        <div class="slds-p-top--xx-small">
+            <lightning:input type="number"  variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Discount_Amount__c}"  formatter="currency" step="any" readonly="true"/>
+            
+        </div>
+    </td>
+    <td>   
+        <div class="slds-p-top--xx-small">
+            <lightning:input type="number"  variant="label-hidden" value="{!v.invoiceLineItem.ERP7__Total_Price__c}"  formatter="currency" step="any" readonly="true"/>
+            
+        </div>
+    </td>
+    <td>   
+        <div class="slds-p-top--xx-small">
+            <lightning:textarea placeholder="{!$Label.c.Enter_Description}" value="{!v.invoiceLineItem.ERP7__Description__c}" maxlength="255" messageWhenTooLong="A maximum of 255 characters are allowed." class="customwidth400"/>
+        </div>
+    </td>
+    <aura:if isTrue="{!and(v.recordType != 'Advance', v.manageCOGS)}">
+        <td>   
+            <div class="slds-p-top--xx-small">
+                <lightning:input 
+                                 type="checkbox" 
+                                 name="red" 
+                                 checked="{!v.invoiceLineItem.ERP7__Account_COGS__c}" 
+                                 onchange="{!c.handleCheckboxChange}" 
+                                 />
+            </div>
+        </td>
+    </aura:if>
+
+</aura:component>

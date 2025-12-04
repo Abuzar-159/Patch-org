@@ -1,0 +1,704 @@
+<aura:component Controller="ERP7.InboundLogisticsLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Recieve.css"/>
+	<ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css" />
+    <!--<ltng:require styles="/resource/ERP7__maqcustom/css/maqmain.css" /> -->
+    <ltng:require styles="/resource/ERP7__maqcustom/css/maqmain-min.css" />
+	<ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    
+	<aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="newBatch" type="Batch__c" default="{sobjectType : 'Batch__c','Name': '','ERP7__Product__c':'','ERP7__Barcode__c':'',ERP7__Shelf_Life_Expiration_Date__c:'',ERP7__Production_Version__c:''}"/>
+    <aura:attribute name="proNameForBatch" type="String" default=""/>
+    <aura:attribute name="currLOLIForBatch" type="String" default=""/>
+    <aura:attribute name="logisticIds" type="String" default=""/>
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="Logistics" type="object[]"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="SiteName" type="String" default=""/>
+    <aura:attribute name="ChannelName" type="String"/>
+    <aura:attribute name="ChannelId" type="String"/>
+    <aura:attribute name="show" type="String" default="25"/>
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="showSelAll" type="Boolean" default="false"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="FileList" type="object[]"/> 
+    <aura:attribute name="Putaway" type="Boolean" default="false"/>
+    <aura:attribute name="renderList" type="Boolean" default="true"/>
+    <aura:attribute name="attachIds" type="List" />
+    <aura:attribute name="BatchError" type="String" default=''/>
+     <aura:attribute name="Showbin" type="Boolean" default="false"/>
+    <aura:attribute name="ShowAttachment" type="Boolean" default="true"/>
+    <aura:attribute name="putawayLocationReq" type="Boolean" default="false"/>
+    <aura:attribute name="helpText" type="string" default="{!$Label.c.InboundLogQtyHelpText}"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.getAllRecieveDetails}" />
+    <aura:method name="getAllRecieveDetails" action="{!c.getAllRecieveDetails}"></aura:method>
+    <aura:method name="Back2Inbound" action="{!c.Back2Inbound}"></aura:method>
+    <aura:method name="Receive" action="{!c.Receive}"></aura:method>
+    <aura:method name="viewChange" action="{!c.viewChange}"></aura:method>
+    <aura:method name="PutawaySelected" action="{!c.PutawaySelected}"></aura:method>
+    <aura:method name="PutawayAll" action="{!c.PutawayAll}"></aura:method>
+    <aura:method name="SaveLinesReceived" action="{!c.SaveLinesReceived}"></aura:method>
+    <aura:method name="SaveAllLOLines" action="{!c.SaveAllLOLines}"></aura:method>
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCodes}"/>
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    
+    
+    <head>  
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <!--<ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />-->
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <!--<apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />-->
+        
+        <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+    </head> 
+    <span class="Receive-class2">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}"/>
+            </span>
+            
+    <body aura:id="body" class="Receive-class1" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}">
+    	<div class="erp_mark7 bg-white" id="er7">
+            
+            <div class="slds-page-header slds-page-header--object-home" role="banner">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">                                
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large Receive-class3"> 
+                                        <img src="/resource/erp7__SLDS213/assets/icons/custom/Stock_receiving.png" width="58"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod Receive-class4">
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate Receive-class5" title="Inbound Logistics" onclick="{!c.Back2Inbound}">Inbound Logistics</h1>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Receive-class6">
+                        
+                          <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Receive-class7" ></i>&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/></div>
+                        <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter Receive-class7" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                        
+                    </div>
+                </div>
+                <div class="slds-p-left--small text-left" >
+                 <aura:iteration var="so" indexVar="Counter" items="{!v.Container.LogisticWrapperList}">
+                     <lightning:formattedUrl label="{!so.Logistic.Name}" target="_blank" value="{!'/'+so.Logistic.Id}"/>
+                     <aura:If isTrue="{!(v.Container.LogisticWrapperList.length-1 > Counter)}">,&nbsp;</aura:If> 
+                    </aura:iteration>
+                </div>
+            </div>
+            <div class="epr_Mark7 erp_mark7 bg-white" >
+                <div  class="panel-collapse collapse in">
+                    <div class="panel-body Receive-class9" >
+                        <!-- Nav tabs --> 
+                        <ul class="nav nav-tabs " role="tablist">
+                            <li class="nav-item"><!-- /lightning/n/ERP7__Outbound_Logistic -->
+                                <a class="nav-link Receive-class10" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Inbound}">
+                                <i class="fa fa-list Receive-class11" aria-hidden="true" ></i>&nbsp;List</a>
+                            </li>    
+                           <li class="{!if((v.Container.Putaway == false),'nav-item active','nav-item')}">
+                               <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!if((v.Container.Putaway == true),c.Receive,'')}">
+                                   <i class="fa fa-level-down Receive-class11" aria-hidden="true"></i>&nbsp;Receive</a>
+                            </li>
+                                
+                            <li class="{!if((v.Container.Putaway == true),'nav-item active','nav-item')}"> 
+                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!if((v.Container.Putaway == false),c.PutawaySelected,'')}" data-logisticlineId="">
+                                <i class="fa fa-level-up Receive-class11" aria-hidden="true"></i>&nbsp;Putaway </a>
+                            </li>
+                        </ul>
+                        
+                    </div>
+                </div>
+            	<div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed Receive-class13','slds-notify_container slds-is-fixed Receive-class12')}">
+                    <div class="slds-notify slds-notify_toast slds-theme_error Receive-class14" role="status">
+                        <span class="slds-assistive-text">error</span>
+                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                            <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                        </span>
+                        <div class="slds-notify__content">
+                            <h2 class="slds-text-heading_x-small Receive-class15" >{!v.exceptionError}
+                            </h2>
+                        </div>
+                        <div class="slds-notify__close Receive-class16">
+                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+        </div> 
+        	   <div class="Receive-class17 erp_Mark7 maqsood" >
+                	
+                   <aura:If isTrue="{!v.Container.Putaway == false}">
+                       <aura:if isTrue="{!v.showSelAll}">
+                          <div class="slds-grid pt-2"> <lightning:input type="checkbox" checked="{!v.checkAll}" onchange="{!c.selectAll}"/>&nbsp;<label class="Receive-class18"><strong>Select All</strong></label></div>
+                       </aura:if>       
+                       
+                       <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIWrapperList}">
+                           <div class="card mb-1 border-custom-m">
+                               <div  class="{!if(and(LOLI.LOLI.ERP7__Quantity__c != 0, LOLI.LOLI.ERP7__Quantity__c == LOLI.LOLI.ERP7__Putaway_Quantity__c),' sucesscolor card-header border-bottom-0 text-left','card-header border-bottom-0 text-left')}">
+                                   <div id="{!LOLI.LOLI.Id}" >
+											  &nbsp; {!itemCounter+1}. 
+                                       <span class="Receive-class21">
+                                           <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.Name}" value="{!'/'+LOLI.LOLI.Id}" class=""/>
+                                       </span>
+                                       
+                                       <span class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Is_Kit__c == true,'Receive-class22','Receive-class23')}">
+                                           &nbsp;&nbsp;&nbsp;Explode Kit: &nbsp;
+                                           <lightning:input type="checkbox" checked="{!LOLI.LOLI.ERP7__Explode__c}" readonly="true"/> 
+                                       </span>
+                                       <span class="{!if(LOLI.errMsg != '','Receive-class24','Receive-class25')}">{!LOLI.errMsg}</span>
+                                   </div>
+                               </div>
+                               <div class="card-body p-1">
+                                 
+                                      
+                                           <table class="table  slds-no-row-hover Receive-class26" > 
+                                               <thead>                                               
+                                                   <tr class="" bgcolor="#f3f3f3">
+                                                       <th scope="col" class="slds-text-heading--label"></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" ><div class="slds-truncate2" title="">Product</div></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" ><div class="slds-truncate2" title="">Qty</div></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" ><div class="slds-truncate2" title="">Received</div></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" ><div class="slds-truncate2" title="">Receive <span class="redtxt">*</span></div></th>
+                                                       <th scope="col" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c, (LOLI.LOLI.ERP7__RMA_Line_Item__c != undefined || LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c != undefined)),'slds-text-heading--label Receive-class28','slds-text-heading--label Receive-class29')}"><div class="slds-truncate2" title="">Serial No.</div></th>
+                                                       <th scope="col" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c, and(LOLI.LOLI.ERP7__RMA_Line_Item__c == undefined, LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c == undefined)),'slds-text-heading--label Receive-class28','slds-text-heading--label Receive-class29')}"><div class="slds-truncate2" title="">Serial Prefix</div></th>
+                                                       <th scope="col" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c, and(LOLI.LOLI.ERP7__RMA_Line_Item__c == undefined, LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c == undefined)),'slds-text-heading--label Receive-class28','slds-text-heading--label Receive-class29')}"><div class="slds-truncate2" title="">Starting No.</div></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" ><div class="slds-truncate2" title="">ORDER</div></th>
+                                                       <th scope="col" class="slds-text-heading--label Receive-class27" >Special Instruction</th>
+                                                       <th scope="col" class="slds-text-heading--label">Action</th>
+                                                       <aura:if isTrue="{!v.ShowAttachment}">
+                                                           <th scope="col" class="slds-text-heading--label"></th>
+                                                       </aura:if>                                                   
+                                                   </tr>
+                                               </thead>
+                                               <tbody>
+                                                   <tr class="Receive-class1" id="{!LOLI.LOLI.Id}">
+                                                       <td class="slds-truncate2">
+                                                           <aura:If isTrue="{!(LOLI.LOLI.ERP7__Quantity_Received__c > LOLI.LOLI.ERP7__Putaway_Quantity__c)}">
+                                                               <lightning:input type="checkbox" checked="{!LOLI.selected}"/>
+                                                           </aura:If> 
+                                                       </td>
+                                                       <td class="slds-truncate2 Receive-class30">
+                                                           <div class="slds-truncate2" title="">
+                                                               <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Product__c}"/>
+                                                               <aura:If isTrue="{!LOLI.LOLI.ERP7__Product__r.ERP7__Picture__c != undefined}">
+                                                                   &nbsp;<img src="{!LOLI.LOLI.ERP7__Product__r.ERP7__Picture__c}" id="itemImage" class="Receive-class31 " styleclass="mobiledisplaynone"/>
+                                                               </aura:If>
+                                                           </div>
+                                                       </td>
+                                                       <td class="slds-truncate2 scanMN Receive-class30">
+                                                           <div class="slds-truncate2 scanMN" title=""><lightning:formattedNumber value="{!LOLI.LOLI.ERP7__Quantity__c}" class="scanMN"/></div>
+                                                       </td>
+                                                       <td class="slds-truncate2 scanMN Receive-class30">
+                                                           <div class="slds-truncate2 scanMN" title=""> <lightning:formattedNumber value="{!LOLI.LOLI.ERP7__Quantity_Received__c}" class="scanMN"/></div>
+                                                       </td>
+                                                       <td class="slds-truncate scanMN Receive-class30" >
+                                                           <div class="slds-truncate2 scanMN" title=""><lightning:input type="number" variant="label-hidden" value="{!LOLI.ReceiveQty}" class="form-control1 scanMN"/> </div>
+                                                       </td>
+                                                       <td data-label=" Serial Number" align="left" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c == true, (LOLI.LOLI.ERP7__RMA_Line_Item__c != undefined)),'slds-truncate2 Receive-class33','slds-truncate2 Receive-class34')}" valign="middle">
+                                                           <div class="slds-truncate2 scanMN" title="">a<lightning:formattedUrl target="_blank"  value="{!LOLI.LOLI.ERP7__RMA_Line_Item__r.ERP7__Serial_Number__c}" label="{!LOLI.LOLI.ERP7__RMA_Line_Item__r.ERP7__Serial_Number__r.Name}" class="form-control1"/></div>
+                                                       </td>
+                                                       <td data-label=" Serial Number" align="left" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c == true, (LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c != undefined)),'slds-truncate2 Receive-class33','slds-truncate2 Receive-class34')}" valign="middle">
+                                                           <div class="slds-truncate2 scanMN" title=""> <lightning:formattedUrl target="_blank"  value="{!LOLI.LOLI.ERP7__Transfer_Order_Line_Item__r.ERP7__SerialNumber__c}" label="{!LOLI.LOLI.ERP7__Transfer_Order_Line_Item__r.ERP7__SerialNumber__r.Name}" class="form-control1"/></div>
+                                                       </td>
+                                                       <td data-label=" Serial No." align="left" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c, and(LOLI.LOLI.ERP7__RMA_Line_Item__c == undefined, LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c == undefined)),'slds-truncate2 Receive-class33','slds-truncate2 Receive-class34')}" valign="middle">
+                                                           <div class="slds-truncate2 scanMN" title=""> <lightning:input type="text" variant="label-hidden" value="{!LOLI.LOLI.ERP7__Serial_Number_Prefix__c}"  class="form-control1" /></div>
+                                                       </td>
+                                                       <td data-label=" Serial No." align="left" class="{!if(and(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c, and(LOLI.LOLI.ERP7__RMA_Line_Item__c == undefined, LOLI.LOLI.ERP7__Transfer_Order_Line_Item__c == undefined)),'slds-truncate2 Receive-class33','slds-truncate2 Receive-class34')}" valign="middle">
+                                                           <div class="slds-truncate2 scanMN" title=""><lightning:input type="text" variant="label-hidden" value="{!LOLI.LOLI.ERP7__Starting_Number__c}"  class="form-control1" /></div>
+                                                       </td>
+                                                       <td class="slds-truncate2 Receive-class30" >
+                                                           <div class="slds-truncate2" title=""><lightning:formattedUrl target="_blank"  value="{!'/'+LOLI.LOLI.ERP7__Logistic__c}" label="{!LOLI.LOLI.ERP7__Logistic__r.Name}"/></div>
+                                                       </td>
+                                                       <td class="slds-truncate2 scanMN Receive-class35" >
+                                                           <lightning:textarea variant="label-hidden" value="{!LOLI.LOLI.ERP7__Special_Instruction__c}" class="scanMN" maxlength="255"/>
+                                                       </td>
+                                                       <td class="slds-truncate2"> 
+                                                           <aura:If isTrue="{!and(LOLI.LOLI.ERP7__Putaway_Quantity__c == 0, LOLI.LOLI.ERP7__Quantity__c > 0)}"> <i class="fa fa-level-up Receive-class36" aria-hidden="true" ></i></aura:If>
+                                                           <aura:If isTrue="{!and(LOLI.LOLI.ERP7__Putaway_Quantity__c > 0, LOLI.LOLI.ERP7__Quantity__c > LOLI.LOLI.ERP7__Putaway_Quantity__c, LOLI.LOLI.ERP7__Quantity__c > 0)}"> <i class="fa fa-level-up Receive-class37" aria-hidden="true"></i></aura:If>
+                                                           <aura:If isTrue="{!and(LOLI.LOLI.ERP7__Quantity__c == LOLI.LOLI.ERP7__Putaway_Quantity__c, LOLI.LOLI.ERP7__Quantity__c > 0)}"> <i class="fa fa-level-up Receive-class38" aria-hidden="true" ></i></aura:If>
+                                                           &nbsp; 
+                                                           <aura:If isTrue="{!(LOLI.LOLI.ERP7__Quantity_Received__c > LOLI.LOLI.ERP7__Putaway_Quantity__c)}">
+                                                               <a class="" onclick="{!c.PutawaySelected}" data-logisticlineId="{!LOLI.LOLI.Id}">Putaway</a>
+                                                           </aura:If>
+                                                           <aura:If isTrue="{!!(LOLI.LOLI.ERP7__Quantity_Received__c > LOLI.LOLI.ERP7__Putaway_Quantity__c)}">
+                                                               <span class="Receive-class36-normal">Putaway</span> 
+                                                           </aura:If>
+                                                           <br/><span class="Receive-class39">{!LOLI.LOLI.ERP7__Putaway_Quantity__c}/{!LOLI.LOLI.ERP7__Quantity__c}</span>
+                                                       </td>
+                                                       <aura:if isTrue="{!v.ShowAttachment}">
+                                                           <td  class="slds-truncate2" >
+                                                               <aura:If isTrue="{!(LOLI.Attach.Id == undefined)}">
+                                                                   <div class="slds-col">
+                                                                       <lightning:input aura:id="fileik" type="file" files="{!v.FileList}" name="{!LOLI.LOLI.Id}" onchange="{!c.onFileUploaded}" onfocus="{!c.reRender}" oncomplete="{!c.reRender}" onblur="{!c.reRender}" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" multiple="true" class="Receive-class40"/>
+                                                                   </div>
+                                                               </aura:If>
+                                                               <aura:If isTrue="{!(LOLI.Attach.Id != undefined)}">
+                                                                   <div class="slds-grid Receive-class41" > 
+                                                                       <div class="slds-col">
+                                                                           <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC" name="{!LOLI.Attach.Id}" title="Attachment">
+                                                                               <a href="javascript:void(0)" title="delete" class="Receive-class42">
+                                                                                   <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="Receive-class43" />  
+                                                                               </a>
+                                                                           </lightning:button>
+                                                                           &nbsp;
+                                                                           <lightning:formattedUrl value="{!'/'+LOLI.Attach.Id}" label="{!LOLI.Attach.Name}" target="_blank" class="fcolor"/>
+                                                                       </div>
+                                                                       <div class="slds-col slds-truncate2">
+                                                                           <img src="{!'/servlet/servlet.FileDownload?file='+LOLI.Attach.Id}" class="Receive-class44"/>
+                                                                       </div>
+                                                                   </div>
+                                                               </aura:If>                                                                    
+                                                           </td>
+                                                       </aura:if>
+                                                   </tr>
+                                               </tbody>
+                                           </table>
+                                           
+                                      
+                                   
+                               </div>
+                           </div>
+                            
+                           
+                       </aura:iteration>
+                       <div class="slds-docked-form-footer" >
+                           <div class="col-md-12 Receive-class46" >
+                               <!--<button onclick="{!c.CancelLO}" class="btn1 slds-button slds-button-neutral2" >Cancel</button>-->
+                               <button onclick="{!c.SaveLinesReceived}" class="btn1 slds-button slds-button--brand Receive-class47" >Save</button>
+                           </div>
+                       </div>
+                   </aura:If>
+                   
+                   <aura:if isTrue="{!v.renderList}">
+                   <aura:If isTrue="{!v.Container.Putaway == true}">
+                       <div class="{!if(and(v.Container.DisMsg != undefined, v.Container.DisMsg != ''),'col-md-12 Receive-class48','col-md-12 Receive-class49')}">{!v.Container.DisMsg}</div>
+                       <div class="row-fluid Receive-class50" >
+                           <div class="col-md-12 Receive-class51 pt-2" >
+                               
+                               <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIWrapperList}">
+                               	<aura:If isTrue="{!LOLI.selected}">
+                                    <div class="erp_Mark7 maqsood">
+                                        
+                                        <div class="card text-center border-custom-m pt-1 mb-2" >
+                                            <div class="{!if(and(LOLI.LOLI.ERP7__Quantity_Received__c != 0, LOLI.LOLI.ERP7__Quantity_Received__c == LOLI.LOLI.ERP7__Putaway_Quantity__c),'sucesscolor card-header','card-header')}">
+                                                <div id="{!LOLI.LOLI.Id}" >
+                                                    
+                                                    <ul class="nav nav-pills card-header-pills">
+                                                        <li class="nav-item mr-5">
+                                                            <button value="New" onclick="{!c.AddNewStock}" data-counter="{!itemCounter}" data-subcounter="" data-lastcounter="" title="Add Stock" class="{!if(and(LOLI.LOLI.ERP7__Explode__c != true) ,'Receive-class53 slds-button slds-button_brand','Receive-class54 slds-button slds-button_brand')}"> <!-- Receive-class53-->
+                                                                <i aria-hidden="true" class="fa fa-plus " >  </i> New <!-- Receive-class55-->
+                                                            </button>
+                                                        </li>
+                                                        <li class="nav-item mr-5 pt-1">
+                                                            <div class="slds-truncate2" title="{!LOLI.LOLI.ERP7__Product__r.Name}">
+                                                            <aura:If isTrue="{!LOLI.LOLI.ERP7__Product__r.ERP7__Picture__c != undefined}">
+                                                                <img src="{!LOLI.LOLI.ERP7__Product__r.ERP7__Picture__c}" id="itemImage" class="Receive-class32" styleclass="mobiledisplaynone"/>
+                                                            </aura:If>&nbsp;
+                                                            
+                                                            	<lightning:formattedUrl label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Product__c}" target="_blank" class=""/>
+                                                            </div>
+                                                        </li>
+                                                        <li class="nav-item mr-5 pt-1">
+                                                            <div class="slds-truncate2" title="{!LOLI.LOLI.Name}">
+                                                                <lightning:formattedUrl label="{!LOLI.LOLI.Name}" value="{!'/'+LOLI.LOLI.Id}" target="_blank" class=""/> 
+                                                            </div>
+                                                        </li>
+                                                        <li class="nav-item mr-2">
+                                                           
+                                                                <span class="badge bg-primary">Total Quantity: <strong>{!LOLI.LOLI.ERP7__Quantity__c}</strong></span>
+                                                            
+                                                        	
+                                                        </li>
+                                                        <li class="nav-item mr-2">
+                                                            <span class="badge bg-success">Received Quantity: <strong>{!LOLI.LOLI.ERP7__Quantity_Received__c}</strong></span>
+                                                        </li>
+                                                        <li class="nav-item mr-2">
+                                                            <span class="badge bg-warning">Putaway Quantity : <strong>{!LOLI.LOLI.ERP7__Putaway_Quantity__c}</strong></span>
+                                                        </li>
+                                                        <li class="nav-item">
+                                                            <span class="badge bg-danger">Remaining Putaway : <strong>{!LOLI.LOLI.ERP7__Quantity_Received__c - LOLI.LOLI.ERP7__Putaway_Quantity__c}</strong></span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-1">
+                                                <!--<table class="table" >
+                                                           <tbody>
+                                                               <tr>
+                                                                   <td class="slds-truncate2 Receive-class52" align="center">
+                                                                       <button value="New" onclick="{!c.AddNewStock}" data-counter="{!itemCounter}" data-subcounter="" data-lastcounter="" title="Add Stock" class="{!if(and(LOLI.LOLI.ERP7__Explode__c != true) ,'Receive-class53','Receive-class54')}">
+                                                                            <i aria-hidden="true" class="fa fa-plus Receive-class55" >  </i> New
+                                                                       </button>
+                                                                   </td>
+                                                                   <td class="slds-truncate2 Receive-class56" height="" >            
+                                                                       <h4 class="Receive-class59">
+                                                                          
+                                                                       </h4>
+                                                                   </td>
+                                                                   <td class="slds-truncate2 Receive-class56" height="" >
+                                                                       <h4 class="Receive-class59">
+                                                                         
+                                                                       </h4>
+                                                                   </td> 
+                                                                   <td class="slds-truncate2 Receive-class56" height="">
+                                                                       <h4 class="Receive-class59">Total Quantity : {!LOLI.LOLI.ERP7__Quantity__c}</h4>
+                                                                   </td>
+                                                                   <td class="slds-truncate2 Receive-class56" height="">
+                                                                       <h4 class="Receive-class59">Received Quantity: {!LOLI.LOLI.ERP7__Quantity_Received__c}</h4>
+                                                                   </td>
+                                                                   <td  height="" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Is_Kit__c != true,'slds-truncate2 Receive-class57','slds-truncate2 Receive-class58')}">
+                                                                       <h4 class="Receive-class59">Putaway Quantity : {!LOLI.LOLI.ERP7__Putaway_Quantity__c}</h4>
+                                                                   </td>
+                                                               </tr>
+                                                           </tbody>
+                                                       </table> -->
+                                                <div class="xs">
+                                                    
+                                                        
+                                                        <table class="table Receive-class60" >
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td colspan="7">
+                                                                        <aura:iteration var="Stock" indexVar="stockCounter" items="{!LOLI.StockWrapperList}">
+                                                                            <table class="table slds-no-row-hover Receive-class61" >
+                                                                                <thead class="{!if(stockCounter == 0,'Receive-class22','Receive-class23')}">
+                                                                                    <tr bgcolor="#f3f3f3">
+                                                                                        <td class="slds-text-heading--label slds-truncate2 Receive-class62" >
+                                                                                            &nbsp; 
+                                                                                        </td>
+                                                                                        <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class63" scope="col" valign="middle">Name<span class="redtxt"> *</span> </th>
+                                                                                        <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle">Quantity<span class="redtxt"> *</span> <lightning:helptext content="{!v.helpText}" class="customicon-maq"/></th>
+                                                                                        <th  scope="col" align="left" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Lot_Tracked__c == true,'slds-text-heading--label slds-truncate2 Receive-class65','slds-text-heading--label slds-truncate2 Receive-class66')}" valign="middle"> Batch <span class="redtxt"> *</span></th>
+                                                                                        <th  scope="col" align="left" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c == true,'slds-text-heading--label slds-truncate2 Receive-class65','slds-text-heading--label slds-truncate2 Receive-class66')}" valign="middle"> Serial No. <span class="redtxt"> *</span></th>
+                                                                                        <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle"> Location <aura:if isTrue="{!v.putawayLocationReq}"><span class="redtxt"> *</span></aura:if></th>
+                                                                                        <th align="left" scope="col" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Is_OverSized_Item__c != true,'slds-text-heading--label slds-truncate2 Receive-class65','slds-text-heading--label slds-truncate2 Receive-class66')}" valign="middle"> Bin</th> 
+                                                                                        
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    <tr>
+                                                                                        <td align="left" class="slds-truncate2 Receive-class67" data-label="" valign="middle">
+                                                                                            <span class="{!if(!and((Stock.Stock.ERP7__No_of_Items_Sold__c > 0 || Stock.Stock.ERP7__No_of_Items_Reserved__c > 0 || Stock.Stock.ERP7__No_of_Items_Requested__c > 0)),'Receive-class68','Receive-class69')}">
+                                                                                                <button onclick="{!c.RemoveTheStock}" data-counter="{!itemCounter}" data-subcounter="{!stockCounter}" data-lastcounter="" title="delete Stock" class="Receive-class70">
+                                                                                                    <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="Receive-class43"/>
+                                                                                                </button>
+                                                                                            </span>&nbsp;&nbsp;
+                                                                                            <!--lightning:icon iconName="utility:add" size="x-small"></lightning:icon-->
+                                                                                        </td>
+                                                                                        <td align="left" class="slds-truncate2 scanMN Receive-class71" valign="middle">
+                                                                                            <lightning:input type="text" variant="label-hidden" value="{!Stock.Stock.Name}" class=" scanMN"/>
+                                                                                        </td>
+                                                                                        <td class="slds-truncate2 scanMN Receive-class72" data-label="Quantity" align="left"  valign="middle">
+                                                                                            <span>
+                                                                                                <lightning:input type="text" variant="label-hidden" value="{!Stock.SPLI[0].ERP7__Quantity__c}" class=" scanMN"/>
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        
+                                                                                        <td align="left" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Lot_Tracked__c == true,' Receive-class33',' Receive-class34')}" valign="middle">
+                                                                                            <!--<lightning:input type="text" variant="label-hidden" value="{!Stock.BatchNumber.Name}"/>-->
+                                                                                            
+                                                                                            <div class="slds-grid scanMN epr_Mark7">
+                                                                                                <div class="col-md-11 pl-0 pr-0">
+                                                                                                    <span>
+                                                                                                        <c:CustomInputLookUp objectAPIName="ERP7__Batch__c" aura:id="sl" IconName="standard:user" selectedRecordId="{!Stock.BatchNumber.Id}" qry="{!' And ERP7__Expired__c=false And ERP7__Product__c = \''+LOLI.LOLI.ERP7__Product__c+'\''}" />
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                                <div class="col-md-1 pr-0 Receive-class73" >                                                                                               
+                                                                                                    <i class="fa fa-cogs Receive-class74" onclick="{!c.createBatchModal}" title="Create New Batch" data-index="{!LOLI.LOLI.Id}" data-prodId="{!Stock.Stock.ERP7__Product__c}" data-proName="{!LOLI.LOLI.ERP7__Product__r.Name}"/>                                                                                               
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td data-label="Serial No." align="left" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Serialise__c == true,'slds-truncate2 scanMN Receive-class33','slds-truncate2 scanMN Receive-class34')}" valign="middle">
+                                                                                            <lightning:input type="text" variant="label-hidden" value="{!Stock.SerialNumber.ERP7__Serial_Number__c}" class="scanMN"/>
+                                                                                        </td>
+                                                                                        
+                                                                                        <td align="left" class="scanMN Receive-class75" valign="middle">
+                                                                                            <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="sl" IconName="standard:location" selectedRecordId="{!Stock.Stock.ERP7__Location__c}" qry="{!' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                        </td>
+                                                                                        <td align="left" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Is_OverSized_Item__c != true,'scanMN Receive-class33','scanMN Receive-class34')}" valign="middle">
+                                                                                            <!--<aura:renderif isTrue="{!v.Showbin}">-->
+                                                                                            <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c " aura:id="sl" IconName="standard:entity" selectedRecordId="{!Stock.Stock.ERP7__StorageContainer__c}" qry="{!' AND ERP7__Location__c = \''+Stock.Stock.ERP7__Location__c+'\' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                            <!--</aura:renderif>-->
+                                                                                        </td>
+                                                                                        
+                                                                                    </tr>
+                                                                                    <tr>
+                                                                                        <td height="5"></td>
+                                                                                    </tr>
+                                                                                </tbody>
+                                                                            </table>
+                                                                            
+                                                                            <div class="{!if(Stock.Stock.Id != undefined,'Receive-class76','Receive-class77')}">
+                                                                                <div class="slds-grid">
+                                                                                	<div class="col pr-2 ">
+                                                                                        <b class="Receive-class78">
+                                                                                            Items in Stock : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c}
+                                                                                       
+                                                                                        <!--<div class="card stat-widget mb-1 border-custom-m">
+                                                                                            <div class="card-body p-2">
+                                                                                                 <h2 class="mt-0 mb-0">{!Stock.Stock.ERP7__Number_of_Item_In_Stock__c}</h2>
+                                                                                                <p class="mb-1">Items in Stock :</p>
+                                                                                               </div>
+                                                                                        </div>-->
+                                                                                    </div>
+                                                                                    <div class="col  pr-2 ">
+                                                                                         <b class="Receive-class78">Reserved : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                        <!--<div class="card stat-widget mb-1 border-custom-m">
+                                                                                            <div class="card-body p-2">
+                                                                                                 <h2 class="mt-0 mb-0">{!Stock.Stock.ERP7__Number_of_Item_In_Stock__c}</h2>
+                                                                                                <p class="mb-1">Reserved :</p>
+                                                                                               </div>
+                                                                                        </div>-->
+                                                                                    </div>
+                                                                                    <div class="col  pr-2 ">
+                                                                                        <b class="Receive-class78">Requested to Replenish : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                       <!-- <div class="card stat-widget mb-1 border-custom-m">
+                                                                                            <div class="card-body p-2">
+                                                                                                 <h2 class="mt-0 mb-0">{!Stock.Stock.ERP7__Number_of_Item_In_Stock__c}</h2>
+                                                                                                <p class="mb-1">Requested to Replenish : </p>
+                                                                                               </div>
+                                                                                        </div>-->
+                                                                                    </div>
+                                                                                    <div class="col  pr-2 ">
+                                                                                         <b class="Receive-class78">Requested to Dispatch : </b>{!Stock.Stock.ERP7__Number_of_Items_Requested_to_Dispatch__c} 
+                                                                                        <!--<div class="card stat-widget mb-1 border-custom-m">
+                                                                                            <div class="card-body p-2">
+                                                                                                 <h2 class="mt-0 mb-0">{!Stock.Stock.ERP7__Number_of_Items_Requested_to_Dispatch__c}</h2>
+                                                                                                <p class="mb-1">Requested to Dispatch : </p>
+                                                                                               </div>
+                                                                                        </div>-->
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                                <!---<b>Items in Stock : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                <b class="Receive-class78">Reserved : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                <b class="Receive-class78">Requested to Replenish : </b> {!Stock.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                <b class="Receive-class78">Requested to Dispatch : </b>{!Stock.Stock.ERP7__Number_of_Items_Requested_to_Dispatch__c} -->
+                                                                            </div>
+                                                                            
+                                                                        </aura:iteration>
+                                                                        <aura:iteration var="PLIK" indexVar="itemCounterkit" items="{!LOLI.BOMS}">
+                                                                            <div class="xs">
+                                                                                <div class="table-responsive Receive-class79" >
+                                                                                    <div id="{!LOLI.LOLI.Id}" class="{!if(and(PLIK.LOLI.ERP7__Quantity_Received__c != 0, (PLIK.LOLI.Quantity_Received__c * PLIK.MRP.ERP7__Total_Amount_Required__c)/PLIK.LOLI.Quantity__c == PLIK.lineItemprocessedQuantity),'sucesscolor','color1')}" >
+                                                                                        <table class="table" >
+                                                                                            <tbody>
+                                                                                                <tr>
+                                                                                                    <td   align="center" class="Receive-class52">
+                                                                                                        <button value="New" onclick="{!c.AddNewStockKit}" data-counter="{!itemCounter}" data-subcounter="{!itemCounterkit}" data-lastcounter="" title="Add Stock" class="{!if(and(!PLIK.LOLI.ERP7__Product__r.Serialise__c) ,'Receive-class53','Receive-class54')}">
+                                                                                                            <i aria-hidden="true" class="fa fa-plus Receive-class55" > </i> New
+                                                                                                        </button>
+                                                                                                    </td>
+                                                                                                    <td  class="slds-truncate2 Receive-class56" height="" >
+                                                                                                        <h4 class="Receive-class59">
+                                                                                                            <aura:If isTrue="{!PLIK.MRP.ERP7__MRP_Product__r.ERP7__Picture__c != undefined}">
+                                                                                                                <img src="{!PLIK.MRP.ERP7__MRP_Product__r.ERP7__Picture__c}" id="itemImage" class="Receive-class32" styleclass="mobiledisplaynone"/>
+                                                                                                            </aura:If>
+                                                                                                            &nbsp;	<lightning:formattedUrl label="{!PLIK.MRP.ERP7__MRP_Product__r.Name}" value="{!'/'+PLIK.MRP.ERP7__MRP_Product__c}" target="_blank" class="color-white"/>
+                                                                                                        </h4>
+                                                                                                    </td>
+                                                                                                    <td  height="" class="Receive-class56">
+                                                                                                        <h4 class="Receive-class59">Quantity : {!PLIK.MRP.ERP7__Total_Amount_Required__c}</h4>
+                                                                                                    </td>
+                                                                                                    <td  height="" class="Receive-class56">
+                                                                                                        <h4 class="Receive-class59">Received : {!(PLIK.LOLI.ERP7__Quantity_Received__c * PLIK.MRP.ERP7__Total_Amount_Required__c)/PLIK.LOLI.ERP7__Quantity__c}</h4>
+                                                                                                    </td>
+                                                                                                    <td  height="" class="{!if(LOLI.LOLI.ERP7__Product__r.ERP7__Is_Kit__c != true,'slds-truncate2 Receive-class57','slds-truncate2 Receive-class58')}">
+                                                                                                        <h4 class="Receive-class59">Added : {!PLIK.lineItemprocessedQuantity}</h4>
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                    <table class="table Receive-class60" >
+                                                                                        <tbody>
+                                                                                            <tr>
+                                                                                                <td colspan="7">
+                                                                                                    <aura:iteration var="stockk" indexVar="stockCounterkit" items="{!PLIK.StockWrapperList}">
+                                                                                                        <table class="slds-table slds-no-row-hover Receive-class61" >
+                                                                                                            <thead class="{!if(stockCounterkit == 0,'Receive-class22','Receive-class23')}">
+                                                                                                                <tr >
+                                                                                                                    <td class="slds-text-heading--label Receive-class62">
+                                                                                                                        &nbsp; 
+                                                                                                                    </td>
+                                                                                                                    <th align="left" class="slds-text-heading--label Receive-class63" scope="col" valign="middle">Name<span class="redtxt"> *</span> </th>
+                                                                                                                    <th class="slds-text-heading--label Receive-class64" scope="col" align="left"  valign="middle">Quantity<span class="redtxt"> *</span> </th>
+                                                                                                                    <th scope="col" align="left" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c == true,'slds-text-heading--label Receive-class65','slds-text-heading--label Receive-class66')}" valign="middle"> Batch <span class="redtxt"> *</span></th>
+                                                                                                                    <th scope="col" align="left" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c == true,'slds-text-heading--label Receive-class65','slds-text-heading--label Receive-class66')}" valign="middle"> Serial No. <span class="redtxt"> *</span></th>
+                                                                                                                    <th align="left" class="slds-text-heading--label Receive-class64" scope="col"  valign="middle"> Location <aura:if isTrue="{!v.putawayLocationReq}"><span class="redtxt"> *</span></aura:if> </th>
+                                                                                                                    <th align="left" scope="col" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Is_OverSized_Item__c != true,'slds-text-heading--label Receive-class65','slds-text-heading--label Receive-class66')}" valign="middle"> Bin</th>
+                                                                                                                    
+                                                                                                                </tr>
+                                                                                                            </thead>
+                                                                                                            <tbody>
+                                                                                                                <tr>
+                                                                                                                    <td align="left" class="Receive-class67" data-label="" valign="middle">
+                                                                                                                        <span class="{!if(!and((stockk.Stock.ERP7__No_of_Items_Sold__c > 0 || stockk.Stock.ERP7__No_of_Items_Reserved__c > 0 || stockk.Stock.ERP7__No_of_Items_Requested__c > 0)),'Receive-class68','Receive-class69')}">
+                                                                                                                            <div value="New" onclick="{!c.RemoveTheStockKit}" data-counter="{!itemCounterkit}" data-subcounter="{!stockCounterkit}" data-lastcounter="{!itemCounter}" title="delete Stock" class="Receive-class70">
+                                                                                                                                <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="Receive-class43"/>
+                                                                                                                            </div>
+                                                                                                                        </span>
+                                                                                                                    </td>
+                                                                                                                    <td align="left" class="scanMN Receive-class71"  valign="middle">
+                                                                                                                        <lightning:input type="text" variant="label-hidden" value="{!stockk.Stock.Name}" class="scanMN"/>
+                                                                                                                    </td>
+                                                                                                                    <td class="scanMN Receive-class72" data-label="Quantity" align="left" valign="middle">
+                                                                                                                        <span>
+                                                                                                                            <lightning:input type="text" variant="label-hidden" value="{!stockk.SPLI[0].ERP7__Quantity__c}" class="scanMN"/>
+                                                                                                                        </span>
+                                                                                                                    </td>
+                                                                                                                    <td  align="left" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c == true,'scanMN Receive-class33','scanMN Receive-class34')}" valign="middle">
+                                                                                                                        <lightning:input type="text" variant="label-hidden" value="{!stockk.BatchNumber.Name}" class="scanMN"/>
+                                                                                                                        
+                                                                                                                    </td>
+                                                                                                                    <td data-label="Serial No." align="left" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c == true,'scanMN Receive-class33','scanMN Receive-class34')}" valign="middle">
+                                                                                                                        <lightning:input type="text" variant="label-hidden" value="{!stockk.SerialNumber.ERP7__Serial_Number__c}" class="scanMN"/>
+                                                                                                                    </td>
+                                                                                                                    
+                                                                                                                    <td align="left" class="scanMN Receive-class75" valign="middle">
+                                                                                                                        <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c"  IconName="standard:location" selectedRecordId="{!stockk.Stock.ERP7__Location__c}"/></span>
+                                                                                                                    </td>
+                                                                                                                    
+                                                                                                                    <td align="left" class="{!if(PLIK.MRP.ERP7__MRP_Product__r.ERP7__Is_OverSized_Item__c != true,'scanMN Receive-class33','scanMN Receive-class34')}" valign="middle">
+                                                                                                                        <!--<aura:renderif isTrue="{!v.Showbin}">-->
+                                                                                                                        <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c "  IconName="standard:entity" selectedRecordId="{!stockk.Stock.ERP7__StorageContainer__c}"/></span>
+                                                                                                                        <!--</aura:renderif>-->
+                                                                                                                        
+                                                                                                                    </td>
+                                                                                                                    
+                                                                                                                </tr>
+                                                                                                                <tr>
+                                                                                                                    <td height="5"></td>
+                                                                                                                </tr>
+                                                                                                            </tbody>
+                                                                                                        </table>
+                                                                                                        <div class="{!if(stockk.Stock.Id != undefined,'Receive-class76','Receive-class77')}">
+                                                                                                            <b>Items in Stock : </b> {!stockk.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                                            <b class="Receive-class78">Reserved : </b> {!stockk.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                                            <b class="Receive-class78">Requested to Replenish : </b> {!stockk.Stock.ERP7__Number_of_Item_In_Stock__c} 
+                                                                                                            <b class="Receive-class78">Requested to Dispatch : </b>{!stockk.Stock.ERP7__Number_of_Items_Requested_to_Dispatch__c} 
+                                                                                                        </div>
+                                                                                                        
+                                                                                                    </aura:iteration>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                            <tr class="{!if(PLIK.errMsg != '','Receive-class22','Receive-class23')}">
+                                                                                                <td align="center">
+                                                                                                    <span class="Receive-class80">{!PLIK.errMsg}</span>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                </div>
+                                                                            </div>
+                                                                        </aura:iteration>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr class="{!if(LOLI.errMsg != '','Receive-class22','Receive-class23')}">
+                                                                    <td align="center">
+                                                                        <span class="Receive-class80">{!LOLI.errMsg}</span>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    
+                                                </div>
+                                                
+                                                
+                                            </div>
+                                        </div>
+                                   
+                                                      
+                                                   </div>
+                                    
+                                   
+                                   </aura:If>
+                               </aura:iteration>
+                           </div>
+                       </div> 
+                       <div class="slds-docked-form-footer" >
+                           <div class="col-md-12 Receive-class46" > 
+                               <!--<button onclick="{!c.CancelLO}" class="btn1 slds-button slds-button-neutral2" >Cancel</button>-->
+                               <button onclick="{!c.SaveAllLOLines}" class="btn1 slds-button slds-button--brand Receive-class47">Save</button>
+                           </div>
+                       </div>
+                   </aura:If>
+                   </aura:if>
+                   </div>
+            	</div> 
+    </body>
+    
+    <!--Create new Batch Modal-->
+    <section role="dialog" tabindex="-1" id="myModalCard" aura:id="myModalCard" class="slds-modal  slds-modal_xx-small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+        <div class="slds-modal__container">
+            
+            <header class="slds-modal__header">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                    <lightning:icon iconName="utility:close" class="customfill" alternativeText="Close" title="Close" onclick="{!c.closeBatchModal}"/>
+                </button>
+                <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate Receive-class81" >Create New Batch</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_medium pt-c" id="modal-content-id-1">                
+                 <div class="container-fluid">
+                    <div class="row slds-m-top--xx-small">
+                        <div class="col-md-12 col-sm-12 col-xs-12">
+                            <span class="Receive-class82">
+                                <lightning:formattedText aura:id="paymentError" value="{!v.BatchError}"/>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                        <div class="quote-main">
+                            <label class="slds-form-element__label Receive-class8"><strong>Batch <span class="red">*</span></strong></label>
+                        </div>
+                        <lightning:input value="{!v.newBatch.Name}" placeholder="Batch Number" class="nolble scanMN" onchange="{!c.updateBarcode}"/>
+                    </div>
+                     <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                        <div class="quote-main">
+                            <label class="slds-form-element__label Receive-class8"><strong>Expiry Date</strong></label>
+                        </div>
+                        <lightning:input type="date" value="{!v.newBatch.ERP7__Shelf_Life_Expiration_Date__c}" placeholder="Expiry Date" class="nolble scanMN"/>
+                    </div>
+                     <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                         <div class="quote-main slds-m-top--xx-small">
+                             <label class="slds-form-element__label Receive-class8"><strong>Product Version</strong></label>
+                         </div>
+                         <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="sl" IconName="standard:catalog" selectedRecordId="{!v.newBatch.ERP7__Production_Version__c}" qry="{!' AND ERP7__Product__c = \''+v.newBatch.ERP7__Product__c+'\''}" required="true"/>                         
+                     </div>
+                    <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                        <div class="quote-main slds-m-top--xx-small">
+                            <label class="slds-form-element__label Receive-class8"><strong>Product</strong></label>
+                        </div>                                                                                                                          
+                        <!--<c:CustomInputLookUp objectAPIName="Product2" aura:id="sl" IconName="standard:product_item" selectedRecordId="{!v.newBatch.ERP7__Product__c}" qry="{!' AND Id = \''+v.newBatch.ERP7__Product__c+'\''}"/>-->
+                        <lightning:input value="{!v.proNameForBatch}" placeholder="Product" class="nolble" disabled="true"/>
+                    </div>
+                    <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                        <div class="quote-main">
+                            <label class="slds-form-element__label Receive-class8"><strong>Barcode</strong></label>
+                        </div>
+                        <lightning:input value="{!v.newBatch.ERP7__Barcode__c}" placeholder="Barcode" class="nolble" disabled="true"/>
+                    </div>
+                </div>
+            </div>
+            <footer class="slds-modal__footer text-center">
+                <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeBatchModal}">Cancel</button>
+                <button type="button" class="slds-button slds-button--brand" onclick="{!c.CreateBatch1}">Create Batch</button>
+                
+            </footer>
+            
+        </div>
+        </section>
+        <div class="slds-backdrop" aura:id="myModalCardBackdrop"></div>
+</aura:component>

@@ -1,0 +1,323 @@
+<apex:page controller="Redemption" sidebar="false" cache="false" id="mainPg" docType="html-5.0" showHeader="true">
+   <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+      <head>
+         <meta charset="utf-8" />
+         <meta name="viewport" content="width=device-width,initial-scale=1"/>
+         <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+         <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}"/>
+         <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}"/>
+         <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+        <apex:includeScript value="{!URLFOR($Resource.bootStrap,'/js/bootstrap.min.js')}"/>
+
+         <apex:stylesheet value="{!URLFOR($Resource.TablesSort, 'TablesSort/css/font-awesome.min.css')}" />
+         <apex:stylesheet value="{!URLFOR($Resource.TablesSort, 'TablesSort/css/dataTables.bootstrap.min.css')}" />
+         <!-- <apex:stylesheet value="{!URLFOR($Resource.TablesSort, 'TablesSort/css/bootstrap.min.css')}" />-->
+         <apex:includeScript value="{!URLFOR($Resource.TablesSort,'TablesSort/js/jquery.dataTables.min.js')}"></apex:includeScript>
+         <style>
+            .epr_Mark7 .nav-tabs > li.active > a {
+            color: #7cdbff;
+            cursor: default !important;
+            background-color: #fff !important;
+            border: 0;
+            border-bottom: 2px solid #2196F3 !important;
+            }
+            .epr_Mark7 .nav-tabs > li.active > a:hover{
+            color: #7cdbff;
+            cursor: default !important;
+            background-color: #fff !important;
+            border: 0;
+            border-bottom: 2px solid #2196F3 !important;
+            }
+            .epr_Mark7 .nav-tabs > li.active > a:focus {
+            color: #7cdbff;
+            cursor: default !important;
+            background-color: #fff !important;
+            border: 0;
+            border-bottom: 2px solid #2196F3 !important;
+            }
+            .epr_Mark7 .nav-tabs {
+            }
+            .epr_Mark7 .nav > li > a:hover {
+            text-decoration: none;
+            background-color: #fff;
+            border-bottom:2px solid #0070d2 !important;
+            }
+            .epr_Mark7 .nav > li > a:focus{
+            text-decoration: none;
+            background-color: #fff;
+            border-bottom:2px solid #0070d2 !important;
+            }
+            .epr_Mark7 .nav-tabs > li > a:hover {
+            border-color: #fff;
+            }
+            .epr_Mark7 .nav > li > a {
+            position: relative;
+            display: block;
+            padding: 10px 10px;
+            border-bottom:1px solid #f7f7f7;
+            }
+            .epr_Mark7 .nav {
+            padding-left: 0;
+            margin-bottom: 0;
+            list-style: none;
+            text-transform: uppercase;
+            }
+         </style>
+      </head>
+      <apex:form id="myform">
+         <apex:actionFunction name="ProcessLoyalty" action="{!ProcessLoyalty}"/>
+         <div class="erp_mark7">
+            <div class="epr_Mark7">
+               <!--<ul class="nav nav-tabs " role="tablist">
+                  <li class="nav-item active"> <a class="nav-link" data-toggle="tab" href="#home" role="tab"><i class="fa fa-ellipsis-h" aria-hidden="true"></i>&nbsp;Loyalty</a> </li>
+                  <li class="nav-item"> <a class="nav-link" data-toggle="tab" href="#applycredits" role="tab"><i class="fa fa-ticket" aria-hidden="true"></i>&nbsp;Apply Credits</a> </li>
+                  <li class="nav-item "> <a class="nav-link" data-toggle="tab" href="#coupons" role="tab"><i class="fa fa-tags" aria-hidden="true"></i> &nbsp;Coupons Redemption</a> </li>
+                  </ul>-->
+               <!-- Side Bar Type Layout -->
+               
+               <div class="maq" style="display:{!if(redeemProcess == 'INV','','none')}">
+                  <div class="row slds-m-top--small" style="">
+                     <div class="col-md-2">
+                        <ul class="nav nav-tabs nav-stacked text-center" role="tablist">
+                           <li class="nav-item  active" style="text-align:left;"> <a class="nav-link" data-toggle="tab" href="#home" role="tab"><i class="fa fa-ellipsis-h" aria-hidden="true"></i>&nbsp;Loyalty</a> </li>
+                           <li class="nav-item" style="text-align:left;"> <a class="nav-link" data-toggle="tab" href="#applycredits" role="tab"><i class="fa fa-ticket" aria-hidden="true"></i>&nbsp;Apply Credits</a> </li>
+                           <li class="nav-item" style="text-align:left;"> <a class="nav-link" data-toggle="tab" href="#coupons" role="tab"><i class="fa fa-tags" aria-hidden="true"></i> &nbsp;Redeem Coupons</a> </li>
+                        </ul>
+                     </div>
+                     <div class="col-md-10" style="">
+                         <div class="row slds-m-bottom--small">
+                             <div class="col-md-12 col-sm-12 col-xs-12">
+                                 <apex:outputLabel id="err" style="color:red;font-weight: normal;font-size: 12px;display:{!if(errMsg != '','','none')}">{!errMsg}</apex:outputLabel>
+                             </div>
+                          </div>
+                        <div class="tab-content">
+                        
+                           <div class="tab-pane active" id="home" role="tabpanel">
+                              <apex:outputPanel id="loyalty">
+                              <div class="row slds-m-bottom--small">
+                                 <div class="col-md-6 col-sm-6 col-xs-12">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01">Invoice Amount</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;" value="{!SO.Sales_Order_Amount__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01"> Total Due</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!SO.Due_Amount__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12 slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control font-size1rem">
+                                          <label class="slds-form-element__label" for="text-input-01" >Available Points</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!Customer.total_points__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12 slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01">Loyalty Value</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!Points_Per_Unit_Amount}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12 slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01">Redeem Points <span style="color:red;">*</span></label>
+                                          <apex:input type="number" value="{!redeemPoints}" styleClass="slds-input"/>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="row sld-m-top--large">
+                                 <div class="col-md-12 " >
+                                 <div class="col-md-6 col-sm-6" style="text-align:right;">
+                                    <apex:commandLink styleclass="slds-button slds-button--brand" action="{!ProcessLoyalty}" value="Pay Now" reRender="loyalty,credit,coupon,err" status="spinner1"/>  
+                                 </div>
+                                 <div class="col-md-6 col-sm-6">
+                                    <apex:actionStatus id="spinner1">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SLDS213,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </div>
+                                 </div>
+                              </div>
+                              </apex:outputPanel>
+                           </div>
+                           
+                           <div class="tab-pane " id="applycredits" role="tabpanel">
+                              <apex:outputPanel id="credit">
+                              <div class="row slds-m-bottom--small">
+                                 <div class="col-md-6 col-sm-6 col-xs-12">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01">Invoice Amount</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!SO.Sales_Order_Amount__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01"> Total Due</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!SO.Due_Amount__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12 slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control font-size1rem">
+                                          <label class="slds-form-element__label" for="text-input-01" >Available Credit</label>
+                                          <apex:outputText style="background:#E0E5EE;border: 1px solid lightgrey;"  value="{!Customer.Available_Credit_Balance__c}" styleClass="slds-input" />
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <div class="col-md-6 col-sm-6 col-xs-12 slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                       <div class="slds-form-element__control">
+                                          <label class="slds-form-element__label font-size1rem" for="text-input-01">Redeem Credit <span style="color:red;">*</span></label>
+                                          <apex:input type="number" value="{!redeemCredit}" styleClass="slds-input"/>
+                                       </div>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="row sld-m-top--large">
+                                 
+                                 <div class="col-md-12 " >
+                                 <div class="col-md-6 col-sm-6" style="text-align:right;">
+                                    <apex:commandLink styleclass="slds-button slds-button--brand" action="{!ApplyCredits}" value="Pay Now" reRender="loyalty,credit,coupon,err" status="spinner2"/>  
+                                 </div>
+                                 <div class="col-md-6 col-sm-6">
+                                    <apex:actionStatus id="spinner2">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SLDS213,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </div>
+                                 </div>
+                              </div>
+                              </apex:outputPanel>
+                           </div>
+                           <div class="tab-pane" id="coupons" role="tabpanel">
+                              <apex:outputPanel id="coupon" >
+                              <div class="row slds-p-around--small">
+                                 <div style="width:100%;height:430px;overflow:auto; float:left;margin-top:10px;">
+                                    <div class="row" style="margin:0px;">
+                                       <div class="col-md-3 slds-m-bottom--x-small slds-m-top--x-small">
+                                          <h5><strong>Coupons Redeemed</strong></h5>
+                                       </div>
+                                       <div class="col-md-8 slds-m-bottom--x-small" style="text-align:right;">
+                                          <apex:inputText value="{!couponCode}" styleclass="slds-input" style="width:30%;"/>
+                                          &nbsp;&nbsp;&nbsp;<apex:commandLink styleclass="slds-button slds-button--brand" action="{!RedeemCoupon}" value="Apply" reRender="loyalty,credit,coupon,err" status="spinner3"/>
+                                       </div>
+                                       <div class="col-md-1 col-sm-1">
+                                    <apex:actionStatus id="spinner3">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SLDS213,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </div>
+                                    </div>
+                                    <table class="slds-table slds-table--bordered" >
+                                       <tr class="slds-text-heading--label" bgcolor="#f4f6f9" style="font-weight:bold;" >
+                                          <th style="font-size:11px; padding:10px !important;padding-left:15px !important;border-left:1px solid #f7f7f7;border-right:1px solid #f7f7f7;" >Credit Note</th>
+                                          <th style="font-size:11px; padding:10px !important;padding-left:15px !important;border-left:1px solid #f7f7f7;border-right:1px solid #f7f7f7;" >Coupon</th>
+                                          <th style="font-size:11px; padding:10px !important;padding-left:15px !important;border-left:1px solid #f7f7f7;border-right:1px solid #f7f7f7;" >Applied Date</th>
+                                          <th style="font-size:11px; padding:10px !important;padding-left:15px !important;border-left:1px solid #f7f7f7;border-right:1px solid #f7f7f7;">Amount</th>
+                                       </tr>
+                                       <apex:repeat var="CN"  value="{!Redemptions}">
+                                          <tr>
+                                             <td style="font-size: 13px;padding: 5px !important;padding-left: 15px !important;">
+                                                <div class="slds-truncate" style="font-size:13px;color:#0070d2;cursor:pointer;" id="{!CN.Id}">
+                                                   <apex:commandLink value="{!CN.Name}" action="/{!CN.Id}" title="{!CN.Name}" target="_blank" />
+                                                </div>
+                                             </td>
+                                             <td style="font-size: 13px;padding: 5px !important;padding-left: 15px !important;">
+                                                <div class="slds-truncate" style="font-size:13px;color:#0070d2;cursor:pointer;" id="{!CN.Coupon__c}">
+                                                   <apex:outputField value="{!CN.Coupon__c}" />
+                                                </div>
+                                             </td>
+                                             <td style="font-size: 13px;padding: 5px !important;padding-left: 15px !important;">
+                                                <div class="slds-truncate">
+                                                   <div class="slds-truncate" style="max-width: 130px;font-size:13px;">
+                                                      <apex:outputField value="{!CN.Redemption_Date__c}"/>
+                                                   </div>
+                                                </div>
+                                             </td>
+                                             <td style="font-size: 13px;padding: 5px !important;padding-left: 15px !important;">
+                                                <div class="slds-truncate">
+                                                   <apex:outputField value="{!CN.Value__c}"/>
+                                                </div>
+                                             </td>
+                                          </tr>
+                                       </apex:repeat>
+                                    </table>
+                                 </div>
+                              </div>
+                              </apex:outputPanel>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               
+               <div class="maq" style="display:{!if(redeemProcess == 'ACC','','none')}">
+                  <div class="row slds-m-top--small" style="">
+                     <div class="col-md-2">
+                        <ul class="nav nav-tabs nav-stacked text-center" role="tablist">
+                           <li class="nav-item active" style="text-align:left;"> <a class="nav-link" data-toggle="tab" href="#home" role="tab"><i class="fa fa-ellipsis-h" aria-hidden="true"></i>&nbsp;Redeem Coupons</a> </li>
+                       </ul>
+                     </div>
+                     <div class="col-md-10" style="">
+                         <div class="row slds-m-bottom--small">
+                             <div class="col-md-12 col-sm-12 col-xs-12">
+                                 <apex:outputLabel id="err1" style="color:red;font-weight: normal;font-size: 12px;display:{!if(errMsg != '','','none')}">{!errMsg}</apex:outputLabel>
+                             </div>
+                          </div>
+                        <div class="tab-content">
+                        
+                           <div class="tab-pane active" id="home" role="tabpanel">
+                              <apex:outputPanel id="coupon1" >
+                              <div class="row slds-p-around--small">
+                                 <div style="width:100%;height:430px;overflow:auto; float:left;margin-top:10px;">
+                                    <div class="row" style="margin:0px;">
+                                       <div class="col-md-3 slds-m-bottom--x-small slds-m-top--x-small">
+                                          <h5><strong>
+                                          Available Credit : </strong>{!Customer.Available_Credit_Balance__c}
+                                          </h5>
+                                       </div>
+                                       <div class="col-md-8 slds-m-bottom--x-small" style="text-align:right;">
+                                          <apex:inputText value="{!couponCode}" styleclass="slds-input" style="width:30%;"/>
+                                          &nbsp;&nbsp;&nbsp;<apex:commandLink styleclass="slds-button slds-button--brand" action="{!RedeemAccountCoupon}" value="Apply" reRender="coupon1,err1" status="spinner31"/>
+                                       </div>
+                                       <div class="col-md-1 col-sm-1">
+                                    <apex:actionStatus id="spinner31">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SLDS213,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </div>
+                                    </div>
+                                    
+                                 </div>
+                              </div>
+                              </apex:outputPanel>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               
+            </div>
+         </div>
+      </apex:form>
+   </html>
+</apex:page>

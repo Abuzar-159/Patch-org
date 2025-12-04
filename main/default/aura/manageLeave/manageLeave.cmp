@@ -1,0 +1,1627 @@
+<aura:component controller="LeaveManagementLC" implements="force:appHostable">
+    <head>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/manageleave.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/main-leavemanagement.css"/>
+    </head>
+    
+    <aura:attribute name="Holidays" type="Leave_Entitlements_Holidays__c[]" />
+    <aura:attribute name="EmpEnt" type="Leave_Entitlement__c[]" />
+    <aura:attribute name="Records" type="Leave_Request__c[]" />
+    <aura:attribute name="ForApprovalRecords" type="Leave_Request__c[]" />
+    <aura:attribute name="EmployeeRecords" type="Employees__c[]" />
+    <aura:attribute name="table" type="Leave_Request__c[]" />
+    <aura:attribute type="LeaveManagementLC" name="counts" />
+    <aura:attribute name="items" type="Leave_Request__c[]" />
+    <aura:attribute name="var" type="Leave_Request__c" default="{ 'sobjectType': 'Leave_Request__c' }" />
+    <aura:attribute name="Employee" type="Employees__c" default="{ 'sobjectType': 'Employees__c' }" />
+    <aura:registerEvent name="edit" type="c:editForm" />
+    <aura:registerEvent name="delete" type="c:leaveDelete" />
+    <aura:handler name="delete" action="{!c.handleAccountDelete}" />
+    <aura:handler name="init" value="{!this}" action="{!c.getHolidays}" />			
+    <aura:handler name="init" value="{!this}" action="{!c.getValues}" />			
+    <aura:handler name="init" value="{!this}" action="{!c.displayApproved}" />
+    <aura:handler name="init" value="{!this}" action="{!c.displaySubmitted}" />		
+    <aura:handler name="init" value="{!this}" action="{!c.display}" />				
+    <aura:handler name="init" value="{!this}" action="{!c.getEmpLeaveDetails}" />	
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="init" value="{!this}" action="{!c.setLeaveTypes}" />
+
+    <aura:attribute type="Boolean" name="sortAsc" />
+    <aura:attribute type="String" name="sortField" default=""/>
+    <aura:attribute type="String" name="CurrentLeaveId" default=""/>
+    <aura:attribute type="String" name="UserImageURL" default=""/>
+    <aura:attribute name="ftctrl" type="boolean" default="true"/>
+    <aura:attribute name="EorH" type="String" default=""/>
+
+    <aura:attribute name="Tab" type="String" default="tab1"/>
+    <aura:attribute name="View" type="String" default="List"/>
+    <aura:attribute name="currentEmployee" type="String" default=""/>
+    <aura:attribute name="selectedFY" type="String" default=""/>
+    <aura:attribute name="editIndex" type="Integer" default="0"/>
+    <aura:attribute name="A_Rcomment" type="String" default=""/>
+    <aura:attribute name="empLeaveId" type="String" default=""/>
+    <aura:attribute name="empARIndex" type="Integer" default="0"/>
+    <aura:attribute name="isEdit" type="Boolean" default="false"/>
+    <aura:attribute name="resetLookups" type="Boolean" default="true"/>
+    <aura:attribute name="empLeaves" type="Leave_Request__c[]" />
+    <aura:attribute name = "serverSuccess" type = "String" default=""/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:attribute name="leaveTypes" type="list[]"/>
+    <aura:attribute name="newTimeOff" type="Leave_Request__c" default="{ 'sobjectType': 'Leave_Request__c'}" /> 
+    <aura:attribute type="String" name="DraftActive" default="active-page"/>
+    <aura:attribute type="String" name="ApprovedActive"  default = ""/>
+    <aura:attribute type="String" name="RejectedActive" default = ""/>
+    <aura:attribute type="String" name="EntitleActive" default = ""/>
+    <aura:attribute type="Boolean" name="IsAdmin" default = "false"/>
+    <aura:attribute type="String" name="CurrentTab" default = "LeaveApplication-tab"/>
+    <aura:attribute type="String" name="CurrentPopUp" default = ""/>
+    <aura:attribute name="currentFiscalYear" type="Integer" />
+    <aura:attribute name="Leavereason" type="String" default=""/>
+    <aura:handler name="change" value="{!v.currentFiscalYear}" action="{!c.displayApproved}" />
+    
+    <aura:attribute name="ApprovedRec" type="Leave_Request__c[]" />
+    <aura:attribute name="RejectedRec" type="Leave_Request__c[]" />
+    <aura:attribute name="SubmittedRec" type="Leave_Request__c[]" />
+    <aura:attribute name="DraftRec" type="Leave_Request__c[]" />
+    <aura:attribute name="currentEmp" type="String" default="" />
+    <aura:attribute name="EmployeeEdit" type="Employees__c" default="{ 'sobjectType': 'Employees__c' }" />
+    <aura:attribute name="isEmployeeEdit" type="Boolean" default="false"/>
+    <aura:attribute name="GenderPicklistValues" type="List" default="[{'label': 'Male', 'value': 'Male'}, {'label': 'Female', 'value': 'Female'}]"/>
+    <aura:attribute name="MaritalStatusPicklistValues" type="List" default="[{'label': 'Single', 'value': 'Single'}, {'label': 'Married', 'value': 'Married'}, {'label': 'Divorced', 'value': 'Divorced'}, {'label': 'Widowed', 'value': 'Widowed'}]"/>
+    
+    <body aura:id="body" class="manageLeave-newClass" style="background-color: #f3f4f7;">
+        
+        <!-- Employee Section Starts -->
+        	<aura:if isTrue="{!not(v.Employee.ERP7__Admin__c)}">
+            <div class="erp erp-lm" aura:id="Employee-View"> 
+                <div class="page-container p-2">
+                    <div class="page-header">
+                        <nav class="navbar navbar-expand-lg d-flex justify-content-between">
+                            <div class="" id="navbarNav">
+                                <ul class="navbar-nav" id="leftNav">
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="sidebar-toggle" href="#">
+                                            <i class="fa fa-home"></i>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <h3 class="slds-p-top_small">Leave Management</h3>
+                                    </li>
+                                    
+                                </ul>
+                            </div>
+                            <div class="logo" style="justify-content: flex-end;">
+                                <p class="pt-1 pr-2"><strong>{!v.Employee.Name}</strong></p>
+                                <span class="slds-avatar slds-avatar_circle">
+                                    <span class="slds-icon_container slds-icon-standard-user" title="">
+                                        <aura:if isTrue="{!not(empty(v.UserImageURL))}">
+                                            <img src="{!v.UserImageURL}" alt="Image not Avaialble"/> 
+                                            <aura:set attribute="else">
+                                                <lightning:icon iconName="standard:user" ></lightning:icon>  
+                                            </aura:set>
+                                        </aura:if>
+                                        <span class="slds-assistive-text">User</span>
+                                    </span>
+                                </span>
+                                
+                            </div>
+                            
+                        </nav>
+                    </div>
+                    <div class="page-sidebar mt-6p">
+                        
+                        <div class="card mb-0">
+                            <div class="card-body p-3">
+                                <h5 class="card-title mb-2">{!v.Employee.Name}</h5>
+                                <ul class="list-unstyled profile-about-list">
+                                    <li><i class="fa fa-envelope m-r-xxs"></i><span>{!v.Employee.ERP7__Email__c}</span></li>
+                                    <li><i class="fa fa-compass m-r-xxs"></i><span>Lives in <a href="#">{!v.Employee.ERP7__Place_of_Birth__c}</a></span></li>
+                                    <li><i class="fa fa-address-book m-r-xxs"></i><span>{!v.Employee.ERP7__Phone__c}</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled accordion-menu">
+                            <li class="sidebar-title">
+                                Non Admin User
+                            </li>
+                            <li class="{!v.DraftActive}" data-attribute="draft" onclick="{!c.ChangeActive}">
+                                <a href="javascript:void(0)" onclick="{!c.displayApproved}"> <i class="fa fa-home pr-2"></i>&nbsp;Draft / Submitted </a>
+                            </li>
+                            
+                            <li class="{!v.ApprovedActive}" data-attribute="Approved" onclick="{!c.ChangeActive}">
+                                    <a href="javascript:void(0)" onclick="{!c.Approved}" data-attribute="Approved"> <i class="fa fa-check-circle pr-2"></i>&nbsp;Approved </a>
+                            </li>
+                            <li class="{!v.RejectedActive}" data-attribute="Rejected" onclick="{!c.ChangeActive}">
+                                <a href="javascript:void(0)" onclick="{!c.Approved}" data-attribute="Rejected"><i class="fa fa-times-circle pr-2"></i>&nbsp;Rejected</a>
+                            </li>
+                        <!--    <li class="{!v.EntitleActive}" data-attribute="Entitle" onclick="{!c.ChangeActive}">
+                                <a href="javascript:void(0)">
+                                    <i class="fa fa-file-text-o pr-2"></i>&nbsp;Entitlements / Holidays
+                                </a>
+                            </li> -->
+                            
+                            
+                            
+                        </ul>
+                    </div>
+                    <div class="page-content">
+                        <div class="main-wrapper">
+                            <div class="card">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                           <!-- <h6 class="card-title mb-1" style="font-size: 14px;"><i class="fa fa-calendar-check-o pr-2 fa-2x"></i>&nbsp;<i class="fa fa-chevron-left pr-2" style="color: #7888FC;"></i>&nbsp;01/01/2024 - 31/12/2024&nbsp;<i class="fa fa-chevron-right pl-2" style="color: #7888FC;"></i></h6>-->
+                                            <span aura:id="dateRange" class="card-title mb-1" style="font-size: 14px;">
+                                                <lightning:icon iconName="utility:calendar" class="pr-2 fa-2x" size="small"/>
+                                                <lightning:buttonIcon iconName="utility:left" class="pr-2" variant="bare" onclick="{!c.handlePrevButtonClick}" />
+                                                <span id="dateText">01/01/{!v.currentFiscalYear} - 31/12/{!v.currentFiscalYear}</span>
+                                                <lightning:buttonIcon iconName="utility:right" class="pl-2" variant="bare" onclick="{!c.handleNextButtonClick}" />
+                                            </span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div style="float:right;">
+                                                <button type="submit" class="btn btn-primary" onclick="{!c.openTimeOffModal}" data-attribute="New"><i class="fa fa-plus pr-2"></i>&nbsp;Apply Leave</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Annual Leaves</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/leave.png" style="width:50px;"></img>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Available:</strong>
+                                               
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Annual_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Annual_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Casual Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/error.png" style="width:50px;"></img>
+                                            <hr/>
+                                          
+                                            <p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0"> {!v.Employee.ERP7__Casual_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                           
+                                            <p class="mb-1"><strong>Booked:</strong>
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Casual_Leave_Boooked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Sick Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/stethoscope.png" style="width:50px;"></img>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0"> {!v.Employee.ERP7__Sick_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                               
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Sick_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Paternity Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/feet.png" style="width:50px;"></img>
+                                            <hr/>
+                                           <p class="mb-1"><strong>Available:</strong> 
+                                              
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Paternity_Leave_Avaiable__c}</h4></div>
+                                            <hr/>
+                                             <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Paternity_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget text-center">
+                                        <div class="card-body p-3">
+                                            <h5 class="card-title mb-1">Earned Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/wallet.png" style="width:50px;"></img>
+                                            <hr/>
+                                          	<p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Earned_Leave_Available__c} </h4></div>
+                                            <hr/>
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Earned_Leave_Booked__c} </h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-body p-2">
+                                    <h5 class="card-title mb-2">All Leaves and holidays</h5>
+                                    <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        
+                                        
+                                            <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col">#</th>
+                                                            <th scope="col">Leave Request<br/> Name</th>
+                                                            <th scope="col">Leave Period</th>
+                                                            <th scope="col">Days Taken</th>
+                                                            <th scope="col">Date of<br/> request</th>
+                                                            <th scope="col">Leave Type</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.Records}" var="Approved" indexVar="i">
+                                                            <tr>
+                                                                <th scope="row"> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</th>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <strong>
+                                                                    <lightning:formattedUrl value="{!'/'+Approved.Id}" label="{!Approved.Name}" target="_blank" class="fcolor1"/>
+                                                                </strong>
+                                                                    </div>
+                                                                    </td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <lightning:formattedDateTime value="{!Approved.ERP7__Leave_Start_Date__c}"/> - <lightning:formattedDateTime value="{!Approved.ERP7__Leave_End_Date__c}"/>
+                                                                    </div>
+                                                                    </td>
+                                                                <td><div class="slds-truncate max-widthml">{!Approved.ERP7__Number_of_Days__c}</div></td>
+                                                                <td><div class="slds-truncate max-widthml"><lightning:formattedDateTime value="{!Approved.ERP7__Applied_Date__c}"/></div></td>
+                                                                <td><div class="slds-truncate max-widthml"><lightning:formattedText value="{!Approved.ERP7__Leave_Type__c}" /></div></td>
+                                                                <td>
+                                                                    
+                                                                    <span class="{! (Approved.ERP7__Status__c == 'Draft') ? 'badge badge-warning' : (Approved.ERP7__Status__c == 'Approved') ? 'badge badge-success' : (Approved.ERP7__Status__c == 'Submitted') ? 'badge badge-info' : (Approved.ERP7__Status__c == 'Rejected') ? 'badge badge-danger' : 'badge' }">{!Approved.ERP7__Status__c}</span></td>
+                                                                <td>
+                                                                    <aura:if isTrue="{!(Approved.ERP7__Status__c == 'Draft')}">
+                                                                        <i class="fa fa-edit slds-p-right_small" onclick="{!c.openTimeOffModal}" data-attribute="Edit" data-index="{!i}"></i>
+                                                                    </aura:if>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5 slds-p-around_small">
+                                                <!--<div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to {!v.Records.length} of {!v.Records.length} entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aura:if>
+        <!-- Employee Section Ends -->
+        
+        <!-- Admin Section Starts -->
+        	<aura:if isTrue="{!(v.Employee.ERP7__Admin__c)}">
+            <div class="erp erp-lm " aura:id="Admin-View"> 
+                <div class="page-container p-2">
+                    <div class="page-header">
+                        <nav class="navbar navbar-expand-lg d-flex justify-content-between">
+                            <div class="" id="navbarNav">
+                                <ul class="navbar-nav" id="leftNav">
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="sidebar-toggle" href="#">
+                                            <i class="fa fa-home"></i>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <h3 class="slds-p-top_small">Leave Management Admin</h3>
+                                    </li>
+                                    
+                                </ul>
+                            </div>
+                            <div class="logo" style="justify-content: flex-end;">
+                                <p class="pt-1 pr-2"><strong>{!v.Employee.Name}</strong></p>
+                                <span class="slds-avatar slds-avatar_circle">
+                                    <span class="slds-icon_container slds-icon-standard-user" title="">
+                                        <aura:if isTrue="{!not(empty(v.UserImageURL))}">
+                                            <img src="{!v.UserImageURL}" alt="Image not Avaialble"/> 
+                                            <aura:set attribute="else">
+                                                <lightning:icon iconName="standard:user" ></lightning:icon>  
+                                            </aura:set>
+                                        </aura:if>
+                                        <span class="slds-assistive-text">User</span>
+                                    </span>
+                                </span>
+                                
+                            </div>
+                            
+                        </nav>
+                    </div>
+                    <div class="page-sidebar mt-6p">
+                       
+                        <!-- admin menu section -->
+                        <div class="card mb-0">
+                            <div class="card-body p-3">
+                                <h5 class="card-title mb-3">{!v.Employee.Name}</h5>
+                                <ul class="list-unstyled profile-about-list">
+                                    <li><i class="fa fa-envelope m-r-xxs"></i><span>{!v.Employee.ERP7__Email__c}</span></li>
+                                    <li><i class="fa fa-compass m-r-xxs"></i><span>Lives in <a href="#">{!v.Employee.ERP7__Place_of_Birth__c}</a></span></li>
+                                    <li><i class="fa fa-address-book m-r-xxs"></i><span>{!v.Employee.ERP7__Phone__c}</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <ul class="list-unstyled accordion-menu">
+                            <li class="sidebar-title">
+                                Admin User
+                            </li>
+                            <li class="active-page" data-attribute="LeaveApplication-tab" onclick="{!c.tabChange}" aura:id="LeaveApp-Page">
+                                <a href="javascript:void(0)" onclick="{!c.displaySubmitted}" >
+                                    <i class="fa fa-home pr-2"></i>&nbsp;Leave Applications
+                                </a>
+                            </li>
+                            <li data-attribute="Draft-tab" onclick="{!c.tabChange}" aura:id="Draft-Page"><!--Approved-tab-->
+                                    <a href="javascript:void(0)" data-attribute="Draft" onclick="{!c.DraftSubmit}" > 
+                                        <i class="fa fa-home pr-2"></i>&nbsp;Draft/ Submitted 
+                                	</a>
+                            </li>
+                            
+                            <li data-attribute="Approved-tab" onclick="{!c.tabChange}" aura:id="Approved-Page"><!--Approved-tab-->
+                                    <a href="javascript:void(0)" data-attribute="Approved" onclick="{!c.Approved}" > 
+                                        <i class="fa fa-check-circle pr-2"></i>&nbsp;Approved 
+                                	</a>
+                            </li>
+                            
+                            <li data-attribute="Rejected-tab"  onclick="{!c.tabChange}" aura:id="Rejected-Page"><!--Rejected-tab-->
+                                <a href="javascript:void(0)" data-attribute="Rejected" onclick="{!c.Approved}" >
+                                    <i class="fa fa-times-circle pr-2"></i>&nbsp;Rejected
+                                </a>
+                            </li>
+                            
+                            <li data-attribute="Employees-tab" onclick="{!c.tabChange}" aura:id="Employees-Page">
+                                <a href="javascript:void(0)">
+                                    <i class="fa fa-users pr-2"></i>&nbsp;Employees
+                                </a>
+                            </li>
+                          <!--  <li>
+                                <a href="javascript:void(0)" data-attribute="Policy-tab" onclick="{!c.tabChange}" aura:id="Policy-Page">
+                                    <i class="fa fa-file-text pr-2"></i>&nbsp;Policy
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript:void(0)" data-attribute="Entitlement-tab" onclick="{!c.tabChange}" aura:id="Entitlement-Page">
+                                    <i class="fa fa-file-text-o pr-2"></i>&nbsp;Leave Entitlements
+                                </a>
+                            </li>-->
+                            
+                            
+                            
+                        </ul>
+                        <!-- admin menu section -->
+                        
+                    </div>
+                    
+                    <!--Admin main area -->
+                    <div class="page-content">
+                        <div class="main-wrapper">
+                            <div class="card">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <!-- <h6 class="card-title mb-1" style="font-size: 14px;"><i class="fa fa-calendar-check-o pr-2 fa-2x"></i>&nbsp;<i class="fa fa-chevron-left pr-2" style="color: #7888FC;"></i>&nbsp;01/01/2024 - 31/12/2024&nbsp;<i class="fa fa-chevron-right pl-2" style="color: #7888FC;"></i></h6>-->
+                                            <span aura:id="dateRange" class="card-title mb-1" style="font-size: 14px;">
+                                                <lightning:icon iconName="utility:calendar" class="pr-2 fa-2x" size="small"/>
+                                                <lightning:buttonIcon iconName="utility:left" class="pr-2" variant="bare" onclick="{!c.handlePrevButtonClick}" />
+                                                <span id="dateText">01/01/{!v.currentFiscalYear} - 31/12/{!v.currentFiscalYear}</span>
+                                                <lightning:buttonIcon iconName="utility:right" class="pl-2" variant="bare" onclick="{!c.handleNextButtonClick}" />
+                                            </span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div style="float:right;">
+                                                <button type="submit" class="btn btn-primary" onclick="{!c.openTimeOffModal}" data-attribute="New"><i class="fa fa-plus pr-2"></i>&nbsp;Apply Leave</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                              <div class="row">
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Annual Leaves</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/leave.png" style="width:50px;"></img>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Available:</strong>
+                                               
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Annual_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Annual_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Casual Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/error.png" style="width:50px;"></img>
+                                            <hr/>
+                                          
+                                            <p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0"> {!v.Employee.ERP7__Casual_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                           
+                                            <p class="mb-1"><strong>Booked:</strong>
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Casual_Leave_Boooked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Sick Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/stethoscope.png" style="width:50px;"></img>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0"> {!v.Employee.ERP7__Sick_Leave_Available__c}</h4></div>
+                                            <hr/>
+                                            
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                               
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Sick_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget">
+                                        <div class="card-body p-3 text-center">
+                                            <h5 class="card-title mb-1">Paternity Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/feet.png" style="width:50px;"></img>
+                                            <hr/>
+                                           <p class="mb-1"><strong>Available:</strong> 
+                                              
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Paternity_Leave_Avaiable__c}</h4></div>
+                                            <hr/>
+                                             <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                             <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Paternity_Leave_Booked__c}</h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-xl-2">
+                                    <div class="card stat-widget text-center">
+                                        <div class="card-body p-3">
+                                            <h5 class="card-title mb-1">Earned Leave</h5>
+                                            <img src="/resource/ERP7__ERPTheme/icons/wallet.png" style="width:50px;"></img>
+                                            <hr/>
+                                          	<p class="mb-1"><strong>Available:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Earned_Leave_Available__c} </h4></div>
+                                            <hr/>
+                                            <p class="mb-1"><strong>Booked:</strong> 
+                                                
+                                            </p>
+                                            <div class="float-right"><h4 class="mb-0">{!v.Employee.ERP7__Earned_Leave_Booked__c} </h4></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                           
+                            <div class="card">
+                                <aura:if isTrue="{!v.CurrentTab == 'LeaveApplication-tab' }">
+                                    <div class="card-body p-2">
+                                        <h5 class="card-title mb-2">Leave Applications</h5>
+                                        <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col">Leave Request <br/>Name</th>
+                                                            <th scope="col">Leave Period</th>
+                                                            <th scope="col">Days Taken</th>
+                                                            <th scope="col">Date of <br/>Request</th>
+                                                            <th scope="col">Leave Type</th>
+                                                            <th scope="col">Employee</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:if isTrue="{!v.ForApprovalRecords.length >0}">
+                                                        	<aura:iteration items="{!v.ForApprovalRecords}" var="LeaveReq" indexVar="i">
+                                                            <tr>
+                                                                <td> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <strong>
+                                                                            <lightning:formattedUrl value="{!'/'+LeaveReq.Id}" label="{!LeaveReq.Name}" target="_blank" class="fcolor1" />
+                                                                        </strong>
+                                                                    </div>
+                                                                </td>
+                                                                <!--td scope="row"><input type="checkbox" class="form-input" /></td>-->
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_Start_Date__c}"/>  - <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_End_Date__c}"/>
+                                                                    </div>
+                                                                    </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Number_of_Days__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <lightning:formattedDateTime value="{!LeaveReq.ERP7__Applied_Date__c}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Leave_Type__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <span class="slds-avatar slds-avatar_circle">
+                                                                        <span class="slds-icon_container slds-icon-standard-user" title="">  
+                                                                            <aura:if isTrue="{!not(empty(LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl))}">
+                                                                                <img src="{!LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl}" alt="Image not Avaialble"/> 
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:icon iconName="standard:user" ></lightning:icon>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            <span class="slds-assistive-text">User</span>
+                                                                        </span>
+                                                                    </span>
+                                                                    &nbsp;&nbsp;<lightning:formattedUrl value="{!'/'+LeaveReq.ERP7__Employee__r.Id}" label="{!LeaveReq.ERP7__Employee__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td> 
+                                                                    <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Submitted')}">
+                                                                        <span class="badge badge-info">To Be Approved</span>
+                                                                        <aura:set attribute="else">
+                                                                            <span class="{! (LeaveReq.ERP7__Status__c == 'Approved') ? 'badge badge-success' : (LeaveReq.ERP7__Status__c == 'Rejected') ? 'badge badge-danger' : 'badge' }">{!LeaveReq.ERP7__Status__c}</span>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </td>
+                                                                <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Submitted')}"><!--<aura:if isTrue="{!or(LeaveReq.ERP7__Status__c != 'Rejected',LeaveReq.ERP7__Status__c != 'Approved') }">-->
+                                                                    <td>
+                                                                        <i class="fa fa-check-square mr-2 btn-success fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Approve" data-index="{!i}"></i>
+                                                                    </td>
+                                                                    <td>
+                                                                        <i class="fa fa-window-close btn-danger fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Reject" data-index="{!i}"></i>
+                                                                    </td>
+                                                                    
+                                                                    <td>
+                                                                      <!--  <ui:menu >
+                                                                            <ui:menuTriggerLink aura:id="trigger1" label="">
+                                                                                <lightning:button variant="neutral" label="" class="slds-button slds-button-icon-border-filled slds-button-icon-x-small  btnlineheight slds-p-right_x-small" iconName="utility:down"/>
+                                                                            </ui:menuTriggerLink>    
+                                                                            <ui:menuList aura:id="actionMenu" class="customMenuposition">
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="{!c.editEmployeeByAdmin}" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Edit-Leaverequest" data-index="{!i}"><i class="fa fa-pencil">&nbsp;&nbsp;</i>Edit</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="{!c.viewEmployee}" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="View-Leaverequest" data-index="{!i}"><i class="fa fa-eye"></i>&nbsp;&nbsp;View</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Delete-Leaverequest" data-index="{!i}"><i class="fa fa-trash-o">&nbsp;&nbsp;</i>Delete</span></a>
+                                                                                </ui:actionMenuItem> 
+                                                                            </ui:menuList>
+                                                                        </ui:menu> -->
+                                                                    </td>
+                                                                </aura:if>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                            <aura:set attribute="else">
+                                                                <tr>
+                                                                    <td colspan='11'>
+                                                                        <div class="slds-notify_container slds-is-relative custom-zindex">
+                                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                                <span class="slds-assistive-text">warning</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                                                                                    <lightning:icon iconName='utility:sentiment_neutral' alternativeText='warning' size='medium' title='sentiment_neutral'></lightning:icon>
+                                                                                </span>
+                                                                                <div class="slds-notify__content ">
+                                                                                    <h3 class="slds-text-heading_small"> No Leave Applications to Approve/Reject </h3>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                      
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5">
+                                                <!--div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to 10 of 57 entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <aura:if isTrue="{!v.CurrentTab == 'Draft-tab' }">
+                                    <div class="card-body p-2">
+                                        <h5 class="card-title mb-2">Leave Applications</h5>
+                                        <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col">Leave Request <br/>Name</th>
+                                                            <th scope="col">Leave Period</th>
+                                                            <th scope="col">Days Taken</th>
+                                                            <th scope="col">Date of <br/>Request</th>
+                                                            <th scope="col">Leave Type</th>
+                                                            <th scope="col">Employee</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:if isTrue="{!v.SubmittedRec.length >0}">
+                                                        	<aura:iteration items="{!v.SubmittedRec}" var="LeaveReq" indexVar="i">
+                                                            <tr>
+                                                                <td> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <strong>
+                                                                            <lightning:formattedUrl value="{!'/'+LeaveReq.Id}" label="{!LeaveReq.Name}" target="_blank" class="fcolor1" />
+                                                                        </strong>
+                                                                    </div>
+                                                                </td>
+                                                                <!--td scope="row"><input type="checkbox" class="form-input" /></td>-->
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_Start_Date__c}"/>  - <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_End_Date__c}"/>
+                                                                    </div>
+                                                                    </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Number_of_Days__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <lightning:formattedDateTime value="{!LeaveReq.ERP7__Applied_Date__c}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Leave_Type__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <span class="slds-avatar slds-avatar_circle">
+                                                                        <span class="slds-icon_container slds-icon-standard-user" title="">  
+                                                                            <aura:if isTrue="{!not(empty(LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl))}">
+                                                                                <img src="{!LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl}" alt="Image not Avaialble"/> 
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:icon iconName="standard:user" ></lightning:icon>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            <span class="slds-assistive-text">User</span>
+                                                                        </span>
+                                                                    </span>
+                                                                    &nbsp;&nbsp;<lightning:formattedUrl value="{!'/'+LeaveReq.ERP7__Employee__r.Id}" label="{!LeaveReq.ERP7__Employee__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td> 
+                                                                    <span class="{! (LeaveReq.ERP7__Status__c == 'Approved') ? 'badge badge-success' : (LeaveReq.ERP7__Status__c == 'Rejected') ? 'badge badge-danger' : 'badge' }">{!LeaveReq.ERP7__Status__c}</span>
+                                                                </td> 
+                                                                    <td>
+                                                                        <aura:if isTrue="{!LeaveReq.ERP7__Status__c=='Draft'}">
+                                                                            <a class="svg" onclick="{!c.EditClickAdmin}" data-index="{!i}" data-record="{!LeaveReq.Id}"> 
+                                                                                <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" disabled="true"/>
+                                                                            </a>&nbsp;&nbsp;
+                                                                            <aura:set attribute="else">
+                                                                                <a class="svg disabled-link" onclick="{!c.EditClickAdmin}" data-index="{!i}" data-record="{!LeaveReq.Id}"> 
+                                                                                    <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" disabled="true"/>
+                                                                                </a>&nbsp;&nbsp;
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                        <a class="svg" onclick="{!c.handleDelClickAdmin}" data-index="{!i}" data-record-id="{!LeaveReq.Id}">
+                                                                            <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                        </a>
+                                                                        <!--ui:menu >
+                                                                            <ui:menuTriggerLink aura:id="trigger2" label="">
+                                                                                <lightning:button variant="neutral" label="" class="slds-button slds-buttonicon-border-filled slds-buttonicon-x-small  btnlineheight slds-p-right_x-small" iconName="utility:down"/>
+                                                                            </ui:menuTriggerLink>    
+                                                                            <ui:menuList aura:id="actionMenu" class="customMenuposition">
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);" data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Edit-Leaverequest" data-index="{!i}"><i class="fa fa-pencil">&nbsp;&nbsp;</i>Edit:</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);" data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="View-Leaverequest" data-index="{!i}"><i class="fa fa-eye"></i>&nbsp;&nbsp;View:</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);" data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Delete-Leaverequest" data-index="{!i}"><i class="fa fa-trash-o">&nbsp;&nbsp;</i>Delete:</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                            </ui:menuList>
+                                                                        </ui:menu-->
+                                                                    </td>   
+                                                            </tr>
+                                                        </aura:iteration>
+                                                            <aura:set attribute="else">
+                                                                <tr>
+                                                                    <td colspan='11'>
+                                                                        <div class="slds-notify_container slds-is-relative custom-zindex">
+                                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                                <span class="slds-assistive-text">warning</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                                                                                    <lightning:icon iconName='utility:sentiment_neutral' alternativeText='warning' size='medium' title='sentiment_neutral'></lightning:icon>
+                                                                                </span>
+                                                                                <div class="slds-notify__content ">
+                                                                                    <h3 class="slds-text-heading_small"> No Leave Applications to Approve/Reject </h3>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                      
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5">
+                                                <!--div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to 10 of 57 entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <aura:if isTrue="{!v.CurrentTab == 'Approved-Page' }">
+                                    <div class="card-body p-2">
+                                        <h5 class="card-title mb-2">Leave Applications</h5>
+                                        <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col">Leave Request <br/>Name</th>
+                                                            <th scope="col">Leave Period</th>
+                                                            <th scope="col">Days Taken</th>
+                                                            <th scope="col">Date of <br/>Request</th>
+                                                            <th scope="col">Leave Type</th>
+                                                            <th scope="col">Employee</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:if isTrue="{!v.ApprovedRec.length >0}"> <!-- <aura:if isTrue="{!v.ForApprovalRecords.length >0}"> -->
+                                                        	<aura:iteration items="{!v.ApprovedRec}" var="LeaveReq" indexVar="i">
+                                                            <tr>
+                                                                <td> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <strong>
+                                                                            <lightning:formattedUrl value="{!'/'+LeaveReq.Id}" label="{!LeaveReq.Name}" target="_blank" class="fcolor1" />
+                                                                        </strong>
+                                                                    </div>
+                                                                </td>
+                                                                <!--td scope="row"><input type="checkbox" class="form-input" /></td>-->
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_Start_Date__c}"/>  - <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_End_Date__c}"/>
+                                                                    </div>
+                                                                    </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Number_of_Days__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <lightning:formattedDateTime value="{!LeaveReq.ERP7__Applied_Date__c}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Leave_Type__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <span class="slds-avatar slds-avatar_circle">
+                                                                        <span class="slds-icon_container slds-icon-standard-user" title="">  
+                                                                            <aura:if isTrue="{!not(empty(LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl))}">
+                                                                                <img src="{!LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl}" alt="Image not Avaialble"/> 
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:icon iconName="standard:user" ></lightning:icon>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            <span class="slds-assistive-text">User</span>
+                                                                        </span>
+                                                                    </span>
+                                                                    &nbsp;&nbsp;<lightning:formattedUrl value="{!'/'+LeaveReq.ERP7__Employee__r.Id}" label="{!LeaveReq.ERP7__Employee__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td> 
+                                                                    <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Approved')}">
+                                                                        <span class="badge badge-info">{!LeaveReq.ERP7__Status__c}</span>
+                                                                        <aura:set attribute="else">
+                                                                            <span class="{! (LeaveReq.ERP7__Status__c == 'Approved') ? 'badge badge-success' : (LeaveReq.ERP7__Status__c == 'Rejected') ? 'badge badge-danger' : 'badge' }">{!LeaveReq.ERP7__Status__c}</span>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </td>
+                                                                <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Submitted') }">
+                                                                <td>
+                                                                    <i class="fa fa-check-square mr-2 btn-success fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Approve" data-index="{!i}"></i>
+                                                                </td>
+                                                                <td>
+                                                                    <i class="fa fa-window-close btn-danger fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Reject" data-index="{!i}"></i>
+                                                                </td>
+                                                                <td>
+                                                                    <ui:menu >
+                                                                        <ui:menuTriggerLink aura:id="trigger1" label="">
+                                                                            <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small  btnlineheight slds-p-right_x-small" iconName="utility:down"/>
+                                                                        </ui:menuTriggerLink>    
+                                                                        <ui:menuList aura:id="actionMenu" class="customMenuposition">
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Edit-Leaverequest" data-index="{!i}"><i class="fa fa-pencil">&nbsp;&nbsp;</i>Edit</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="View-Leaverequest" data-index="{!i}"><i class="fa fa-eye"></i>&nbsp;&nbsp;View</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Delete-Leaverequest" data-index="{!i}"><i class="fa fa-trash-o">&nbsp;&nbsp;</i>Delete</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                        </ui:menuList>
+                                                                    </ui:menu>
+                                                                </td>
+                                                                </aura:if>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                            <aura:set attribute="else">
+                                                                <tr>
+                                                                    <td colspan='11'>
+                                                                        <div class="slds-notify_container slds-is-relative custom-zindex">
+                                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                                <span class="slds-assistive-text">warning</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                                                                                    <lightning:icon iconName='utility:sentiment_neutral' alternativeText='warning' size='medium' title='sentiment_neutral'></lightning:icon>
+                                                                                </span>
+                                                                                <div class="slds-notify__content ">
+                                                                                    <h3 class="slds-text-heading_small "> No Leave Applications to Approve/Reject </h3>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                      
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5">
+                                                <!--div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to 10 of 57 entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <aura:if isTrue="{!v.CurrentTab == 'Rejected-Page' }">
+                                    <div class="card-body p-2">
+                                        <h5 class="card-title mb-2">Leave Applications</h5>
+                                        <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col">Leave Request <br/>Name</th>
+                                                            <th scope="col">Leave Period</th>
+                                                            <th scope="col">Days Taken</th>
+                                                            <th scope="col">Date of <br/>Request</th>
+                                                            <th scope="col">Leave Type</th>
+                                                            <th scope="col">Employee</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                            <th scope="col"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:if isTrue="{!v.RejectedRec.length >0}">
+                                                        	<aura:iteration items="{!v.RejectedRec}" var="LeaveReq" indexVar="i">
+                                                            <tr>
+                                                                <td> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <strong>
+                                                                            <lightning:formattedUrl value="{!'/'+LeaveReq.Id}" label="{!LeaveReq.Name}" target="_blank" class="fcolor1" />
+                                                                        </strong>
+                                                                    </div>
+                                                                </td>
+                                                                <!--td scope="row"><input type="checkbox" class="form-input" /></td>-->
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_Start_Date__c}"/>  - <lightning:formattedDateTime value="{!LeaveReq.ERP7__Leave_End_Date__c}"/>
+                                                                    </div>
+                                                                    </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Number_of_Days__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <lightning:formattedDateTime value="{!LeaveReq.ERP7__Applied_Date__c}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td><div class="slds-truncate max-widthml">{!LeaveReq.ERP7__Leave_Type__c}</div></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    <span class="slds-avatar slds-avatar_circle">
+                                                                        <span class="slds-icon_container slds-icon-standard-user" title="">  
+                                                                            <aura:if isTrue="{!not(empty(LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl))}">
+                                                                                <img src="{!LeaveReq.ERP7__Employee__r.ERP7__Employee_User__r.SmallPhotoUrl}" alt="Image not Avaialble"/> 
+                                                                                <aura:set attribute="else">
+                                                                                    <lightning:icon iconName="standard:user" ></lightning:icon>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            
+                                                                            <span class="slds-assistive-text">User</span>
+                                                                        </span>
+                                                                    </span>
+                                                                    &nbsp;&nbsp;<lightning:formattedUrl value="{!'/'+LeaveReq.ERP7__Employee__r.Id}" label="{!LeaveReq.ERP7__Employee__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td> 
+                                                                    <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Submitted')}">
+                                                                        <span class="badge badge-info">To Be Approved</span>
+                                                                        <aura:set attribute="else">
+                                                                            <span class="{! (LeaveReq.ERP7__Status__c == 'Approved') ? 'badge badge-success' : (LeaveReq.ERP7__Status__c == 'Rejected') ? 'badge badge-danger' : 'badge' }">{!LeaveReq.ERP7__Status__c}</span>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </td>
+                                                                <aura:if isTrue="{!(LeaveReq.ERP7__Status__c == 'Submitted') }"><!--<aura:if isTrue="{!or(LeaveReq.ERP7__Status__c != 'Rejected',LeaveReq.ERP7__Status__c != 'Approved') }">-->
+                                                                <td>
+                                                                    <i class="fa fa-check-square mr-2 btn-success fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Approve" data-index="{!i}"></i>
+                                                                </td>
+                                                                <td>
+                                                                    <i class="fa fa-window-close btn-danger fa-2x" aria-hidden="true" onclick="{!c.openApprovedRejectedModel}" data-recordId="{!LeaveReq.Id}" data-name="Reject" data-index="{!i}"></i>
+                                                                </td>
+                                                                <td>
+                                                                    <ui:menu >
+                                                                        <ui:menuTriggerLink aura:id="trigger1" label="">
+                                                                            <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small  btnlineheight slds-p-right_x-small" iconName="utility:down"/>
+                                                                        </ui:menuTriggerLink>    
+                                                                        <ui:menuList aura:id="actionMenu" class="customMenuposition">
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Edit-Leaverequest" data-index="{!i}"><i class="fa fa-pencil">&nbsp;&nbsp;</i>Edit</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="View-Leaverequest" data-index="{!i}"><i class="fa fa-eye"></i>&nbsp;&nbsp;View</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-recordId="{#LeaveReq.Id}" data-name="{#LeaveReq.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{!LeaveReq}" data-name="{#LeaveReq.Name}" onclick="{!c.openPopupModal}" data-attribute="Delete-Leaverequest" data-index="{!i}"><i class="fa fa-trash-o">&nbsp;&nbsp;</i>Delete</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                        </ui:menuList>
+                                                                    </ui:menu>
+                                                                </td>
+                                                                </aura:if>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                            <aura:set attribute="else">
+                                                                <tr>
+                                                                    <td colspan='11'>
+                                                                        <div class="slds-notify_container slds-is-relative custom-zindex">
+                                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                                <span class="slds-assistive-text">warning</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                                                                                    <lightning:icon iconName='utility:sentiment_neutral' alternativeText='warning' size='medium' title='sentiment_neutral'></lightning:icon>
+                                                                                </span>
+                                                                                <div class="slds-notify__content ">
+                                                                                    <h3 class="slds-text-heading_small "> No Leave Applications to Approve/Reject </h3>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                      
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5">
+                                                <!--div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to 10 of 57 entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <aura:if isTrue="{!v.CurrentTab == 'Employees-tab'}">
+                                    <div class="card-body p-2">
+                                    	<h5 class="card-title mb-2">Employees</h5>
+                                    <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        <div class="table-responsive">
+                                                <table class="slds-table slds-table_bordered">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps"> 
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col" width="5%"></th>
+                                                            <th scope="col">Employee Name</th>
+                                                            <th scope="col">Job Title</th>
+                                                            <th scope="col">Email</th>
+                                                            <th scope="col">Phone</th>
+                                                            <th scope="col">Status</th>
+                                                            <th scope="col"></th>
+                                                           
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:iteration items="{!v.EmployeeRecords}" var="EmpRec" indexVar="i">
+                                                            <tr>
+                                                                <td> <lightning:formattedText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;</td>
+                                                                <td scope="row"><input type="checkbox" class="form-input" /></td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                        <span class="slds-avatar slds-avatar_circle">
+                                                                            <span class="slds-icon_container slds-icon-standard-user" title="">  
+                                                                                <aura:if isTrue="{!not(empty(EmpRec.ERP7__Employee_User__r.SmallPhotoUrl))}">
+                                                                                    <img src="{!EmpRec.ERP7__Employee_User__r.SmallPhotoUrl}" alt="Image not Avaialble"/> 
+                                                                                    <aura:set attribute="else">
+                                                                                        <lightning:icon iconName="standard:user" ></lightning:icon>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+                                                                                
+                                                                                <span class="slds-assistive-text">User</span>
+                                                                            </span>
+                                                                        </span>
+                                                                        &nbsp;&nbsp;<lightning:formattedUrl value="{!'/'+EmpRec.Id}" label="{!EmpRec.Name}" target="_blank" class="fcolor1"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">{!EmpRec.ERP7__Job_Title__c}</div>
+                                                                </td>
+                                                                <td>
+                                                                    <div class="slds-truncate max-widthml">
+                                                                    {!EmpRec.ERP7__Email__c}
+                                                                    </div>
+                                                                </td>
+                                                                <td><div class="slds-truncate max-widthml">{!EmpRec.ERP7__Phone__c}</div></td>
+                                                                <td> 
+                                                                    <aura:if isTrue="{!(EmpRec.ERP7__Active__c)}">
+                                                                        <span class="badge badge-success">Active</span>
+                                                                        <aura:set attribute="else">
+                                                                            <span class="badge badge-danger">In-Active</span>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                    </td>
+                                                                <td>
+                                                                    <ui:menu >
+                                                                        <ui:menuTriggerLink aura:id="trigger" label="">
+                                                                            <lightning:button variant="neutral" label="" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small  btnlineheight slds-p-right_x-small" iconName="utility:down"/>
+                                                                        </ui:menuTriggerLink>    
+                                                                        <ui:menuList aura:id="actionMenu" class="customMenuposition">
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}" onclick="{!c.editEmployeeByAdmin}" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}"><i class="fa fa-pencil">&nbsp;&nbsp;</i>Edit</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                                <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}" onclick="{!c.viewEmployee}" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}"><i class="fa fa-eye"></i>&nbsp;&nbsp;View</span></a>
+                                                                                </ui:actionMenuItem>
+                                                                               <!-- <ui:actionMenuItem >
+                                                                                    <a href="javascript:void(0);"   data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}" onclick="" title=""><span class="slds-form-element__label AccountsPayable-newClass14" data-record="{#EmpRec.Id}" data-name="{#EmpRec.Name}"><i class="fa fa-trash-o">&nbsp;&nbsp;</i>Delete</span></a>
+                                                                                </ui:actionMenuItem> -->
+                                                                        </ui:menuList>
+                                                                    </ui:menu>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-sm-12 col-md-5">
+                                                <!--div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite">Showing 1 to 10 of 57 entries</div>-->
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                    </div>
+                                </aura:if>
+                                
+                            </div>
+                            
+                            <!-- User profile area-->
+                            <!--div class="card mmm"> 
+                                <div class="card-body">
+                                    <h5 class="card-title">Parveez Pasha</h5>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_8-of-12 slds-large-size_8-of-12 slds-p-right_small">
+                                            <div class="slds-grid slds-wrap slds-m-bottom_medium">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Employee ID</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Leave Type</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Date</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Email ID</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Date of request</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="form-element-01">Reason for leave</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="text" id="form-element-01" placeholder="" class="slds-input" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">Back</button>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h3>As of 22-Jan-2024 </h3>
+                                                </div>
+                                                <div class="card-body p-2">
+                                                    <blockquote class="blockquote mb-0">
+                                                        <p>Available balance 12</p>
+                                                        <p>Currently booked 1</p>
+                                                        <p>Balance after booked leave 11</p>
+                                                        
+                                                    </blockquote>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div!-->
+                            <!-- User profile area ends here-->
+                        </div>
+                    </div>
+                    <!--Admin Main area -->
+                </div>
+            </div>
+        </aura:if>
+        <!-- Admin Section Ends -->
+        
+        <div class="editMSmodal" aura:id="allLeaveModals">
+            <section aura:id="newTimeOffModal" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeTimeOffModal}" variant="bare-inverse" size="large"/> 
+                        <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate manageLeave-newClass43">Apply Leave</h2>
+                    </header>
+                    <div class="slds-grid slds-wrap manageLeave-newClass44">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <label class="slds-form-element__label" for="unique-id-of-input">{!$Label.c.Name_ManageLeave}<span class="manageLeave-newClass45">*</span></label>
+                                <lightning:input type="Name" aura:id="newTimeOffName" variant="label-hidden" value="{!v.newTimeOff.Name}" placeholder="{!$Label.c.Enter_Name_ManageLeave}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <aura:if isTrue="{!v.resetLookups}">
+                                       <c:CustomInputLookUp objectAPIName="User" label="{!$Label.c.Approver_ManageLeave}" IconName="standard:user" selectedRecordId="{!v.newTimeOff.ERP7__Approvers__c}" hideRemove="true"/><!--qry="{!'And Id != \''+v.currentEmployee+'\''}-->
+                                    <aura:set attribute="else">
+                                       <c:CustomInputLookUp objectAPIName="User" label="{!$Label.c.Approver_ManageLeave}" IconName="standard:user" selectedRecordId="{!v.newTimeOff.ERP7__Approvers__c}" /><!--qry="{!'And Id != \''+v.currentEmployee+'\''}"-->
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="Date" label="{!$Label.c.Start_Date_ManageLeave}" value="{!v.newTimeOff.ERP7__Leave_Start_Date__c}" onchange="{!c.leaveDateChange}" placeholder="{!$Label.c.Enter_Date_ManageLeave}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="Date" label="End Date" value="{!v.newTimeOff.ERP7__Leave_End_Date__c}" onchange="{!c.leaveDateChange}" placeholder="{!$Label.c.Enter_Date_ManageLeave}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:select value="{!v.newTimeOff.ERP7__Leave_Type__c}" label="Type">
+                                    <option text="Choose one..." value=""/>
+                                    <aura:iteration items="{!v.leaveTypes}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="Number" min="1" label="{!$Label.c.Number_Of_Days_ManageLeave}" disabled="true" value="{!v.newTimeOff.ERP7__Number_of_Days__c}" placeholder="{!$Label.c.Time_Period_ManageLeave}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="Date" label="Applied Date" value="{!v.newTimeOff.ERP7__Applied_Date__c}" />
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <!--lightning:input label="{!$Label.c.Reason_ManageLeave}" value="{!v.Leavereason}" placeholder="{!$Label.c.Enter_Reason_ManageLeave}"/-->
+                                <lightning:input aura:id="leaveReason2" label="{!$Label.c.Reason_ManageLeave}" value="{!v.newTimeOff.ERP7__Reason__c}" placeholder="{!$Label.c.Enter_Reason_ManageLeave}"/><!--inputRichText-->
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer text-center">
+                        <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closeTimeOffModal}" variant="neutral"/>
+                        <lightning:button onclick="{!c.saveTimeOff}" label="Save As Draft" variant="brand"/>
+                        <lightning:button onclick="{!c.submitTimeOff}" label="{!$Label.c.Submit_ManageLeave}" variant="Success"/>
+                    </footer>
+                </div>
+            </section>
+            <section aura:id="approveTimeOffModal" role="dialog" tabindex="-1" class="slds-modal">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-modal__header_empty">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeApproveModal}" variant="bare-inverse" size="large"/>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input aura:id="ReasonApproved" value="{!v.A_Rcomment}" variant="label-hidden" placeholder="{!$Label.c.Enter_Comment_ManageLeave}"/><!--inputRichText-->
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closeApproveModal}" variant="neutral"/>
+                        <lightning:button onclick="{!c.ApproveLeave}" label="Approve" variant="Success"/>
+                    </footer>
+                </div>
+            </section>
+            <section aura:id="rejectTimeOffModal" role="dialog" tabindex="-1" class="slds-modal">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-modal__header_empty">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeRejectModal}" variant="bare-inverse" size="large"/>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input aura:id="ReasonRejected" value="{!v.A_Rcomment}" variant="label-hidden" placeholder="{!$Label.c.Enter_Comment_ManageLeave}"/><!--inputRichText-->
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closeRejectModal}" variant="neutral"/>
+                        <lightning:button onclick="{!c.RejectLeave}" label="{!$Label.c.Reject_ManageLeave}" variant="destructive"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop" aura:id="newTimeOffModalBackdrop"></div>
+        </div>
+
+        <div class="editMSmodal" aura:id="allLeaveModals1">
+            <section aura:id="viewAplliedRequest" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closePopupModal}" variant="bare-inverse" size="large"/> 
+                        <aura:if isTrue="{!v.CurrentPopUp == 'Delete-Leaverequest'}">
+                            <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate manageLeave-newClass43">Delete Leave Application
+                               <!-- <lightning:formattedUrl value="{!'/' + v.newTimeOff.Id}"  target="_blank" class="fcolor1">Delete Leave Application </lightning:formattedUrl> -->
+                            </h2>                            
+                            <aura:set attribute="else">
+                                <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate manageLeave-newClass43">Leave Application
+                                  <!--  <lightning:formattedUrl value="{!'/' + v.newTimeOff.Id}"  target="_blank" class="fcolor1">Leave Application </lightning:formattedUrl> -->
+                                </h2>
+                            </aura:set>
+                        </aura:if>
+                    </header>
+                    
+                    <aura:if isTrue="{!v.CurrentPopUp == 'Delete-Leaverequest'}">
+                        <div class="slds-modal__content slds-p-around_medium tcenter">
+                                <p>Are you Sure to Delete this Leave Request?</p>
+                                <!--lightning:icon iconName="action:delete" alternativeText="Clone Icon"/-->
+                        </div>
+                        <aura:set attribute="else">
+                            <div class="slds-grid slds-wrap manageLeave-newClass44">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="unique-id-of-input">{!$Label.c.Name_ManageLeave}<span class="manageLeave-newClass45">*</span></label>
+                                        <lightning:input type="Name" aura:id="newTimeOffName" variant="label-hidden" value="{!v.newTimeOff.Name}" placeholder="{!$Label.c.Enter_Name_ManageLeave}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <aura:if isTrue="{!v.resetLookups}">
+                                               <c:CustomInputLookUp objectAPIName="User" label="{!$Label.c.Approver_ManageLeave}" IconName="standard:user" selectedRecordId="{!v.newTimeOff.ERP7__Approvers__c}" qry="{!'And Id != \''+v.currentEmployee+'\''}" hideRemove="true"/>
+                                            <aura:set attribute="else">
+                                               <c:CustomInputLookUp objectAPIName="User" label="{!$Label.c.Approver_ManageLeave}" IconName="standard:user" selectedRecordId="{!v.newTimeOff.ERP7__Approvers__c}" qry="{!'And Id != \''+v.currentEmployee+'\''}"/>
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="Date" label="{!$Label.c.Start_Date_ManageLeave}" value="{!v.newTimeOff.ERP7__Leave_Start_Date__c}" onchange="{!c.leaveDateChange}" placeholder="{!$Label.c.Enter_Date_ManageLeave}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="Date" label="End Date" value="{!v.newTimeOff.ERP7__Leave_End_Date__c}" onchange="{!c.leaveDateChange}" placeholder="{!$Label.c.Enter_Date_ManageLeave}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.newTimeOff.ERP7__Leave_Type__c}" label="Type">
+                                            <option text="Choose one..." value=""/>
+                                            <aura:iteration items="{!v.leaveTypes}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div> 
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="Number" min="1" label="{!$Label.c.Number_Of_Days_ManageLeave}" disabled="true" value="{!v.newTimeOff.ERP7__Number_of_Days__c}" placeholder="{!$Label.c.Time_Period_ManageLeave}"/>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="Date" label="Applied Date" value="{!v.newTimeOff.ERP7__Applied_Date__c}" />
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" label="Employee Requester" IconName="standard:user" selectedRecordId="{!v.newTimeOff.ERP7__Employee__c}" qry="{!'And Id != \''+v.newTimeOff.ERP7__Employee__c+'\''}" hideRemove="true"/> <!--qry="{!'And Id != \''+v.newTimeOff.ERP7__Employee__c+'\''}"-->      
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input aura:id="leaveReason" label="{!$Label.c.Reason_ManageLeave}" value="{!v.newTimeOff.ERP7__Reason__c}" placeholder="{!$Label.c.Enter_Reason_ManageLeave}"/><!--inputRichText-->
+                                    </div>
+                                </div>
+                            </div>         
+                        </aura:set>
+                    </aura:if>
+                    
+                    <footer class="slds-modal__footer text-center">
+                        <aura:if isTrue="{!v.CurrentPopUp == 'Delete-Leaverequest'}">
+
+                            <lightning:button  label="No" onclick="{!c.closePopupModal}" variant="neutral"/>
+                            <lightning:button onclick="{!c.DeleteLeaveReq}" label="Yes" variant="brand" />
+
+                            <aura:set attribute="else">
+                                <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closePopupModal}" variant="neutral"/>
+                                <aura:if isTrue="{!v.newTimeOff.ERP7__Status__c == 'Draft'}">
+                                    <lightning:button onclick="{!c.Save}" label="Save" variant="Success"/>
+                                    <lightning:button onclick="{!c.SaveSubmit}" label="Submit" variant="Success"/>
+                                    <aura:set attribute="else">
+                                        <lightning:button onclick="{!c.Save}" label="Save" variant="Success" disabled="true"/>
+                                    </aura:set>
+                                </aura:if>
+                            </aura:set>
+
+                        </aura:if>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop" aura:id="newTimeOffModalBackdrop1"></div>
+        </div>
+        <!-- Emp View/Edit modal start -->
+        <div class="EmpViewModal" aura:id="EmpModal">
+            
+            <section aura:id="EmployeeEditModal" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeEmployeeEditModal}" variant="bare-inverse" size="large"/> 
+                        <aura:if isTrue="{!v.isEmployeeEdit}">
+                            <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate manageLeave-newClass43">Edit Employee</h2>
+                            <aura:set attribute="else">
+                                <h2 id="contactModalHeading" class="slds-text-heading_medium slds-hyphenate manageLeave-newClass43">View Employee</h2>
+                            </aura:set>
+                        </aura:if>
+                    </header>
+
+                    <div class="slds-grid slds-wrap manageLeave-newClass44">
+                        <!-- Group 1: First Name, Last Name, Gender, Address -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="text" label="First Name" value="{!v.EmployeeEdit.ERP7__First_Name__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="text" label="Last Name" value="{!v.EmployeeEdit.ERP7__Last_Name__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:select label="Gender" value="{!v.EmployeeEdit.ERP7__Gender__c}">
+                                    <option value="">-- None --</option>
+                                    <aura:iteration items="{!v.GenderPicklistValues}" var="item">
+                                        <option value="{!item.value}">{!item.label}</option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" label="Address" IconName="standard:user" selectedRecordId="{!v.EmployeeEdit.ERP7__Address__c}" />
+
+                               <!-- <lightning:input type="text" label="{!$Label.c.Addresss}" value="{!v.EmployeeEdit.Address__c}"/> -->
+                            </div>
+                        </div>
+                 <!--   </div>  -->
+                    
+                 <!--   <div class="slds-grid slds-wrap manageLeave-newClass44">  -->
+                        <!-- Group 2: Leave Balances -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="number" label="Annual Leave Available" value="{!v.EmployeeEdit.ERP7__Annual_Leave_Available__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="number" label="Casual Leave Available" value="{!v.EmployeeEdit.ERP7__Casual_Leave_Available__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="number" label="Sick Leave Available" value="{!v.EmployeeEdit.ERP7__Sick_Leave_Available__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="number" label="Paternity Leave Available" value="{!v.EmployeeEdit.ERP7__Paternity_Leave_Avaiable__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="number" label="Earned Leave Available" value="{!v.EmployeeEdit.ERP7__Earned_Leave_Available__c}"/>
+                            </div>
+                        </div>
+                   <!-- </div>-->
+                    
+                  <!--  <div class="slds-grid slds-wrap manageLeave-newClass44">  -->
+                        <!-- Group 3: Job Title, First Working Day, etc. -->
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="text" label="Job Title" value="{!v.EmployeeEdit.ERP7__Job_Title__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="date" label="First Working Day" value="{!v.EmployeeEdit.ERP7__First_Working_Day__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="text" label="Description" value="{!v.EmployeeEdit.ERP7__Description__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                            	<c:CustomInputLookUp objectAPIName="ERP7__Employees__c" label="Manager" IconName="standard:user" selectedRecordId="{!v.EmployeeEdit.ERP7__Employee_User__r.ManagerId}" qry="{!'And Id != \''+v.currentEmp+'\''}" />
+                              <!--  <lightning:input type="text" label="Manager" value="{!v.EmployeeEdit.ReportingManager__r.Name}"/>   qry="{!'And Id != \''+v.currentEmployee+'\''}"-->
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:select label="Marital Status" value="{!v.EmployeeEdit.ERP7__Marital_Status__c}">
+                                    <option value="">-- None --</option>
+                                    <aura:iteration items="{!v.MaritalStatusPicklistValues}" var="item">
+                                        <option value="{!item.value}">{!item.label}</option>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>                        
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="checkbox" label="Active" checked="{!v.EmployeeEdit.ERP7__Active__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="tel" label="Phone" value="{!v.EmployeeEdit.ERP7__Phone__c}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:input type="email" label="Email" value="{!v.EmployeeEdit.ERP7__Email__c}"/>
+                            </div>
+                        </div>
+                    </div>
+                    <aura:if isTrue="{!v.isEmployeeEdit}">
+                        <footer class="slds-modal__footer text-center">
+                            <lightning:button  label="Cancel" onclick="{!c.closeEmployeeEditModal}" variant="neutral"/>
+                            <lightning:button onclick="{!c.saveEmployeeEditModal}" label="Save" variant="Success"/>
+                            <aura:set attribute="else">
+                                <lightning:button  label="Cancel" onclick="{!c.closeEmployeeEditModal}" variant="neutral"/>
+                            </aura:set>
+                        </footer>
+                    </aura:if>
+                </div>
+            </section>
+           
+            <div class="slds-backdrop" aura:id="EmployeeEditBackdrop"></div>
+        </div>
+        <!-- Emp View/Edit modal end -->
+    </body>
+</aura:component>

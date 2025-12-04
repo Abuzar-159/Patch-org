@@ -1,0 +1,230 @@
+<aura:component controller="ProductListComm" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    
+            <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ProductListComm.css"/>
+
+    <ltng:require scripts="{!join(',',
+                           $Resource.ProductListComm + '/ProductListComm/script/common_scripts.min.js',                           
+                           $Resource.ProductListComm + '/ProductListComm/script/main.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/sticky_sidebar.min.js',
+    						$Resource.ProductListComm + '/ProductListComm/script/specific_listing.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/jquery_3.5.0.min.js')}"/>
+      
+    <aura:attribute name="UserName" type="String" default="GuestUser"/>
+    <aura:attribute name="PortalUser" type="Boolean" default="false"/>
+    <aura:attribute name = "errMsg" type = "String" default = ""  access = "global"/>
+    <aura:attribute name="Action" type="String" default="SignIn"/>
+    <aura:attribute name="ActionName" type="String" default="Sign In"/>
+    <aura:attribute name="showSignIn" type="Boolean" default="false"/>
+    
+    <aura:attribute name="AccId" type="String"/>
+    <aura:attribute name="categoryList" type="List"/>
+    <aura:attribute name="noOfItemsOnCart" type="Integer" default="0"/>
+    <aura:attribute name="catList" type="String[]"/>
+    <aura:attribute name="SubTotal" type="Integer" default="0"/>
+    <aura:attribute name="cartItems" type="Object"/>
+    
+    <aura:attribute name="guestProds" type="String[]"/>
+    
+    <!--=====for showing list or grid view in ProductListComm while searching =====-->
+    <aura:attribute name="productView" type="String" default="grid"/>
+	<!--=====for showing list or grid view in ProductListComm while searching =====-->
+    
+    <aura:handler event="c:ProductListComm_BodyToHeader" action="{!c.eventHandler}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    
+    <aura:registerEvent name="ProductListCommEvent" type="c:ProductListCommEvent"/>
+    <aura:handler event="c:ProductListCommEvent" action="{!c.eventHandle1}"/>
+    <!--<aura:handler event="ERP7:ProductListCommEvent" action="{!c.HandlerProductListCommEvent}"/>-->
+    <!--<aura:handler event="c:ProductListComm_BodyToHeader" action="{!c.eventHandler}"/> -->
+    
+    <body>
+        <header class="version_1 erp_mark7">
+            <div class="layer"></div><!-- Mobile menu overlay mask -->
+            
+            <!-- /main_header -->            
+            <div class="main_nav inner Sticky">
+                <div class="container">
+                    <div class="row small-gutters">
+                        <div class="col-xl-3 col-lg-3 col-md-3">
+                            <nav class="categories">
+                                <ul class="clearfix">
+                                    <li><span>
+                                        <a>
+                                            <span class="hamburger hamburger--spin">
+                                                <span class="hamburger-box">
+                                                    <span class="hamburger-inner"></span>
+                                                </span>
+                                            </span>
+                                            <!---Categories--> <img src="../resource/ERP7__ProductListComm/ProductListComm/img/logo/logo.jpg" data-src="../resource/ERP7__ProductListComm/ProductListComm/img/logo/logo.jpg" class="ProductListCH-newClass4" onclick="{!c.home}"></img>
+                                        </a>
+                                        </span>
+                                        <div id="menu">
+                                            <ul>
+                                                <aura:iteration items="{!v.catList}" var="cl">
+                                                	<li onclick="{!c.sendCat}" data-value="{!cl}"><a>{!cl}</a></li>
+                                            	</aura:iteration>
+                                                <!--<aura:iteration items="{!v.categoryList}" var="cl">
+                                                <li><a>{!cl.ERP7__Category__c}</a>
+                                                    <ul>
+                                                        <li><a>{!cl.type}</a></li>
+                                                        
+                                                    </ul>
+                                                </li>
+                                            </aura:iteration>-->
+                                                <!--<li><span><a href="#0">All</a></span>
+                                                <ul>
+                                                    <li><a href="listing-row-1-sidebar-left.html">One</a></li>
+                                                    <li><a href="listing-row-2-sidebar-right.html">Two</a></li>
+                                                    <li><a href="listing-row-4-sidebar-extended.html">Three</a></li>
+                                                    <li><a href="listing-grid-1-full.html">Four</a></li>
+                                                </ul>
+                                            </li>-->                                            
+                                            </ul>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                        <div class="col-xl-6 col-lg-7 col-md-6 d-none d-md-block">
+                            <div class="custom-search-input">
+                                <input type="text" onkeyup="{!c.sendToBody}" id="seachbox" placeholder="Search over 10.000 products"/>
+                                <button type="submit" onclick="{!c.sendToBody}"><i class="header-icon_search_custom"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-2 col-md-3"> 
+                            <ul class="top_tools"> 
+                                <li>
+                                    <div class="dropdown dropdown-cart">
+                                        <a onclick="{!c.viewCart1}" class="cart_bt"><strong>{!v.noOfItemsOnCart}</strong></a>
+                                        <div class="dropdown-menu">
+                                            <ul>
+                                                <aura:if isTrue="{!v.cartItems.length > 0}">
+                                                	<aura:iteration items="{!v.cartItems}" var="ci">
+                                                        <li>
+                                                            <a onclick="{!c.detailPage}" data-value="{!ci.pbe.Product2.Id}">
+                                                                <figure><img src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+ci.ContentDoc.ContentDocumentId}" alt="" width="50" height="50" class="lazy"/></figure>
+                                                                <strong><span>{!ci.pbe.Product2.Name}</span><lightning:formattedNumber style="currency" value="{!ci.pbe.UnitPrice}"/></strong>
+                                                            </a>
+                                                            <!--<a href="#0" class="action"><i class="ti-trash"></i></a>-->
+                                                        </li>                                                    
+                                                    </aura:iteration> 
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.noOfItemsOnCart > 2}">
+                                                    <a onclick="{!c.viewCart1}"><li><strong>{!v.noOfItemsOnCart -2}</strong>&nbsp;More products</li></a> 
+                                                </aura:if>                                                
+                                            </ul>
+                                            <div class="total_drop">
+                                                <aura:if isTrue="{!v.AccId != ''}">
+                                                	<div class="clearfix"><strong>Total</strong><span><lightning:formattedNumber style="currency" value="{!v.SubTotal}"/></span></div>
+                                                </aura:if>                                                
+                                                <a onclick="{!c.viewCart1}" class="btn_1 outline">View Cart</a>
+                                                <aura:if isTrue="{!v.cartItems.length > 0}">
+                                                	<a onclick="{!c.checkOut}" data-Action="SignIn" class="btn_1">Checkout</a>
+                                                </aura:if>                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- /dropdown-cart-->
+                                </li>
+                                <li>
+                                    <div class="dropdown dropdown-access">
+                                        <a href="#" class="access_link"><span>Account</span></a>
+                                        <aura:if isTrue="{!v.PortalUser}">
+                                            <div class="dropdown-menu">                                            
+                                                <ul>
+                                                    <li>
+                                                        <a onclick="{!c.myAccount}"><i class="ti-user"></i>{!v.UserName}</a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="{!'https://'+$Label.c.Host_PathCustomerPortal+'/'+$Label.c.UserProfile}"><i class="ti-eye"></i>Change Password</a>
+                                                    </li>
+                                                    <li>
+                                                        <a onclick="{!c.myOrders}"><i class="ti-package"></i>My Orders</a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="{!'https://'+$Label.c.Host_PathCustomerPortal+'/secur/logout.jsp'}"><i class="ti-unlock"></i>Logout</a>
+                                                    </li>
+                                                    <li>
+                                                        <a target="_blank" href="https://support.aqxolt.com/faqs/"><i class="ti-help-alt"></i>Help and Faq</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!!(v.PortalUser)}">
+                                            <div class="dropdown-menu">
+                                                <a onclick="{!c.showSignIn}" data-Action="SignIn" class="btn_1 mb-2">Sign In </a>
+                                                <a onclick="{!c.showSignIn}" data-Action="Register" class="btn_1 outline">Register </a>
+                                                <ul>
+                                                    <li>
+                                                        <a target="_blank"  href="https://support.aqxolt.com/faqs/"><i class="ti-help-alt"></i>Help and Faq</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </aura:if>                                    
+                                    </div>
+                                </li>     
+                                
+                                <!-- /dropdown-access-->
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- /row -->
+                </div>
+                <div class="search_mob_wp">
+                    <input type="text" class="form-control" placeholder="Search over 10.000 products"/>
+                    <input type="submit" class="btn_1 full-width" value="Search"/>
+                </div>
+                <!-- /search_mobile -->
+            </div>
+            <!-- /main_nav --> 
+        </header>
+        
+        <aura:if isTrue="{!v.showSignIn}">
+            <div aura:id="showSignInModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="false" class="ProductListCH-newClass1">
+                
+                <div class="modal-dialog cascading-modal" role="document">
+                    
+                                    
+                	
+                    <!--Content-->
+                    <div class="modal-content p-0">
+                        <lightning:buttonIcon class="slds-modal__close" alternativeText="Close" iconName="utility:close" onclick="{!c.closeSignInModal}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                        <!--Modal cascading tabs-->
+                        <div class="modal-c-tabs">
+                            
+                            <!-- Nav tabs -->
+                            <ul class="nav nav-tabs py-2 ProductListCH-newClass2" role="tablist">
+                                <li class="nav-item py-2 ProductListCH-newClass3">
+                                    <a class="ProductListCH-newClass5" data-toggle="tab" href="#panel7" role="tab"><!--<i class="fa fa-user mr-1"></i>-->
+                                        {!v.ActionName}
+                                    </a>
+                                </li>   
+                            </ul>
+                            
+                            <!-- Tab panels -->
+                            <div class="tab-content">
+                              
+                                
+                                <!-- SignIn Panel-->
+                                <aura:if isTrue="{!v.Action=='SignIn'}">
+                                    <c:ProductListCommSignIn/>
+                                </aura:if>
+                                <!-- SignIn Panel-->
+                                
+                                <!-- Register Panel-->                                
+                                <aura:if isTrue="{!v.Action=='Register'}"> 
+                                    <div class="pl-4 pr-4 pb-4 pt-0" id="panel8" role="tabpanel"> 
+                                        <c:ProductListCommRegistration></c:ProductListCommRegistration>                                        
+                                    </div>
+                                </aura:if>      
+                                <!--/Register panel-->
+                            </div>                            
+                        </div>
+                    </div>                    
+                </div>
+            </div>   
+            <div aura:id="signInModalBackdrop" class="slds-backdrop"></div>
+        </aura:if>
+        
+    </body>
+</aura:component>

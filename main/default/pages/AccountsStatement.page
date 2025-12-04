@@ -1,0 +1,261 @@
+<apex:page controller="AccountsStatement"  docType="html-5.0" sidebar="false" standardStylesheets="true" showHeader="false" id="Invoice" renderAs="{!if(showSelectedAttachment==true && showSelectedAttachment1==true ,'pdf','')}" action="{!Run}"> <!-- renderAs="{!if(showSelectedAttachment==true,'pdf','')}"   action="{!Email_Details}"  -->
+    <!-- standardController="Account" extensions="AccountsStatement"  -->
+    <!-- <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>-->
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+    <html>
+        <head>
+            <style>
+                .bPageBlock {
+                border-top: 4px solid #36a0fe;
+                }
+                .Custom28Tab .secondaryPalette, .individualPalette .Custom28Block .secondaryPalette {
+                background-color: #690;
+                border-color: #f9f9f9;
+                }   
+                input[type=text],
+                textarea,
+                select {
+                -webkit-transition: all 0.30s ease-in-out;
+                -moz-transition: all 0.30s ease-in-out;
+                -ms-transition: all 0.30s ease-in-out;
+                -o-transition: all 0.30s ease-in-out;
+                outline: none;
+                padding: 3px 0px 3px 3px;
+                /*margin: 5px 1px 3px 0px;*/
+                border: 1px solid #DDDDDD;
+                }
+                
+                input[type=text]:focus,
+                textarea:focus,
+                select:focus {
+                outline: 0;
+                border-color: #1589ee;
+                background-color: white;
+                box-shadow: 0 0 3px #0070D2; 
+                }
+                
+                .wrapper {
+                width: 800px;
+                height: auto;
+                margin: 50px auto 50px;
+                }
+                h1{
+                font-size:20px;
+                }
+            </style>
+        </head>
+        <script type="text/javascript">
+            function setupclosepopup() {
+                top.window.returnValue = 1;
+                top.window.close();
+            }
+            function closePopup() {
+                window.close();
+                
+            }
+        </script>
+        <body>
+            <div class="erp_mark7">
+                <apex:form id="mainform">
+                    <apex:actionFunction name="SendInvoiceAF" action="{!sendStatement}" reRender="msgPnlId,MainPanel,selectedPanelId, selectedRepeatId,mainform" />
+                    <apex:actionFunction name="callOnComplete" action="{!test}" reRender="msgPnlId,MainPanel"/> 
+                    <apex:actionFunction name="navToPymentAF" action="{!navToPyment}" reRender="mainform"/>
+                    <apex:actionFunction name="selectAllInvoices" action="{!selectAllInvoicesCB}" reRender="RenderInvoices"/>
+                    <div class="wrapper">
+                        <apex:outputPanel id="msgPnlId">
+                            <tr>
+                                <td>
+                                    <apex:pageMessages />
+                                </td>
+                            </tr>
+                        </apex:outputPanel>
+                        <apex:outputPanel rendered="{!showSelectedAttachment==false}">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <apex:outputPanel >
+                                    <tr > 
+                                        <td height="20"  Style="vertical-align:middle;text-align: center;margin-bottom:1%">
+                                            <apex:commandLink value="Send Statement" action="{!sendStatement}" styleClass="slds-button slds-button--brand slds-m-bottom--small"/>
+                                            <apex:commandLink value="PDF" styleClass="slds-button slds-button--brand slds-m-bottom--small" action="{!createPDF}" target="_blank"/>
+                                            <apex:commandLink value="Close" styleClass="slds-button slds-button--neutral slds-m-bottom--small" onclick="window.history.back()" target="_self"/>
+                                        </td>
+                                    </tr>
+                                </apex:outputPanel>
+                                <tr>
+                                    <td>
+                                        <div style="width:100%; height:35px; background:#54698d; color:#fff;" onclick="var element = document.getElementById('{!$Component.MainBlock}'),style = window.getComputedStyle(element),top = style.getPropertyValue('display');if(top =='none'){document.getElementById('{!$Component.MainBlock}').style.display='block'; document.getElementById('offExpand').style.display='none';document.getElementById('onExpand').style.display='block';}else {document.getElementById('{!$Component.MainBlock}').style.display='none';document.getElementById('offExpand').style.display='block';document.getElementById('onExpand').style.display='none';}">
+                                            <a href="#" style="text-decoration:none; color:#fff;line-height:0px;padding-left:0px; ">
+                                                <table width="100%">
+                                                    <tr>
+                                                        <td height="30" align="left" valign="middle" width="3%">
+                                                            <img src="{!URLFOR($Resource.SCM,'SCM/Images/plus.png')}" id="offExpand" title="click to Expand" style="display: none;" />
+                                                            <img src="{!URLFOR($Resource.SCM,'SCM/Images/minus.png')}" id="onExpand" style="display:block" />
+                                                        </td>
+                                                        <td align="left" valign="middle" width="70%" style="text-decoration:none; color:#fff;">{!currentAccount.Name}</td>
+                                                        <td align="left" valign="right" style="text-decoration:none; color:#fff;">
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </a>
+                                        </div>
+                                        <apex:outputPanel id="MainBlock" style="background:none;">
+                                            <apex:pageBlock id="MainPB">
+                                                <table border="0" align="center" width="100%" style="border:0px solid black;" bgcolor="#f9f9f9">
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                        <th>
+                                                            <apex:outputLabel value="To" />
+                                                        </th>
+                                                        <td>
+                                                            <apex:input required="true" type="email" value="{!toEmail_id}" style="border-radius : 5px; height : 20px; width : 80%; border:1px solid #ddd; padding:5px;" rendered="{!$ObjectType.Contact.fields.Email.Accessible}"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                    </tr>
+                                                    
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                        <th>
+                                                            <apex:outputLabel value="CC" />
+                                                        </th>
+                                                        <td>
+                                                            <apex:inputText style="width:555px; border:1px solid #ddd; padding:5px; border-radius:5px;" value="{!EmailsCC}" required="false" />
+                                                        </td>
+                                                    </tr> 
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                    </tr>
+                                                    
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                        <th>
+                                                            <apex:outputLabel value="Subject" />
+                                                        </th>
+                                                        <td>
+                                                            <apex:inputText style="width:555px; border:1px solid #ddd; padding:5px; border-radius:5px;" value="{!EmailSubject}" required="false" />
+                                                        </td>
+                                                    </tr> 
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>&nbsp;</td>
+                                                        <th style="vertical-align:top;">
+                                                            <apex:outputLabel value="Text Body" />
+                                                        </th>
+                                                        <td>
+                                                            <apex:inputTextarea id="editTemplate" value="{!TextBody}" cols="100" rows="15" style="border:1px solid #ddd; padding:5px;" richText="true"/>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </apex:pageBlock>
+                                        </apex:outputPanel>
+                                    </td>
+                                </tr>
+                                <tr height="10">
+                                    <td align="center">
+                                    </td>
+                                </tr>
+                            </table>
+                            <!--<h1 style="font-size:20px;">Invoices</h1>-->
+                            <div style="height:300px; overflow-y:scroll;float:left;margin-bottom:30px;">
+                                <apex:outputPanel id="RenderInvoices">   
+                                    <table class="slds-table slds-table--bordered slds-table_cell-buffer">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Select">
+                                                        <apex:inputCheckbox value="{!allInvoicesSelect}" onchange="selectAllInvoices()"/>
+                                                    </div>
+                                                </th>                                   
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Invoice Number">Invoice Number</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Order Number">Order Number</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Invoice Date">Due Date</div>
+                                                </th>
+                                                <!--<th scope="col">
+                                                    <div class="slds-truncate" title="Invoice Amount">Invoice Amount</div>
+                                                </th>-->
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Invoice Amount">Customer PO-reference</div>
+                                                </th><!--
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Amount Paid">Amount Paid</div>
+                                                </th>-->
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Due Amount">Due Amount</div>
+                                                </th> 
+                                                <!---<th scope="col">
+                                                    <div class="slds-truncate" title="Status">Status</div>
+                                                </th>-->
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <apex:repeat value="{!InvoiceList}" var="inv">  
+                                                <tr>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="Select">
+                                                            <apex:inputField value="{!inv.Active__c}" id="inc">
+                                                                <apex:actionSupport event="onchange" action="{!UpsertINV}" reRender="inc"/>
+                                                            </apex:inputField>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Name}">
+                                                            <apex:outputField value="{!inv.Name}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.ERP7__Order__r.Name}">
+                                                            <!--<apex:outputField value="{!inv.ERP7__Order__r.Name}"/>-->
+                                                            <apex:outputText value="{!IF(inv.ERP7__Order__r.Name != null, inv.ERP7__Order__r.Name, inv.ERP7__Order_S__r.Name)}"/>
+                                                        </div> 
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Due_Date__c}">
+                                                            <apex:outputField value="{!inv.Invoice_Date__c}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.ERP7__Order__r.Purchase_Order_Number__c}">
+                                                            <!--<apex:outputField value="{!inv.ERP7__Order__r.Purchase_Order_Number__c}"/>-->
+                                                            <apex:outputText value="{!IF(inv.ERP7__Order__r.Purchase_Order_Number__c != null,inv.ERP7__Order__r.Purchase_Order_Number__c,inv.ERP7__Order_S__r.Customer_Purchase_Order_Reference__c)}"/>
+                                                        </div>
+                                                    </td><!--
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Sales_Order_Amount__c}">
+                                                            <apex:outputField value="{!inv.Sales_Order_Amount__c}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Amount_Paid__c}">
+                                                            <apex:outputField value="{!inv.Amount_Paid__c}"/>
+                                                        </div> 
+                                                    </td>-->
+                                                    <td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Total_Due__c}">
+                                                            <apex:outputField value="{!inv.Total_Due__c}"/>
+                                                        </div>
+                                                    </td> 
+                                                    <!--<td data-label="">
+                                                        <div class="slds-truncate" title="{!inv.Status__c}">
+                                                            <apex:outputField value="{!inv.Status__c}"/>
+                                                        </div>
+                                                    </td>-->
+                                                </tr>
+                                            </apex:repeat>
+                                        </tbody>
+                                    </table>
+                                </apex:outputPanel>
+                            </div>  
+                        </apex:outputPanel>     
+                    </div>
+                </apex:form>
+            </div>
+        </body>
+    </html>
+</apex:page> <!-- today old-->

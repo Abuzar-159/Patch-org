@@ -1,0 +1,407 @@
+<aura:component controller="TimeSheetManagerLC" access="global" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" >
+    <ltng:require styles="/resource/ERP7__SLDS0121/assets/styles/salesforce-lightning-design-system-vf.min.css" />
+           <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__SupplierPoratalComm/SupplierPortalComm/CSS/overiding-standard.css"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="timeSheet" type="Timesheet__c" default="{ 'sobjectType': 'Timesheet__c',
+																				'ERP7__Employee__c': '',
+																				'ERP7__Project__c':'',
+																				'unknown_custom_field':'',
+																				'ERP7__Status__c': '',
+																				'ERP7__Approver__c': ''
+                                                                        		}" />
+    <aura:attribute name="tceObj" access="global" type="Time_Card_Entry__c" default="{'sobjectType' : 'Time_Card_Entry__c'}" />
+    <aura:attribute name="tSheetcomp" type="Timesheet__c" access="global" />
+    <aura:attribute name="rid" type="String" default="" />
+    <aura:attribute name="counts" type="TimeSheetManagerLC" />
+    <aura:attribute name="modalIsOpen" type="boolean" default="false"/>
+    <!--<aura:attribute name="TimeSheetObjs" type="TimeSheetManagerLC" />-->
+    <aura:handler name="change" value="{!v.timeSheet.ERP7__Week_Date__c}" action="{!c.onChange}" />
+    <aura:attribute name="intweek" type="String" access="global" default="0" />
+    <!--Lookup attributes-->
+    <aura:attribute name="id" type="String" default="" access="GLOBAL" />
+    <aura:attribute name="objNew" type="Time_Card_Entry__c" default="{sobjectType:'Time_Card_Entry__c',  
+                                                       'Id':null}" />
+    <!--End-->
+    <aura:attribute name="hour1" type="String"/>
+    <aura:attribute name="hour2" type="String"/>
+    <aura:attribute name="hour3" type="String"/>
+    <aura:attribute name="hour4" type="String"/>
+    <aura:attribute name="hour5" type="String"/>
+    <aura:attribute name="hour6" type="String"/>
+    <aura:attribute name="hour7" type="String"/>
+    <aura:attribute name="weekint" type="Integer" default="7" />
+    <aura:handler event="c:saveEvent" action="{!c.handleApplicationEventFired}" />
+    <aura:registerEvent name="delete" type="c:timesheetDelete" />
+    <!-- Event handlers -->
+    <aura:handler name="delete" action="{!c.handleAccountDelete}" />
+    <!--Validation Error Event-->
+    <!--<aura:registerEvent name="validationError" type="c:validationTimeSheet"/>-->
+    <aura:handler name="validationError" event="c:validationTimeSheet" action="{!c.hourValidation1}"/><!--displayWeekErrors-->
+    <aura:attribute name="weekError1" type="String"/>
+    
+<div class="erp_mark7">
+     <div class="card shadow-custom AddTimeCardEntry-newClass1">
+                <div class="card-body">     
+                    <div> <!-- class="table-responsive AddTimeCardEntry-newClass2" tabindex="1"-->
+                        <table class="table">
+                            {!v.body}
+                            <thead class="" data-aura-rendered-by="478:0">
+                                <tr data-aura-rendered-by="479:0">
+                                   <th width="10%" class="text-center">
+                                         <a data-target="#myModal" onclick="{!c.Navigate}" data-record="Add" class="AddTimeCardEntry-newClass3" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                    <i class="fa fa-plus AddTimeCardEntry-newClass5" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                    &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                </a>
+                                    </th>
+                                    <th width="20%" class="slds-text-heading--label AddTimeCardEntry-newClass4" data-aura-rendered-by="480:0">{!$Label.c.Schedules_AddTimeCardEntry}</th>
+                                    <th width="20%" class="slds-text-heading--label AddTimeCardEntry-newClass4"  data-aura-rendered-by="482:0">{!$Label.c.Activity_AddTimeCardEntry}</th>
+                                    <th width="25%" class="slds-text-heading--label AddTimeCardEntry-newClass4"  data-aura-rendered-by="484:0">{!$Label.c.Activity_Notes_AddTimeCardEntry}</th>
+                                    <th width="20%" class="slds-text-heading--label AddTimeCardEntry-newClass4"  data-aura-rendered-by="486:0">{!$Label.c.Activity_Status_AddTimeCardEntry}</th>
+                                    
+                                     
+                                </tr>
+                            </thead>
+                            <tbody data-aura-rendered-by="495:0">
+                                <tr class="slds-hint-parent no-label" data-aura-rendered-by="496:0">
+                                   
+                                    <td class="text-center">
+                                        <lightning:button class="slds-button slds-button_neutral neutralC" onclick="{!c.handleDelClick}" >
+                                                <a title="Remove Item">
+                                                    <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="AddTimeCardEntry-newClass6" data-aura-rendered-by="19:1393;a"/>
+                                                </a>
+                                            </lightning:button>
+                                    </td>
+                                    <td class="AddTimeCardEntry-newClass7">
+                                        <!--render facet: 500:0--><!--render facet: 502:0-->
+                                        <div class="has-feedback"><c:CustomInputLookUp aura:id="schedule" objectAPIName="ERP7__Schedule__c" IconName="standard:user" selectedRecordId="{!v.tceObj.ERP7__Schedule__c}"/>
+                                        </div>
+                                    </td>
+                                    <td>
+                                           <lightning:select value="{!v.timeSheet.ERP7__Status__c}" class="no-lable">
+                                                <option value="Administrative" selected="selected" data-aura-rendered-by="512:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Administrative_AddTimeCardEntry}</option>
+                                                <option value="Analysis" data-aura-rendered-by="517:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Analysis_AddTimeCardEntry}</option>
+                                                <option value="Assembling" data-aura-rendered-by="522:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Assembling_AddTimeCardEntry}</option>
+                                                <option value="Bug Fix" data-aura-rendered-by="527:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Bug_Fix_AddTimeCardEntry}</option>
+                                                <option value="Crafting" data-aura-rendered-by="532:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Crafting_AddTimeCardEntry}</option>
+                                                <option value="Development" data-aura-rendered-by="537:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Development_AddTimeCardEntry}</option>
+                                                <option value="Email" data-aura-rendered-by="542:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Email_AddTimeCardEntry}</option>
+                                                <option value="Meeting" data-aura-rendered-by="547:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Meeting_AddTimeCardEntry}</option>
+                                                <option value="Phone" data-aura-rendered-by="552:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Phone_AddTimeCardEntry}</option>
+                                                <option value="Polishing" data-aura-rendered-by="557:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Polishing_AddTimeCardEntry}</option>
+                                                <option value="Project Management" data-aura-rendered-by="562:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Project_Management_AddTimeCardEntry}</option>
+                                                <option value="Proposal" data-aura-rendered-by="567:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Proposal_AddTimeCardEntry}</option>
+                                            </lightning:select>
+                                          
+                                    </td>
+                                    <td    data-aura-rendered-by="580:0" class="no-lable">
+                                         <lightning:input type="text" value="{!v.tceObj.ERP7__Activity_Risk__c}"/>
+                                      </td>
+                                    <td>
+                                           <lightning:select value="{!v.tceObj.ERP7__Activity_Status__c}" class="no-lable">
+                                                <option value="On Hold" selected="selected" data-aura-rendered-by="594:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.On_Hold_AddTimeCardEntry}</option>
+                                                <option value="Cancelled" data-aura-rendered-by="599:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Cancelled_AddTimeCardEntry}</option>
+                                                <option value="Completed" data-aura-rendered-by="604:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Completed_AddTimeCardEntry}</option>
+                                                <option value="In Progress" data-aura-rendered-by="609:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.In_Progress_AddTimeCardEntry}</option>
+                                            </lightning:select>
+                                         
+                                    </td>
+                                     
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div > <!--class="table-responsive AddTimeCardEntry-newClass8" tabindex="1"-->
+                        <table class="table">
+                            <thead data-aura-rendered-by="623:0">
+                                <tr data-aura-rendered-by="624:0">
+                                    <th class="slds-text-heading--label" scope="col">
+                                {!$Label.c.Select_Date_AddTimeCardEntry}
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d}" /><!--MMM EEE d-->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d1}" /><!-- format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label " scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d2}" /><!-- format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d3}" /><!-- format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d4}" /><!--format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d5}" /><!-- format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                                <lightning:formattedDateTime  day="2-digit"  month="short" weekday="short" value="{!v.counts.d6}" /><!-- format="MMM EEE d" -->
+                            </th>
+                            <th class="slds-text-heading--label" scope="col">
+                            </th>
+                                </tr>
+                            </thead>
+                            <tbody data-aura-rendered-by="656:0">
+                                <tr data-aura-rendered-by="657:0">
+                                    <td class=" no-label" data-label="Select Date">
+                                        <lightning:input type="date" value="{!v.timeSheet.ERP7__Week_Date__c}" />
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_1_Hours__c}" disabled="{!v.counts.slotsMap[0]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" aura:id="weekDay1" required="true"/><!--updateOn="keyup" keyup="{!c.hourValidation1}"-->
+                                        &nbsp;
+                                            <a onclick="{!c.show}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true"></i>
+                                            </a>
+                                        &nbsp;{!v.hour1}
+                                        </div>
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d1}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_2_Hours__c}" disabled="{!v.counts.slotsMap[1]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation2}" aura:id="weekDay2" required="true"/>
+                                            &nbsp;
+                                            <a onclick="{!c.show1}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true"></i>
+                                            </a>
+                                        &nbsp;{!v.hour2}
+                                        </div>   
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d2}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_3_Hours__c}" disabled="{!v.counts.slotsMap[2]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation3}" aura:id="weekDay3" required="true"/>
+                                        &nbsp;
+                                            <a onclick="{!c.show2}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true" ></i>
+                                            </a>
+                                        &nbsp;{!v.hour3}
+                                        </div>
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d3}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_4_Hours__c}" disabled="{!v.counts.slotsMap[3]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation4}" aura:id="weekDay4" required="true"/>
+                                        &nbsp;
+                                            <a onclick="{!c.show3}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true" ></i>
+                                            </a>
+                                        &nbsp;{!v.hour4}
+                                        </div> 
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d4}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_5_Hours__c}" disabled="{!v.counts.slotsMap[4]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation5}" aura:id="weekDay5" required="true"/>
+                                        &nbsp;
+                                            <a onclick="{!c.show4}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true" ></i>
+                                            </a>
+                                       &nbsp;{!v.hour5}
+                                        </div>    
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d5}">
+                                        <div class="slds-grid">
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_6_Hours__c}" disabled="{!v.counts.slotsMap[5]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation6}" aura:id="weekDay6" required="true"/>
+                                        &nbsp;
+                                            <a onclick="{!c.show5}" aura:id="appbtn">
+                                                <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true"></i>
+                                            </a>
+                                        &nbsp;{!v.hour6}
+                                        </div>    
+                                    </td>
+                                    <td class="" data-label="{!v.counts.d6}">
+                                       <div class="slds-grid"> 
+                                        <lightning:input type="text" variant="label-hidden" value="{!v.tceObj.ERP7__Week_Day_7_Hours__c}" disabled="{!v.counts.slotsMap[6]}" placeholder="{!$Label.c.Add_Hours_AddTimeCardEntry}" onchange="{!c.hourValidation7}" aura:id="weekDay7" required="true"/>
+                                        &nbsp;
+                                           <a onclick="{!c.show6}" aura:id="appbtn">
+                                               <i class="fa fa-pencil-square-o AddTimeCardEntry-newClass9 pt-2" aria-hidden="true" ></i>
+                                           </a>
+                                        &nbsp;{!v.hour7}
+                                        </div>   
+                                    </td>
+                                    <td class="AddTimeCardEntry-newClass7" data-label="" colspan="2">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                    <section aura:id="Approve" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">	
+                    	
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve">-->
+                        <div class="slds-modal__container">
+                             <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_1_Comment__c}"  />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                     <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+               
+                <!--End of Modal Dialogue1-->
+                <!--Modal display dialogue box2-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                    <section aura:id="Approve2" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">	
+                    	
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve2">-->
+                        <div class="slds-modal__container">
+                             <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_2_Comment__c}"  />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                     <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+                    
+                </section>
+                <!--End of Modal Dialogue2-->
+                <!--Modal display dialogue box3-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                     <section aura:id="Approve3" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">		
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve3">-->
+                        <div class="slds-modal__container">
+                             <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_3_Comment__c}" />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                    
+                                    <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                     
+                                </div>
+                            </div>
+                        </div>
+                   
+                </section>
+                <!--End of Modal Dialogue3-->
+                <!--Modal display dialogue box4-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                     <section aura:id="Approve4" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">	
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve4">-->
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_4_Comment__c}"  />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                    <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+                    
+                </section>
+                <!--End of Modal Dialogue4-->
+                <!--Modal display dialogue box5-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                     <section aura:id="Approve5" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">		
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve5">-->
+                        <div class="slds-modal__container">
+                             <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                   <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_5_Comment__c}" />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                     <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+
+                </section>
+                <!--End of Modal Dialogue5-->
+                <!--Modal display dialogue box6-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                    <section aura:id="Approve6" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">	 	
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve6">-->
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_6_Comment__c}" />
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                     <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+                   
+                </section>
+                <!--End of Modal Dialogue6-->
+                <!--Modal display dialogue box7-->
+                <div class="slds-backdrop" aura:id="expenseBackdrop"></div>
+                    <section aura:id="Approve7" role="dialog" class="slds-modal AddTimeCardEntry-newClass10">	 	
+                    <!--<div aria-hidden="true" class="slds-modal slds-modal_small" aura:id="Approve7">-->
+                        <div class="slds-modal__container">
+                             <header class="slds-modal__header slds-modal__header_empty">
+                                <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="{!$Label.c.Close_Timesheets}" onclick="{!c.Modal_hide}" variant="bare-inverse" size="large"/>
+                            </header>
+                            <div class="slds-modal__content">
+                                <div>
+                                    <lightning:textarea aura:id="Reason" maxlength="200" value="{!v.tceObj.ERP7__Week_Day_7_Comment__c}"/>
+                                </div>
+                            </div>
+                            <div class="slds-modal__footer slds-modal__footer--center AddTimeCardEntry-newClass11">
+                                <div class="slds-x-small-buttons--horizontal">
+                                     <lightning:button variant="neutral" aura:id="remId" label="{!$Label.c.Cancel_Timesheets}" title="{!$Label.c.Cancel_Timesheets}" onclick="{!c.Modal_hide}"/>
+                                    <lightning:button variant="brand" aura:id="button" label="{!$Label.c.Add_Comment_AddTimeCardEntry}" title="{!$Label.c.Add_Comment_AddTimeCardEntry}" onclick="{!c.Modal_hide}"/>
+                                </div>
+                            </div>
+                        </div>
+                   
+                </section>
+                    </div>
+                </div>
+            </div>
+    </div>
+    
+    
+    
+    
+        
+    <div aura:id="TimeCEContent">
+    </div>
+  
+    
+</aura:component>

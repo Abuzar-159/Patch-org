@@ -1,0 +1,106 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global" controller="CreateTO">
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/TransferOrderLineItem.css"/>
+    <aura:attribute name="item" type="Object" default="{'availableQty':'0', 'v.item.ERP7__Products__c':'', 'v.item.ERP7__Products__r.ERP7__Lot_Tracked__c':false, 'v.item.ERP7__Products__r.ERP7__Serialise__c':false}"/>
+    <aura:attribute name="index" type="Integer"/>
+    <aura:attribute name="qry" type="String" />
+    <aura:attribute name="availableQty" type="Integer" default="0"/>
+    <aura:attribute name="deleteIndex" type="Integer" />
+    <aura:attribute name="toli" type="Object" default="[]"/>
+    <aura:attribute name="isDelete"  type="Boolean" default="false"/>
+    <aura:attribute name="BatchProd"  type="Boolean" default="false"/>
+    <aura:attribute name="SerialProd"  type="Boolean" default="false"/>
+    <aura:attribute name="SerialorBatch"  type="Boolean" default="false"/> 
+    <aura:attribute name="checkValidation" type="Boolean" default="false"/>
+    <aura:attribute name="FDId" type="String" default=""/>
+    <aura:method name="callValidate" action="{!c.validate}"/>
+    <aura:method name="callProdValidate" action="{!c.prodValidate}"/>
+    <aura:method name="callQtyValidate" action="{!c.qtyValidate}"/>
+    <aura:method name="callSerBatValidate" action="{!c.prodSerBatValidate}"/>
+    <aura:registerEvent name="IndexingEvent" type="c:IndexingEvent"/> 
+    <aura:handler name="change" value="{!v.item.ERP7__Products__c}" action="{!c.productChange}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Quantity_requested__c}" action="{!c.checkInventory}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Batch_Lot__c}" action="{!c.batchChange}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__SerialNumber__c}" action="{!c.serialChange}"/>
+    <aura:handler name="change" value="{!v.FDId}" action="{!c.stockhandler}"/>
+    <aura:attribute name="processSNBatch" type="Boolean" default="true"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <aura:if isTrue="{!v.showSpinner}">     
+        <span class="TOLI-cls1"> 
+            
+            <div class="custom-spinner slds-spinner_container ">
+                <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                    <span class="slds-assistive-text">Loading</span>
+                    <div class="slds-spinner__dot-a"></div>
+                    <div class="slds-spinner__dot-b"></div>
+                    
+                </div>
+                <div class="custom-loading-text">
+                    {!v.spinnerContent}
+                </div>
+            </div>
+
+            <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass slds-hide"/-->
+        </span>
+    </aura:if>
+    
+    <tr class="slds-hint-parent ">
+        <td valign="top" data-label="Action"> 
+            
+            <a class="svg TOLI-cls2" onclick="{!c.deletetoli}" >
+                 <lightning:icon iconName="action:delete" size="x-small"></lightning:icon> 
+            </a>
+            
+        </td>
+        
+        <td valign="top" data-label="Product">
+            <div class="custompill" >
+                <c:CustomInputProduct objectAPIName="Product2" IconName="standard:product" selectedRecordId="{!v.item.ERP7__Products__c}" selectedRecord="{!v.item.ERP7__Products__r}" aura:id="toliProduct" />
+            </div>
+        </td>
+        <td valign="top" data-label="Name">
+            <lightning:input type="text" variant="label-hidden" value="{!v.item.Name}" aura:id="toliName" placeholder="{!$Label.c.Enter_Name_ManageLeave}"/>
+        </td>
+        <aura:if isTrue="{!v.processSNBatch}">
+            <aura:if isTrue = "{!v.item.ERP7__Products__c}">
+                <td valign="top" >
+                    <aura:if isTrue="{!v.SerialProd}">
+                        <div class="custompill" onmouseover="{!c.lookupClickSerial}">
+                            <c:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="standard:custom" selectedRecordId="{!v.item.ERP7__SerialNumber__c}" qry="{!v.qry}" aura:id="toliSerial"/>
+                        </div>
+                        <aura:set attribute="else">
+                            <lightning:input variant="label-hidden" type="Search" value="" class="" disabled="true" aura:id="" placeholder="{!$Label.c.Search_UsersShiftMatch}"/>
+                        </aura:set>
+                    </aura:if>
+                </td>  
+                <td valign="top" >
+                    <aura:if isTrue="{!v.BatchProd}">
+                        <div class="custompill" onmouseover="{!c.lookupClickBatch}">
+                            <c:CustomInputLookUp objectAPIName="ERP7__Batch__c" IconName="standard:custom" selectedRecordId="{!v.item.ERP7__Batch_Lot__c}" qry="{!v.qry}" aura:id="toliBatch"/>
+                        </div>
+                        <aura:set attribute="else">
+                            <lightning:input variant="label-hidden" type="Search" value="" class="" disabled="true" aura:id="" placeholder="{!$Label.c.Search_UsersShiftMatch}"/>
+                        </aura:set>
+                    </aura:if>
+                </td>
+                <aura:set attribute="else">
+                    <td valign="top">
+                        <lightning:input variant="label-hidden" type="Search" value="" disabled="true" aura:id="" placeholder="{!$Label.c.Search_UsersShiftMatch}"/>
+                    </td>
+                    <td valign="top">
+                        <lightning:input variant="label-hidden" type="Search" value="" disabled="true" aura:id="" placeholder="{!$Label.c.Search_UsersShiftMatch}"/>
+                    </td>
+                </aura:set>
+            </aura:if>
+        </aura:if>
+        <td valign="top" data-label="Quantity" >
+            <lightning:input type="number" variant="label-hidden" value="{!v.item.ERP7__Quantity_requested__c}" disabled="{!v.SerialProd}" aura:id="toliQty" placeholder="{!$Label.c.Enter_Quantity}" class=""/>
+        </td>
+        <td valign="top" data-label="Description">
+            <lightning:textarea name="description" variant="label-hidden" aura:id="toliDescription" value="{!v.item.ERP7__Description__c}" placeholder="{!$Label.c.Enter_Description}" maxlength="32768" messageWhenTooLong="A maximum of 32768 characters are allowed."/>
+        </td>
+        <td valign="top" data-label="Quantity">
+            <center>{!v.item.availableQty}</center>
+        </td>
+    </tr>
+</aura:component>

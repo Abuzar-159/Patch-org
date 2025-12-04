@@ -1,0 +1,94 @@
+<aura:component Controller="ERP7.CreateBill" implements="force:appHostable,flexipage:availableForAllPageTypes,force:hasRecordId" access="global">
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/RecordPayment.css"/> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="RT" type="String"/>
+    <aura:attribute name="today" type="Date"/>
+    <aura:attribute name="Bill" type="Bill__c"/>
+    <aura:attribute name="recordId" type="String" />
+    <aura:attribute name="OrgId" type="String" default=""/>
+    <aura:attribute name="PayName" type="String" default=""/>
+    <aura:attribute name="post" type="Boolean" default="false" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="dueAmount" type="Decimal" default="0.00" />
+    <aura:attribute name="payment" type="Map" default="{'ERP7__Accounts__c':'','ERP7__Refund__c':'false'}"/>
+    <div class=" erp_mark7 bg-white erp_Mark7 maqsood">
+        <aura:if isTrue="{!v.showSpinner}">
+            <lightning:spinner variant="brand" size="large" class="mainSpinClass"/><!--alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"-->
+        </aura:if>
+        
+        <lightning:layout multipleRows="true" horizontalAlign="spread" class="bg-white">
+            <lightning:layoutItem size="12">
+                <div class="slds-page-header">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:scan_card" size="x-small" alternativeText="scan_card!" title="scan_card" />	
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset RecordPmt-class3" >Refund Payment - for Bill {!v.Bill.Name}</p>
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title=""></h1>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top">                      
+                        </div>
+                    </div>
+                </div>
+                
+            </lightning:layoutItem>
+            
+            
+            
+            <lightning:layoutItem size="12" class="slds-p-around_medium">
+                <lightning:layout multipleRows="true" horizontalAlign="start">
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <c:CustomInputLookUp label="Received From" objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Accounts__c}" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Vendor'"  required="true" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <lightning:input type="number" readonly="true" value="{!v.dueAmount}" label="Refund Balance" formatter="currency" step="0.01"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <span class="slds-form-element__label slds-no-flex">{!$Label.c.Acc_Pay_Payment_Date}</span>
+                        <lightning:input type="date"  value="{!v.payment.ERP7__Payment_Date__c}" class="displaynone-label" />
+                    </lightning:layoutItem> 
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <lightning:input type="number" aura:id="paymentAmount" required="true" value="{!v.payment.ERP7__Total_Amount__c}" label="{!$Label.c.Acc_Pay_Payment_Amount}" formatter="currency" step="0.01" min="1" messageWhenValueMissing="Please enter the value" />
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <c:CustomInputLookUp label="Payment Account" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Payment_Account__c}" aura:Id="paymentAccount"  required="true" qry="{! v.OrgId != ''?' AND ERP7__Organisation__c =\''+ v.OrgId+'\''+ ' AND ERP7__Payment_Account__c=true' : ' AND ERP7__Payment_Account__c=true'}"/><!--qry="{!v.AccountsFilter}"    -->
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <lightning:input type="number" aura:id="bankFee"  value="{!v.payment.ERP7__Bank_Charges__c}" label="Bank Charges" formatter="currency" step="0.01" min="1" messageWhenValueMissing="Please enter the value" />
+                    </lightning:layoutItem>
+                    <aura:if isTrue="{!v.payment.ERP7__Bank_Charges__c > 0}">
+                        <lightning:layoutItem size="4" padding="horizontal-small">
+                            <c:CustomInputLookUp label="Bank Fee Account" required="true" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Bank_Fee_COA__c}" aura:Id="bankFeeAccount"  qry=" AND RecordType.DeveloperName = 'Expense' " />
+                        </lightning:layoutItem>
+                    </aura:if>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <lightning:input type="text" aura:id="checkReference" required="true" value="{!v.payment.ERP7__Reference_Cheque_No__c}" label="Reference Number"  messageWhenValueMissing="Please enter the value"/>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="4" padding="horizontal-small">
+                        <c:CustomInputLookUp label="Organisation" objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Account__c}" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Organisation'"  required="true" />
+                    </lightning:layoutItem>
+                </lightning:layout>
+            </lightning:layoutItem>
+        </lightning:layout>
+        
+        
+        <div class="slds-docked-form-footer slds-float_right">
+            <lightning:button label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.cancel}" class=""/>
+            <lightning:button label="{!$Label.c.ContractConsole_Save}" variant="brand"  onclick="{!c.save}" class=""/>
+            <lightning:button label="Save and Post" variant="brand"  onclick="{!c.savePost}" class=""/>
+         </div>
+    </div>
+</aura:component>

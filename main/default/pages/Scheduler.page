@@ -1,0 +1,1113 @@
+<apex:page showHeader="true" sidebar="false" standardStylesheets="true" controller="Scheduler" cache="false" id="pag" docType="html-5.0">
+
+    <head>
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+        <title>Scheduler</title>
+            <apex:stylesheet value="{!URLFOR($Resource.codebase, 'codebase/dhtmlxgantt.css')}" />
+           <!-- <apex:stylesheet value="{!URLFOR($Resource.ganttchart, 'assets/styles/salesforce-lightning-design-system-scoped.css')}" /> -->
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.min.css')}" />
+        <apex:includeScript value="{!URLFOR($Resource.bootStrap,'/js/bootstrap.min.js')}"/>
+
+            <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery-ui.js')}"/>
+            <apex:stylesheet value="{!URLFOR($Resource.jQuery,'/css/jquery-ui.css')}"/>
+            <apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/font-awesome.css')}"/>  
+            <apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/erp_mark7_bootstrap.css')}"/>
+         </head>
+         <style>
+          .epr_Mark7 .nav > li > a:hover, .epr_Mark7 .nav > li > a:focus {
+    text-decoration: none;
+    background-color: #0070d2 !important;
+}
+         .epr_Mark7{
+             background: #ffffff;
+         }
+         
+          
+            .noSidebarCell,
+            .sidebarCell .fixed {
+                padding: 0px;
+            }
+            .hasMotif {
+                margin: 0 0px;
+            }
+            body .bodyDiv .outerNoSidebar {
+                background: #f8f9fb;
+            }
+            .headerSearchLeftRoundedCorner #phSearchInput {
+                top: -2px;
+            }
+            .multiforce {
+                font-size: 12px;
+            }
+            .zen .zen-tabMenu a {
+                font-size: .8em;
+                font-weight: 500;
+                text-decoration: none;
+            }
+         
+         
+         </style>
+        
+    <html style="background:#f8f9fb;">
+    
+    <body>
+        <apex:form id="autoCompleteForm">
+            <apex:include pageName="SchedulerScript" />
+            <apex:actionFunction action="{!FetchSchedulesAndCycles}" name="Evaluate" />
+            <apex:actionFunction action="{!updateSchedule}" name="updateSchedule" reRender="panelb" status="loading" >
+                <apex:param assignTo="{!jString}" name="jString" value="" /> </apex:actionFunction>
+            <apex:actionFunction action="{!deleteSchedule}" name="deleteSchedule" reRender="panelb" status="loading">
+              
+                <apex:param assignTo="{!jString}" name="jString" value="" /> </apex:actionFunction>
+            <apex:actionFunction action="{!saveSchedule}" name="saveSchedule" reRender="panelb" oncomplete="processCompleteRoll();" status="loading">
+                <apex:param assignTo="{!jString}" name="jString" value="" /> </apex:actionFunction>
+            <apex:actionFunction name="processComplete" action="{!reLoad}" reRender="wik" status="loading" />
+            <apex:actionFunction name="processCompleteRoll" action="{!reLoad}" />
+            <apex:outputPanel id="panelb"></apex:outputPanel>
+            <apex:outputPanel id="wik">
+                <script type="text/javascript">
+                    var ik = '{!JSENCODE(schedulesString)}';
+                   
+                </script>
+               <div class="erp_mark7">
+               
+               <div class="slds-page-header slds-page-header--object-home" role="banner" style="padding-bottom: .0rem">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">                                
+                                    <span class="slds-icon_container">
+                                        <div aria-hidden="true" class="slds-icon slds-icon-standard-process slds-icon--large" > 
+                                            <i class="fa fa-cog" aria-hidden="true" style="color:#fff;padding:14px;font-size:22px;"></i>
+                                        </div>
+                                    </span>
+                                </div>
+
+                                <div class="slds-media__bod" style="width:207px">
+                                    <p class="slds-text-title--caps slds-line-height--reset">&nbsp; </p>
+                                    <nav class="slds-context-bar__secondary" role="navigation">
+                                        <ul class="slds-grid">
+                                            <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger--hover" aria-haspopup="true" style="margin-left: 0px;">
+                                                <a href="javascript:void(0);" class="slds-context-bar__label-action" title="Menu Item" style="padding:0em;">
+                                                    <span class="slds-truncate"><h1 class="slds-page-header__title slds-truncate" title="Scheduler">Scheduler</h1></span>
+                                                </a>
+                                                
+                                               
+                                            </li>
+                                            
+                                        </ul>
+                                    </nav>
+                                    <button class="slds-button slds-type-focus slds-m-right--small slds-grid slds-truncate" aria-haspopup="true">
+                                        <div class="slds-grid slds-grid--vertical-align-center slds-truncate"> &nbsp; </div>
+                                    </button>
+                                </div>
+                                <ul class="slds-grid--vertical-align-left" style=" display:inline-flex;">
+                                   <li style="padding-left: 10px;">
+                                        <span style="text-decoration:none;font-size:14px;line-height:48px;"><apex:commandLink action="{!manageResources}"  style="text-decoration:none;"><i class="fa fa-archive" aria-hidden="true"  style="color:#009688;"></i> Builder</apex:commandLink></span>
+                                    </li>
+                                         
+                                         <div style="text-align:right;margin-right:10px;">
+                                       <apex:actionStatus id="spinner1">
+                                            <apex:facet name="start">
+                                                <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="42px;" width="42px;"/>
+                                            </apex:facet>
+                                        </apex:actionStatus>
+                                   </div>  
+                                </ul>
+                                
+                            </div>
+                        </div>
+                        <!--<div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small">
+                            <div class="slds-button-group" role="group">
+                                <a href="#" class="slds-button slds-button--neutral" style="text-decoration:none;" onclick="createWorkOrders();">
+                                   <i class="fa fa-plus" aria-hidden="true" style="color:#fe8f60;"></i> Work Order
+                               </a>
+                               <a href="#" class="slds-button slds-button--neutral" style="text-decoration:none;" onclick="createPurchaseOrders();">
+                                   <i class="fa fa-plus" aria-hidden="true" style="color:#fe8f60;"></i> Purchase Order
+                               </a>
+                            </div>
+                        </div> -->
+                    </div>
+                    
+                  </div>  
+                     <div class="epr_Mark7">
+                
+                   <!-- <nav class="navbar  slds-theme--alt-inverse slds-m-bottom--x-small" style="margin-bottom: 0px;">
+                      
+                              
+                             <div class="container-fluid" style="padding-left: 0px;">              
+                            <ul class="nav navbar-nav navbar-left">
+                                <li><a href="#" style="text-decoration:none;background:transparent !important;"><i class="fa fa-cog" aria-hidden="true"  style="color:#00c6b7;"></i> Scheduler</a></li>
+                             <li style="margin-left:0em;"><apex:commandLink action="{!manageResources}"  style="text-decoration:none;"><i class="fa fa-archive" aria-hidden="true"  style="color:#bfec6c;"></i> Builder</apex:commandLink></li>
+                             
+                            </ul>
+                             <ul class="nav navbar-nav navbar-right">
+                                
+                              
+                            </ul>
+                            
+                            
+                           
+                          
+                        </div>
+                    </nav> -->
+                </div>                
+                <div class="epr_Mark7 ">
+                    <div class="container">
+                   
+                        <div class="slds-p-top--small"></div>
+                        
+                            <div class="row">
+                                <div class="col-md-2 slds-p-bottom--x-small">
+                                   
+                                    <apex:inputText id="WOTextBoxId" value="{!workOrderSrc}" styleClass="lookupInput" onchange="Evaluate();" html-placeholder="Search work orders..." rendered="{!$ObjectType.Schedule__c.Accessible}"/>
+                                    <apex:inputHidden id="searchWOId" value="{!workOrderSrcId}" /> </div>
+                                <div class="col-md-2 slds-p-bottom--x-small">
+                                    
+                                    <apex:inputText id="WSTextBoxId" value="{!workStationSrc}" styleClass="lookupInput" onchange="Evaluate();" html-placeholder="Search Work Centers..." rendered="{!$ObjectType.Schedule__c.Accessible}"/>
+                                    <apex:inputHidden id="searchWSId" value="{!workStationSrcId}" /> </div>
+                                <div class="col-md-2 slds-p-bottom--x-small">
+                                    
+                                    <apex:inputText id="productTextBoxId" value="{!searchString}" styleClass="placeHolder" html-placeholder="Search products..." onchange="Evaluate();" style="width:100%;" rendered="{!$ObjectType.Schedule__c.Accessible}"
+                                    />
+                                    <apex:inputHidden id="searchProductId" value="{!searchStringId}" /> </div>
+                                <div class=" col-md-1 slds-p-bottom--x-small" style="margin-top:0px; margin-bottom:0px;padding-left: 10px;"> </div>
+                               
+                                
+                                <div class="col-md-3 slds-p-bottom--x-small" style=" margin-top:0px; text-align:left;">
+                                    <h5 style="margin-top:0px;margin-bottom:0px;">
+                                    
+                                   <apex:outputText value="{0, date,MMMM dd','  yyyy}"><apex:param value="{!today()}" /></apex:outputText>
+                                  
+                                
+                                    <div class="btn-group" role="group" aria-label="...">
+                                        <div class="btn-group " role="group"> <select name="scale" class="form-control" style="width:120px; height:30px; margin-left: 10px;">
+                                          <option value="5">Time View</option>
+                                          <option value="1" selected="true">Day View</option>
+                                          <option value="2">Week View</option>
+                                          <option value="3">Month View</option>
+                                          <option value="4">Year View</option>
+                                        </select> </div>
+                                    </div>
+                                     </h5>
+                                </div>
+                                <div class="col-md-1 slds-p-bottom--x-small" style="height:50px;">
+                                    <h5 style="margin-top:0px;">
+                                    <apex:actionStatus id="loading" startStyle="color:red;text-align:left;" startText="Loading...">
+                                        <apex:facet name="start"> Loading...
+                                           
+                                            <apex:image url="{!URLFOR($Resource.codebase,'codebase/Images/slds_spinner_brand.gif')}" height="30px;" width="30px;" /> </apex:facet>
+                                    </apex:actionStatus>
+                                     </h5>
+                                </div>
+                               
+                            </div>
+                        </div>
+                    </div>
+                   <div class="epr_Mark7"> 
+                        <div class="container-fluid"> 
+                            <div class="row">
+                                <div class="" style="height:auto background:#fff;padding-right: 0px;padding-left: 0px;">
+                                    <div class="col-md-12">
+                                    <div id="gantt_here" style="width:100%; min-height:700px;height:auto; float:left;background:#fff;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>  
+                </div>
+                </div>
+              
+                <script>
+                    
+                    gantt.locale.labels["section_WorkOrder"] = "Work Order";
+                    gantt.locale.labels["section_lineitem"] = "Line Item";
+                    gantt.locale.labels["section_productservice"] = "Product Service";
+                    gantt.locale.labels["section_start_date"] = "Start date";
+                    gantt.locale.labels["section_scheduleName"] = "Name";
+                    gantt.locale.labels["section_processes"] = "Process";
+                    gantt.locale.labels["section_scheduleType"] = "Schedule Type";
+                    gantt.locale.labels["section_workStation"] = "Work Center Assign";
+                    gantt.locale.labels["section_progress"] = "Progress %";
+                    gantt.locale.labels["section_status"] = "Status";
+                    gantt.locale.labels["section_schedule"] = "Schedule";
+                    gantt.locale.labels["section_cycle"] = "Process Cycle";
+                    gantt.locale.labels["section_add"] = "add";
+                    gantt.config.columns = [
+                            {
+                            name: "WorkOrder",
+                            label: "Work Order",
+                            width: 100,
+                            align: "center",
+                            template: function(item) {
+                                return item.WorkOrder ? item.WorkOrder : ""
+                            }
+                                    },
+                            {
+                            name: "productservice",
+                            label: "Product/Service",
+                            width: 100,
+                            align: "center",
+                            template: function(item) {
+                                return item.productservice ? item.productservice : ""
+                            }
+                                    },
+                            {
+                            name: "text",
+                            label: "Process/Cycle/Schedule",
+                            tree: true,
+                            width: "150",
+                            align: "left"
+                            }, 
+                            {
+                            name: "workStation",
+                            label: "Work Center",
+                            width: 100,
+                            align: "center",
+                            template: function(item) {
+                                return item.workStation ? item.workStation : ""
+                            }
+                                    }, 
+                        
+                         {
+                            name: "leadTime",
+                            label: "Lead Time",
+                            width: 100,
+                            align: "center",
+                            template: function(item) {
+                                return item.leadTime ? item.leadTime : ""
+                            }
+                                    }, {
+                            name: "add",
+                            label: "",
+                            width: "50",
+                            align: "left"
+                                    }
+                                    
+                        ];
+                    gantt.templates.progress_text = function(start, end, task) {
+                        return "<span>" + Math.round(task.progress) + "% </span>";
+                    };
+                    gantt.config.lightbox.sections = [{
+                            name: "scheduleName",
+                            height: 27,
+                            map_to: "scheduleName",
+                            type: "textarea"
+                                    },
+                        {
+                            name: "WorkOrder",
+                            height: 30,
+                            map_to: "WorkOrder",
+                            type: "workorder"
+                                    },
+                                   
+                        {
+                            name: "processes",
+                            height: 30,
+                            map_to: "Processes",
+                            type: "process"
+                                    },
+                        {
+                            name: "productservice",
+                            height: 30,
+                            map_to: "productservice",
+                            type: "product"
+                                    },
+
+                        {
+                            name: "lineitem",
+                            height: 30,
+                            map_to: "lineitem",
+                            type: "lineitem"
+                                    },
+                        {
+                            name: "cycle",
+                            height: 30,
+                            map_to: "cycle",
+                            type: "cycle"
+                                    },
+
+                        {
+                            name: "schedule",
+                            height: 30,
+                            map_to: "schedule",
+                            type: "schedule"
+                                    },
+
+                        {
+                            name: "workStation",
+                            height: 30,
+                            map_to: "workStation",
+                            type: "workstation"
+                                    },
+
+                        {
+                            name: "status",
+                            height: 30,
+                            map_to: "status",
+                            type: "select",
+                            options: [
+                                {
+                                    key: "In Progress",
+                                    label: "In Progress"
+                                },
+                                {
+                                    key: "Complete",
+                                    label: "Complete"
+                                },
+                                {
+                                    key: "Cancelled",
+                                    label: "Cancelled"
+                                }
+                                        ]
+                                    },
+                        {
+                            name: "progress",
+                            height: 30,
+                            map_to: "progress",
+                            type: "number"
+                                    },
+                        {
+                            name: "time",
+                            type: "time",
+                            map_to: "auto",
+                            time_format: ["%d", "%m", "%Y", "%H:%i"] //,"%H:%i"
+                                    }
+                                    ];
+                    gantt.init("gantt_here");
+                    gantt.form_blocks["my_editor"] = {
+                        render: function(sns) {
+                           
+                            return "<div class='dhx_cal_ltext' style='height:60px;'>Text&nbsp;<input type='text'><br/>Holders&nbsp;<input type='text'></div>";
+                        },
+                        set_value: function(node, value, task) {
+                            node.childNodes[1].value = value || "";
+                            node.childNodes[4].value = task.users || "";
+                        },
+                        get_value: function(node, task) {
+                            task.users = node.childNodes[4].value;
+                            return node.childNodes[1].value;
+                        },
+                        focus: function(node) {
+                            var a = node.childNodes[1];
+                            a.select();
+                            a.focus();
+                        }
+                    };
+                    gantt.parse(ik);
+
+                    function ScheduleLookUpTemp() {
+                        var baseURL;
+                        var fieldId = document.getElementById("schId").Id;
+                        
+                        var commVal = communityValue();
+                        baseURL = commVal + "/ScheduleSelect?";
+                        baseURL = baseURL + "txt=" + escapeUTF("schId");
+                        baseURL = baseURL + "&frm=" + escapeUTF("{!$Component.qer}");
+                        openPopup(baseURL, "zlookup", 500, 500, "width=1085,height=550,left=0,top=100,toolbar=no,status=no,directories=no,menubar=no,resizable=yes,scrollable=no",
+                            true);
+                    }
+                    var newWin = null;
+                  
+                    function processLookUp() {
+                        var url = "apex/processSelect";
+                        newWin = window.open(url, 'Popup', 'height=600,width=600,left=100,top=100,margin-top=10,resizable=no,scrollbars=yes,toolbar=no,status=no');
+                        if(window.focus) {
+                            newWin.focus();
+                        }
+                        return false;
+                    }
+                   
+                    function workstationLookUp() {
+                        var cycleId = document.getElementById("cycleId").value;
+                        if(cycleId != '') {
+                            var url = "apex/workstationassignSelect?cycle=";
+                            newWin = window.open(url, 'Popup', 'height=600,width=600,left=100,top=100,margin-top=10,resizable=no,scrollbars=yes,toolbar=no,status=no');
+                            if(window.focus) {
+                                newWin.focus();
+                            }
+                        }
+                        return false;
+                    }
+
+                    function workorderLookUp() {
+                        var url = "apex/workorderSelect";
+                        newWin = window.open(url, 'Popup', 'height=600,width=600,left=100,top=100,margin-top=10,resizable=no,scrollbars=yes,toolbar=no,status=no');
+                        if(window.focus) {
+                            newWin.focus();
+                        }
+                        return false;
+                    }
+
+                    function lineitemLookUp() {
+                        var workorder = document.getElementById("workorderName").value;
+                        var workorderId = document.getElementById("workorderId").value;
+                        if(workorderId != '') {
+                            var url = "apex/lineitemSelect?woId=";
+                            newWin = window.open(url, 'Popup', 'height=600,width=600,left=100,top=100,margin-top=10,resizable=no,scrollbars=yes,toolbar=no,status=no');
+                            if(window.focus) {
+                                newWin.focus();
+                            }
+                            return false;
+                        }
+                    }
+                   
+                    function cycleLookUp() {
+                        var processId = document.getElementById("processId").value;
+                        if(processId != '') {
+                            var url = "apex/cycleSelect?process=";
+                            newWin = window.open(url, 'Popup', 'height=600,width=600,left=100,top=100,margin-top=10,resizable=no,scrollbars=yes,toolbar=no,status=no');
+                            if(window.focus)
+                            {
+                                newWin.focus();
+                            }
+                            return false;
+                        }
+                    }
+
+                    function communityValue() {
+                        
+                        var comVal = document.getElementById('{!$Component.qer.comVal}').value;
+                       
+                        return comVal;
+                    }
+
+                    function closeLookupPopup() {
+                        if(null != newWin) {
+                            newWin.close();
+                        }
+                    }
+
+                    function dissolveWS(name, id) {
+                        
+                        id.value = '';
+                        name.value = '';
+                        
+                        if(id.id == "cycleId") {
+                            var elewsn = document.getElementById("workstationName");
+                            var elewsid = document.getElementById("workstationId");
+                            elewsn.value = '';
+                            elewsid.value = '';
+                        }
+                        if(id.id == "workorderId") {
+                          
+                            document.getElementById("lineitemId").value = '';
+                            document.getElementById("lineitemName").value = '';
+                        }
+                        if(id.id == "processId") {
+                           
+                            document.getElementById("productId")
+                                .value = '';
+                            document.getElementById("productName")
+                                .value = '';
+                            document.getElementById("cycleId")
+                                .value = '';
+                            document.getElementById("cycleName")
+                                .value = '';
+                            document.getElementById("workstationId")
+                                .value = '';
+                            document.getElementById("workstationName")
+                                .value = '';
+                        }
+                    }
+
+                    function setScaleConfig(value) {
+                        switch(value) {
+                            case "1":
+                                gantt.config.scale_unit = "day";
+                                gantt.config.step = 1;
+                                gantt.config.date_scale = "%d %M";
+                                gantt.config.subscales = [
+
+                                        ];
+                                gantt.config.scale_height = 50;
+                                gantt.config.scale_width = 70;
+                                gantt.templates.date_scale = null;
+                                break;
+                            case "2":
+                                var weekScaleTemplate = function(date) {
+                                    var dateToStr = gantt.date.date_to_str("%d %M");
+                                    var endDate = gantt.date.add(gantt.date.add(date, 1, "week"), -1, "day");
+                                    return dateToStr(date) + " - " + dateToStr(endDate);
+                                };
+                                gantt.config.scale_unit = "week";
+                                gantt.config.step = 1;
+                                gantt.templates.date_scale = weekScaleTemplate;
+                                gantt.config.subscales = [
+                                    {
+                                        unit: "day",
+                                        step: 1,
+                                        date: "%D"
+                                    }
+                                        ];
+                                gantt.config.scale_height = 50;
+                                break;
+                            case "3":
+                                gantt.config.scale_unit = "month";
+                                gantt.config.date_scale = "%F - %Y";
+                                gantt.config.subscales = [
+                                    {
+                                        unit: "day",
+                                        step: 1,
+                                        date: "%j - %D"
+                                    }
+                                        ];
+                                gantt.config.scale_height = 50;
+                                gantt.templates.date_scale = null;
+                                break;
+                            case "4":
+                                gantt.config.scale_unit = "year";
+                                gantt.config.step = 1;
+                                gantt.config.date_scale = "%Y";
+                                gantt.config.min_column_width = 70;
+                                gantt.config.scale_height = 50;
+                                gantt.templates.date_scale = null;
+                                gantt.config.subscales = [
+                                    {
+                                        unit: "month",
+                                        step: 1,
+                                        date: "%M"
+                                    }
+                                        ];
+                                break;
+                            case "5":
+                                gantt.config.scale_unit = "day";
+                                gantt.config.step = 1;
+                                gantt.config.date_scale = "%d %M";
+                                gantt.config.subscales = [
+                                    {
+                                        unit: "hour",
+                                        step: 1,
+                                        date: "%g:%i %a"
+                                    }
+                                        ];
+                                gantt.config.scale_height = 50;
+                                gantt.config.scale_width = 70;
+                                gantt.templates.date_scale = null;
+                                break;
+                        }
+                    }
+                    setScaleConfig('1');
+                    var func = function(e) {
+                        e = e || window.event;
+                        var el = e.target || e.srcElement;
+                        var value = el.value;
+                        var els = document.getElementsByName("scale");
+                        for(var i = 0; i < els.length; i++) {
+                            els[i].style.backgroundColor = '#ffffff';
+                        }
+                        setScaleConfig(value);
+                        gantt.render();
+                    };
+                    var els = document.getElementsByName("scale");
+                    for(var i = 0; i < els.length; i++) {
+                        els[i].onchange = func;
+                    }
+                    var PLACEHOLDER = '';
+                    var searchObject;
+                    var queryTerm;
+                    $('[id$=productTextBoxId]')
+                        .autocomplete({
+                            minLength: 2,
+                            source: function(request, response) {
+                                queryTerm = request.term;
+                                
+                                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.Scheduler.searchProductsP}', request.term, function(result, event) {
+                                    if(event.type == 'exception') {
+                                        alert(event.message);
+                                    } else {
+                                        searchObject = result;
+                                        response(searchObject);
+                                    }
+                                },
+                                {
+                                    escape: true
+                                });
+                            },
+                            focus: function(event, ui) {
+                                $('[id$=productTextBoxId]')
+                                    .val(ui.item.Name);
+                                
+                                return false;
+                            },
+                            select: function(event, ui) {
+                                $('[id$=productTextBoxId]')
+                                    .val(ui.item.Name);
+                                $('[id$=searchProductId]')
+                                    .val(ui.item.Id);
+                                
+                                Evaluate();
+                                return false;
+                            },
+                        })
+                        .data("ui-autocomplete")
+                        ._renderItem = function(ul, item) {
+                           
+                            var entry = "<a style='text-decoration:none;color:#333;'>" + item.Name;
+                            
+                            entry = entry + "</a>";
+                            entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+                            return $("<li class='liclassik'></li>")
+                                .data("item.autocomplete", item)
+                                .append(entry)
+                                .appendTo(ul);
+                        };
+                    $('[id$=WOTextBoxId]')
+                        .autocomplete({
+                            minLength: 2,
+                            source: function(request, response) {
+                                queryTerm = request.term;
+                                
+                                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.Scheduler.searchWOs}', request.term, function(result, event) {
+                                    if(event.type == 'exception') {
+                                        alert(event.message);
+                                    } else {
+                                        searchObject = result;
+                                        response(searchObject);
+                                    }
+                                },
+                                {
+                                    escape: true
+                                });
+                            },
+                            focus: function(event, ui) {
+                                $('[id$=WOTextBoxId]')
+                                    .val(ui.item.Name);
+                                
+                                return false;
+                            },
+                            select: function(event, ui) {
+                                $('[id$=WOTextBoxId]')
+                                    .val(ui.item.Name);
+                                $('[id$=searchWOId]')
+                                    .val(ui.item.Id);
+                               
+                                Evaluate();
+                                return false;
+                            },
+                        })
+                        .data("ui-autocomplete")
+                        ._renderItem = function(ul, item) {
+                           
+                            var entry = "<a style='text-decoration:none;color:#333;'>" + item.Name;
+                            
+                            entry = entry + "</a>";
+                            entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+                            return $("<li class='liclassik'></li>")
+                                .data("item.autocomplete", item)
+                                .append(entry)
+                                .appendTo(ul);
+                        };
+                    $('[id$=WSTextBoxId]')
+                        .autocomplete({
+                            minLength: 2,
+                            source: function(request, response) {
+                                queryTerm = request.term;
+                                
+                                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.Scheduler.searchWSss}', request.term, function(result, event) {
+                                    if(event.type == 'exception') {
+                                        alert(event.message);
+                                    } else {
+                                        searchObject = result;
+                                        response(searchObject);
+                                    }
+                                },
+                                {
+                                    escape: true
+                                });
+                            },
+                            focus: function(event, ui) {
+                                $('[id$=WSTextBoxId]')
+                                    .val(ui.item.Name);
+                                
+                                return false;
+                            },
+                            select: function(event, ui) {
+                                $('[id$=WSTextBoxId]')
+                                    .val(ui.item.Name);
+                                $('[id$=searchWSId]')
+                                    .val(ui.item.Id);
+                                
+                                Evaluate();
+                                return false;
+                            },
+                        })
+                        .data("ui-autocomplete")
+                        ._renderItem = function(ul, item) {
+                            
+                            var entry = "<a style='text-decoration:none;color:#333;'>" + item.Name;
+                           
+                            entry = entry + "</a>";
+                            entry = entry.replace(queryTerm, "<b>" + queryTerm + "</b>");
+                            return $("<li class='liclassik'></li>")
+                                .data("item.autocomplete", item)
+                                .append(entry)
+                                .appendTo(ul);
+                        };
+                        
+                          window.onload = setFocus();
+                    
+                          function setFocus() {
+                             document.getElementById('{!$Component.autoCompleteForm.panelb}').focus();
+                          }
+
+                </script>
+                
+                <style>
+                      
+        @media (min-width: 992px) {
+            .erp_mark7 .col-md-1 {
+                width: 9.333333%;
+            }
+        }
+
+
+        /* Ends Here */
+
+
+        /* all */
+
+        ::-webkit-input-placeholder {
+            font-size: 11px !important;
+            background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+        }
+
+        ) center right 5px no-repeat;
+        background-size:12px 12px;
+
+        }
+        ::-moz-placeholder {
+            font-size: 11px !important;
+            background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+        }
+        ) center right 5px no-repeat;
+        background-size:12px 12px;
+
+        }
+        /* firefox 19+ */
+        :-ms-input-placeholder {
+            font-size:11px !important;
+            background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+        }
+        ) center right 5px no-repeat;
+        background-size:12px 12px;
+
+        }
+        /* ie */
+        input:-moz-placeholder {
+            font-size:11px !important;
+            background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+        }
+        ) center right 5px no-repeat;
+        background-size:12px 12px;
+
+        }
+        .erp_mark7 .form-control-feedback {
+            position: absolute;
+            top: 24px;
+            right: 14px;
+            z-index: 2;
+            display: block;
+            width: 34px;
+            height: 50px;
+            line-height: 50px;
+            text-align: center;
+            pointer-events: none;
+        }
+        input[type=text],
+        textarea,
+        select {
+            border: 1px solid rgba(0,
+            0,
+            0,
+            0.1);
+            color: #616161!important;
+            font-size: 12px !important;
+            padding: 5px;
+        }
+        input[type=text],
+        textarea,
+        select:focus {
+            -webkit-box-shadow: inset 0 1px 1px rgba(0,
+            0,
+            0,
+            0.075);
+            box-shadow: inset 0 1px 1px rgba(0,
+            0,
+            0,
+            0.075);
+            -webkit-transition: border-color ease-in-out 0.15s,
+            -webkit-box-shadow ease-in-out 0.15s;
+            -o-transition: border-color ease-in-out 0.15s,
+            box-shadow ease-in-out 0.15s;
+            transition: border-color ease-in-out 0.15s,
+            box-shadow ease-in-out 0.15s;
+        }
+        .delicon {
+            height: 15px;
+            width: 15px;
+            cursor:pointer;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .lookupIcon {
+            cursor:pointer;
+            vertical-align: middle;
+        }
+        .lookupInput {
+            display: inline;
+            white-space: nowrap;
+            vertical-align: middle;
+            color: #616161;
+            box-shadow: none !important;
+            width: 100%;
+            font-size: 0.85em;
+            font-weight: 300;
+            height: 30px;
+            border-radius: 0;
+            -webkit-appearance: none;
+        }
+        .displayNone {
+            display:none;
+        }
+        .displayBlock {
+            display:block;
+        }
+        .ui-autocomplete-loading {
+            background: white url({!URLFOR($Resource.codebase,'codebase/Images/slds_spinner_brand.gif')
+        }
+        ) center right 10px no-repeat;
+        background-size:20px 20px;
+
+        }
+        .placeHolder {
+            font-style: italic;
+        }
+        .ui-helper-hidden-accessible {
+            display:none;
+        }
+        .liclassik {
+            background: #ffffff;
+            width: 20%;
+            border-bottom: 1px solid #f2f2f2;
+            border-left: 1px solid #f2f2f2;
+            border-right: 1px solid #f2f2f2;
+            color: #333;
+            padding-left: 5px;
+            position: relative;
+            left: -60px;
+            top: 0px;
+            list-style:none;
+            cursor:pointer;
+        }
+        .liclassik:hover {
+            background: #f4f4f4;
+            width: 20%;
+            border-bottom: 1px solid #f2f2f2;
+            border-left: 1px solid #f2f2f2;
+            border-right: 1px solid #f2f2f2;
+            color: #333;
+            padding-left: 5px;
+            position: relative;
+            left: -61px;
+            top: 0px;
+            list-style:none;
+            cursor:pointer;
+        }
+
+        /*
+                    #ul.ui-autocomplete.ui-menu.ui-widget.ui-widget-content.ui-corner-all{
+                        background:red;
+                    }
+                    */
+        .red .gantt_cell,
+        .odd.red .gantt_cell,
+        .red .gantt_task_cell,
+        .odd.red .gantt_task_cell {
+            background-color: #FDE0E0;
+        }
+        .green .gantt_cell,
+        .odd.green .gantt_cell,
+        .green .gantt_task_cell,
+        .odd.green .gantt_task_cell {
+            background-color: #BEE4BE;
+        }
+        .gantt_task_line {
+            -webkit-border-radius: 2px;
+            -moz-border-radius: 2px;
+            border-radius: 2px;
+            position: absolute;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            //background-color: #3db9d3;
+            //border: 1px solid #2898b0;
+            background-color: #00a1e0;
+            border: 1px solid #888;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -moz-user-select: -moz-none;
+        }
+        .gantt_task_progress {
+            text-align: left;
+            z-index: 0;
+            background: #4cca81;
+            background-image: linear-gradient(45deg,
+            rgba(0,
+            0,
+            0,
+            .035) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(0,
+            0,
+            0,
+            .035) 50%,
+            rgba(0,
+            0,
+            0,
+            .035) 75%,
+            transparent 75%,
+            transparent);
+            background-size: 64px 64px;
+        }
+        .ikclass1 {
+            background: #00a1e0;
+            border: 2px solid #00a1e0;
+        }
+        .ikclass2 {
+            background: #eea416;
+            border: 2px solid #eea416;
+        }
+
+        /* css added on 07042106 */
+        .gantt_cal_light_wide .gantt_wrap_section {
+            position: relative;
+            padding: 10px 0;
+            overflow: visible;
+            width: 100% !important;
+            border-bottom: 0px solid #ebebeb;
+        }
+        .gantt_cal_light_wide .gantt_cal_lsection {
+            border: 0;
+            float: left;
+            text-align: right;
+            width: 90px;
+            height: 20px;
+            padding: 5px 0 0 0;
+        }
+        .gantt_cal_light_wide.gantt_cal_light_full {
+            width: 800px;
+            height: 425px !important;
+            top: 118px;
+            left: 314px;
+        }
+        .gantt_cal_light_wide .gantt_cal_larea {
+            padding: 0 10px;
+            width: 100%;
+            height: 340px !important;
+        }
+        .gantt_cal_light_wide .gantt_cal_larea {
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            border: 1px solid #cecece;
+            background: #F0F8FF;
+        }
+        .gantt_cal_light_wide .gantt_wrap_section {
+            position: relative;
+            padding: 10px 0;
+            overflow: visible;
+            width: 100%;
+            border-bottom: 0px solid #ebebeb;
+        }
+        .gantt_cal_light_wide .gantt_section_time {
+            overflow: visible;
+            padding-top: 2px!important;
+            padding-right: 8%;
+            height: 20px!important;
+        }
+        .gantt_cal_light select {
+            font-family: Arial;
+            border: 1px solid #cecece;
+            font-size: 13px;
+            padding: 5px;
+            margin: 0;
+            height: 26px;
+            background: #ffffff;
+        }
+        .gantt_cal_ltext {
+            padding: 2px 10px;
+            overflow: hidden;
+        }
+        .gantt_cal_ltext textarea {
+            width: 80% !important;
+        }
+        .gantt_cal_ltext input {
+            width: 80% !important;
+        }
+        .gantt_cal_light .gantt_btn_set {
+            margin: 10px 10px;
+        }
+        .cls element.style {}
+        .gantt_cal_ltext textarea {
+            width: 90% !important;
+        }
+        .gantt_cal_ltext textarea {
+            overflow: auto;
+            font-family: Arial;
+            font-size: 13px;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+            border: 1px solid #cecece;
+            height: 100%;
+            width: 100%;
+            outline: 0!important;
+            resize: none;
+        }
+        input[type=text],
+        input[type=number],
+        textarea,
+        select {
+            border: 1px solid rgba(0,
+            0,
+            0,
+            0.1);
+            color: #616161!important;
+            font-size: 12px !important;
+            padding: 5px;
+        }
+        .erp_mark7 .btn:focus,
+        .erp_mark7 .btn:active:focus,
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: thin dotted;
+            outline: 1px auto grey;
+            outline-offset: -2px;
+        }
+        .gantt_task_progress span {
+            color: #FFF;
+            position: relative;
+            font-size:11px;
+            z-index: 20;
+            padding: 3px;
+            margin-left: 3px;
+            border-radius: 3px;
+        }
+
+@media (min-width: 1200px){
+.epr_Mark7 .container {
+    width: 1250px;
+    margin: 0 0px 0 0px;
+}
+       
+}
+
+                </style>
+            </apex:outputPanel>
+        </apex:form>
+    </body>
+    </html>
+</apex:page>

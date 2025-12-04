@@ -1,0 +1,1147 @@
+<aura:component controller="Fedex" implements="force:appHostable">
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css, /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.min.css,
+                          /resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Fedex.css"/>
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:attribute name="ShowInvoice" type="boolean" default="false"/>
+    <aura:attribute name="showeditBillDetails" type="boolean" default="false"/>
+    <aura:attribute name="SuggestedAddress" type="String"/>
+    <aura:attribute name="displayModal" type="boolean" default="false"/>
+    <aura:attribute name="ShowTimeInCostTab" type="boolean" default="false"/>
+    <aura:attribute name="ShowGetRate" type="boolean" default="true"/>
+    <aura:attribute name="selectedTab" type="String" default="SHIPPING_SERVICES"/>
+    <aura:attribute name="signatureservice" type="List"/>
+    <aura:attribute name="statusconfirmation" type="List"/>
+    <aura:attribute name="packageId" type="List"/>
+    <aura:attribute name="shipmentId" type="String"/>
+    <aura:attribute name="address" type="Object"/> 
+    <aura:attribute name="fromAddress" type="Object"/> 
+    <aura:attribute name="myConsW" type="Object"/> 
+    <aura:attribute name="packageList" type="List"/> 
+    <aura:attribute name="packageLists" type="List"/>
+    <aura:attribute name="recordIdMap" type="Map"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="ShiptoContact" type="object"/>
+    <!--aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/-->
+    <aura:attribute name="shipment" type="Shipment__c" default="{ 'sobjectType': 'Shipment__c', 'ERP7__Terms_Of_Shipment__c': '--None--', 'ERP7__Reason_For_Export__c':'SAMPLE', 'ERP7__Signature_Services__c':'SERVICE_DEFAULT', 'ERP7__Status__c':''}"/>
+    <aura:attribute name="fedexCred" type="Object"/>
+    <aura:attribute name="FEDEX_Services" type="Object" />
+    <aura:attribute name="result" type="String"/>
+    <aura:attribute name="retValue" type="String" default=""/>
+    <aura:attribute name="errorMsg" type="String"/>
+    <aura:attribute name="WrapperMsg" type="String"/>
+    <aura:attribute name="errorMsg1" type="String"/>
+    <aura:attribute name="trackWrapperList" type="Object"/>
+    <aura:attribute name="toShipmentType" type="Boolean" default="false"/>
+    <aura:attribute name="fromShipmentType" type="Boolean" default="false"/>
+    <aura:attribute name="spodLetter" type="Attachment" default="{'sObjectType':'Attachment'}"/>
+    <aura:attribute name="bufferlbl" type="Attachment" default="{'sObjectType':'Attachment'}"/>
+    <aura:attribute name="attUrl" type="String"/> 
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <!-- <aura:handler name="change" value="{!v.address.Id}" action="{!c.toadresschange}"/>
+    <aura:handler name="change" value="{!v.fromAddress.Id}" action="{!c.fromAddresschange}"/> -->
+    <aura:attribute name="statusconfirmationOptions" type="List"/>
+    <aura:attribute name="signatureserviceOptions" type="List"/>
+    <aura:attribute name="specialServicesFedex" type="List"/>
+    
+    <aura:attribute name="reasonforexportOptions" type="List"/>
+    <aura:attribute name="termsofshipmentOptions" type="List"/>
+    <aura:attribute name="billingOptions" type="List"/>
+    <aura:attribute name="isforRMA" type="Boolean" default="false"/>
+    <aura:attribute name="showSendReturnLabel" type="boolean" default="false"/>
+    <aura:attribute name="isLoading" type="boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="redirectURL" type="String" default=""/>
+    <aura:attribute name="addresserrmsg" type="String" default=""/>
+    <aura:attribute name="returnshipment" type="Shipment__c" default="{ 'sobjectType': 'Shipment__c','ERP7__Billing_Account_Number__c':'','ERP7__Billing_Postal_Code__c':'','ERP7__Billing_Country_Code__c':'','ERP7__Shipment_Billing_options__c':'','ERP7__Billing_Contact__c':'','ERP7__Billing_Address__c':''}"/>
+    <aura:attribute name="returnshipmentdate" type="date" default=""/>
+    <aura:attribute name="showreturnmodal" type="boolean" default="false"/>
+    <aura:attribute name="allowReturnShipment" type="boolean" default="false"/>
+    
+    <aura:attribute name="allowUPSReturnShipmentFromFedEx" type="boolean" default="false"/>
+    <aura:attribute name="selectedTabRS" type="String" default="FedEx"/>
+    <aura:attribute name="UPS_Services" type="Object" />
+    <aura:attribute name="UpsmyConsW" type="Object"/> 
+    <aura:attribute name="disableEditBillOptReturnShipment" type="boolean" default="false"/>
+    <aura:attribute name="selectedLogisticReturnShipType" type="String" default=""/>
+    
+    <body id="mybody">
+        <div class="erp_mark7" aura:id="sldshide" >
+            <aura:if isTrue="{!not(empty(v.exceptionError))}">
+                <div class="slds-notify_container slds-is-absolute top15" >
+                    <div class="slds-notify slds-notify_toast slds-theme_error" role="status" >
+                        <span class="slds-assistive-text">{!$Label.c.error}</span>
+                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                            <lightning:icon iconName="utility:error" variant="inverse" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" size="x-small"/>
+                        </span>
+                        <div class="slds-notify__content">
+                            <p class="slds-text-heading_x-small mb-0">
+                                <lightning:formattedText value="{!v.exceptionError}"/>
+                            </p>
+                        </div>
+                        <div class="slds-notify__close" >
+                            <a onclick="{!c.closeError}" class="textdeccolor">
+                                <lightning:icon iconName="utility:close" variant="inverse" alternativeText="close!" title="Close" size="x-small"/>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.isLoading}">
+                <lightning:spinner variant="brand" size="small" aura:id="spinner" />
+            </aura:if>
+            
+            <div class="slds-page-header">
+                <div class="slds-media">
+                    <div class="slds-media__figure">
+                        <span class="slds-icon_container slds-icon-standard-" title="">
+                            <span class="slds-icon slds-page-header__icon" aria-hidden="true">
+                                <img src="/resource/ERP7__PickPackShipResource/assets/images/logo-header-fedex-gb.png" width="92" height="40" alt="Fedex"  class="fedex-class1"/> 
+                            </span>
+                        </span>
+                    </div>
+                    <div class="slds-media__body">
+                        <h1 class="slds-page-header__title slds-truncate slds-align-middle" title=""></h1>
+                        <p class="slds-text-body_small slds-line-height_reset"></p>
+                    </div>
+                    <aura:if isTrue="{!if(or(or(v.shipment.Id == null,v.shipment.Id == undefined),v.shipment.Id == ''), true,false)}">
+                        <div>
+                            <lightning:button label="{!$Label.c.Validate_Address}" onclick="{!c.callOnAddressAPI}"></lightning:button>
+                        </div>
+                        <!--aura:set attribute="else">
+                            <aura:if isTrue="{!v.allowReturnShipment}">
+                                <aura:if isTrue="{!if(or(or(v.returnshipment.Id == null,v.returnshipment.Id == undefined),v.returnshipment.Id == ''), true,false)}">
+                                    <div>
+                                        <lightning:button label="{!$Label.c.GenerateReturnShipment}" onclick="{!c.getreturnshipmentrates}"></lightning:button>
+                                    </div>
+                                </aura:if>
+                            </aura:if>
+                        </aura:set-->
+                    </aura:if>
+                </div>
+            </div>
+            
+            <div class="epr_Mark7">
+                <div class="row fedex-class2">  
+                    <div class="col-md-6 slds-m-top--small">
+                        <div>
+                            <div class="slds-page-header slds-m-top--xx-small fedex-class3" onclick="{!c.sectionOne}">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-hide" aura:id="articleOne" iconName="utility:right" size="x-small"/>
+                                        <lightning:icon class="slds-show" aura:id="articleOne" iconName="utility:up" size="x-small" />
+                                    </div>
+                                    
+                                    <div class="slds-m-left--large" >{!$Label.c.X1_Where_is_this_shipment_going}</div>
+                                </section>
+                            </div>
+                            
+                            <div aura:id="articleOne">
+                                <div class="epr_Mark7 fedex-class4">
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label"> {!$Label.c.To_Address}:</label> 
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" label="" IconName="standard:address" selectedRecordId="{!v.address.Id}" hideRemove="true"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.ERP7__Company__c !=null,v.address.ERP7__Contact__r.ERP7__Company__c !='')}">
+                                                    <lightning:input type="text" label="{!$Label.c.CompanyLabel}" value="{!v.address.ERP7__Contact__r.ERP7__Company__c}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="text" label="{!$Label.c.CompanyLabel}" value="{!v.address.ERP7__Customer__r.ERP7__Company__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div> 
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.ShiptoContact != null,v.ShiptoContact != '')}">
+                                                    <lightning:input type="text" label="{!$Label.c.ContractConsole_Contact}" value="{!v.ShiptoContact.Name}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="text" label="{!$Label.c.ContractConsole_Contact}" value="{!v.address.ERP7__Contact__r.Name}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.Email !=null,v.address.ERP7__Contact__r.Email !='')}">
+                                                    <lightning:input type="email" label="Email" value="{!v.address.ERP7__Contact__r.Email}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="email" label="Email" value="{!v.address.ERP7__Customer__r.ERP7__Email__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.Phone !=null,v.address.ERP7__Contact__r.Phone !='')}">
+                                                    <lightning:input type="tel" label="{!$Label.c.Phone_AddTimeCardEntry}" value="{!v.address.ERP7__Contact__r.Phone}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="tel" label="{!$Label.c.Phone_AddTimeCardEntry}" value="{!v.address.ERP7__Customer__r.Phone}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_1}" value="{!v.address.ERP7__Address_Line1__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_2}" value="{!v.address.ERP7__Address_Line2__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.City_town}" value="{!v.address.ERP7__City__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.State_country}" value="{!v.address.ERP7__State__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Zip_post_code}" value="{!v.address.ERP7__Postal_Code__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Cash_Payment_Country}" value="{!v.address.ERP7__Country__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="checkbox" label="{!$Label.c.Is_Residential}" variant="label-hidden" class="display-lable" checked="{!v.toShipmentType}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="slds-page-header Message slds-m-top--xx-small fedex-class3" onclick="{!c.sectionTwo}">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-show" aura:id="articleTwo" iconName="utility:up" size="x-small"/>
+                                        <lightning:icon class="slds-hide" aura:id="articleTwo" iconName="utility:right" size="x-small" />
+                                    </div>
+                                    <div class="slds-m-left--large" >2.{!$Label.c.Where_is_this_shipment_coming_from}</div>
+                                </section>
+                            </div>
+                            <div class="slds-show" aura:id="articleTwo">
+                                <div class="epr_Mark7 fedex-class4">
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label">{!$Label.c.From_Address}</label>
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" label="" selectedRecordId="{!v.fromAddress.Id}" hideRemove="true"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.ERP7__Company__c !=null,v.fromAddress.ERP7__Contact__r.ERP7__Company__c !='')}">
+                                                    <lightning:input type="tel" label="{!$Label.c.CompanyLabel}" value="{!v.fromAddress.ERP7__Contact__r.ERP7__Company__c}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="tel" label="{!$Label.c.CompanyLabel}" value="{!v.fromAddress.ERP7__Customer__r.ERP7__Company__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <!--<lightning:input type="text" label="{!$Label.c.CompanyLabel}" value="{!v.fromAddress.ERP7__Contact__r.ERP7__Company__c}"/>-->
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.ContractConsole_Contact}" value="{!v.fromAddress.ERP7__Contact__r.Name}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.Email !=null,v.fromAddress.ERP7__Contact__r.Email !='')}">
+                                                    <lightning:input type="email" label="Email" value="{!v.fromAddress.ERP7__Contact__r.Email}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="email" label="Email" value="{!v.fromAddress.ERP7__Customer__r.ERP7__Email__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.Phone !=null,v.fromAddress.ERP7__Contact__r.Phone !='')}">
+                                                    <lightning:input type="tes" label="{!$Label.c.Phone_AddTimeCardEntry}" value="{!v.fromAddress.ERP7__Contact__r.Phone}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="tes" label="{!$Label.c.Phone_AddTimeCardEntry}" value="{!v.fromAddress.ERP7__Customer__r.Phone}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_1}" value="{!v.fromAddress.ERP7__Address_Line1__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_2}" value="{!v.fromAddress.ERP7__Address_Line2__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.City_town}" value="{!v.fromAddress.ERP7__City__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.State_country}" value="{!v.fromAddress.ERP7__State__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row slds-grid slds-m-around--small fedex-class5">
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Zip_post_code}" value="{!v.fromAddress.ERP7__Postal_Code__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Cash_Payment_Country}" value="{!v.fromAddress.ERP7__Country__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-xs-4">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="checkbox" label="{!$Label.c.Is_Residential}" variant="label-hidden" class="display-lable" checked="{!v.fromShipmentType}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            
+                            <div class="slds-page-header Message slds-m-top--xx-small fedex-class3" onclick="{!c.sectionThree}">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-show" aura:id="articleThree" iconName="utility:up" size="x-small"/>
+                                        <lightning:icon class="slds-hide" aura:id="articleThree" iconName="utility:right" size="x-small" />
+                                    </div>
+                                    <div class="slds-m-left--large" >3.{!$Label.c.What_are_you_shipping}</div>
+                                </section>
+                            </div>
+                            
+                            
+                            <div class="slds-show" aura:id="articleThree">
+                                <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th scope="col"> <div class="slds-truncate2" title="{!$Label.c.Package}">{!$Label.c.Package}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Order">{!$Label.c.Order_RMA}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Weight">{!$Label.c.PackageSlip_List_Weight}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Length">{!$Label.c.ShipmentManagement_Package_Length}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Width">{!$Label.c.ShipmentManagement_Package_Width}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Height">{!$Label.c.Height_Pack}</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Declared Value">{!$Label.c.Pack_Declared_Value}</div> </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration items="{!v.packageList}" var="package">				
+                                            <tr class="slds-hint-parent">
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        <lightning:formattedUrl label="{!package.Name}" value="{!'/'+package.Id}" target="_blank"/>
+                                                    </div>
+                                                </td>
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        <aura:if isTrue="{!package.ERP7__Sales_Order__c!=null}">
+                                                            <lightning:formattedUrl label="{!package.ERP7__Sales_Order__r.Name}" value="{!'/'+package.ERP7__Sales_Order__c}" target="_blank"/>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!package.ERP7__Transfer_Order__c!=null}">
+                                                            <lightning:formattedUrl label="{!package.ERP7__Transfer_Order__r.Name}" value="{!'/'+package.ERP7__Transfer_Order__c}" target="_blank"/>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!package.ERP7__Order__c !=null}">
+                                                            <aura:if isTrue="{!package.ERP7__Order__r.Name !=null}">
+                                                                <lightning:formattedUrl label="{!package.ERP7__Order__r.Name}" value="{!'/'+package.ERP7__Order__c}" target="_blank"/>
+                                                                <aura:set attribute="else">
+                                                                    <lightning:formattedUrl label="{!package.ERP7__Order__r.OrderNumber}" value="{!'/'+package.ERP7__Order__c}" target="_blank"/>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!package.ERP7__Return_Merchandise_Authorisation__c != null}">
+                                                            <aura:if isTrue="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__c !=null}">
+                                                                <aura:if isTrue="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__r.Name !=null}">
+                                                                    <lightning:formattedUrl label="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__r.Name}" value="{!'/'+package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__c}" target="_blank"/>
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:formattedUrl label="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__r.OrderNumber}" value="{!'/'+package.ERP7__Return_Merchandise_Authorisation__r.ERP7__Order__c}" target="_blank"/>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__SO__c!=null}">
+                                                                <lightning:formattedUrl label="{!package.ERP7__Return_Merchandise_Authorisation__r.ERP7__SO__r.Name}" value="{!'/'+package.ERP7__Return_Merchandise_Authorisation__r.ERP7__SO__c}" target="_blank"/>
+                                                            </aura:if>
+                                                        </aura:if>
+                                                    </div>
+                                                </td> 
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        {!package.ERP7__Weight__c}
+                                                    </div>
+                                                </td>
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        {!package.ERP7__Length__c}  
+                                                    </div>
+                                                </td>
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        {!package.ERP7__Width__c} 
+                                                    </div>
+                                                </td>                                    
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        {!package.ERP7__Height__c}
+                                                    </div>
+                                                </td>
+                                                <td class="greyheadlabel">
+                                                    <div class="slds-truncate2">
+                                                        <lightning:input type="number" formatter="currency" step="0.01" value="{!package.ERP7__Declared_Value__c}"/>
+                                                    </div>
+                                                </td></tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="slds-page-header slds-m-top--xx-small fedex-class3" onclick="{!c.sectionFour}">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-show" aura:id="articleFour" iconName="utility:right" size="x-small"/>
+                                        <lightning:icon class="slds-hide" aura:id="articleFour" iconName="utility:up" size="x-small" />
+                                    </div>
+                                    <div class="slds-m-left--large" >4.{!$Label.c.SupplierInvoice_Invoice_Details}</div>
+                                </section>
+                            </div>
+                            
+                            
+                            <div class="slds-hide" aura:id="articleFour">
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                        <div class="slds-form-element">
+                                            <lightning:input type="text" label="{!$Label.c.UPS_Invoice_Number}" value="{!v.shipment.ERP7__Invoice_Number__c}"/>
+                                        </div>
+                                    </div>
+                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                        <div class="slds-form-element">
+                                            <lightning:input type="text" label="{!$Label.c.PO_Purchase_Order_Number}" value="{!v.shipment.ERP7__Purchase_Order_Number__c}"/>
+                                        </div>
+                                    </div> 
+                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                        <div class="slds-form-element">
+                                            <lightning:select value="{!v.shipment.ERP7__Terms_Of_Shipment__c}" aura:id="termsofshipment" label="{!$Label.c.Terms_Of_Shipment}">
+                                                <aura:iteration items="{!v.termsofshipmentOptions}" var="option">
+                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Terms_Of_Shipment__c, option.value)}"/>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>                                                
+                                </div>                                                
+                                <div class="row slds-m-top--small">                                                    
+                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                        <div class="slds-form-element">
+                                            <lightning:select value="{!v.shipment.ERP7__Reason_For_Export__c}" aura:id="reasonforexport" label="{!$Label.c.Reason_For_Export}">
+                                                <aura:iteration items="{!v.reasonforexportOptions}" var="option">
+                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Reason_For_Export__c, option.value)}"/>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                        <div class="slds-form-element">
+                                            <label class="slds-form-element__label" for="text-input-01">{!$Label.c.Declaration_Statement}</label>
+                                            <div class="slds-form-element__control">
+                                                <lightning:textarea value="{!v.shipment.ERP7__Declaration_Statement__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 slds-m-top--xx-small">
+                        <div class="slds-tabs--default slds-p-around--xx-small">
+                            <ul class="slds-tabs--default__nav" role="tablist">
+                                <div onclick="{!c.setSSCPickList}"><c:Tab label="{!$Label.c.Shipping_Services_Cost}" name="SHIPPING_SERVICES" selectedTab="{!v.selectedTab}" iconclass="fa fa-file-text" /></div>
+                                <div onclick="{!c.setPickList}"><c:Tab label="{!$Label.c.UPS_Process_Shipment}" name="PROCESS_SHIPMENT" selectedTab="{!v.selectedTab}" iconclass="fa fa-th-large" /></div>
+                                <c:Tab label="{!$Label.c.UPS_Track_Shipment}" name="TRACK_SHIPMENT" selectedTab="{!v.selectedTab}" iconclass="fa fa-truck fa-1x" />
+                            </ul>
+                        </div>
+                        <aura:if isTrue="{!equals(v.selectedTab,'SHIPPING_SERVICES')}">
+                            <div class="row slds-grid slds-m-around--small fedex-class5">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning:input type="date" label="{!$Label.c.UPS_Shipment_Date}" value="{!v.shipment.ERP7__Shipment_Date__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning:textarea label="{!$Label.c.AddSubscription_Description}" value="{!v.shipment.ERP7__Description__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control">
+                                        <div class="">
+                                            <lightning:select  value="{!v.shipment.ERP7__Signature_Services__c}" aura:id="signatureservice" label="{!$Label.c.Signature_Services}">
+                                                <aura:iteration items="{!v.signatureserviceOptions}" var="option">
+                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Signature_Services__c, option.value)}"/>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>    
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="row slds-grid slds-m-around-ssmall UPS-class6" >
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <lightning:select value="{!v.shipment.ERP7__Shipment_Billing_options__c}" aura:id="billingOptions" label="{!$Label.c.Shipment_Billing_Options}" disabled="{!v.showeditBillDetails}">
+                                            <aura:iteration items="{!v.billingOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Shipment_Billing_options__c, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-iconr-right">
+                                        <label class="slds-form-element__label">{!$Label.c.Billing_Account_Number}</label><lightning:input type="text" variant="label-hidden" value="{!v.shipment.ERP7__Billing_Account_Number__c}" disabled="{!v.showeditBillDetails}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-iconr-right">
+                                        <label class="slds-form-element__label">{!$Label.c.Billing_Contact}</label>
+                                        <c:CustomInputLookUp objectAPIName="Contact" aura:id="bilCon" IconName="standard:contact" selectedRecordId="{!v.shipment.ERP7__Billing_Contact__c}" hideRemove="{!v.showeditBillDetails}" disabled="{!v.showeditBillDetails}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon-rright">
+                                        <label class="slds-form-element__label">{!$Label.c.CreateCustomer_Billing_Address} :</label>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" aura:id="bilAdd" IconName="standard:address" selectedRecordId="{!v.shipment.ERP7__Billing_Address__c}"  hideRemove="{!v.showeditBillDetails}" disabled="{!v.showeditBillDetails}"/>
+                                    </div>
+                                </div>
+                            </div> <!-- For third party -->
+                            <div class="row slds-grid slds-m-around--small fedex-class5">
+                                <!-- <aura:if isTrue="{!v.retValue=='SR'}">
+                                    <div class="col-md-4 col-xs-4">
+                                        <div class="slds-form-element__control">
+                                            <lightning:input type="checkbox" label="Email from Third Party" checked="{!v.shipment.ERP7__Email_from_Third_Party__c}"/>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                                <aura:if isTrue="{!v.retValue == 'SR'}">
+                                    <div class="col-md-4 col-xs-4"> 
+                                        <div class="slds-form-element__control ">
+                                            <lightning:textarea label="Message" value="{!v.shipment.ERP7__Message__c}"/>
+                                        </div>
+                                    </div>
+                                </aura:if> -->
+                            </div>
+                           <div class="row slds-grid slds-m-around-ssmall UPS-class6">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control">
+                                        <div class="">
+                                            <lightning:select  value="{!v.shipment.ERP7__Fedex_Special_Services__c}" aura:id="specialService" label="Special Services">
+                                                <aura:iteration items="{!v.specialServicesFedex}" var="option">
+                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Fedex_Special_Services__c, option.value)}"/>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>    
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="row slds-grid slds-m-around--small fedex-class5">
+                                <aura:if isTrue="{!v.ShowGetRate}">
+                                    <div class="col-xs-12 col-sm-4 col-md-3 fedex-class6">
+                                        <lightning:button variant="brand" onclick="{!c.Shipping_Rate}" label="{!$Label.c.Get_Rates}"/>
+                                    </div>
+                                </aura:if>
+                            </div>
+                            <aura:if isTrue="{!and(v.addresserrmsg != undefined, v.addresserrmsg != '')}">
+                                <div class="row fedex-class8">
+                                    <a href="{!v.redirectURL}" target="_blank">
+                                        <lightning:formattedText value="{!v.addresserrmsg}" class="colorErrorMsg"/> &nbsp;
+                                    </a>
+                                </div>                                                    
+                            </aura:if>
+                            <aura:if isTrue="{!and(v.errorMsg != undefined, v.errorMsg != '')}"> 
+                                <div class="row fedex-class8" > <lightning:formattedText value="{!v.errorMsg}" class="colorErrorMsg"/> </div>                                                    
+                            </aura:if>
+                            <aura:if isTrue="{!and(v.errorMsg1 != undefined, v.errorMsg1 != '')}">
+                                <div class="row fedex-class8"> <lightning:formattedText value="{!v.errorMsg1}" class="colorErrorMsg"/> </div>                                                    
+                            </aura:if>
+                            <aura:if isTrue="{!and(v.WrapperMsg != undefined, v.WrapperMsg != '')}">
+                                <div class="row">
+                                    <div class="col-md-10 col-sm-2 col-xs-12 fedex-class9">
+                                        <lightning:formattedText aura:id="UPSErrorMsg" value="{!v.WrapperMsg}"/>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            
+                            <aura:if isTrue="{!v.ShowTimeInCostTab}">
+                                <div class="row">
+                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                                <th scope="col"> <div class="slds-truncate" title="Select">{!$Label.c.Select}</div> </th>
+                                                <th scope="col"> <div class="slds-truncate" title="Available Service Type">{!$Label.c.Service_Type}</div> </th>
+                                                <th scope="col"> <div class="slds-truncate" title="Total Charges">{!$Label.c.UPS_Total_Charges}</div> </th>
+                                                <th>&nbsp; </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration var="twl" indexVar="pcount" items="{!v.FEDEX_Services.Services}">
+                                                <tr>
+                                                    <th scope="row" data-label="Select">
+                                                        <div class="slds-form-element__control slds-truncate fedex-class10">
+                                                            <lightning:input type="radio" aura:id="Fr0" name="others" checked="{!twl.Selected}"/>
+                                                        </div>                                                                            
+                                                    </th>
+                                                    <td data-label="Service Type">
+                                                        <div class="slds-truncate" title="Service">
+                                                            <lightning:formattedText value="{!twl.Service}" title="{!twl.Service}" />
+                                                        </div>
+                                                    </td> 
+                                                    <td data-label="Total Charges">
+                                                        <div class="slds-truncate" title="Total Charges"> 
+                                                            <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                        </div>
+                                                    </td>
+                                                </tr>                                                
+                                            </aura:iteration>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.ShowTimeInCostTab}">
+                                <div class="row">
+                                    <div class="col-sm-12 slds-m-top--small slds-m-bottom--small fedex-class8">
+                                        <lightning:button variant="brand" onclick="{!c.Shipping_Request}" label="{!$Label.c.Initiate_Shipment}"/>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            <div class="slds-grid slds-wrap">
+                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap2}">
+                                    <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                        <aura:if isTrue="{!v.packageList[0].ERP7__Thermal_Labels__c}">
+                                            <a href="{!'/servlet/servlet.FileDownload?file='+v.bufferlbl.Id}" class="slds-button slds-button--neutral1"  target="_blank">Buffer Label</a>
+                                            <aura:set attribute="else">
+                                                <lightning:button variant="brand" class="width100PL fontcolorwhite"  onclick="{!c.CreateFedexLabel}" label="{!$Label.c.View_Label}"/>
+                                                
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                    </div>
+                                    <aura:if isTrue="{!and(v.showSendReturnLabel,v.isforRMA)}">
+                                        <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                            <lightning:button variant="brand" class="width100PL fontcolorwhite" onclick="{!c.SendReturnLabel}" label="{!$Label.c.Send_Return_Label}"/>
+                                        </div>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap2}">
+                                    <aura:if isTrue="{!v.ShowInvoice}">
+                                        <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                            <lightning:button variant="brand" class="width100PL fontcolorwhite"  onclick="{!c.CreateInvoice}" label="{!$Label.c.View_Commercial_Invoice}"/>
+                                        </div>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap3}">
+                                    <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                        <lightning:button variant="neutral" class="width101" onclick="{!c.Cancel_Request}" label="{!$Label.c.UPS_Cancel_Shipment}"/>
+                                    </div>
+                                </aura:if>
+                                <!--</div>
+                            <div class="row">-->
+                                <aura:if isTrue="{!and(v.allowReturnShipment,v.isforRMA == false)}">
+                                    <aura:if isTrue="{!and(and(v.shipment.Id != undefined, v.shipment.Id != null),v.shipment.Id != '')}">
+                                        <aura:if isTrue="{!if(or(or(v.returnshipment.Id == null,v.returnshipment.Id == undefined),v.returnshipment.Id == ''), true,false)}">
+                                            <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                                <lightning:button class="width100PL" label="{!$Label.c.GenerateReturnShipment}" onclick="{!c.getreturnshipmentrates}"></lightning:button>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!and(and(v.returnshipment.Id != undefined, v.returnshipment.Id != null),v.returnshipment.Id != '')}">
+                                            <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                                <lightning:button variant="brand" class="width100PL fontcolorwhite"  onclick="{!c.CreateFedexReturnLabel}" label="{!$Label.c.View_Return_Label}"/>
+                                            </div>
+                                            <div class="col-xs-12 col-sm-4 col-md-4 slds-m-top--small fedex-class8"> 
+                                                <lightning:button variant="brand" class="width100PL fontcolorwhite" onclick="{!c.SendReturnReturnLabel}" label="{!$Label.c.Send_Return_Label}"/>
+                                            </div>
+                                        </aura:if>
+                                    </aura:if>
+                                </aura:if>
+                            </div>
+                            <div class="slds-m-top--small"></div>
+                            <div class="container slds-p-top--small slds-m-top--medium fedex-class11">
+                                <h1 class="fedex-class12"> End-User License Agreement (ASP Agreement) </h1>
+                                <h3> Appendix A-1 </h3>
+                                <p class="fedex-class13">
+                                    If Your Developer Agreement is a FedEx ASP Agreement, this EULA is to be included in Your FedEx(R) Compatible solution, subject to and in accordance with Your Developer Agreement: To use the Application (as defined below), you must agree to abide by this Agreement. This Agreement gives each of us certain rights and responsibilities. You will be assuming full and sole responsibility for all use of the Application occurring under your Account Number and registration information (e.g., meter number(s), credentials, etc.); you will be limiting your remedies. Please read this Agreement carefully.<br/><br/> You will be required to accept this Agreement in order to complete the registration process. By clicking the "I accept" button, you accept and agree to be bound by all of the provisions of this Agreement, including those incorporated by reference, without modification, limitation or qualification. You will be binding yourself or your company to this Agreement. You represent that you have the authority to bind your company, if done on behalf of a company, to this Agreement. If you do not have such authority, you must click the "I decline" button. You must also click the "I decline" button if you do not agree with this Agreement. If you decline, you will not be authorized to access or use the Application and/or the FedEx services available through such Application.
+                                </p>
+                                <h3> FedEx End-User License Agreement </h3>
+                                <p class="fedex-class13">
+                                    This license agreement (“Agreement”) is entered by and between FedEx Corporate Services, Inc. (“FedEx”) and you (“Licensee”).<br/><br/> In consideration of the mutual promises and obligations set out below, the sufficiency of which the Parties acknowledge, FedEx and Licensee acknowledge and agree as follows: Section 1. Application, License, Restrictions.<br/><br/> (a) Grant. Subject to the terms and conditions of this Agreement, FedEx grants Licensee a personal, non-exclusive, royalty-free, non-assignable, non-transferable, limited, revocable license, without the right to grant sublicenses, solely within the United States, to: (i) access and use the FedEx shipping services application (“Application”), (a) only as the Application is integrated into and made accessible to Licensee as a part of Licensee’s licensed remote access to those application hosting services (“Services”) provided by_________________________ (“System Supplier”) to Licensee, and (b) only through the means provided by the System Supplier, all solely for the purposes of accessing and using those shipping and shipping related services offered, from time to time, by FedEx or its Affiliates through the Application (“FedEx Services”); (ii) access and use Documentation (as defined below) solely for the purposes of accessing and using the Application and obtaining FedEx Services; and, (iii) to the extent that Licensee incorporates shipping functionality into its public web page in connection with Licensee’s retail operations in order to facilitate shipments to its retail customers, Licensee may allow retail customers to access and use the Application, solely as part of the Service and through the means provided by the System Suppler, for the sole purpose of conducting e-commerce transactions with Licensee that request FedEx Services by (and through) Licensee; provided, however, in no event does such access by retail customers extend to third party shippers or resellers or consolidators of shipping or shipping related services except as may be expressly permitted by a separate written agreement between FedEx and Licensee. Licensee may not access or use the Application or Documentation for any other purposes.
+                                    <br/><br/>(b) Restrictions.<br/><br/> (i) The license does not permit, and Licensee will not (and will not permit any employee or other third party to):<br/><br/> 1. Reverse engineer, decompile, disassemble, or translate the Application;<br/><br/> 2. Apply any procedure or process to the Application in order to ascertain, derive, and/or appropriate for any reason or purpose, the source code or source listings for the Application or any trade secret or confidential information or process contained in the Application;<br/><br/> 3. Remove, obscure, modify or otherwise change any product identification, copyright or other notices or legends contained in or on, or available through, the Application or Documentation;<br/><br/> 4. Transfer the Application, Documentation or the license, all whether in whole or in part, or grant any rights in the Application, Documentation or the license, all whether in whole or in part by sublicense or otherwise;<br/><br/> 5. Except as expressly permitted under Section 1(a) herein, provide, lease, lend, or otherwise use or allow others to use or have access to the Application, the Documentation or any portion thereof;<br/><br/> 6. Disseminate or disclose performance information or analysis (including, without limitation, benchmarks) relating to the Application without the prior written consent of FedEx;<br/><br/> 7. Use or display (including, doing either on a stand-alone basis (i.e., not as integrated with the Services)) the Application or Documentation, or any portion of either, except as expressly authorized in and in accordance with Section 1(a) above;<br/><br/> 8. Reproduce or distribute the Application or Documentation;<br/><br/> 9. Modify or create derivative works of the Application or Documentation; or,<br/><br/> 10. Use the Application to perform or order FedEx Services by or for the benefit of third parties. For the avoidance of doubt, the functionality available through the Application (e.g., that which enables Licensee to label, rate, route, record, track and invoice) may only be used by Licensee for shipments tendered to FedEx for carriage on behalf of Licensee unless expressly permitted by a separate written agreement between FedEx and Licensee.<br/><br/> (ii) Licensee shall promptly notify FedEx in writing upon its discovery of any unauthorized use of the Application or Documentation. FedEx may prevent access to or use of the Application or FedEx systems if FedEx has reason to believe that (a) Licensee or third party using the Application licensed to Licensee may be involved in potential unauthorized use of or other infringement of FedEx proprietary rights or (b) Licensee or its use of the Application is in violation of this Agreement.
+                                    <br/><br/>(iii) Licensee acknowledges and agrees that the Application and Documentation are subject to export restrictions and controls imposed by various statutes and regulations, (collectively, "the Acts"), including the Export Administration Act and the Export Administration Regulations. Licensee shall not use, export or re-export the Application or Documentation except as authorized by and in compliance with the Acts and all laws and regulations of the jurisdiction in which FedEx made the Application available to Licensee. Without limiting the foregoing, Licensee shall not export or re-export the Application or Documentation (i) into or to a national or resident of any embargoed countries under the Acts which include as of the date hereof, Cuba, Iran, Iraq, Libya, North Korea, Sudan or Syria or (ii) to a Denied Party listed on U.S. Department of Commerce's list of U.S. Denied Persons or a Special Designated National on the U.S. Treasury Department's list of Specially Designated Nationals. By entering into this Agreement, Licensee represents and warrants that Licensee is not located in, under control of, or a national or resident of any such country or on any such list.
+                                    <br/><br/>(iv) Licensee acknowledges that the Services and other services provided by System Supplier are not provided by or on behalf of FedEx. LICENSEE HEREBY WAIVES ANY AND ALL CLAIMS AGAINST FEDEX ARISING FROM OR RELATING TO LICENSEE’S USE OF THE SERVICES OR THE OTHER SERVICES PROVIDED BY SYSTEM SUPPLIER.
+                                    <br/><br/>(v) In addition to the provisions of this Agreement, if Licensee is an agency, department, or other entity of the United States Government (“Government”), pursuant to 48 C.F.R. 12.212 or 48 C.F.R. 227.7202, as applicable, the (a) Application and (b) any related materials, specifications, technical data, and documentation (collectively, “Documentation”) are Commercial Items as defined in 48 C.F.R. 2.101 and are licensed to Government end users only as Commercial Items and only with the rights granted to all other end users as provided in this Agreement. Manufacturer is FedEx Corporate Services, Inc., 30 FedEx Parkway, Collierville, TN 38017.
+                                    <br/><br/>(c) Modifications. To the extent FedEx or the System Supplier makes available to Licensee any updates, upgrades, enhancements, bug-fixes or other modifications to the Application (collectively, “Modifications”), such Modifications shall be considered a part of the Application and subject to the terms and conditions of this Agreement; provided, however, a Modification may come with its own imbedded license agreement and in the event of a conflict between this Agreement and any imbedded license agreement, the terms of the imbedded license agreement control. For the avoidance of doubt, except as otherwise stated, “Application” includes “Modification.”
+                                    <br/><br/>(d) Ownership and Reservation of Rights. All right, title and interest, including all intellectual property rights, in and to the Application, Modifications (if any), and Documentation, are owned exclusively by FedEx and/or its licensors. The Application, Modification and Documentation are licensed, not sold, and are and shall at all times remain the property of FedEx. Except for the limited, revocable license granted in Section 1(a), Licensee shall have no right, title or interest in any the Application, Modification or Documentation, and shall not allow any lien or encumbrance to exist on any of the foregoing. Except for the express license granted in Section 1(a), all rights in and to the Application and Documentation are reserved.
+                                    <br/><br/>(e) FedEx affiliates. Licensee hereby acknowledges that, unless otherwise specified, when used in this Agreement, the name “FedEx” shall include FedEx Corporate Services, Inc., its parent company and any and all of its affiliate companies, including without limitation Federal Express Corporation and FedEx Ground Package System, Inc.; provided, however, Licensee acknowledges that the sole obligor under this Agreement is FedEx Corporate Services, Inc. alone. Licensee further acknowledges that the contract of carriage for shipments made by Licensee using the Application (and not the terms governing use of such Application) is between Licensee and the FedEx company to which Licensee tenders the package within the United States.
+                                    <br/><br/>Section 2. Licensee Obligations.
+                                    <br/><br/>(a) <u>Systems and Access.</u> This Agreement governs Licensee’s access and use of the Application as provided above and under the FedEx account numbers and/or registration information (e.g., meter numbers, credentials, etc.) provided to Licensee by FedEx. Licensee will follow instructions of FedEx, including those in the Application and/or Documentation, provided from time to time, for access and use of the Application. Licensee is solely responsible for providing and maintaining all hardware necessary to access and use the Application. In addition, Licensee acknowledges that use of certain Applications or Services may require Licensee to modify its internal computer systems from time to time, and Licensee will make such modifications at its expense pursuant to the instructions provided by FedEx or System Supplier. Licensee is solely responsible, for obtaining access to the Internet or World Wide Web. Such access is required to utilize the Application. FedEx may, and may require the System Supplier, to modify the Application at any time for any reason and Licensee hereby consents to all such Modifications. If required, when instructed by FedEx (and on an ongoing basis thereafter), Licensee will complete an End of Day Close Process as required by FedEx to ensure FedEx shipping transactions are uploaded to FedEx at the close of each business day.
+                                    <br/><br/><u>Maintenance.</u> Licensee agrees to look solely to the System Supplier for all technical support and maintenance of the Services and Application, unless otherwise instructed by FedEx. Notwithstanding the foregoing, FedEx in its sole discretion may (i) repair, modify, replace, disable, monitor, or remove the Application; and (ii) provide installation and integration assistance or technical support with respect to Licensee’s access to and use of the Application (collectively (i) and (ii) referred to herein “Limited Support Services”). Notwithstanding the foregoing, FedEx is under no obligation to provide Limited Support Services, or any other services, or Modifications hereunder.
+                                    <br/>(c) <u>Information and Data.</u> Licensee is advised and encouraged to maintain back-up copies of any data or information (including, names, addresses, reports, etc.) that it uses or stores with, through or in the Services or the Application (collectively, “Data”). FedEx is and will not be responsible for the loss of or damage to any Data. Licensee will not load process or store Data on or through the Application not required or related to the conduct of business with FedEx. FedEx shall have access to and use of the Data used or processed on, though, in or with the Application. FedEx reserves the right to access, use, delete or remove any Data in connection with the provision of any FedEx Services or in connection with this Agreement. In addition, Licensee consents to the collection, use or disclosure by FedEx or its designee of limited personally identifiable information about Licensee or its users for the purposes contemplated by this Agreement and for marketing, sales, testing, development and other FedEx business purposes.
+                                    <br/><br/>(d) <u>Supplies .</u> Licensee acknowledges that it is responsible for the purchase of any supplies necessary to use the Application or Service and will contact the System Supplier to determine what, if any, supplies it must purchase for use of any Application or Service.
+                                    <br/><br/><u>Section 3. Termination.</u> This Agreement is effective until terminated by either party. This Agreement will terminate independently without notice if Licensee fails to comply with any provision of this Agreement or any instructions regarding the Application provided by FedEx. Upon termination for any reason, Licensee must cease all use of the Application. FedEx reserves the right to unilaterally terminate this Agreement and the use of the Application at any time, for any reason, and by whatever means.
+                                    <br/><br/><u>Section 4. Payment.</u> With respect to FedEx Services, Licensee will follow all of payment terms and instructions of FedEx. Licensee will remit payment, in accordance with the terms and conditions contained in the applicable FedEx transportation agreement, applicable FedEx Service Guide ("Service Guide"), or as otherwise instructed by FedEx. Licensee is responsible for payment of all charges generated through use of the Application under Licensee’s account number and registration information (e.g., meter numbers, credentials, etc.). Any rates reflected in or published by the Application or Service, if shown, are offered for information purposes only and may be different from the actual charges for FedEx Services incurred by Licensee.
+                                    <br/><br/><u>Section 5. Adjustments and Refunds.</u> With respect to FedEx Services, Licensee may bill shipping charges for transactions conducted through the Application only to valid account numbers (e.g., bill sender, bill recipient or bill third party). Shipments tendered to FedEx with incorrect or incomplete routing, labeling, commitment date, service designation or other errors will not be eligible for refunds under money-back guarantees of FedEx. Refunds requested by Licensee with respect to any shipment must be made in accordance with the applicable Service Guide or Licensee’s transportation agreement with FedEx. Licensee will not be entitled to any refund or credit under money-back guarantees of FedEx if FedEx determines that the claim resulted from improper use of the Application. FedEx, in its sole discretion, may suspend its money-back guarantees in the event Application or Service fails or is inoperable for any reason.
+                                    <br/><br/><u>Section 6. Disclaimer of Warranty.</u> Licensee expressly acknowledges and agrees that access to and use of the Application is provided to Licensee by the System Supplier and that FedEx is neither providing the Services nor charging Licensee a fee for access to or use of the Application or for providing the Limited Support Services, if any.
+                                    <br/><br/>The Application and Limited Support Services are provided “AS-IS” WITHOUT representation or warranty of any kind.
+                                    <br/><br/>To the extent permitted by applicable law, FedEx and its Representatives (as defined in Section 8 below), disclaim and exclude all warranties, whether, express, statutory, or implied, including the implied warranties of Merchantability and Fitness for a Particular Purpose, and the warranties of Non-Infringement or Quiet Enjoyment. FedEx does not represent or warrant that the Application will meet any or all of Licensee’s requirements or that its operations will be uninterrupted or error free or that any defect within the Application will be corrected. FedEx does not represent or warrant that the Limited Support Services will meet any or all of Licensee’s requirements or that it will correct any defect within the Application. FedEx does not represent or warrant that the Application, Limited Support Services or any other related services or content is free from bugs, viruses, errors or other program limitations. FedEx does not represent or warrant access to the Internet or to any other service or content through the Application. Furthermore, FedEx does not warrant or make any representation regarding the results of Licensee’s installation or use of the Application or the Limited Support Services in terms of capability, correctness, accuracy, reliability or otherwise.
+                                    <br/><br/>No oral or written information, representation or advice given by FedEx, the System Supplier or an authorized representative of either shall create any warranty.
+                                    <br/><br/>Some states do not allow the exclusion of implied warranties, so the above exclusions may not apply to Licensee. In that event, any implied warranties are limited in duration to sixty (60) days from the date of purchase of the Services. However, some states do not allow limitations on how long an implied warranty lasts, so the above limitation may not apply to Licensee. This warranty gives Licensee specific legal rights and Licensee may have other rights as well which vary from state to state.
+                                    <br/><br/><u>Section 7. Remedies.</u> YOUR SOLE REMEDY FOR ANY DISSATISFACTION WITH THE APPLICATION OR LIMITED SUPPORT SERVICES IS TO STOP USING THE APPLICATION. Licensee agrees to look to the System Supplier for all issues relating to Your access, use or inability to access or use the Application and/or Services. Licensee acknowledges and agrees that it is Licensee’s sole responsibility to arrange with the System Supplier for any and all warranties, maintenance/support requirements, and remedies, if any, arising out of Licensee’s access to and use of the Application and/or Services. Licensee agrees that the remedy set forth in this Section is Licensee’s exclusive remedy under this Agreement for any dissatisfaction with its access to or use of (or inability to do either) the Application, the Services or Limited Support Services.
+                                    <br/><br/><u>Section 8. Limitation of Liability.</u> Licensee acknowledges that FedEx is providing the Application and Limited Support Services, if any, to Licensee free of charge.
+                                    <br/><br/>The entire liability of FedEx and its Representatives (as defined below) for any reason shall be limited to $100.00. whether based on breach of contract, breach of warranty, tort (including, negligence), product liability, statutory or strict liability or otherwise even if FedEx or its Representatives have been advised of the possibility of such damages and even if a remedy set forth herein is found to have failed of its essential purpose.
+                                    <br/><br/>To the maximum extent permitted by applicable law, FedEx and its parent company and subsidiaries and affiliates, direct and indirect, of its Parent company, licensors, or any of the foregoing’s respective employees, officers, directors and/or agents (collectively, “Representatives”) are not and shall not be liable for any special, incidental, exemplary, punitive, consequential or other indirect damages (including: damages for loss of business, loss of data, loss of profits, damages to Licensee’s computer systems or the like), whether based on breach of contract, breach of warranty, tort (including, negligence), product liability, statutory or strict liability or otherwise even if FedEx or its Representatives have been advised of the possibility of such damages and even if a remedy set forth herein is found to have failed of its essential purpose.
+                                    <br/><br/>Some states do not allow the limitation and/or exclusion of liability for incidental or consequential damages, so the above limitation or exclusion may not apply to You.
+                                    <br/><br/>The limitations of damages set forth above are fundamental elements of the basis of the bargain between FedEx and Licensee. FedEx would not be able to provide the Application without such limitations.
+                                    <br/><br/><u>Section 9. Controlling Law and Severability.</u> This Agreement shall be governed by and construed in accordance with the laws of the United States and the State of Tennessee, excluding its conflicts of law provisions. If for any reason a court of competent jurisdiction finds any provision of this Agreement, or a portion thereof, to be unenforceable, that provision shall be enforced to the maximum extent permissible so as to effect the intent of the parties and the remainder of this Agreement shall remain in full force and effect. Any cause of action with respect to Application must be instituted within one (1) year after the claim or cause of action has arisen in Shelby County, Tennessee or be barred.
+                                    <br/><br/><u>Section 10. Terms and Conditions of Carriage.</u>
+                                    <br/><br/>(a) It is understood and agreed by Licensee that the Application and/or Service may contain functionality which may be used by Licensee to make shipments through carriers other than FedEx. Licensee should contact the System Supplier to determine if the Service has multi-carrier capability. If so, Licensee agrees that it will look solely to such third party carriers for the terms under which Licensee may tender shipments to and have its shipments carried by such third party carriers and that, as between FedEx and Licensee, Licensee is solely responsible for its compliance with such third party carriers' terms of shipping and will look solely to such third party carriers for all remedies attributable to claims arising out of the third party carriers’ carriage of Licensee’s shipments. LICENSEE WILL DEFEND, INDEMNIFY AND HOLD HARMLESS FEDEX FROM ALL CLAIMS, DEMANDS AND JUDGMENTS, INCLUDING THE PAYMENT OF ATTORNEY’S FEES, FROM THIRD PARTY CARRIERS ARISING OUT OF LICENSEE’S USE OF THE SERVICES TO PROCESS SHIPMENTS TENDERED TO SUCH CARRIERS.
+                                    <br/><br/>(b) With respect to FedEx Services, Licensee agrees that domestic and international carriage by FedEx of any shipments tendered to FedEx pursuant to this Agreement or using the Application shall be in accordance with the terms, conditions and limitations of liability set out on the NONNEGOTIABLE Air Waybill, Label, Manifest, or Pick-Up Record (collectively “Shipping Documentation”) and as appropriate any transportation agreement between Licensee and FedEx covering such shipment and in any applicable tariff, Service Guide or Standard Conditions of Carriage, copies of which are available upon request, and which are incorporated into this Agreement by reference. If there is a conflict between the Shipping Documentation and any such document then in effect or this Agreement, the transportation agreement, tariff, Service Guide, Standard Conditions of Carriage, or this Agreement will control, in that order of priority. If a shipment originates outside the United States, the contract of carriage is with the FedEx subsidiary, branch, or independent contractor who originally accepts the shipment.
+                                    <br/><br/>(c) In the event Licensee uses the Application and/or Service to process shipments tendered to FedEx for delivery to locations outside the United States or country of shipment origin, Licensee will, at Licensee’s sole expense, assure that the terms and conditions of international carriage supplied by FedEx from time to time (and which may be amended or modified from time to time at the sole discretion of FedEx) are placed on the Shipping Documentation, as instructed by FedEx, for all such international shipments. LICENSEE WILL DEFEND, INDEMNIFY AND HOLD HARMLESS FEDEX AND ITS REPRESENTATIVES FROM AND AGAINST ANY AND ALL LOSSES, DAMAGES, CLAIMS AND OTHER ITEMS OF COST AND EXPENSE ARISING OUT OF LICENSEE’S FAILURE TO APPLY THE INTERNATIONAL CARRIAGE TERMS TO THE SHIPPING DOCUMENTATION FOR SUCH INTERNATIONAL SHIPMENTS, INCLUDING WITHOUT LIMITATION CLAIMS FROM THE RECIPIENT OF ANY SHIPMENT, AND LICENSEE’S FAILURE TO FOLLOW INSTRUCTIONS OF FEDEX IN REGARD TO THE PLACEMENT OF THE TERMS ON THE SHIPPING DOCUMENTATION FOR SUCH INTERNATIONAL SHIPMENTS.
+                                    <br/><br/>(d) Licensee acknowledges that if the Application and/or Service is used to process shipments to locations outside the United States or country of shipment origin, Licensee must enter the name of the person completing the Shipping Documentation to print in lieu of its manual signature on the Shipping Documentation, as applicable, for all shipments tendered by Licensee to FedEx using the Application or Service. Licensee further acknowledges that such printed name shall be sufficient to constitute the Licensee’s signature, and Licensee’s acceptance of FedEx terms and conditions of carriage contained in the applicable transportation agreement, tariff, Service Guide, Standard Conditions, or Shipping Documentation, under which the shipment is accepted by FedEx, or its independent contractor.
+                                    <br/><br/>(e) Unless otherwise indicated, the shipper's address indicated on the face of any Shipping Documentation is the place of execution and the place of departure and the recipient's address listed on the face of the Shipping Documentation is the place of destination. Unless otherwise indicated on the face of the Shipping Documentation the first carrier of all shipments is Federal Express Corporation, 3610 Hacks Cross Road, Memphis, TN, 38125. In the event another carrier is listed on any such document, that carrier is the first carrier of the shipment. The address for FedEx Ground is P.O. Box 108, Coraopolis, PA 15230.
+                                    <br/><br/><u>Section 11. Indemnity.</u> Licensee shall, at Licensee’s sole cost and expense, defend, indemnify and hold FedEx and its Representatives harmless from and against all claims, demands, suits, damages, losses, liabilities, costs, expenses, fines and judgments, including reasonable attorney’s fees, (hereinafter, collectively, “Claims”) arising out of or relating to (a) Licensee’s installation, use (or inability to use) and/or removal (or inability to remove) of the Application or any other materials or services provided to Licensee by or on behalf of FedEx or its Representatives;
+                                    <br/><br/>(b) the intentional acts, willful misconduct or negligence (acts or omissions) of licensee, its employees, officers, directors, suppliers, customer, agents, users, or representatives (collectively, for purposes of sections 11(b) and 11(c), “Licensee”); or, (c) Licensee’s breach of this Agreement. FedEx may intervene and assume its defense in any such Claims, at its expense and in its sole discretion. Licensee will not settle any Claims involving FedEx or the Application without the prior written consent of FedEx.
+                                    <br/><br/>Section 12. Complete Agreement. This Agreement constitutes the entire agreement between Licensee and FedEx with respect to the Application, and supersedes any prior or contemporaneous understandings, representations, statements or agreements, written or oral, regarding the Application. Notwithstanding the foregoing, an Application or Modification may come with its own imbedded license agreement and in the event of a conflict between this Agreement and any imbedded license agreement, the terms of the imbedded license agreement control. As used in this Agreement, “including” means “including, without limitation” and is illustrative rather than exhaustive. No amendment to or modification of this Agreement will be binding on FedEx without the written consent of FedEx. Licensee may not assign or otherwise transfer this Agreement or the licenses granted herein, including by operation of law without the prior written consent of FedEx. Any assignment or transfer in violation of the foregoing is void and of no effect. In addition, except for FedEx Representatives, Licensee and FedEx acknowledge and agree that there are no third party beneficiaries to this Agreement. The provisions of Sections 1(b), 1(c), 1(d), 1(e), 2(c), 3, 4, 5, 6, 7, 8, 9, 10 11, and 12 will survive the termination of this Agreement.
+                                    
+                                </p>
+                            </div>                      
+                        </aura:if>
+                        <aura:if isTrue="{!equals(v.selectedTab,'PROCESS_SHIPMENT')}">
+                            <div class="row slds-grid slds-m-around--small fedex-class14">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning:input type="text" label="{!$Label.c.InternalShipment_Shipment_Tab}" value="{!v.shipment.Name}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.shipment.ERP7__Status__c}" aura:id="statusconfirmation" label="{!$Label.c.UPS_Shipment_Status}">
+                                            <aura:iteration items="{!v.statusconfirmationOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Status__c, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">      
+                                    <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap2}">
+                                        <div class="col-sm-12 slds-m-top--xxx-small slds-m-bottom--xxx-small fedex-class8"> 
+                                            <lightning:button variant="brand" class="width100" onclick="{!c.CreateFedexLabel}" label="{!$Label.c.View_Label}"/>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap3}">
+                                        <div class="col-sm-12 slds-m-top--xxx-small slds-m-bottom--xxx-small fedex-class8"> 
+                                            <lightning:button variant="neutral" class="width101" onclick="{!c.Cancel_Request}" label="{!$Label.c.UPS_Cancel_Shipment}"/>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <div class="row">&nbsp;</div>
+                            <aura:if isTrue="{!and(v.errorMsg != undefined, v.errorMsg != '')}"> 
+                                <div class="row fedex-class8"> <lightning:formattedText value="{!v.errorMsg}" class="colorErrorMsg"/> </div>                                                    
+                            </aura:if>
+                            <aura:if isTrue="{!and(v.FEDEX_Services.UPSErrorMsg != undefined, v.FEDEX_Services.UPSErrorMsg != '')}">
+                                <div class="row fedex-class15"> 
+                                    <lightning:formattedText aura:id="UPSErrorMsg" value="{!v.FEDEX_Services.UPSErrorMsg}"/>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap4}">
+                                <div class="panel panel-default slds-m-top--small">
+                                    <div class="panel-heading">
+                                        <h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#collapse4" class="fedex-class16">{!$Label.c.Pickup_Details}</a> </h4>
+                                    </div>
+                                    <div id="collapse4" class="panel-collapse collapse in">
+                                        <div class="panel-body">
+                                            <div class="col-md-8 fedex-class17">                                                                        
+                                                <div class="row">
+                                                    <div class="col-xs-12 col-sm-6 col-md-6">
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="date" label="{!$Label.c.Pickup_Ready_Time}" value="{!v.shipment.ERP7__Package_Ready_Time__c}" class="font12m"/>
+                                                        </div>
+                                                    </div>                                                                            
+                                                    <div class="col-xs-12 col-sm-6 col-md-6">
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="date" label="{!$Label.c.Pickup_Close_Time}" value="{!v.shipment.ERP7__Customer_Close_Time__c}" class="font12m"/>
+                                                        </div>
+                                                    </div>                                                                            
+                                                </div>                                                                        
+                                                <div class="row slds-m-top--xxx-small">
+                                                    <div class="col-xs-12 col-sm-6 col-md-6">
+                                                        <div class="slds-form-element">
+                                                            <lightning:input type="text" label="{!$Label.c.UPS_Pickup_Reference_No}" value="{!v.shipment.ERP7__Pickup_Confirmation_Number__c}"/>
+                                                        </div>                                                                       
+                                                    </div>
+                                                </div>                                                                          
+                                            </div> 
+                                            
+                                            <div class="col-md-4">
+                                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap5}">
+                                                    <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                        <lightning:button variant="brand" class="width101" onclick="{!c.PickupAvailability}" label="{!$Label.c.Pickup_Availability}"/>
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap6}">
+                                                    <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                        <lightning:button variant="brand" class="width100" onclick="{!c.CreatePickup}" label="{!$Label.c.Create_Pick_Up}"/>
+                                                    </div>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap7}">
+                                                    <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                        <lightning:button variant="neutral" class="width101" onclick="{!c.CancelPickup}" label="{!$Label.c.Cancel_Pick_Up}"/>
+                                                    </div>
+                                                </aura:if>
+                                            </div>                                                                    
+                                        </div>                                                                
+                                    </div>                                                            
+                                </div>                                                        
+                            </aura:if>
+                        </aura:if>
+                        <aura:if isTrue="{!equals(v.selectedTab,'TRACK_SHIPMENT')}">
+                            <div class="row slds-grid slds-m-around--small fedex-class18">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        {!$Label.c.Tracking_no} <lightning:formattedText value="{!v.shipment.ERP7__TrackingNumber__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4"></div>
+                                <div class="col-sm-4 slds-m-top--xxx-small">
+                                    <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap8}">
+                                        <div class="slds-m-top--xxx-small">
+                                            <lightning:button variant="brand" class="width100" onclick="{!c.Track_Request}" label="{!$Label.c.UPS_Track_Shipment}"/>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap8}">
+                                        <div class=" slds-m-top--xxx-small">
+                                            <lightning:button variant="brand" class="width101" onclick="{!c.Signature_Proof}" label="{!$Label.c.Proof_of_Delivery}"/>
+                                        </div>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.FEDEX_Services.showAndHideMap9}">
+                                        <div class="slds-m-top--xxx-small">
+                                            <a href="{!'/servlet/servlet.FileDownload?file='+v.spodLetter.Id}" class="slds-button slds-button--neutral1"  target="_blank">{!$Label.c.UPS_View_POD_Letter}</a>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                            </div>
+                            <div class="row">&nbsp;</div>
+                            <aura:if isTrue="{!and(v.errorMsg != undefined, v.errorMsg != '')}"> 
+                                <div class="row fedex-class8"> <lightning:formattedText value="{!v.errorMsg}" class="colorErrorMsg"/> </div>                                                    
+                            </aura:if> 
+                            <aura:if isTrue="{!and(v.FEDEX_Services.UPSErrorMsg != undefined, v.FEDEX_Services.UPSErrorMsg != '')}">
+                                <div class="col-md-10 col-sm-2 col-xs-12 fedex-class19" >
+                                    <lightning:formattedText aura:id="UPSErrorMsg" value="{!v.FEDEX_Services.UPSErrorMsg}"/>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.FEDEX_Services.UPSErrorMsg == 'Track Shipment Activities'}">
+                                <div class="row slds-grid slds-m-around--small fedex-class18">
+                                    <div class="fedex-class20">    
+                                        <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                            <thead>
+                                                <tr class="slds-text-title--caps">
+                                                    <th scope="col"> <div class="slds-truncate" title="Location">{!$Label.c.InventoryConsole_Location}</div> </th>
+                                                    <th scope="col"> <div class="slds-truncate" title="Date/Time">{!$Label.c.Date_Time1}</div> </th>                                                            
+                                                    <th scope="col"> <div class="slds-truncate" title="Arrival Location">{!$Label.c.Arrival_Location}</div> </th> 
+                                                    <th scope="col"> <div class="slds-truncate" title="Activity">{!$Label.c.Activity_AddTimeCardEntry}</div> </th>
+                                                </tr>
+                                            </thead>
+                                            
+                                            <tbody>
+                                                <aura:iteration var="twl" items="{!v.FEDEX_Services.trackServices}">
+                                                    <tr>
+                                                        <td data-label="Location" class="fedex-class21">
+                                                            <div class="slds-truncate" title="Location"> 
+                                                                <lightning:formattedText value="{!twl.location}"/> 
+                                                            </div>
+                                                        </td>                                                                                                                               
+                                                        <td data-label="Date/Time" class="fedex-class22">
+                                                            <div class="slds-truncate" title="Date/Time">
+                                                                <lightning:formattedDateTime value="{!twl.dtValue}" /> 
+                                                            </div>
+                                                        </td>                                                            
+                                                        <td data-label="Arrival Location">
+                                                            <div class="slds-truncate" title="Arrival Location"> 
+                                                                <lightning:formattedText value="{!if(twl.arrivalLocation != null, twl.ArrivalLocation, '-')}"/>
+                                                            </div>
+                                                        </td> 
+                                                        <td data-label="Activity">
+                                                            <div class="slds-truncate" title="Activity"> 
+                                                                <lightning:formattedText value="{!twl.activityDesp}"/> 
+                                                            </div>
+                                                        </td> 
+                                                    </tr>                                                
+                                                </aura:iteration>
+                                            </tbody> 
+                                        </table>
+                                    </div>
+                                </div>
+                            </aura:if>
+                        </aura:if>
+                    </div>
+                </div>
+            </div>
+            
+            <aura:if isTrue="{!v.displayModal}">
+                <div>
+                    <section role="dialog" tabindex="-1" aria-label="Meaningful description of the modal content" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">
+                                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closeBtn}">
+                                    <lightning:icon iconName="utility:close" size="small" variant="neutral"/>
+                                    <span class="slds-assistive-text">Close</span>
+                                </button>
+                            </header>
+                            
+                            <div class="slds-modal__content slds-p-around_medium alignLeft" id="modal-content-id-1">
+                                <p>{!$Label.c.Suggested_Address} : {!v.SuggestedAddress}</p>
+                            </div>
+                            <footer class="slds-modal__footer">
+                                <lightning:button label="{!$Label.c.Update_Ship_address}"
+                                                  variant="brand" class="slds-m-top--medium"
+                                                  onclick="{!c.yesBtn}"/>
+                                <lightning:button label="{!$Label.c.Cancel_ManageLeave}"
+                                                  variant="brand" class="slds-m-top--medium"
+                                                  onclick="{!c.closeBtn}"/>
+                            </footer>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open"></div>
+                </div>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.showreturnmodal}">
+                <div>
+                    <section role="dialog" tabindex="-1" aria-label="Meaningful description of the modal content" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">
+                                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.closereturnmodal}">
+                                    <lightning:icon iconName="utility:close" size="small" variant="neutral"/>
+                                    <span class="slds-assistive-text">Close</span>
+                                </button>
+                            </header>
+                            
+                            <div class="slds-modal__content slds-p-around_medium alignLeft" id="modal-content-id-1">
+                                <div class="row">
+                                    
+                                    <aura:if isTrue="{!v.selectedTabRS == 'FedEx'}">
+                                        <div class="row slds-m-around-ssmall UPS-class6" >
+                                            <div class="col-xs-12 col-sm-4 col-md-4">
+                                                <div class="slds-form-element">
+                                                    <lightning:select value="{!v.returnshipment.ERP7__Shipment_Billing_options__c}" aura:id="returnbillingOptions" label="{!$Label.c.Shipment_Billing_Options}" disabled="{!v.disableEditBillOptReturnShipment}">
+                                                        <aura:iteration items="{!v.billingOptions}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.returnshipment.ERP7__Shipment_Billing_options__c, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-xs-4">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-iconr-right">
+                                                    <lightning:input type="text" label="{!$Label.c.Billing_Account_Number}" value="{!v.returnshipment.ERP7__Billing_Account_Number__c}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-xs-4">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-iconr-right">
+                                                    <label class="slds-form-element__label">{!$Label.c.Billing_Contact}</label>
+                                                    <c:CustomInputLookUp objectAPIName="Contact" aura:id="returnbilCon" IconName="standard:contact" selectedRecordId="{!v.returnshipment.ERP7__Billing_Contact__c}" hideRemove="{!v.disableEditBillOptReturnShipment}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4 col-xs-4">
+                                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon-rright">
+                                                    <label class="slds-form-element__label">{!$Label.c.CreateCustomer_Billing_Address} </label>
+                                                    <c:CustomInputLookUp objectAPIName="ERP7__Address__c" aura:id="returnbilAdd" IconName="standard:address" selectedRecordId="{!v.returnshipment.ERP7__Billing_Address__c}"  hideRemove="{!v.disableEditBillOptReturnShipment}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!v.allowUPSReturnShipmentFromFedEx}">
+                                        <aura:if isTrue="{!v.selectedTabRS == 'UPS'}">
+                                            <div class="row slds-m-around--small UPS-class6" >
+                                                <div class="col-md-4 col-xs-4">
+                                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                        <lightning:input type="text" label="{!$Label.c.Billing_Account_Number}" value="{!v.returnshipment.ERP7__Billing_Account_Number__c}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-xs-4">
+                                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                        <lightning:input type="text" label="{!$Label.c.SupplierRegistration_Billing_Postal_Code}" value="{!v.returnshipment.ERP7__Billing_Postal_Code__c}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4 col-xs-4">
+                                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                        <lightning:input type="text" label="{!$Label.c.Billing_Country_Code}" value="{!v.returnshipment.ERP7__Billing_Country_Code__c}" disabled="{!v.disableEditBillOptReturnShipment}"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </aura:if>
+                                    
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning:input type="date" label="{!$Label.c.UPS_Shipment_Date}" value="{!v.returnshipmentdate}" onchange="{!c.getreturnshipmentrates}"/>
+                                    </div>
+                                    
+                                    <lightning:tabset selectedTabId="{!v.selectedTabRS}">
+                                        <aura:if isTrue="{!or(v.selectedLogisticReturnShipType == 'FedEx',v.selectedLogisticReturnShipType == '')}">
+                                            <lightning:tab label="FedEx" id="FedEx">
+                                                <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                                    <thead>
+                                                        <tr class="slds-text-title--caps">
+                                                            <th scope="col"> <div class="slds-truncate" title="Select">{!$Label.c.Select}</div> </th>
+                                                            <th scope="col"> <div class="slds-truncate" title="Available Service Type">{!$Label.c.Service_Type}</div> </th>
+                                                            <th scope="col"> <div class="slds-truncate" title="Total Charges">{!$Label.c.UPS_Total_Charges}</div> </th>
+                                                            <th>&nbsp; </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <aura:if isTrue="{!and(v.FEDEX_Services != undefined,v.FEDEX_Services != null)}">
+                                                            <aura:if isTrue="{!and(v.FEDEX_Services.Services != undefined,v.FEDEX_Services.Services != null)}">
+                                                                <aura:iteration var="twl" indexVar="pcount" items="{!v.FEDEX_Services.Services}">
+                                                                    <tr>
+                                                                        <th scope="row" data-label="Select">
+                                                                            <div class="slds-form-element__control slds-truncate fedex-class10">
+                                                                                <lightning:input type="radio"  name="others" checked="{!twl.Selected}"/>
+                                                                            </div>                                                                            
+                                                                        </th>
+                                                                        <td data-label="Service Type">
+                                                                            <div class="slds-truncate" title="Service">
+                                                                                <lightning:formattedText value="{!twl.Service}" title="{!twl.Service}" />
+                                                                            </div>
+                                                                        </td> 
+                                                                        <td data-label="Total Charges">
+                                                                            <div class="slds-truncate" title="Total Charges"> 
+                                                                                <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>                                                
+                                                                </aura:iteration>
+                                                            </aura:if>
+                                                        </aura:if>
+                                                    </tbody>
+                                                </table>
+                                            </lightning:tab>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!v.allowUPSReturnShipmentFromFedEx}">
+                                            <aura:if isTrue="{!or(v.selectedLogisticReturnShipType == 'UPS',v.selectedLogisticReturnShipType == '')}">
+                                                <lightning:tab label="UPS" id="UPS">
+                                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer slds-m-top--small">
+                                                        <thead>
+                                                            <tr class="slds-text-title--caps">
+                                                                <th scope="col"> <div class="slds-truncate3" title="Select">{!$Label.c.Select}</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate3" title="Available Service Type">{!$Label.c.Service_Type}</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate3" title="Total Charges">{!$Label.c.UPS_Total_Charges}</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate3" title="Delivery Date">{!$Label.c.Delivery_Date}</div> </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <aura:if isTrue="{!and(v.UPS_Services != undefined,v.UPS_Services != null)}">
+                                                                <aura:if isTrue="{!and(v.UPS_Services.Services != undefined,v.UPS_Services.Services != null)}">
+                                                                    <aura:iteration var="twl" indexVar="pcount" items="{!v.UPS_Services.Services}">
+                                                                        <tr>
+                                                                            <th scope="row" data-label="Select">
+                                                                                <div class="slds-form-element__control slds-truncate3 UPS-class13">
+                                                                                    <lightning:input type="radio" variant="label-hidden" name="others" checked="{!twl.Selected}"/>
+                                                                                </div>                                                                            
+                                                                            </th>
+                                                                            <td data-label="Service Type">
+                                                                                <div class="slds-truncate3" title="Service">
+                                                                                    <lightning:formattedText value="{!twl.ServiceManual}" title="{!twl.ServiceManual}" />
+                                                                                </div>
+                                                                            </td> 
+                                                                            <td data-label="Total Charges">
+                                                                                <div class="slds-truncate3" title="Total Charges"> 
+                                                                                    <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                                                </div>
+                                                                            </td>
+                                                                            <td data-label="Delivery Date">
+                                                                                <div class="slds-truncate3" title="Delivery Date"> 
+                                                                                    <aura:if isTrue="{!or(v.UPS_Services.DeliveryDate == '', v.UPS_Services.DeliveryDate == null)}">
+                                                                                        <lightning:formattedText value="{!twl.DeliveryDateS}" title="{!twl.DeliveryDateS}" />
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!v.UPS_Services.DeliveryDate != ''}">
+                                                                                        <lightning:formattedText value="{!twl.DeliveryDate}" title="{!twl.DeliveryDate}" />
+                                                                                    </aura:if>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </aura:iteration>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </tbody>
+                                                    </table>
+                                                </lightning:tab>
+                                            </aura:if>
+                                        </aura:if>
+                                    </lightning:tabset>
+                                </div>
+                            </div>
+                            
+                            <footer class="slds-modal__footer">
+                                <aura:if isTrue="{!v.selectedTabRS == 'FedEx'}">
+                                    <aura:if isTrue="{!and(v.FEDEX_Services != undefined,v.FEDEX_Services != null)}">
+                                        <aura:if isTrue="{!and(v.FEDEX_Services.Services != undefined,v.FEDEX_Services.Services != null)}">
+                                            <lightning:button label="{!$Label.c.Generate}" variant="brand" class="slds-m-top--medium" onclick="{!c.generateReturnShipment}"/>
+                                        </aura:if>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                <aura:if isTrue="{!and(v.allowUPSReturnShipmentFromFedEx,v.selectedTabRS == 'UPS')}">
+                                    <aura:if isTrue="{!and(v.UPS_Services != undefined,v.UPS_Services != null)}">
+                                        <aura:if isTrue="{!and(v.UPS_Services.Services != undefined,v.UPS_Services.Services != null)}">
+                                            <lightning:button label="{!$Label.c.Generate}" variant="brand" class="slds-m-top--medium" onclick="{!c.generateUPSReturnShipmentFromFedEx}"/>
+                                        </aura:if>
+                                    </aura:if>
+                                </aura:if>
+                                
+                                
+                                <lightning:button label="{!$Label.c.Cancel_ManageLeave}" variant="brand" class="slds-m-top--medium" onclick="{!c.closereturnmodal}"/>
+                            </footer>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open"></div>
+                </div>
+            </aura:if>
+        </div>
+    </body>
+</aura:component>

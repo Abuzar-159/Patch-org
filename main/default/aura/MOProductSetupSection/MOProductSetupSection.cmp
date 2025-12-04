@@ -1,0 +1,1832 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes" access="global" controller="MOProductConfiguaration">
+    <head>
+        <!--ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /-->
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/MOProductSetupSection.css"/>
+    </head>
+    
+    <aura:attribute name="allowWIPValidation" type="Boolean" default="false" />
+    <aura:attribute name="NewVersion" type="Version__c" default="{'sObjectType':'ERP7__Version__c',ERP7__Default__c : false,Name : '',Id:'',ERP7__Start_Date__c:'',ERP7__To_Date__c : ''}" />
+    <aura:attribute name="ShowNewPr" type="Boolean" default="false" />
+    <aura:attribute name="WorkQry" type="String" default="" />
+    <aura:attribute name="createWCerrMsg" type="String" default="" />
+    <aura:attribute name="ChannelId" type="String" default="" />
+    <aura:attribute name="siteErr" type="String" default=""/>
+    <aura:attribute name="editErrorMsg" type="String" default=""/>
+    <aura:attribute name="ProcessErr" type="String" default=""/>
+    <aura:attribute name="Productdetails" type="Object" />
+    <aura:attribute name="AllProcsdetails" type="Object" />
+    <aura:attribute name="ProcessCycles" type="Object" default="{}"/>
+    <aura:attribute name="NewProcessCycles" type="Process_Cycle__c" default=" {'sObjectType':'ERP7__Process_Cycle__c',Name : '',ERP7__Work_Center__c : '',ERP7__Work_Center__r : {'Id':'', 'Name': ''},ERP7__Process__c : ''}"/>
+    <aura:attribute name="EditProcessCycles" type="Process_Cycle__c" default=" {'sObjectType':'ERP7__Process_Cycle__c',Name : '',ERP7__Work_Center__c : '',ERP7__Work_Center__r : {'Id':'', 'Name': ''},ERP7__Process__c : '',ERP7__Sort__c: 0}"/>
+    <aura:attribute name="exceptionError" type="String" />
+    <aura:attribute name="showsiteSelect" type="Boolean" default="false" />
+    <aura:attribute name="routingexits" type="Boolean" default="false" />
+    <aura:attribute name="showspinner" type="Boolean" default="false" />
+    <aura:attribute name="RawMaterialsite" type="Site__c" default="{'sObjectType':'ERP7__Site__c',Name : '',Id:''}" />
+    <aura:attribute name="FinishedProductsite" type="Site__c" default="{'sObjectType':'ERP7__Site__c',Name : '',Id:''}" />
+    <aura:attribute name="selectedProcess" type="List" />
+    <aura:attribute name="BomUom" type="List" />
+    <aura:attribute name="WIPUom" type="List" />
+    <aura:attribute name="resultVal" type="List" />
+    <aura:attribute name="cheklstval" type="List" />
+    <aura:attribute name="NewOperation" type="Operation__c" default=" {'sObjectType':'ERP7__Process_Cycle__c',Name:'',ERP7__Process_Cycle__c: '',ERP7__Is_Signature_Required__c:false,ERP7__Timer__c: false,ERP7__Auto_Clock_In__c :false}"/>
+    <aura:attribute name="EditOperation" type="Operation__c" default=" {'sObjectType':'ERP7__Process_Cycle__c',Name:'',ERP7__Process_Cycle__c: '',ERP7__Is_Signature_Required__c:false,ERP7__Timer__c: false,ERP7__Auto_Clock_In__c :false}"/>
+    <aura:attribute name="NewBOM" type="BOM__c" default=" {'sObjectType':'ERP7__BOM__c',Name:'',ERP7__BOM_Component__c: '',ERP7__Quantity__c:0.0,ERP7__Maximum_Variance__c:0.0,ERP7__Minimum_Variance__c:  0.0,ERP7__For_Multiples__c : 0.0}"/>
+    <aura:attribute name="EditBOM" type="BOM__c" default=" {'sObjectType':'ERP7__BOM__c',Name:'',ERP7__BOM_Component__c: '',ERP7__Quantity__c:0.0}"/>
+    <aura:attribute name="NewWIP" type="WIP_Link__c" default=" {'sObjectType':'ERP7__WIP_Link__c',Name:'',ERP7__Process_Cycle__c: '',ERP7__Process_Output_Product__c:'',ERP7__Quantity_Unit_Of_Measure__c: '',ERP7__Quantity_Unit__c :0.0}"/>
+    <aura:attribute name="EditWIP" type="WIP_Link__c" default=" {'sObjectType':'ERP7__WIP_Link__c',Name:'',ERP7__Process_Cycle__c: '',ERP7__Process_Output_Product__c:'',ERP7__Quantity_Unit_Of_Measure__c: '',ERP7__Quantity_Unit__c :0.0}"/>
+    <aura:attribute name="Newmedia" type="Media__c" default="{'sObjectType' : 'ERP7__Media__c',Name:'',ERP7__Operation__c :''}" />
+    <aura:attribute name="editMedia" type="Media__c" default="{'sObjectType' : 'ERP7__Media__c',Name:''}" />
+    <aura:attribute name="FileList" type="object"/>
+    <aura:attribute name="filleList" type="String[]" default="[]"/>
+    <aura:attribute name="SelectedAttachments" type="object[]"/>
+    <aura:attribute name="showDelete" type="Boolean" default="false"/>
+    <aura:attribute name="showConfirmDialog" type="Boolean" default="false"/>
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="oppQry" type="String" />
+    <aura:attribute name="ProcessCycleId" type="String" />
+    <aura:attribute name="Action" type="String" />
+    <aura:attribute name="RRGroupId" type="Resource_Group__c" default="{'sObjectType' : 'ERP7__Resource_Group__c',Name:'',Id:''}"/>
+    <aura:attribute name="Process" type="Object" />
+    <aura:attribute name="DragIndex" type="integer" />
+    <aura:attribute name="SelectedVersion" type="Object" />
+    <aura:attribute name="NewChklst" type="Checklist__c" default="{'sObjectType' : 'ERP7__Checklist__c',Name:'',ERP7__Action_Detail__c :'',ERP7__Result__c:'',ERP7__Comply__c:'',ERP7__Process_Cycle__c:'',ERP7__Operation__c : '',ERP7__Operation__r : { Id: '',Name :''},ERP7__Is_Mandatory__c:false}" />
+    <aura:attribute name="EditChklst" type="Checklist__c" default="{'sObjectType' : 'ERP7__Checklist__c',Name:'',ERP7__Action_Detail__c :'',ERP7__Result__c:'',ERP7__Comply__c:'',ERP7__Process_Cycle__c:'',ERP7__Operation__c : '',ERP7__Operation__r : { Id: '',Name :''}}" />
+    <aura:attribute name="allowNew" type="boolean" default="true" />
+    <aura:attribute name="showVenCodeandProdCode" type="boolean" default="true" />
+    <!-- To get dependent picklist -->
+    <aura:attribute name="listControllingValues" type="list" default="[]" description="to store controller field values"/>
+    <aura:attribute name="listDependingValues" type="list" default="['--- None ---']" description="to store dependent field values"/>
+    <aura:attribute name="depnedentFieldMap" type="map" description="map to store dependent values with controlling value"/>
+    <aura:attribute name="bDisabledDependentFld" type="boolean" default="true"/>
+    
+    <aura:attribute name="objDetail" type="Checklist__c" default="{'sobjectType' : 'Checklist__c'}"/>
+    <aura:attribute name="controllingFieldAPI" type="string" default="ERP7__Comply__c" description="store field API name of Controller field"/>
+    <aura:attribute name="dependingFieldAPI" type="string" default="ERP7__Result__c" description="store field API name of dependent field"/>
+    <aura:attribute name="allowNonInventoryItems" type="boolean" default="false"/>
+    <aura:attribute name="oldSort" type="Integer" default="0"/>  
+    <aura:attribute name="sortedlist" type="list" default="[]"/>  
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:method name="popInit"  action="{!c.doInit}"/>
+    
+    <!-- New BOM/WIP creation Page -->
+    <aura:attribute name="Header" type="String" default="" />
+    <aura:attribute name="addProductsMsg" type="String" default="" />
+    <aura:attribute name="searchItem" type="String" default="" />
+    <aura:attribute name="seachItemFmily" type="String" default="" />
+    <aura:attribute name="subItemFmily" type="String" default="" />
+    <aura:attribute name="familylst" type="List" /> 
+    <aura:attribute name="subfamilylst" type="List" /> 
+    <aura:attribute name="listOfProducts" type="String[]" default="[]"/>
+    <aura:attribute name="selectedListOfProducts" type="String[]" default="[]"/>
+    <aura:attribute name="showAddProducts" type="boolean" default="false"/>
+    <aura:attribute name="BOMCreation" type="boolean" default="false"/>
+    <aura:attribute name="disableAddProductsButton" type="boolean" default="false"/>
+    
+    <!-- For Product family and sub family Picklists -->
+    <aura:attribute name="objDetail1" type="string" default="Product2" />
+    <aura:attribute name="controllingFieldAPI1" type="string" default="Family" description="store field API name of Controller field"/>
+    <aura:attribute name="dependingFieldAPI1" type="string" default="ERP7__Product_Service_Family__c" description="store field API name of dependent field"/>
+    <aura:attribute name="listDependingValues1" type="list" default="" description="to store dependent field values"/>
+    <aura:attribute name="listControllingValues1" type="String" default="" description="to store controller field values"/>
+    <aura:attribute name="bDisabledDependentFld1" type="boolean" default="false"/> 
+    <aura:attribute name="depnedentFieldMap1" type="object" description="map to store dependent values with controlling value"/>
+    <aura:attribute name="showchecklistvalue1" type="boolean" default="false"/>
+    <aura:attribute name="ControllingValue1" type="String" default="" description="to store controller field values"/>
+    
+    <aura:attribute name="SelectedVersionToClone" type="Object" />
+    <aura:attribute name="ProcessToClone" type="Object" />
+    
+    <div class="maqsood erp_Mark7" aura:id="body">
+        <aura:if isTrue="{!v.showspinner}">
+            <span class="ProjectWorkbench-newClass7">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'ProjectWorkbench-newClass3 slds-notify_container slds-is-fixed','ProjectWorkbench-newClass2 slds-notify_container slds-is-fixed')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error ProjectWorkbench-newClass4" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <p class="slds-text-heading_x-small ProjectWorkbench-newClass5">{!v.exceptionError}
+                    </p>
+                </div>
+                <div class="slds-notify__close ProjectWorkbench-newClass6">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <aura:if isTrue="{!!v.showAddProducts}">
+            <aura:if isTrue="{!!v.showsiteSelect}">
+                
+                <div class="slds-page-header">
+                    <div class="slds-page-header__row">
+                        <div class="slds-page-header__col-title">
+                            <div class="slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-procedure">
+                                        <lightning:icon iconName="standard:procedure" size="medium"></lightning:icon>
+                                        
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h6>
+                                               
+                                                <span class="slds-page-header__title slds-truncate" title="">
+                                                    <aura:if isTrue="{!v.Action == 'Edit'}">
+                                                        <h6 class="card-title mb-1">
+                                                            {!$Label.c.EditLabel}&nbsp;{!$Label.c.Process}
+                                                        </h6>      
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!v.Action == 'clone'}">
+                                                        <h6 class="card-title mb-1">
+                                                           {!$Label.c.New_AddTimeCardEntry}&nbsp;{!$Label.c.Process} 
+                                                        </h6>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!v.Action == 'New'}">
+                                                        <h6 class="card-title mb-1">
+                                                            {!$Label.c.Transfer_Order_Create}&nbsp;{!$Label.c.Process}
+                                                        </h6>
+                                                    </aura:if>
+                                                
+                                                </span>
+                                                 <span>
+                                                    <a href="{!'/'+ v.Productdetails.Id}" target="_blank">
+                                                        <lightning:formattedText value="{!v.Productdetails.Name}"/>
+                                                    </a>
+                                                </span>
+                                            </h6>
+                                        </div>
+                                        <div class="slds-page-header__name-switcher">
+                                            <div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-page-header__col-actions">
+                            <div class="slds-page-header__controls">
+                                <div class="slds-page-header__control">
+                                    <ul class="slds-button-group-list">
+                                        <li>
+                                            <div class="slds-grid">
+                                                
+                                                <div class="slds-m-right--xx-small slds-truncate slds-truncate-pw-grid"> <i class="fa fa-arrow-right Pick-newClass6"></i>&nbsp;
+                                                    <lightning:formattedUrl label="{!v.SelectedVersion.Name}" value="{!'/'+v.SelectedVersion.Id}" target="_blank"/>
+                                                </div>
+                                                <div class="slds-m-right--xx-small slds-truncate slds-truncate-pw-grid">  <i class="fa fa-filter Pick-newClass6" ></i>&nbsp;<lightning:formattedUrl label="{!v.Process.Name}" value="{!'/'+v.Process.Id}" target="_blank"/></div>
+                                                
+                                            </div>
+                                        </li>
+                                        <li>
+                                            
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="container-fluid pb-1 pl-2 pt-1 ProjectWorkbench-newClass8  theme-bg min-height520">
+                    <div class="card shadow-mrr ProjectWorkbench-newClass49 mt-100">
+                        <div class="card-body">
+                            <div class=" justify-content-between slds-hide"> 
+                                
+                                <h6 class="card-title">
+                                    <a href="{!'/'+ v.Productdetails.Id}" target="_blank">
+                                        <lightning:formattedText value="{!v.Productdetails.Name}"/>
+                                    </a>
+                                </h6>
+                                <aura:if isTrue="{!v.Action == 'Edit'}">
+                                    <h6 class="card-title">
+                                        <Center>{!$Label.c.EditLabel}&nbsp;{!$Label.c.Process}</Center> 
+                                    </h6>      
+                                </aura:if>
+                                <aura:if isTrue="{!v.Action == 'clone'}">
+                                    <h6 class="card-title">
+                                        <Center>{!$Label.c.New_AddTimeCardEntry}&nbsp;{!$Label.c.Process}</Center> 
+                                    </h6>
+                                </aura:if>
+                                <aura:if isTrue="{!v.Action == 'New'}">
+                                    <h6 class="card-title">
+                                        <Center>{!$Label.c.Transfer_Order_Create}&nbsp;{!$Label.c.Process}</Center> 
+                                    </h6>
+                                </aura:if>
+                                <div class="slds-grid">
+                                    
+                                    <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Pick-newClass6"></i>&nbsp;
+                                        <lightning:formattedUrl label="{!v.SelectedVersion.Name}" value="{!'/'+v.SelectedVersion.Id}" target="_blank"/>
+                                    </div>
+                                    <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter Pick-newClass6" ></i>&nbsp;<lightning:formattedUrl label="{!v.Process.Name}" value="{!'/'+v.Process.Id}" target="_blank"/></div>
+                                    
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="table-responsive ProjectWorkbench-newClass50" tabindex="1">
+                                <table class="slds-table slds-table_striped slds-table_fixed-layout slds-no-row-hover">
+                                    <thead class="">
+                                        <tr>
+                                            <th width="10%" class="text-left">
+                                                <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                    <a data-target="#myModal" onclick="{!c.NewProcesscylce}" data-record="Add" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                        <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                        &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                    </a>
+                                                </aura:if>
+                                            </th>
+                                            <th class="text-left">{!$Label.c.Process_cycle_Manufacturing_Step}</th>
+                                            <th class="text-left">{!$Label.c.Assigned_Work_Center}</th>
+                                            <th class="text-left">{!$Label.c.Sort}</th>
+                                            <th>&nbsp;</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody >
+                                        
+                                            <aura:If isTrue="{!v.allowNew}">
+                                                <aura:iteration items="{!v.ProcessCycles}" var="pcs" indexVar="count">
+                                                    <aura:If isTrue="{!and(pcs.prcscycl.Id != null,pcs.prcscycl.Id != '')}">
+                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                            <tr draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleProcessDrop}" ondragover="{!c.allowDrop}" data-index="{!count}" data-record-id="{!pcs.prcscycl.Id}">
+                                                                <td>
+                                                                    <lightning:buttonIcon value="{!count}" title="{!pcs.expanded}" onclick="{!c.toggle}" iconName="{!pcs.expanded?'utility:chevrondown':'utility:chevronright'}" class="white-bg"/>&nbsp;
+                                                                    <a class="svg Milestones-class22 customcactionedit" data-record-id="{!pcs.prcscycl.Id}" data-index="{!count}" onclick="{!c.editProcesscycl}">
+                                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                    </a>&nbsp;
+                                                                    <a class="svg Milestones-class22 customcactionedit" data-record-id="{!pcs.prcscycl.Id}" data-index="{!count}" onclick="{!c.deleteProcesscycl}">
+                                                                        <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                    </a>&nbsp;
+                                                                    
+                                                                </td>
+                                                                <td><a  data-record-id="{!pcs.prcscycl.Id}" data-index="{!count}" href="{!'/'+ pcs.prcscycl.Id}" target="_blank">{!pcs.prcscycl.Name}</a></td>
+                                                                
+                                                                <td> 
+                                                                    <a href="{!'/'+ pcs.prcscycl.ERP7__Work_Center__c}" target="_blank">
+                                                                        <div class="slds-truncate"><lightning:formattedText value="{!pcs.prcscycl.ERP7__Work_Center__r.Name}"/></div>
+                                                                    </a>
+                                                                </td>
+                                                                <td><div class="slds-truncate ">{!pcs.prcscycl.ERP7__Sort__c}</div>
+                                                                </td>
+                                                                <td>&nbsp;
+                                                                </td>
+                                                            </tr>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                            <tr>
+                                                                <td>
+                                                                    <lightning:input type="checkbox" checked="{!pcs.prcscycl.selected}" title="{!pcs.prcscycl.Id}" onchange="{!c.setPcsSelected}"></lightning:input>
+                                                                </td>
+                                                                <td><a  data-record-id="{!pcs.prcscycl.Id}" data-index="{!count}" href="{!'/'+ pcs.prcscycl.Id}" target="_blank">{!pcs.prcscycl.Name}</a></td>
+                                                                
+                                                                <td> 
+                                                                    <a href="{!'/'+ pcs.prcscycl.ERP7__Work_Center__c}" target="_blank">
+                                                                        <div class="slds-truncate"><lightning:formattedText value="{!pcs.prcscycl.ERP7__Work_Center__r.Name}"/></div>
+                                                                    </a>
+                                                                </td>
+                                                                <td><div class="slds-truncate ">{!pcs.prcscycl.ERP7__Sort__c}</div>
+                                                                </td>
+                                                                <td>&nbsp;
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!pcs.expanded}">
+                                                            <!--<aura:if isTrue="{!pcs.isselected}"> -->
+                                                            <tr >
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Operations_Tasks_recorded_at_the_workcenter}</h6>
+                                                                            <div class="slds-grid">
+                                                                                
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%" class="text-left">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a onclick="{!c.openModal}" data-record-id="{!pcs.prcscycl.Id}" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                    </th>
+                                                                                    <th width="40%" class="text-left">
+                                                                                        <div class="slds-truncate">
+                                                                                            {!$Label.c.Operation}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate">
+                                                                                            {!$Label.c.Auto_Clock_In}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate">
+                                                                                            {!$Label.c.Timer}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate">
+                                                                                            {!$Label.c.Signature_Required}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <aura:iteration items="{!pcs.allRelateddetails.oprlst}" indexVar="oppcount" var="opr">
+                                                                                    <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                        <tr draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleOpDrop}" ondragover="{!c.allowDrop}" data-index="{!oppcount}" data-record-id="{!pcs.prcscycl.Id}">
+                                                                                            <td>
+                                                                                                <a class="svg Milestones-class22 customcactionedit" onclick="{!c.editoperation}" data-record-id="{!opr.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                    <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                                                </a>&nbsp;
+                                                                                                <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deleteoperation}" data-record-id="{!opr.Id}" data-index="{!oppcount}">
+                                                                                                    <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ opr.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate"><lightning:formattedText value="{!opr.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <lightning:input type="checkbox" checked="{!opr.ERP7__Auto_Clock_In__c}" disabled="true" />
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <lightning:input type="checkbox" checked="{!opr.ERP7__Timer__c}" disabled="true"/>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <lightning:input type="checkbox" checked="{!opr.ERP7__Is_Signature_Required__c}" disabled="true" />
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                        <tr>
+                                                                                            <td>
+                                                                                                <lightning:input type="checkbox" checked="{!opr.selected}" title="{!opr.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ opr.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate"><lightning:formattedText value="{!opr.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td><lightning:input type="checkbox" checked="{!opr.ERP7__Auto_Clock_In__c}" disabled="true" /></td>
+                                                                                            <td> 
+                                                                                                <lightning:input type="checkbox" checked="{!opr.ERP7__Timer__c}" disabled="true"/>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <lightning:input type="checkbox" checked="{!opr.ERP7__Is_Signature_Required__c}" disabled="true" />
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>  
+                                                            <tr > 
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Bill_of_Materials_BOM}</h6>
+                                                                            <div class="slds-grid">
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%" class="text-left">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a onclick="{!c.openBOMModal}" data-record-id="{!pcs.prcscycl.Id}" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                    </th>
+                                                                                    <aura:if isTrue="{!v.showVenCodeandProdCode}">
+                                                                                        <th class="text-left">
+                                                                                            <div class="slds-truncate slds-truncate-override">{!$Label.c.Product_Code}</div>
+                                                                                        </th>
+                                                                                        <th class="text-left">
+                                                                                            <div class="slds-truncate slds-truncate-override">
+                                                                                                {!$Label.c.PO_Vendor_part_no}
+                                                                                            </div>
+                                                                                        </th>
+                                                                                    </aura:if>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override">
+                                                                                            {!$Label.c.CreatePOProduct}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override">
+                                                                                            {!$Label.c.AddSubscription_Quantity}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override"> {!$Label.c.UOM}</div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override">{!$Label.c.Maximum_Variance}</div>
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override">{!$Label.c.Minimum_Variance}</div>
+                                                                                        
+                                                                                    </th>
+                                                                                    <th class="text-left">
+                                                                                        <div class="slds-truncate slds-truncate-override">{!$Label.c.Multiple}
+                                                                                        </div>
+                                                                                    </th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <aura:iteration items="{!pcs.allRelateddetails.bomlst}" indexVar="bomcount" var="bom">
+                                                                                    <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                        <tr draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleDrop}" ondragover="{!c.allowDrop}" data-index="{!bomcount}" data-record-id="{!pcs.prcscycl.Id}">
+                                                                                            <td>
+                                                                                                <a class="svg Milestones-class22 customcactionedit" onclick="{!c.editBOM}" data-record-id="{!bom.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                    <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                                                </a>&nbsp;
+                                                                                                <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deleteBillofM}" data-record-id="{!bom.Id}" data-index="{!bomcount}">
+                                                                                                    <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.showVenCodeandProdCode}">
+                                                                                                <td>
+                                                                                                    <div class="slds-truncate slds-truncate-override">
+                                                                                                        {!bom.ERP7__BOM_Component__r.ProductCode}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td>
+                                                                                                    <div class="slds-truncate slds-truncate-override">
+                                                                                                        {!bom.ERP7__BOM_Component__r.ERP7__Vendor_product_Name__c}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ bom.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate slds-truncate-override"><lightning:formattedText value="{!bom.ERP7__BOM_Component__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Quantity__c}</div></td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate slds-truncate-override">
+                                                                                                    <aura:iteration items="{!v.BomUom}" var="uomval">
+                                                                                                        <aura:if isTrue="{!bom.ERP7__Unit_of_Measure__c == uomval.value}">{!uomval.label}</aura:if>
+                                                                                                    </aura:iteration>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Maximum_Variance__c}</div></td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Minimum_Variance__c}</div></td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__For_Multiples__c}</div></td>
+                                                                                        </tr> 
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                        <tr>
+                                                                                            <td>
+                                                                                                <lightning:input type="checkbox" checked="{!bom.selected}" title="{!bom.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.showVenCodeandProdCode}">
+                                                                                                <td>
+                                                                                                    <div class="slds-truncate slds-truncate-override">
+                                                                                                        {!bom.ERP7__BOM_Component__r.ProductCode}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td>
+                                                                                                    <div class="slds-truncate slds-truncate-override">
+                                                                                                        {!bom.ERP7__BOM_Component__r.ERP7__Vendor_product_Name__c}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ bom.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate slds-truncate-override"><lightning:formattedText value="{!bom.ERP7__BOM_Component__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Quantity__c}</div></td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate slds-truncate-override">
+                                                                                                    <aura:iteration items="{!v.BomUom}" var="uomval">
+                                                                                                        <aura:if isTrue="{!bom.ERP7__Unit_of_Measure__c == uomval.value}">{!uomval.label}</aura:if>
+                                                                                                    </aura:iteration>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Maximum_Variance__c}</div></td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__Minimum_Variance__c}</div></td>
+                                                                                            <td> <div class="slds-truncate slds-truncate-override">{!bom.ERP7__For_Multiples__c}</div></td>
+                                                                                        </tr> 
+                                                                                        
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Work_in_Progress_WIPs}</h6>
+                                                                            <div class="slds-grid">
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%" class="text-left">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a onclick="{!c.openWIPModal}" data-record-id="{!pcs.prcscycl.Id}" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                    </th>
+                                                                                    <th class="text-left">{!$Label.c.Name_ManageLeave}</th>
+                                                                                    <th class="text-left">{!$Label.c.Work_in_progress_product}</th>
+                                                                                    <th class="text-left">{!$Label.c.AddSubscription_Quantity}</th>
+                                                                                    <th class="text-left">{!$Label.c.UOM}</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <aura:iteration items="{!pcs.allRelateddetails.wiplinks}" var="wip" indexVar="wipIndex">
+                                                                                    <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                        <tr draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleWiPDrop}" ondragover="{!c.allowDrop}" data-index="{!wipIndex}" data-record-id="{!pcs.prcscycl.Id}">
+                                                                                            <td>
+                                                                                                <a class="svg Milestones-class22 customcactionedit" onclick="{!c.editWIP}" data-record-id="{!wip.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                    <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                                                </a>&nbsp;
+                                                                                                <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deleteWIP}" data-record-id="{!wip.Id}" data-index="{!wipIndex}">
+                                                                                                    <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ wip.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate slds-truncate-override"><lightning:formattedText value="{!wip.Name}"/> </div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ wip.ERP7__Process_Output_Product__c}" target="_blank">
+                                                                                                    <div class="slds-truncate"> <lightning:formattedText value="{!wip.ERP7__Process_Output_Product__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate">  {!wip.ERP7__Quantity_Unit__c}</div>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate">
+                                                                                                    <aura:iteration items="{!v.WIPUom}" var="uom">
+                                                                                                        <aura:if isTrue="{!wip.ERP7__Quantity_Unit_Of_Measure__c == uom.value}">{!uom.label}</aura:if>
+                                                                                                    </aura:iteration>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                        <tr>
+                                                                                            <td>
+                                                                                                <lightning:input type="checkbox" checked="{!wip.selected}" title="{!wip.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ wip.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate slds-truncate-override"><lightning:formattedText value="{!wip.Name}"/> </div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ wip.ERP7__Process_Output_Product__c}" target="_blank">
+                                                                                                    <div class="slds-truncate"> <lightning:formattedText value="{!wip.ERP7__Process_Output_Product__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate">  {!wip.ERP7__Quantity_Unit__c}</div>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate">
+                                                                                                    <aura:iteration items="{!v.WIPUom}" var="uom">
+                                                                                                        <aura:if isTrue="{!wip.ERP7__Quantity_Unit_Of_Measure__c == uom.value}">{!uom.label}</aura:if>
+                                                                                                    </aura:iteration>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                        
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Team_Members}</h6>
+                                                                            <div class="slds-grid">
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a onclick="{!c.openResouceModal}" data-record-id="{!pcs.prcscycl.Id}" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                    </th>
+                                                                                    <th class="text-left">{!$Label.c.Name_ManageLeave}</th>
+                                                                                    <th class="text-left">{!$Label.c.Employee_StockTake}</th>
+                                                                                    <th class="text-left">{!$Label.c.Resource_Group}</th>
+                                                                                    <th class="text-left">{!$Label.c.Start_Date_UserAvailabilities}</th>
+                                                                                    <th class="text-left">{!$Label.c.End_Date_UserAvailabilities}</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                
+                                                                                <aura:if isTrue="{!(pcs.allRelateddetails.availableResource.length > 0)}">
+                                                                                    <aura:iteration items="{!pcs.allRelateddetails.availableResource}" var="RR" indexVar="RRIndex">
+                                                                                        <tr>
+                                                                                            <td>
+                                                                                                <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                                    <a class="svg Milestones-class22 customcactionedit" onclick="{!c.editResource}" data-record-id="{!RR.Id}" data-index="{!RRIndex}">
+                                                                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                                                    </a>&nbsp;
+                                                                                                    <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deleteResource}" data-record-id="{!RR.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                        <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                    </a>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                                    <lightning:input type="checkbox" checked="{!RR.selected}" title="{!RR.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ RR.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate"> <lightning:formattedText value="{!RR.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ RR.ERP7__Employee__c}" target="_blank">
+                                                                                                    <div class="slds-truncate"><lightning:formattedText value="{!RR.ERP7__Employee__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ RR.ERP7__Resource_Group__c}" target="_blank">
+                                                                                                    <div class="slds-truncate"> <lightning:formattedText value="{!RR.ERP7__Resource_Group__r.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>  <div class="slds-truncate"><lightning:formattedTime value="{!RR.ERP7__Start_Date__c}" /></div></td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate"> <lightning:formattedTime value="{!RR.ERP7__End_Date__c}" /></div>
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                    </aura:iteration>
+                                                                                </aura:if>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Checklists_Instructions}</h6>
+                                                                            <div class="slds-grid">
+                                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a onclick="{!c.openchecklistModal}" data-record-id="{!pcs.prcscycl.Id}" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                    </th>
+                                                                                    <th class="text-left">{!$Label.c.Name_ManageLeave}</th>
+                                                                                    <th class="text-left">{!$Label.c.Instructions}</th>
+                                                                                    <th class="text-left">{!$Label.c.Checklist_Operation}</th>
+                                                                                    <th class="text-left">{!$Label.c.checklist_Value}</th>
+                                                                                    <th class="text-left">{!$Label.c.Has_checklist}</th>
+                                                                                    <th class="text-left">{!$Label.c.Operation}</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                
+                                                                                <aura:if isTrue="{!(pcs.allRelateddetails.checklists.length > 0)}">
+                                                                                    <aura:iteration items="{!pcs.allRelateddetails.checklists}" var="cc" indexVar="ccIndex">
+                                                                                        <tr>
+                                                                                            <td>
+                                                                                                <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                                    <a class="svg Milestones-class22 customcactionedit" onclick="{!c.editchecklists}" data-record-id="{!cc.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                                                    </a>&nbsp;
+                                                                                                    <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deletechecklist}" data-record-id="{!cc.Id}" data-index="{!pcs.prcscycl.Id}">
+                                                                                                        <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                    </a>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                                    <lightning:input type="checkbox" checked="{!cc.selected}" title="{!cc.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <a href="{!'/'+ cc.Id}" target="_blank">
+                                                                                                    <div class="slds-truncate"> <lightning:formattedText value="{!cc.Name}"/></div>
+                                                                                                </a>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <div class="slds-truncate"> <lightning:formattedRichText value="{!cc.ERP7__Action_Detail__c}"/></div>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <div class="slds-truncate"> <lightning:formattedText value="{!cc.ERP7__Comply__c}"/></div>
+                                                                                            </td>
+                                                                                            
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate"><lightning:formattedText value="{!cc.ERP7__Result__c}" /></div>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <lightning:input type="checkbox" checked="{!cc.ERP7__Has_Checklist__c}" disabled="true"/>
+                                                                                            </td>
+                                                                                            <td> 
+                                                                                                <div class="slds-truncate"><lightning:formattedText value="{!cc.ERP7__Operation__r.Name}" /></div>
+                                                                                            </td>
+                                                                                            
+                                                                                        </tr> 
+                                                                                    </aura:iteration>
+                                                                                </aura:if>
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td colspan="5">
+                                                                    <div class="card card-extra-c1-maq mb-1">
+                                                                        <div class="d-flex justify-content-between">
+                                                                            <h6 class="card-title">{!$Label.c.Design_Drawing_Document}</h6>
+                                                                            <div class="slds-grid"></div>
+                                                                        </div>
+                                                                        <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                                                            <thead class="">
+                                                                                <tr>
+                                                                                    <th width="10%" class="text-left">
+                                                                                        <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                            <a data-target="#myModal" onclick="{!c.openAttachmentModal}" data-record-id="{!pcs.prcscycl.Id}" data-record="Add" class="Milestones-class18" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="javascript:void(0);">
+                                                                                                <i class="fa fa-plus Milestones-class19" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                                                                                &nbsp;{!$Label.c.New_AddTimeCardEntry}
+                                                                                            </a>
+                                                                                        </aura:if>
+                                                                                        
+                                                                                    </th>
+                                                                                    <th class="text-left">{!$Label.c.Name_ManageLeave}</th>
+                                                                                    <th class="text-left">{!$Label.c.Operation}</th>
+                                                                                    <th class="text-left">{!$Label.c.Attachment}</th>
+                                                                                    
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                <aura:iteration items="{!pcs.allRelateddetails.med}" var="media" indexVar="medcount">
+                                                                                    <tr>
+                                                                                        <td>
+                                                                                            <!--<a class="svg Milestones-class22" onclick="{!c.editmedia}" data-record-id="{!media.Id}" data-index="{!medcount}">
+                                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="Edit!" title="Edit" />
+                                                                    </a>&nbsp;-->
+                                                                                            <aura:if isTrue="{!(v.Action != 'clone')}">
+                                                                                                <a class="svg Milestones-class22 customcactionedit"  onclick="{!c.deletemedia}" data-record-id="{!media.Id}" data-index="{!medcount}">
+                                                                                                    <lightning:icon iconName="action:delete" size="xx-small" alternativeText="delete!" title="delete" />
+                                                                                                </a>
+                                                                                            </aura:if>
+                                                                                            <aura:if isTrue="{!(v.Action == 'clone')}">
+                                                                                                <lightning:input type="checkbox" checked="{!media.selected}" title="{!media.Id}" disabled="{!!pcs.prcscycl.selected}"></lightning:input>
+                                                                                            </aura:if>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <a href="{!'/'+ media.Id}" target="_blank">
+                                                                                                <div class="slds-truncate"><lightning:formattedText value="{!media.Name}"/></div>
+                                                                                            </a>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <a href="{!'/'+ media.ERP7__Operation__c}" target="_blank">
+                                                                                                <div class="slds-truncate"> <lightning:formattedText value="{!media.ERP7__Operation__r.Name}"/></div>
+                                                                                            </a>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <aura:iteration items="{!pcs.allRelateddetails.attchment}" var="attch">
+                                                                                                <aura:if isTrue="{!(attch.ParentId == media.Id)}">
+                                                                                                    <div class="slds-grid">
+                                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_9-of-12">
+                                                                                                            <div class="slds-truncate">
+                                                                                                                <lightning:formattedUrl value="{!'/'+attch.Id}" label="{!attch.Name}" target="_blank" class="fcolor"/>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12">
+                                                                                                            <img src="{!'/servlet/servlet.FileDownload?file='+attch.Id}" class="MOs_class111"/>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </aura:if>
+                                                                                            </aura:iteration>
+                                                                                        </td>
+                                                                                        
+                                                                                        
+                                                                                    </tr> 
+                                                                                </aura:iteration>
+                                                                            </tbody>
+                                                                        </table>                                                
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:if>
+                                                    </aura:If>
+                                                    <!-- </aura:if>-->
+                                                </aura:iteration>
+                                            </aura:If>
+                                       
+                                    </tbody>
+                                </table>
+                                
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                
+            </aura:if>
+            <aura:if isTrue="{!v.showsiteSelect}">
+                <aura:if isTrue="{!!v.routingexits}">
+                    <section>
+                        <div class="slds-page-header">
+                            <div class="slds-page-header__row">
+                                <div class="slds-page-header__col-title">
+                                    <div class="slds-media">
+                                        <div class="slds-media__figure">
+                                           
+                                                <lightning:icon iconName="standard:code_set" size="small"></lightning:icon>
+                                            
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <div class="slds-page-header__name">
+                                                <div class="slds-page-header__name-title">
+                                                    <h1>
+                                                        <span class="slds-page-header__title slds-truncate" title="">{!$Label.c.Select_site_and_Version_Details}</span>
+                                                    </h1>
+                                                </div>
+                                            </div>
+                                            <p class="slds-page-header__name-meta"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="container-fluid mt-2">
+                            <header class="card">
+                                <div class="card-body p-2">
+                                    
+                                    <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate  MOs_class10">
+                                        {!v.siteErr}
+                                    </h2>
+                                    
+                                 
+                                        <div class="slds-grid slds-wrap slds-p-bottom_small">
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Site__c" aura:id="mvr" label="{!$Label.c.Please_Select_Raw_Material_site}" IconName="standard:flow" selectedRecord="{!v.RawMaterialsite}"  qry=" And ERP7__Active__c=true " required="true"/>                                        
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Site__c" aura:id="mvr" label="{!$Label.c.Please_Select_Finished_Product_site}" IconName="standard:flow" selectedRecord="{!v.FinishedProductsite}"  qry=" And ERP7__Active__c=true " required="true"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <aura:If isTrue="{!(v.SelectedVersion.Id == null || v.SelectedVersion.Id == '')}">
+                                            <h4><strong> {!$Label.c.Version_Details}:</strong></h4>
+                                            
+                                            <div class="slds-grid slds-wrap slds-p-top_small"> 
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                                    <lightning:input type="Text" aura:id="VerName"  value="{!v.NewVersion.Name}" label="{!$Label.c.Version_Name}"  />
+                                                </div>
+                                                
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                                    <label lightning-input_input="" for="input-284" class="slds-form-element__label slds-no-flex">{!$Label.c.Default}</label>
+                                                    <lightning:input type="checkbox" aura:id="min"  checked="{!v.NewVersion.ERP7__Default__c}"  />
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small slds-p-top_small">
+                                                    <lightning:input type="Date" aura:id="Start date"  value="{!v.NewVersion.ERP7__Start_Date__c}" label="{!$Label.c.MyTimesheets_Start_Date}" />
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small slds-p-top_small">
+                                                    <lightning:input type="Date" aura:id="To date"  value="{!v.NewVersion.ERP7__To_Date__c}" label="{!$Label.c.To_Date}" />
+                                                </div>
+                                            </div>   
+                                        </aura:If>
+                                        
+                                        <!-- <p>
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Site__c" aura:id="mvr" label="Please Select Raw Material site" IconName="standard:flow" selectedRecord="{!v.RawMaterialsite}"  qry=" And ERP7__Active__c=true " required="true"/>
+                                        </p>
+                                        <br/>
+                                        <p>
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Site__c" aura:id="mvr" label="Please Select Finished Product site" IconName="standard:flow" selectedRecord="{!v.FinishedProductsite}"  qry=" And ERP7__Active__c=true " required="true"/>
+                                        </p>
+                                        <p> Version Details </p>
+                                        <br/>
+                                        <p>
+                                            Version Name: {!v.NewVersion.Name}
+                                        </p>-->
+                                        
+                                 
+                                </div>
+                            </header>
+                            
+                            <footer class="slds-docked-form-footer slds-text-align_center">
+                                <button onclick="{!c.backTOMOProducts}" class="slds-button slds-button_neutral" > {!$Label.c.PackageSlip_Back}</button>
+                                <button class="slds-button slds-button_brand" onclick="{!c.getSites}">{!$Label.c.Next_UsersShiftMatch}</button>
+                            </footer>
+                        </div>
+                    </section>
+                </aura:if>
+                
+            </aura:if>
+            
+            <aura:if isTrue="{!v.ShowNewPr}">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <!-- Modal/Popup Box Header Starts here-->
+                        <header class="slds-modal__header">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.cancelNewPr }"
+                                                  alternativeText="{!$Label.c.Close_Timesheets}"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close" size="large"/>
+                            
+                            <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Create_Process_Cycle}</h4>
+                            <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate  MOs_class10">{!v.ProcessErr}</h4>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1" style="min-height:200px;">
+                            <div class="slds-grid">
+                           		<div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                <lightning:input type="text" aura:id="name"  value="{!v.NewProcessCycles.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                            </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                <c:CustomInputLookUp objectAPIName="ERP7__Work_Center__c" aura:id="wc" label="{!$Label.c.Please_Select_Work_center}" IconName="standard:flow" selectedRecordId="{!v.NewProcessCycles.ERP7__Work_Center__c}"  qry="{!v.WorkQry}" required="true" selectedRecord="{!v.NewProcessCycles.ERP7__Work_Center__r}"/>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <button onclick="{!c.cancelNewPr}" class="slds-button slds-button_neutral" >{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button_brand" onclick="{!c.createNewPr}">{!$Label.c.Save_UserAvailabilities}</button>
+                            
+                            
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="editProcssModal" role="dialog">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.EditLabel}&nbsp;{!$Label.c.Process_Cycle}</h4>
+                        
+                    </header>
+                    
+                    
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <p>
+                                        <lightning:input type="text" aura:id="name"  value="{!v.EditProcessCycles.Name}" label="{!$Label.c.Name_ManageLeave}" required="true" />
+                                    </p>
+                                    <br/>
+                                    <p>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Work_Center__c" aura:id="wc" label="{!$Label.c.Please_Select_Work_center}" IconName="standard:flow" selectedRecordId="{!v.EditProcessCycles.ERP7__Work_Center__c}"  qry="{!v.WorkQry}" required="true" selectedRecord="{!v.EditProcessCycles.ERP7__Work_Center__r}"/>
+                                    </p>
+                                    <p>
+                                        <lightning:input type="text" aura:id="name"  value="{!v.EditProcessCycles.ERP7__Sort__c}" label="{!$Label.c.Sort}" />
+                                    </p>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                           <button class="slds-button slds-button_neutral" onclick="{!c.closeModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.updateProcsscycle}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="slds-backdrop" aura:id="myeditModalBackdrop"></div>
+            <!--New Operation creation modal -->
+            <section class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="NewOPModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeOPModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.New_Operation}</h4>
+                        
+                    </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.NewOperation.Name}" label="{!$Label.c.Name_ManageLeave}" required="true" maxlength="80"/>
+                                        </div>
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 ">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Process_Cycle__c" aura:id="wc" label="{!$Label.c.Process_Cycle}" IconName="standard:flow" selectedRecordId="{!v.NewOperation.ERP7__Process_Cycle__c}" required="true" hideRemove="true"/>
+                                        </div>
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-top_small"> 
+                                            <p>
+                                                <lightning:input type="checkbox" aura:id="name"  checked="{!v.NewOperation.ERP7__Auto_Clock_In__c}" label="{!$Label.c.Auto_Clock_In}" />
+                                            </p>
+                                            <p>
+                                                <lightning:input type="checkbox" aura:id="name"  checked="{!v.NewOperation.ERP7__Is_Signature_Required__c}" label="{!$Label.c.Signature_Required}" />
+                                            </p>
+                                            <p>
+                                                <lightning:input type="checkbox" aura:id="name"  checked="{!v.NewOperation.ERP7__Timer__c}" label="{!$Label.c.Timer}" />
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                            
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeOPModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.createNewoperation}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <div class="slds-backdrop" aura:id="NewOPModalBackdrop"></div>
+            
+            <!--Edit Operation creation modal -->
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="EditOPModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeOPeditModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.EditLabel}&nbsp;{!$Label.c.Operation}</h4>
+                        
+                    </header>
+                    
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                   <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                        <lightning:input type="text" aura:id="name"  value="{!v.EditOperation.Name}" label="{!$Label.c.Name_ManageLeave}" required="true" maxlength="80"/>
+                                       </div>
+                                     <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                    
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Process_Cycle__c" aura:id="wc" label="{!$Label.c.Process_Cycle}" IconName="standard:flow" selectedRecordId="{!v.EditOperation.ERP7__Process_Cycle__c}" required="true" hideRemove="true"/>
+                                       </div>
+                                       
+                                       <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                                           <p>
+                                               <lightning:input type="checkbox" aura:id="name"  checked="{!v.EditOperation.ERP7__Auto_Clock_In__c}" label="{!$Label.c.Auto_Clock_In}" />
+                                           </p>
+                                           
+                                           <p>
+                                               <lightning:input type="checkbox" aura:id="name"  checked="{!v.EditOperation.ERP7__Is_Signature_Required__c}" label="{!$Label.c.Signature_Required}" />
+                                           </p>
+                                           <p>
+                                               <lightning:input type="checkbox" aura:id="name"  checked="{!v.EditOperation.ERP7__Timer__c}" label="{!$Label.c.Timer}" />
+                                           </p>
+                                       </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeOPeditModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.updateoperation}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="slds-backdrop" aura:id="EditOPModalBackdrop"></div>
+            <!--Edit Operation creation modal -->
+            <!--Edit BOM  modal -->
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="EditBOMModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeBOMeditModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.EditLabel}&nbsp;{!$Label.c.Bill_of_Materials_BOM}</h4>
+                        
+                    </header>
+                    
+                    
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.EditBOM.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                                            
+                                        </div>
+                                        <aura:if isTrue="{!v.allowNonInventoryItems}">
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12  slds-p-right_small">
+                                                <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="{!$Label.c.CreatePOProduct}" IconName="standard:flow" selectedRecordId="{!v.EditBOM.ERP7__BOM_Component__c}" required="true" qry='And IsActive = true'/>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_small">
+                                                    <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="{!$Label.c.CreatePOProduct}" IconName="standard:flow" selectedRecordId="{!v.EditBOM.ERP7__BOM_Component__c}" required="true" qry='And IsActive = true and ERP7__Track_Inventory__c = true'/>
+                                                </div>
+                                            </aura:set>
+                                        </aura:if>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="qty"  value="{!v.EditBOM.ERP7__Quantity__c}" label="{!$Label.c.AddSubscription_Quantity}" required="true" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:select aura:id="UOM"  value="{!v.EditBOM.ERP7__Unit_of_Measure__c}" label="{!$Label.c.UOM}" required="true" >
+                                                <aura:iteration items="{!v.BomUom}" var="uomval">
+                                                    <option text="{!uomval.label}" value="{!uomval.value}" selected="{!v.EditBOM.ERP7__Unit_of_Measure__c == uomval.value}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                            
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="max"  value="{!v.EditBOM.ERP7__Maximum_Variance__c}" label="{!$Label.c.Maximum_Variance}" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="min"  value="{!v.EditBOM.ERP7__Minimum_Variance__c}" label="{!$Label.c.Minimum_Variance}" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="multiple"  value="{!v.EditBOM.ERP7__For_Multiples__c}" label="{!$Label.c.Multiple}" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="cost"  value="{!v.EditBOM.ERP7__Cost_Price__c}" label="{!$Label.c.Cost_Price}" step="0.0001"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeBOMeditModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.updateBom}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="slds-backdrop" aura:id="EditBOMModalBackdrop"></div>
+            <!--BOM creation modal -->
+            <!--
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="NewBOMModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeBOMModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">New Bill of Materails(BOM)</h2>
+                        <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                        
+                    </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form-ccompound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_small" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.NewBOM.Name}" label="Name" required="true"/>
+                                        </div>
+                                        <aura:if isTrue="{!v.allowNonInventoryItems}">
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12  slds-p-right_small" onclick="{!c.getUOM}" name="NewBOM">
+                                                <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="BOM Component" IconName="standard:flow" selectedRecordId="{!v.NewBOM.ERP7__BOM_Component__c}" required="true" qry='And IsActive = true'/>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12  slds-p-right_small" onclick="{!c.getUOM}" name="NewBOM">
+                                                    <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="BOM Component" IconName="standard:flow" selectedRecordId="{!v.NewBOM.ERP7__BOM_Component__c}" required="true" qry='And IsActive = true and ERP7__Track_Inventory__c = true'/>
+                                                </div>
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                        
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="qty"  value="{!v.NewBOM.ERP7__Quantity__c}" label="Required QTY" required="true" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="UOM"  value="{!v.NewBOM.ERP7__Unit_of_Measure__c}" label="Unit of Measure" required="true" >
+                                                <aura:iteration items="{!v.BomUom}" var="uomval">
+                                                    <option text="{!uomval}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="max"  value="{!v.NewBOM.ERP7__Maximum_Variance__c}" label="Max. variance" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="min"  value="{!v.NewBOM.ERP7__Minimum_Variance__c}" label="Min. variance" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="multiple"  value="{!v.NewBOM.ERP7__For_Multiples__c}" label="Multiples" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                            <lightning:input type="Number" aura:id="cost"  value="{!v.NewBOM.ERP7__Cost_Price__c}" label="Cost Price" step="0.0001"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align-ccenter BuildSchedule_M-newClass117">
+                            <button class="slds-button slds-button-bbrand" onclick="{!c.CreateNewBom}">Save</button>
+                            <button type="button" class="slds-button slds-button-nneutral" onclick="{!c.closeBOMModal}">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="slds-backdrop" aura:id="NewBOMModalBackdrop"></div>-->
+            
+            <!-- New WIP creation Modal-->
+            <!--
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="NewWIPModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeNewWIPModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">New Work In Progress(WIP) Product</h2>
+                        <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                    </header>
+                    
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form-ccompound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.NewWIP.Name}" label="Name" required="true"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-p-right_small"  onclick="{!c.getUOM}" name="NewWIP">
+                                            <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="WIP Product" IconName="standard:flow" selectedRecordId="{!v.NewWIP.ERP7__Process_Output_Product__c}" required="true" qry='And IsActive = true and ERP7__Track_Inventory__c = true'/>
+                                        </div>
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="qty"  value="{!v.NewWIP.ERP7__Quantity_Unit__c}" label="Produced QTY" required="true" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:select aura:id="UOM"  value="{!v.NewWIP.ERP7__Quantity_Unit_Of_Measure__c}" label="Unit of Measure" required="true" >
+                                                <aura:iteration items="{!v.WIPUom}" var="uom">
+                                                    <option text="{!uom}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align-ccenter BuildSchedule_M-newClass117">
+                            <button class="slds-button slds-button-bbrand" onclick="{!c.CreateNewWIP}">Save</button>
+                            <button type="button" class="slds-button slds-button-nneutral" onclick="{!c.closeNewWIPModal}">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <div class="slds-backdrop" aura:id="NewWIPModalBackdrop"></div> -->
+            <!-- Edit WIP Modal-->
+            
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="EditWIPModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeEditWIPModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.EditLabel}&nbsp;{!$Label.c.Work_in_Progress_WIPs}</h4>
+                        
+                    </header>                    
+                    
+                    
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_small" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.EditWIP.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            
+                                            <c:CustomInputProduct objectAPIName="Product2" aura:id="wc" label="{!$Label.c.CreatePOProduct}" IconName="standard:flow" selectedRecordId="{!v.EditWIP.ERP7__Process_Output_Product__c}" required="true" qry='And IsActive = true and ERP7__Track_Inventory__c = true'/>
+                                        </div>
+                                        
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="Number" aura:id="qty"  value="{!v.EditWIP.ERP7__Quantity_Unit__c}" label="{!$Label.c.AddSubscription_Quantity}" required="true" step="0.0001"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="UOM"  value="{!v.EditWIP.ERP7__Quantity_Unit_Of_Measure__c}" label="{!$Label.c.UOM}" required="true" >
+                                                <aura:iteration items="{!v.WIPUom}" var="uom">
+                                                    <option text="{!uom.label}" value="{!uom.value}" selected="{!v.EditWIP.ERP7__Quantity_Unit_Of_Measure__c == uom.value}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeEditWIPModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.SaveEditWIP}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div class="slds-backdrop" aura:id="NewWIPModalBackdrop"></div>
+            <!-- Create design/Drawing Doc -->
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="NewattchModalshow" role="dialog">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closemediaModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.add_for_mo_product}&nbsp;{!$Label.c.Attachment}</h4>
+                        
+                    </header>
+                    
+                    
+                    <div class="slds-modal__content " id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                <h2 class="slds-align-middle BuildSchedule_M-newClass116" title="">{!v.editErrorMsg}</h2>
+                                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.Newmedia.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 ">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Operation__c" aura:id="wc" label="{!$Label.c.Operation}" IconName="standard:flow" selectedRecordId="{!v.Newmedia.ERP7__Operation__c}" required="true" qry="{!v.oppQry}"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12">
+                                            <lightning:input aura:id="fileId" type="file" files="{!v.FileList}" onchange="{!c.handleFilesChange}" multiple="true" label="{!$Label.c.Upload_Attachment}" value="{!v.filleList}" />
+                                            <aura:if isTrue="{!v.showDelete}">
+                                                <a onclick="{!c.removeAttachment}" title="{!$Label.c.NewCase_Remove_Attachment}" class="createbill-class6">
+                                                    <i class="fa fa-minus-circle" aria-hidden="true"></i>
+                                                </a>                        
+                                            </aura:if>
+                                            <aura:iteration items="{!v.filleList}" var="file" indexVar='count'>
+                                                <div class="slds-text-body_small slds-text-color_error">{!file}&nbsp;&nbsp;&nbsp;
+                                                </div>
+                                            </aura:iteration>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                            
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closemediaModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.SaveNewMedia}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="slds-backdrop" aura:id="NewattchModalBackdrop"></div>
+            <!-- New chceklists-->
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="newChecklistModal" role="dialog">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closechecklistModal }"
+                                              alternativeText="{!$Label.c.Close_Timesheets}"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Transfer_Order_Create}&nbsp;{!$Label.c.CheckList}</h4>
+                        
+                    </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_small" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.NewChklst.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="text" aura:id="action"  value="{!v.NewChklst.ERP7__Action_Detail__c}" label="{!$Label.c.Instructions}" />
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Operation__c" aura:id="newop" label="{!$Label.c.Operation}" IconName="standard:flow" selectedRecordId="{!v.NewChklst.ERP7__Operation__c}"  qry="{!v.oppQry}" required="true"/>                                        
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small slds-m-top_large">
+                                            <lightning:input type="checkbox" aura:id="action"  checked="{!v.NewChklst.ERP7__Is_Mandatory__c}" label="Required" />
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="check"  value="{!v.NewChklst.ERP7__Comply__c}" label="{!$Label.c.Checklist_Operation}"  onchange="{!c.onControllerFieldChange}">
+                                                <aura:iteration items="{!v.listControllingValues}" var="ck">
+                                                    <option text="{!ck}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>                                    </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="result"  value="{!v.NewChklst.ERP7__Result__c}" label="{!$Label.c.checklist_Value}"  disabled="{!v.bDisabledDependentFld}">
+                                                <aura:iteration items="{!v.listDependingValues}" var="rs">
+                                                    <option text="{!rs}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                             <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closechecklistModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                            <button class="slds-button slds-button--brand" onclick="{!c.Newchecklist}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            
+            <div class="slds-backdrop" aura:id="newChecklistModalBackdrop"></div>
+            
+            <!-- Edit checklists -->
+            <div class="slds-modal BuildSchedule_M-newClass115" id="myModal9" aura:id="editChecklistModal" role="dialog">
+                <div class="slds-modal__container">
+                    <!-- Modal/Popup Box Header Starts here-->
+                    <header class="slds-modal__header">
+                        <lightning:buttonIcon iconName="utility:close"
+                                              onclick="{!c.closeeditchecklistModal }"
+                                              alternativeText="close"
+                                              variant="bare-inverse"
+                                              class="slds-modal__close" size="large"/>
+                        
+                        <h4 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.EditLabel}&nbsp;{!$Label.c.CheckList}</h4>
+                        
+                    </header>
+                    <div class="slds-modal__content" id="modal-content-id-1">
+                        <fieldset class="slds-form--compound">
+                            <div class="slds-form-element__group">
+                                
+                                <div class="slds-modal__content slds-p-around_small" id="modal-content-id-1">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right_small">
+                                            <lightning:input type="text" aura:id="name"  value="{!v.EditChklst.Name}" label="{!$Label.c.Name_ManageLeave}" required="true"/>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="text" aura:id="action"  value="{!v.EditChklst.ERP7__Action_Detail__c}" label="{!$Label.c.Instructions}" />
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <c:CustomInputLookUp objectAPIName="ERP7__Operation__c" aura:id="newop" label="{!$Label.c.Operation}" IconName="standard:flow" selectedRecordId="{!v.EditChklst.ERP7__Operation__c}"  qry="{!v.oppQry}" required="true"/>                                        
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:input type="checkbox" aura:id="action"  checked="{!v.EditChklst.ERP7__Is_Mandatory__c}" label="Required" />
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="check"  value="{!v.EditChklst.ERP7__Comply__c}" label="{!$Label.c.Checklist_Operation}"   onchange="{!c.onControllerFieldChange}">
+                                                <aura:iteration items="{!v.listControllingValues}" var="ck">
+                                                    <option text="{!ck}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>                                    </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12  slds-p-right_small">
+                                            <lightning:select aura:id="result"  value="{!v.EditChklst.ERP7__Result__c}" label="{!$Label.c.checklist_Value}" disabled="{!v.bDisabledDependentFld}" >
+                                                <aura:iteration items="{!v.listDependingValues}" var="rs">
+                                                    <option text="{!rs}"></option>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <div class="modal-footer slds-text-align--center BuildSchedule_M-newClass117">
+                           
+                            <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeeditchecklistModal}">{!$Label.c.Cancel_UserAvailabilities}</button>
+                             <button class="slds-button slds-button--brand" onclick="{!c.SaveEditchecks}">{!$Label.c.Save_UserAvailabilities}</button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div class="slds-backdrop" aura:id="editChecklistModalBackdrop"></div>
+            <aura:if isTrue="{!!v.showsiteSelect}">
+                <div class="">
+                    
+                    <div class="slds-docked-form-footer m-0" >
+                        <lightning:button label="{!$Label.c.PackageSlip_Back}"  class="slds-button slds-button-nneutral" onclick="{!c.backTOMOProducts}" disabled="{!(v.showsiteSelect== true)}"/>
+                        <lightning:button label="{!if(v.Action == 'clone','Save',$Label.c.Complete_Set_Up)}" variant="brand" class="slds-button slds-button-bbrand white" onclick="{!c.CompletesetUp}" disabled="{!v.ProcessCycles.length == 0}"/>
+                    </div>
+                    
+                </div>
+            </aura:if>
+        </aura:if>
+        <aura:if isTrue="{!v.showAddProducts}">
+            <div class="slds-page-header">
+                <div class="slds-page-header__row">
+                    <div class="slds-page-header__col-title">
+                        <div class="slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-opportunity" title="Products">
+                                    <lightning:icon iconName="standard:products" size="large" ></lightning:icon>
+                                    <span class="slds-assistive-text">{!$Label.c.CreatePOProduct}</span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate" >{!$Label.c.add_for_mo_product}&nbsp;{!v.Header}</span>
+                                        </h1>
+                                    </div>
+                                    
+                                </div>
+                                <p class="slds-page-header__name-meta">
+                                    <div class="slds-grid slds-wrap">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">  
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <label for="4909:0" class="slds-form-element__label">
+                                                        <strong>{!$Label.c.RequisitionToPurchaseOrder_Search}&nbsp;{!$Label.c.CreatePOProduct}</strong>
+                                                    </label>
+                                                    <lightning:input type="text" variant="label-hidden" value="{!v.searchItem}" oncommit="{!c.fetchProducts}" class="no-input-lable" placeholder="{!$Label.c.Search_Product_by_Name_and_code}" maxlength="200" ></lightning:input>
+                                                </div>
+                                            </div> 
+                                        </div>
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                            <div class="slds-form-element__control">
+                                                <label for="4909:0" class="slds-form-element__label">
+                                                    <strong> {!$Label.c.Select}&nbsp;{!$Label.c.Family}</strong>
+                                                </label>
+                                                <lightning:select name="parentField" aura:id="parentField"     value="{!v.seachItemFmily}" class="no-label-cust2"  onchange="{!c.fetchFamilyProducts}"     > 
+                                                    <aura:iteration items="{!v.listControllingValues1}" var="value" >
+                                                        <option value="{!value}">{!value}</option>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                                <!--<lightning:select  aura:id="family" value="{!v.seachItemFmily}"  class="no-label-cust2" onchange="{!c.fetchFamilyProducts}" >
+                                                    <aura:iteration items="{!v.familylst}" var="item">
+                                                        <option text="{!item}" value="{!item}" selected="{!v.seachItemFmily == item}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>-->
+                                            </div>
+                                        </div> 
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                            <div class="slds-form-element__control">
+                                                <label for="4909:0" class="slds-form-element__label">
+                                                    <strong> {!$Label.c.Select}&nbsp;{!$Label.c.Sub_Family}</strong>
+                                                </label>
+                                                <lightning:select name="childField"
+                                                                  value="{!v.subItemFmily}"
+                                                                  class="no-label-cust2 pl-4"
+                                                                  disabled="{!v.bDisabledDependentFld1}" onchange="{!c.fetchSubFamilyProducts}" >
+                                                    <aura:iteration items="{!v.listDependingValues1}" var="value">
+                                                        <option value="{!value}">{!value}</option>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                                <!-- <lightning:select  aura:id="Subfamily" value="{!v.subItemFmily}"  class="no-label-cust2" onchange="{!c.fetchSubFamilyProducts}" disabled="{!v.disableSubFamily}">
+                                                    <aura:iteration items="{!v.subfamilylst}" var="item">
+                                                        <option text="{!item}" value="{!item}" selected="{!v.subItemFmily == item}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>-->
+                                            </div>
+                                        </div> 
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-m-top_x-largecus">
+                                            <div class="slds-form-element__control">
+                                                <a class="addNewBTN AccountsPayable-newClass5" onclick="{!c.createProduct}" target="_blank" aria-haspopup="true" data-toggle="dropdown"> 
+                                                    <i class="fa fa-plus" aria-hidden="true"></i> &nbsp;{!$Label.c.New_Product} <span class="caret"></span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="{!if(and(v.addProductsMsg != '', v.addProductsMsg != undefined),'slds-notify_container slds-is-fixed cpo-class-position30','slds-notify_container slds-is-fixed cpo-class9')}">
+                <div class="slds-notify slds-notify_toast slds-theme_warning cpo-class11" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.error}&nbsp;</span>
+                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:warning" variant="inverse" size="x-small" alternativeText="{!$Label.c.error}" title="Warning" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <p class="slds-text-heading_x-small cpo-class12">{!v.addProductsMsg}&nbsp;
+                        </p>
+                    </div>
+                    <div class="slds-notify__close cpo-class13">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeaddProductsMsg}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_Timesheets}" title="close" />
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}&nbsp;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="card shadow-mrr ">                    
+                    <table class="table slds-table_bordered slds-table_fixed-layout slds-table_resizable-cols pb-50" role="grid">
+                        <thead>
+                            <tr class="slds-text-title--caps">
+                                <th width="5%">
+                                </th>
+                                <th>
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.Product_Code}">{!$Label.c.Product_Code}</div> 
+                                </th>
+                                <aura:if isTrue="{!v.showVenCodeandProdCode}">
+                                    <th>
+                                        <div class="slds-truncate slds-truncate-override" title="{!$Label.c.PO_Vendor_part_no}">{!$Label.c.PO_Vendor_part_no}</div>  
+                                    </th>
+                                </aura:if>
+                                <th width="20%">
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.CreatePOProduct}">{!$Label.c.CreatePOProduct}</div> 
+                                </th>
+                                <th>
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.Stock}">{!$Label.c.Stock}</div> 
+                                </th>
+                                <th>
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.AddSubscription_Quantity}">{!$Label.c.AddSubscription_Quantity}</div> 
+                                </th> 
+                                <th>
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.UOM}">{!$Label.c.UOM}</div> 
+                                </th>
+                                <aura:if isTrue="{!v.BOMCreation}">
+                                    <th>
+                                        <div class="slds-truncate slds-truncate-override" title="{!$Label.c.Maximum_Variance}">{!$Label.c.Maximum_Variance}</div> 
+                                    </th>
+                                    <th>
+                                        <div class="slds-truncate slds-truncate-override" title="{!$Label.c.Minimum_Variance}">{!$Label.c.Minimum_Variance}</div> 
+                                    </th>
+                                    <th>
+                                        <div class="slds-truncate slds-truncate-override" title="Multiples">{!$Label.c.Multiple}</div> 
+                                    </th>
+                                </aura:if>
+                                <th>
+                                    <div class="slds-truncate slds-truncate-override" title="{!$Label.c.MOsetupProductName}">{!$Label.c.MOsetupProductName}</div> 
+                                </th>
+                            </tr>            
+                        </thead>
+                        <aura:iteration items="{!v.listOfProducts}" var="prod1" indexVar="index">
+                            <tr >
+                                <td scope="row" class="slds-text-align--right">                                            
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <lightning:input type="checkbox" variant="label-hidden" onchange="{!c.handleCheckbox}" name="{!prod1.prod.Id}"></lightning:input> <!--checked="{!prod1.checkSelected}" -->
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="slds-truncate">
+                                        <lightning:formattedText value="{!prod1.prod.ProductCode}"></lightning:formattedText>
+                                    </div>                                            
+                                </td>
+                                <aura:if isTrue="{!v.showVenCodeandProdCode}">
+                                    <td>
+                                        <div class="slds-truncate">
+                                            <lightning:formattedText value="{!prod1.prod.ERP7__Vendor_product_Name__c}"></lightning:formattedText>
+                                        </div>                                            
+                                    </td>
+                                </aura:if>
+                                <td width="20%">
+                                    <div class="slds-truncate white-space-normal">
+                                        <lightning:formattedUrl label="{!prod1.prod.Name}" value="{!'/'+prod1.prod.Id}" target="_blank" title="{!prod1.prod.Name}" class="line-height20"/>
+                                    </div>   
+                                    
+                                </td>
+                                <td>
+                                    <div class="stock-pill">
+                                        {!prod1.stock}                                               
+                                    </div>
+                                </td>
+                                <td>
+                                    <lightning:input type="number" value="{!prod1.quantity}"  name="{!index}"  step="{!$Label.c.DecimalplacesinPOScreen}" variant="label-hidden" maxlength="5" ></lightning:input>                        
+                                </td> 
+                                <td>
+                                    <lightning:select aura:id="UOM"  value="{!prod1.UOM}" label="UOM"  variant="label-hidden" class="no-label-cust2">
+                                        <aura:iteration items="{!v.BomUom}" var="uomval">
+                                            <option text="{!uomval.label}" value="{!uomval.value}" selected="{!prod1.UOM == uomval.value}"></option>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </td> 
+                                <aura:if isTrue="{!v.BOMCreation}">
+                                    <td>
+                                        <lightning:input type="Number" aura:id="max"  value="{!prod1.MaxVariance}" label="Max. variance" variant="label-hidden" maxlength="5" />
+                                    </td>
+                                    <td>
+                                        <lightning:input type="Number" aura:id="min"  value="{!prod1.MinVariance}" label="Min. variance" variant="label-hidden" maxlength="5" />
+                                    </td>
+                                    <td>
+                                        <lightning:input type="Number" aura:id="multiple"  value="{!prod1.Multiples}" label="Multiples" variant="label-hidden" maxlength="5" />
+                                    </td>
+                                </aura:if>
+                                <td>
+                                    <div class="slds-truncate slds-truncate-override">
+                                        <lightning:formattedText value="{!prod1.prod.Description}"   ></lightning:formattedText>
+                                        
+                                    </div> 
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                        <aura:if isTrue="{!(v.listOfProducts.length == 0)}">
+                            
+                            <tr>
+                                <td colspan="10">
+                                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                        <i class="mdi mdi-alert-circle-check icon-size-warning mr-2"></i>
+                                        <div>{!$Label.c.No_Products_Available} </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </aura:if> 
+                    </table>
+                    
+                </div>
+            </div>
+            <div class="slds-docked-form-footer">
+                <lightning:button label="{!$Label.c.ShipmentManagement_Cancel}" onclick="{!c.backToMainPage}"></lightning:button>&nbsp;&nbsp;
+                <lightning:button label="{!$Label.c.Add_Products}" onclick="{!c.addProducts}" variant="brand" disabled="{!v.disableAddProductsButton}"></lightning:button>
+            </div>
+        </aura:if>
+    </div>
+</aura:component>

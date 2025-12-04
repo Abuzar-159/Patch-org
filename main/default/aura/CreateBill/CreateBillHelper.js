@@ -20,6 +20,49 @@
     },
 
 
+    // Newly added on 14-11-2025 for the doc deletion by saqlain khan
+     SaveButtonForManageBillDoc: function(component, event) {
+        var parentId = component.get('v.recordId');  
+        var queue = (component.get('v.deletedFiles') || []).slice();  
+
+        if (!queue.length) {
+            console.log('[SaveButtonForManageBillDoc] nothing to delete');
+            return;
+        }
+
+        console.log('[SaveButtonForManageBillDoc] deleting:', JSON.stringify(queue));
+
+        var processNext = function() {
+            if (!queue.length) {
+                component.set('v.deletedFiles', []); 
+                console.log('[SaveButtonForManageBillDoc] delete complete');
+                return;
+            }
+
+            var idToDelete = queue.shift();
+            var action = component.get('c.DeleteAttachment'); 
+            action.setParams({
+                attachId: idToDelete,
+                parentId: parentId || ''
+            });
+
+            action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (state === 'SUCCESS') {
+                    console.log('[SaveButtonForManageBillDoc] deleted on server:', idToDelete);
+                } else {
+                    console.error('[SaveButtonForManageBillDoc] failed for', idToDelete, response.getError && response.getError());
+                }
+                processNext();
+            });
+
+            $A.enqueueAction(action);
+        };
+
+        processNext();
+    },
+
+
     resetFileStateSafe: function(component) {
     console.log('🧹 resetFileStateSafe called');
     try {
@@ -553,6 +596,7 @@
                 var dataStart = contents.indexOf(base64Mark) + base64Mark.length;
                 var fileContents = contents.substring(dataStart);
                 
+                
                 var action = component.get("c.uploadFile");
                 console.log('saveAtt 2');
                 action.setParams({
@@ -809,7 +853,8 @@
         if (file.type === 'application/pdf') {
             helper.processPDF(file, component, helper);
         } else if (file.type.startsWith('image/')) {
-            helper.processImage(file, component, helper);
+            // helper.processImage(file, component, helper);
+             alert('Please select a PDF file for processing.');
         } else {
             alert('Please select a PDF or image file.');
         }
@@ -890,10 +935,28 @@
             });
 
               // Set extracted text to the component
-                component.set("v.extractedText", extractedText);
-
+            component.set("v.extractedText", extractedText);
+            const setRT = component.get("v.setRT");
+            const isactive = component.get("v.isActive");
+            const isactiveExp = component.get("v.isActiveExp");
+            
                 // Send the extracted text to the Apex method to process the line items
+            if(setRT == 'Bill' && isactive){
+                console.log("extractedText for bill:", extractedText);
                 helper.callGeminiAPI(component, extractedText);
+
+            }
+            else if(setRT == 'Expense Bill' && isactiveExp){
+                console.log("extractedText for Expense bill:", extractedText);
+                helper.callGeminiAPIExpense(component, extractedText);
+            }
+            else{
+                alert("⚠️ OCR is not active for this Bill type. Please contact your administrator.");
+            }
+
+
+            // console.log("Navigating to Bills tab");
+            //     helper.callGeminiAPI(component, extractedText);
             }).catch(error => {
                 console.error("Error reading PDF:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
                  alert("⚠️ Error reading PDF via OCR. Please try again later.");
@@ -1865,6 +1928,75 @@ console.log('productsWithNoDesc ---------> ', JSON.stringify(component.get("v.mi
 
 // },
 
+// for the expance part 
+
+callGeminiAPIExpense: function (component, extractedText) {
+    component.set("v.showSpinner", true);
+
+    var action = component.get("c.extractExpenseItemsFromText");
+    action.setParams({ invoiceText: extractedText });
+
+    action.setCallback(this, function (response) {
+        component.set("v.showSpinner", false);
+
+        if (response.getState() === "SUCCESS") {
+            var textData = response.getReturnValue();
+
+            if (!textData || textData.startsWith("Error:")) {
+                this.showToast('Error', 'error', 'OCR could not extract expense items. Try again.');
+                return;
+            }
+
+            let lines = textData.split("\n").filter(Boolean);
+
+            let items = [];
+
+            // 5 lines per item
+            for (let i = 0; i < lines.length; i += 5) {
+                items.push({
+                    qty: parseFloat(lines[i]) || 0,
+                    unitPrice: parseFloat(lines[i + 1]) || 0,
+                    discount: parseFloat(lines[i + 2]) || 0,
+                    taxPercent: parseFloat(lines[i + 3]) || 0,
+                    taxAmount: parseFloat(lines[i + 4]) || 0
+                });
+            }
+
+            console.log("EXPENSE ITEMS:", JSON.stringify(items));
+            component.set("v.extractedExpenseItems", items);
+
+           let expenseRows = [];
+
+            items.forEach(item => {
+                expenseRows.push({
+                    ERP7__Quantity__c: item.qty,
+                    ERP7__Amount__c: item.unitPrice,
+                    ERP7__Discount__c: item.discount,
+                    ERP7__Tax_Rate__c: item.taxPercent,
+                    ERP7__Tax_Amount__c: item.taxAmount,
+                    ERP7__Total_Amount__c: (item.unitPrice - item.discount),
+                    ERP7__Description__c: ''
+                });
+            });
+
+            // Set rows to the UI component
+            component.set("v.billItems", expenseRows);
+
+            console.log("Expense Rows Set:", JSON.stringify(expenseRows));
+            console.log("the bill data", JSON.stringify(component.get("v.billItems")));
+            // 🔥 Force UI to update (Aura rerender)
+            var uiRefresh = component.get("c.Newone");
+            $A.enqueueAction(uiRefresh);
+
+
+
+        } else {
+            this.showToast('Error', 'error', 'Failed to reach OCR API.');
+        }
+    });
+
+    $A.enqueueAction(action);
+},
 
 
 

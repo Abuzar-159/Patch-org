@@ -1,0 +1,437 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes" access="global" controller="MOProductConfiguaration">
+    <head>
+        <!--ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /-->
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        
+    </head>
+    <aura:attribute name="VersionPopupErrorMsg" type="String" />
+    <aura:attribute name="VerStatus" type="List"/>
+    <aura:attribute name="VerType" type="List"/>
+    <aura:attribute name="today" type="Date" />
+    <aura:attribute name="verQry" type="String" />
+    <aura:attribute name="NewVersion" type="Version__c" default = "{'sObjectType':'ERP7__Version__c',Name : '',ERP7__Default__c : false,ERP7__Status__c :'',ERP7__Start_Date__c :'',ERP7__To_Date__c : '',ERP7__Type__c:'',ERP7__Product__c:'',ERP7__Product__r : {Id: '',Name:''}}" />
+    <aura:attribute name = "ReservedProducts" type = "Integer" default = "0"/>
+    <aura:attribute name = "CertifiedProducts" type = "Integer" default = "0"/>
+    <aura:attribute name = "IndevelopmentProducts" type = "Integer" default = "0"/>
+    <aura:attribute name = "EndOfcycleProjects" type = "Integer" default = "0"/>
+    <aura:attribute name="searchProduct" type="String" />
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="exceptionError" type="String" />
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="1"/>
+    <aura:attribute name="prodlst" type="List" />
+    <aura:attribute name="ProdUom" type="List" />
+    <aura:attribute name="CurrProdLst" type="List" />
+    <aura:attribute name="OpenVersionmodal" type="Boolean" default="false"/>
+    <aura:attribute name="showSearch" type="Boolean" default="false"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:method name="popInit"  action="{!c.doInit}"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <aura:attribute name="UpdatedProdetails" type="Object" />
+     
+    <div class="maqsood erp_Mark7" aura:id="body">
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'ProjectWorkbench-newClass3 slds-notify_container slds-is-fixed','ProjectWorkbench-newClass2 slds-notify_container slds-is-fixed')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error ProjectWorkbench-newClass4" role="status">
+                <span class="slds-assistive-text">{!$Label.c.error}</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <p class="slds-text-heading_x-small ProjectWorkbench-newClass5">{!v.exceptionError}
+                    </p>
+                </div>
+                <div class="slds-notify__close ProjectWorkbench-newClass6">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                        <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <span class="ProjectWorkbench-newClass7">
+            <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/-->
+             <aura:if isTrue="{!v.showSpinner}">
+                <div class="custom-spinner slds-spinner_container ">
+                    <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                        
+                    </div>
+                    <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                </div>
+            </aura:if>
+        </span>
+        <div class="container-fluid pb-1 pl-2 pt-1 ProjectWorkbench-newClass8  theme-bg min-height520">	
+            <div class="d-flex justify-content-between">
+                <h6 class="card-title">
+                    <ul class="slds-tabs--default__nav" role="tablist">
+                        <li  class="slds-tabs--default__item slds-active ProjectWorkbench-newClass10" title="{!$Label.c.Products}" role="presentation">
+                            <a class="slds-tabs--default__link ProjectWorkbench-newClass12" href="javascript:void(0);" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-deafult-1__item">
+                                <i class="fa fa-file" aria-hidden="true" ></i> &nbsp;{!$Label.c.Products}
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </h6>
+                
+                <div class="pt-2">
+                    
+                    <div class="slds-grid">
+                        
+                        <div class="slds-grid mr-2 ProjectWorkbench-newClass14">
+                            
+                            <span class="slds-m-top_x-small">
+                                <div class="slds-form-element__control">
+                                    <a class="addNewBTN AccountsPayable-newClass5" onclick="{!c.createProduct}" target="_blank" aria-haspopup="true" data-toggle="dropdown"> 
+                                        <i class="fa fa-plus" aria-hidden="true"></i> &nbsp;New Manufacturing Product <span class="caret"></span>
+                                    </a>
+                                </div>
+                            </span>
+                            <span  >
+                                <lightning:input oncommit= "{!c.searchProducts}" value="{!v.searchProduct}" placeholder="{!$Label.c.Search_Product_UsersShiftMatch}" variant="label-hidden" maxlength="255"/>
+                               <!-- <lightning:input onchange= "{!c.searchProducts}"   onblur="{!c.toggleSearch}"  type="Search" name="searchPrd" value="{!v.searchProduct}" placeholder="Search Product..." />-->
+                            </span>
+                            
+                            
+                        </div> 
+                    </div>
+                    
+                </div>
+            </div>
+            
+             <div class="container-fluid">
+                <div class="card widget-inline border-0 " data-aura-rendered-by="337:0">
+                            <div class="card-body p-0 m-0" data-aura-rendered-by="338:0">
+                                <div class="row g-0 m-0" data-aura-rendered-by="339:0">
+                                    <div class="col-sm-6 col-xl-3 pr-0" data-aura-rendered-by="340:0">
+                                        <div class="card shadow-none m-0 border-0" data-aura-rendered-by="341:0">
+                                            <div class="card-body text-center" data-aura-rendered-by="342:0" >
+                                                <i class="fa fa-arrows-h text-muted font-24" data-aura-rendered-by="343:0"></i>
+                                                <h3  class="mb-0 color-blue"><span data-aura-rendered-by="345:0">{!v.ReservedProducts}&nbsp;</span></h3>
+                                                <p class="text-muted font-15 mb-0" data-aura-rendered-by="347:0">{!$Label.c.Released}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-xl-3 pl-0 pr-0 border-start" data-aura-rendered-by="349:0">
+                                        <div class="card shadow-none m-0  border-0" data-aura-rendered-by="350:0">
+                                            <div class="card-body text-center" data-aura-rendered-by="351:0">
+                                                <i class="fa fa-certificate text-muted font-24"  data-aura-rendered-by="352:0"></i>
+                                                <h3 class="mb-0 color-red"><span data-aura-rendered-by="354:0">{!v.CertifiedProducts}&nbsp;</span></h3>
+                                                <p class="text-muted font-15 mb-0" data-aura-rendered-by="356:0">{!$Label.c.Certified}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-xl-3 pl-0 pr-0 border-start " data-aura-rendered-by="358:0">
+                                        <div class="card shadow-none m-0 border-0" data-aura-rendered-by="359:0">
+                                            <div class="card-body text-center" data-aura-rendered-by="360:0">
+                                                <i class="fa fa-cogs text-muted font-24"  data-aura-rendered-by="361:0"></i>
+                                                <h3  class="mb-0 color-green"><span data-aura-rendered-by="363:0">{!v.IndevelopmentProducts}&nbsp;</span></h3>
+                                                <p class="text-muted font-15 mb-0" data-aura-rendered-by="365:0">{!$Label.c.In_Development}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-xl-3 pl-0 pr-0 border-start " data-aura-rendered-by="358:0">
+                                        <div class="card shadow-none m-0 border-0" data-aura-rendered-by="359:0">
+                                            <div class="card-body text-center" data-aura-rendered-by="360:0">
+                                                <i class="fa fa-crosshairs text-muted font-24"  data-aura-rendered-by="361:0"></i>
+                                                <h3  class="mb-0 color-green"><span data-aura-rendered-by="363:0">{!v.EndOfcycleProjects}&nbsp;</span></h3>
+                                                <p class="text-muted font-15 mb-0" data-aura-rendered-by="365:0">{!$Label.c.End_of_Lifecycle}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+               
+            </div>
+            
+            <div class="container-fluid">
+                <div class="card shadow-mrr mt-100">
+                    <div class="card-body">
+                        <!--<div class="table-responsive ProjectWorkbench-newClass50" tabindex="1">-->
+                            <table class="table">
+                                <thead class="">
+                                    <tr>
+                                        
+                                        <th class="text-left">
+                                            {!$Label.c.AddSubscription_Action}
+                                        </th>
+                                        <th class="text-left">{!$Label.c.MOsetupProductCode}</th>
+                                        <th class="text-left">{!$Label.c.MOsetupProductName}</th>
+                                        <th class="text-left">{!$Label.c.UOM}</th>
+                                        <th class="text-left">{!$Label.c.Acc_Recev_Status_Entered}</th>
+                                        <th class="text-left">{!$Label.c.Version}</th>
+                                        <th class="text-left">{!$Label.c.Process}</th>
+                                        
+                                        
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:if isTrue="{!!(v.prodlst.length == 0)}">
+                                        <aura:iteration  items='{!v.prodlst}' var='pro' indexVar='count'>
+                                            <tr>
+                                                
+                                                <td>
+                                                    <a class="svg Milestones-class22 customcactionedit" data-record-id="{!pro.prod.Id}" onclick="{!c.editProduct}" title="Edit Product">
+                                                        <lightning:icon iconName="action:edit" size="xx-small" alternativeText="{!$Label.c.Edit}" title="{!$Label.c.Edit}" />
+                                                    </a>&nbsp;
+                                                </td>
+                                                 <td  > 
+                                                    <div class="slds-truncate max-width140"  >
+                                                        <a href="{!'/'+pro.prod.Id}" target="_blank" class="slds-m-right--xx-small">
+                                                            <aura:renderIf isTrue="{!(pro.prod.ProductCode != undefined)}"> 
+                                                                <lightning:formattedText value="{!pro.prod.ProductCode}" title="{!pro.prod.ProductCode}" />
+                                                            </aura:renderIf>
+                                                            <aura:renderIf isTrue="{!(pro.prod.Name != undefined)}"> 
+                                                                - <lightning:formattedText value="{!pro.prod.Name}" title="{!pro.prod.Name}" />
+                                                            </aura:renderIf>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                                <td >
+                                                    <div class="slds-truncate max-width140">
+                                                        {!pro.prod.Description}
+                                                       <!-- <a href="{!'/'+pro.prod.Id}" target="_blank" class="slds-m-right-xxx-small"> {!pro.prod.Description}</a>-->
+                                                            <!--<a href="javascript:void(0);" onclick="{!c.Nav2Process}" data-record-id="{!pro.prod.Id}" title="{!pro.prod.Name}">-->
+                                                       </div>    
+                                                </td>
+                                                
+                                                <td  > 
+                                                    <aura:iteration items="{!v.ProdUom}" var="uomval">
+                                                        <aura:if isTrue="{!pro.prod.QuantityUnitOfMeasure == uomval.value}">                                                            
+                                                            <div class="slds-truncate max-width140"  title="{!uomval.label}">
+                                                                {!uomval.label} 
+                                                            </div>
+                                                        </aura:if>
+                                                    </aura:iteration>                                                    
+                                                </td>
+                                                <td  ><span class="badge badge-planned " title=""><!--{!pro.prod.ERP7__Status__c}-->
+                                                    <aura:if isTrue="{!pro.prod.ERP7__Status__c == 'Released'}">
+                                                        {!$Label.c.Released}
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!pro.prod.ERP7__Status__c == 'Certified'}">
+                                                                {!$Label.c.Certified}
+                                                                <aura:set attribute="else">
+                                                                    <aura:if isTrue="{!pro.prod.ERP7__Status__c == 'In Development'}">
+                                                                        {!$Label.c.In_Development}
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!pro.prod.ERP7__Status__c == 'End of Lifecycle'}">
+                                                                                {!$Label.c.End_of_Lifecycle}
+                                                                                <aura:set attribute="else">
+                                                                                    {!pro.prod.ERP7__Status__c}
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    </span></td>
+                                                <td width="15%">
+                                                    <div class="col-md-12 p-0 pillcustonm" title="{!$Label.c.Select_version_to_Proceed}" onmouseover="{!c.lookupClickVersion}" onclick="{!c.getProcesses}" name="{!pro.version.Id}" data-record-id="{!pro.prod.Id}">
+                                                        <c:CustomInputLookUp  objectAPIName="ERP7__Version__c" aura:id="mvr" IconName="standard:flow" selectedRecordId="{!pro.version.Id}"  qry="{!v.verQry}"/>
+                                                    </div>
+                                                </td> 
+                                                 <td  width="15%">
+                                                    <div class="col-md-12 p-0 pillcustonm" title="{!$Label.c.Select_Process_to_Proceed}" onclick="{!c.getProcessDetails}" data-record-id="{!pro.Process.Id}" >
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Process__c" aura:id="Pr" IconName="standard:flow" selectedRecordId="{!pro.Process.Id}" hideRemove="{!pro.hideProcessRemove}"/>
+                                                    </div>
+                                                </td>
+                                                <td >
+                                                    <aura:if isTrue="{!or(pro.Process.Id == '',pro.Process.Id == null)}">
+                                                        <button class="slds-button slds-button_neutral" data-index="{!count}" onclick="{!c.CreateProcess}" title="{!$Label.c.Transfer_Order_Create}" >{!$Label.c.Transfer_Order_Create}</button><!--disabled="{!or(pro.version.Id == '',pro.version.Id == null)}"-->
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!and(pro.Process.Id != '',pro.Process.Id != null)}">
+                                                        <button class="slds-button slds-button_neutral" data-record-id="{!pro.Process.Id}" data-index="{!count}" onclick="{!c.CloneProcess}" title="{!$Label.c.Clone}" >{!$Label.c.Clone}</button> <!--disabled="{!pro.disableclone}"-->
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!or(pro.version.Id == '',pro.version.Id == null)}">
+                                                        <button class="slds-button slds-button_brand" data-record-id="{!pro.Process.Id}" data-index="{!count}"  disabled="true" title="{!$Label.c.EditLabel}">{!$Label.c.EditLabel}</button>
+                                                        <aura:set attribute="else">
+                                                            <button class="slds-button slds-button_brand" data-record-id="{!pro.Process.Id}" data-index="{!count}" onclick="{!c.UpdateProcess}" disabled="{!(pro.disableEdit)}" title="{!$Label.c.EditLabel}">{!$Label.c.EditLabel}</button>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </td>
+                                            </tr> 
+                                        </aura:iteration>
+                                    </aura:if>
+                                </tbody>
+                                
+                            </table>
+                            
+                            
+                        <!--</div>-->
+                        
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="erp_Mark7 epr_Mark7">
+            
+            <div class="row slds-docked-form-footer m-0" >
+                <aura:if isTrue="{!v.prodlst.length>0}">
+                    <div class="col-md-2 ProjectWorkbench-newClass37" >
+                        <div class="slds-grid" >
+                            <div class="slds-col ProjectWorkbench-newClass38">
+                                {!$Label.c.Acc_Recev_Show}&nbsp;
+                            </div>  
+                            <div class="slds-col ProjectWorkbench-newClass39 nolabel"> 
+                                <lightning:select class="slds-show_inline-block"  name="select1"  value="{!v.show}" onchange="{!c.setShow}">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                </aura:if>
+                <aura:if isTrue="{!v.prodlst.length>0}">
+                    
+                    <div class="col-md-3 displaynonemobile ProjectWorkbench-newClass40">
+                        {!$Label.c.Acc_Recev_Showing}&nbsp;<span class="text-lightblue">{!v.startCount}-{!v.endCount}</span>&nbsp;{!$Label.c.Acc_Recev_of_total}&nbsp;<span class="text-lightblue">{!v.recSize}</span>&nbsp;{!$Label.c.Acc_Recev_Records}
+                    </div>
+                    
+                </aura:if> 
+                
+                <aura:if isTrue="{!v.prodlst.length>0}">
+                    
+                    <div class="col-md-5 mb-1 text-align-custom">
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination ProjectWorkbench-newClass41">
+                                <li class=""> 
+                                    <a class="{!if(1 >= v.startCount,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> <!-- -->
+                                </li>
+                                <li >
+                                    <a class="{!if(1 >= v.startCount,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}"  onclick="{!c.Previous}"> &lt; {!$Label.c.Previous}</a> <!-- -->
+                                </li>
+                                
+                                <li>
+                                    <a class="{!if(v.endCount == v.recSize,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} &gt;</a> <!--  -->
+                                </li>
+                                <li >
+                                    <a class="{!if(v.endCount == v.recSize,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}" onclick="{!c.NextLast}">&gt;&gt; </a> <!--  -->
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    
+                </aura:if> 
+                <aura:if isTrue="{!v.prodlst.length>0}">
+                    
+                    <div class="col-md-2 mb-1 displaynonemobile">
+                        <div class="slds-grid">
+                            <div class="slds-col slds-p-top_xx-small text-right slds-p-right_small">
+                                {!$Label.c.page} 
+                            </div>
+                            <div class="slds-col">
+                                <lightning:input type="Number" aura:id="pageId" value="{!v.PageNum}" onclick="{!c.OfsetChange}" class="width100p"/> 
+                            </div>
+                            <div class="slds-col ProjectWorkbench-newClass44 text-left">
+                                <span class="text-lightblue"> {!$Label.c.page_of}&nbsp; {!v.PNS.length}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </aura:if>
+            </div>
+        </div>
+    </div>
+    
+        <!-- Attributes -->
+    <aura:attribute name="isCreateOrUpdate" type="Boolean" default="false" />
+    <aura:attribute name="NavtoSetupComp" type="Boolean" default="false" />
+    <aura:attribute name="NewProdId" type="String" />
+    <aura:attribute name="recId" type="String" />
+    <aura:attribute name="fieldsSet" type="List" />
+    <aura:attribute name="CancelLabel" type="String" default="Cancel" />
+    <aura:attribute name="buttonLabel" type="String" default="Save" />
+
+    <!-- Create Modal Section -->
+    <aura:if isTrue="{!v.isCreateOrUpdate}">
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_medium" aria-labelledby="modal-heading-01" aria-modal="true">
+            <div class="erp_Mark7 slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" iconName="utility:close"
+                                           iconClass="slds-button__icon slds-button__icon_large slds-button_icon-inverse slds-button_icon-border-none" onclick="{!c.closeCreateOrUpdate}"/>
+                    <div>
+                        <h1 class="slds-modal__title slds-hyphenate">New Manufacturing Product</h1>
+                    </div>
+                </header>
+                
+                <lightning:recordEditForm objectApiName="Product2" density="comfy" recordId="{!v.recId}"  onsuccess="{!c.handleCreateOrUpdateSuccess}">
+                    <div class="slds-modal__content slds-p-around_medium min-height300">
+                        <div class="container-fluid">
+                            <div class="slds-grid slds-wrap slds-m-top--xx-small">
+                                <div class="row slds-m-top--xx-small">
+                                    <div class="col-md-12 col-sm-12 col-xs-12">
+                                        
+                                    </div>
+                                </div>
+                                <aura:iteration items="{!v.fieldsSet}" var="item">
+                                    <div class="col-md-3 col-sm-3 col-xs-12">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                               
+                                                <!--lightning:inputField fieldName="{!fld.fieldApiName}" required="{!fld.isRequired}" value="{!fld.defaultValue}" /-->
+                                                <lightning:layoutItem>
+                                                    <lightning:inputField fieldName="{!item}" aura:id="inv_input_field"/>
+                                                </lightning:layoutItem>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+                            </div>
+                            <br/>
+                        </div>
+                    </div>
+                    
+                        <footer class="slds-modal__footer text-center">
+                            <lightning:button label="{!v.CancelLabel}" variant="neutral" onclick="{!c.closeCreateOrUpdate}" class="slds-m-right_small" />
+                            <lightning:button type="submit" label="{!v.buttonLabel}" class="" variant="brand" />
+                        </footer>
+                    
+                </lightning:recordEditForm>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </aura:if>
+    
+    <!-- Confirm Version Create Modal Section -->
+    <aura:if isTrue="{!v.NavtoSetupComp}">
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                
+                <lightning:buttonIcon class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" iconName="utility:close"
+                                      iconClass="slds-button__icon slds-button__icon_large slds-button_icon-inverse slds-button_icon-border-none" onclick="{!c.closeConfirm}"/>
+                
+                <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1">
+                    <h1>Proceed with creating a version for the manufacturing product?</h1>
+                </div>
+                <div class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" aria-label="Cancel and close" onclick="{!c.closeConfirm}">No</button>
+                    <button class="slds-button slds-button_brand" onclick="{!c.ProceedVersionCreate}">Yes</button>
+                </div>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </aura:if>
+    
+   
+    
+    
+</aura:component>

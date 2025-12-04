@@ -1,0 +1,352 @@
+<aura:component controller="TimeManagement" implements="force:appHostable,forceCommunity:availableForAllPageTypes" access="global">   
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css, /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css,
+                              /resource/ERP7__bootStrap/css/bootstrap-4.1.css, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>  
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/manageresource.css"/> 
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        
+    </head> 
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="Resource" type="Resource__c"/>
+    <aura:attribute name="TimeoffList" type="String[]" default=""/>
+    <aura:attribute name="showTimeoffPopup" type="Boolean" default="false"/>
+    <aura:attribute name="RId" type="String" default="" access="global"/>
+    <aura:attribute name="Id" type="String" default=""/> 
+    <aura:attribute name="Timeoff" type="Time_Off__c"/>
+    <aura:attribute name="TOTypeList" type="String[]" default=""/>  
+    <aura:attribute name="TimeoffST" type="String" default=""/>
+    <aura:attribute name="TimeoffET" type="String" default=""/>
+    <aura:handler name="change" value="{!v.userId}" action="{!c.doInit}"/> 
+    <aura:attribute name="action" type="String" default=""/>
+    <aura:attribute name="AvailabilityMsg" type="String" default=""/>
+    <aura:attribute name="saveErrorMsg" type="String" default=""/> 
+    <aura:attribute name="DateErrorMsg" type="String" default=""/> 
+    <aura:attribute name="eDateMsg" type="String" default=""/> 
+    <aura:attribute name="TimeErrorMsg" type="String" default=""/> 
+    <aura:attribute name="STErrorMsg" type="String" default=""/> 
+    <aura:attribute name="ETErrorMsg" type="String" default=""/> 
+    <aura:attribute name="isSupervisor" type="Boolean"/>
+    <aura:attribute name="isSupervisorCtrl" type="Boolean" default="true"/>
+    <aura:attribute name="Today" type="Date"/>
+    <aura:attribute name="checker" type="Integer"/>
+    <aura:attribute name="ResourceList" type="String[]" default=""/>
+    <aura:attribute name="ResourceListDum" type="String[]" default=""/>
+    <aura:attribute name="TeamList" type="String[]" default=""/>
+    <aura:attribute name="expertLocsList" type="String[]" />
+    <aura:attribute name="prodServiceList" type="String[]" />
+    <aura:attribute name="DateList" type="String[]" default=""/>   
+    <aura:attribute name="dateFormat" type="String" />
+    <aura:attribute name="selectedTeam" type="String" default=""/>
+    <aura:attribute name="userId" type="String" default=""/>
+    <aura:attribute name="selectedExpLocation" type="String" default=''/>
+    <aura:attribute name="selectedService" type="String" />
+    <aura:attribute name="TimeDuration" type="Integer" default="0"/>
+    <aura:handler name="change" value="{!v.Timeoff.ERP7__End_Date__c}" action="{!c.DateDiffrenceHandler}"/>
+    <aura:attribute name="NODays" type="Integer"/>  
+    <aura:attribute name="FromSP" type="Boolean" default="true"/>
+    <aura:attribute name="isSuperUser" type="Boolean" default="false"/>
+    <aura:attribute name="User" type="User"/>
+    
+    <div class="erp_mark7 mr-class1">
+        <div class="erp_Mark7" id="body" aura:id="body">
+            <aura:if isTrue="{!v.saveErrorMsg != ''}">
+                <div class="slds-notify_container slds-is-fixed top15">
+                    <div class="slds-notify slds-notify_toast slds-theme_error mr-class102" role="status" >
+                        <span class="slds-assistive-text">error</span>
+                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                            <lightning:icon iconName="utility:error" variant="inverse" alternativeText="Error!" title="Error" />
+                        </span>
+                        <div class="slds-notify__content">
+                            <h2 class="slds-text-heading_x-small mr-class101" >
+                                {!v.saveErrorMsg}
+                            </h2>
+                        </div>
+                        <div class="slds-notify__close top25">
+                            <a onclick="{!c.onClick}" class="textdecononecolor">
+                                <lightning:icon iconName="utility:close" variant="inverse" alternativeText="close!" title="Close" />
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+            <div class="slds-page-header">
+                <div class="slds-page-header__row">
+                    <div class="slds-page-header__col-title">
+                        <div class="slds-media">
+                            <div class="slds-media__figure">
+                                <lightning:icon iconName="utility:date_time" size="x-small" alternativeText="date_time!" title="date_time" />
+                            </div>
+                            
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        
+                                        <div class="slds-form-element__control mr-class2">
+                                            
+                                            
+                                            <aura:if isTrue="true">  
+                                                <aura:if isTrue="{!v.showTimeoffPopup==false}"> 
+                                                    <c:CustomInputLookUp objectAPIName="User" selectedRecordId="{!v.userId}" NameValue="" IconName="standard:account" placeholder="Search User..."/>
+                                                    <aura:set Attribute="else">
+                                                        <span class="mr-class3"><b>{!v.User.Name}</b></span>
+                                                    </aura:set> 
+                                                </aura:if> 
+                                                
+                                                
+                                                <aura:set Attribute="else">
+                                                    <span class="mr-class3"><b>{!v.User.Name}</b></span> 
+                                                    
+                                                </aura:set>   
+                                            </aura:if>
+                                            <div>
+                                                
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <p class="slds-page-header__name-meta"></p>
+                            </div>
+                            
+                            <div class="slds-page-header__col-actions">
+                                <div class="slds-page-header__controls">
+                                    <div class="slds-page-header__control">
+                                        <ul class="mr-class4">
+                                            <li class="slds-m-right--small">
+                                                <button disabled="{!v.userId=='' || v.userId==undefined || v.userId==null}" class="slds-button slds-button slds-button_brand mr-class5" onclick="{!c.TimeoffPopup}" data-activity="show" data-action="new">
+                                                    &nbsp;<i class="fa fa-plus" aria-hidden="true" title="Time off"></i> Time off
+                                                </button>
+                                            </li>
+                                            
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="scroll-box mr-class6">      
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-m-top--small">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">Name</div>
+                            </th>
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">Start Date</div>
+                            </th>
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">End Date</div>
+                            </th> 
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">Start Time</div>
+                            </th>
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">End Time</div>
+                            </th>
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">Type</div>
+                            </th>
+                            <th class="slds-text-title_caps" scope="col">
+                                <div class="slds-truncate" title="">Reason</div>
+                            </th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <aura:iteration items="{!v.TimeoffList}" var="to" indexVar="index">     
+                            <tr class="slds-hint-parent">
+                                <td data-label="Name">
+                                    <div class="slds-truncate" title="Name">
+                                        <ui:outputText value="{!to.Name}" class="slds-output"/> 
+                                    </div>
+                                </td>
+                                <th data-label="Date" scope="row">
+                                    <div class="slds-truncate" title="Start Date">
+                                        <ui:outputDate value="{!to.ERP7__Start_Date__c}" class="slds-output"/> 
+                                    </div>
+                                </th>
+                                <th data-label="Date" scope="row">
+                                    <div class="slds-truncate" title="End Date">
+                                        <ui:outputDate value="{!to.ERP7__End_Date__c}" class="slds-output"/> 
+                                    </div>
+                                </th> 
+                                <td data-label="Start Time">
+                                    <div class="slds-truncate" title="Start Time">
+                                        <ui:outputText value="{!to.ERP7__Start_Time__c}" class="slds-output"/> 
+                                    </div>
+                                </td>
+                                <td data-label="End Time">
+                                    <div class="slds-truncate" title="End Time">
+                                        <ui:outputText value="{!to.ERP7__End_Time__c}" class="slds-output"/> 
+                                    </div>
+                                </td>
+                                <td data-label="Type">
+                                    <div class="slds-truncate" title="Type">
+                                        <ui:outputText value="{!to.ERP7__Type__c}" class="slds-output"/> 
+                                    </div>
+                                </td>
+                                <td data-label="Reason">
+                                    <div class="slds-truncate" title="{!to.ERP7__Reason__c}">
+                                        <ui:outputText value="{!to.ERP7__Reason__c}" class="slds-output"/> 
+                                    </div>
+                                </td>
+                                <td data-label="Confidence">
+                                    <div class="slds-truncate mr-class7" title="">
+                                        <img onclick="{!c.TimeoffPopup}" data-activity="show" data-action="update" id="{!index}" src="/resource/ERP7__SCM/SCM/Images/slds_edit.png" 
+                                             width="20" height="20" class="mr-class8" title="Edit" data-aura-rendered-by="6778:0"/>&nbsp;
+                                        <img onclick="{!c.TimeoffDelete}" data-activity="show" data-action="delete" data-Id="{!to.Id}" src="/resource/ERP7__SCM/SCM/Images/slds_delete.png"
+                                             width="20" height="20" class="mr-class8" title="Edit Record" data-aura-rendered-by="6778:0"/>
+                                    </div>
+                                </td>
+                                
+                            </tr>
+                        </aura:iteration> 
+                        
+                    </tbody>
+                </table>  
+                
+                
+                <aura:if isTrue="{!v.AvailabilityMsg !=''}"> <br/>
+                    <div class="slds-notify_container slds-is-relative mr-class9 zindexclass">
+                        <div class="slds-notify slds-notify_toast slds-theme_warning mr-class10" role="status">
+                            <span class="slds-assistive-text">warning</span>
+                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                            </span>
+                            <div class="slds-notify__content">
+                                <h2 class="slds-text-heading_small ">{!v.AvailabilityMsg}
+                                </h2>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
+                    
+                </aura:if> 
+                
+            </div> 
+            
+            <footer class="slds-docked-form-footer mr-class13">
+                <aura:if isTrue="{!v.showTimeoffPopup==false}">
+                    <lightning:button onclick="{!c.goToHome}" label="Previous" iconName="utility:chevronleft"/>
+                </aura:if>
+            </footer>
+            
+            <div aria-hidden="true" class="slds slds-hide" aura:id="timeoffDeleteConfirmId"> 
+                <div aria-hidden="false" role="dialog" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container mr-class14">
+                        <div class="slds-modal__content"> 
+                            <div class="slds-modal__content slds-p-around--medium"> 
+                                <div class="slds-form-element__control">
+                                    <label class="slds-radio">
+                                        <span class="slds-form-element__label"> </span> <br/>
+                                        <span class="mr-class15">Are you sure you want to delete this record?</span>
+                                    </label>
+                                </div> 
+                            </div>  
+                            <div  class="modal-footer text-center mr-class16">  
+                                <span >
+                                    <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-action="delete" value="Yes" onclick="{!c.saveTimeoff}">Yes</button> 
+                                    <button type="button" value="No" class="slds-button slds-button--neutral" data-activity="hide" onclick="{!c.TimeoffDelete}">No</button> 
+                                    
+                                </span>   
+                            </div>
+                        </div> 
+                    </div>                    
+                </div>       
+                <div class="slds-backdrop slds-backdrop--open"></div>         
+            </div> 
+            <aura:if isTrue="{!v.showTimeoffPopup}">
+                <section role="dialog" tabindex="-1" aria-label="Meaningful description of the modal content" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-modal_small">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header slds-modal__header_empty">
+                            <a class="slds-modal__close slds-button_icon-inverse" onclick="{!c.TimeoffPopup}" data-activity="hide" data-action="cancel">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="medium"/>
+                            </a>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <div class="event_rok">
+                                <div class="container-fluid slds-m-top--small mr-class17">
+                                    
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <label class="slds-form-element__label" for="form-element-01">Start Date <span class="mr-class21">*</span></label>
+                                                    <lightning:input type="date" variant="label-hidden" value="{!v.Timeoff.ERP7__Start_Date__c}"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <label class="slds-form-element__label" for="form-element-01">End Date <span class="mr-class21">*</span></label>
+                                                <lightning:input type="date" variant="label-hidden" value="{!v.Timeoff.ERP7__End_Date__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <lightning:input type="time" label="Start Time"  value="{!v.Timeoff.ERP7__Start_Time__c}" class=""/>
+                                                </div> 
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <div class="slds-form-element__control">
+                                                    <lightning:input type="time" label="End Time" value="{!v.Timeoff.ERP7__End_Time__c}" class=""/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <label class="slds-form-element__label" for="form-element-01">Type</label>
+                                                <div class="slds-form-element__control">
+                                                    <ui:inputSelect options="{!v.TOTypeList}" value="{!v.Timeoff.ERP7__Type__c}" class="slds-select"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="slds-form-element">
+                                                <label class="slds-form-element__label" for="form-element-01">Number of Days</label>
+                                                <div class="slds-form-element__control mr-class22" tilte="Number of Days">                               
+                                                    <ui:inputNumber value="{!v.NODays}" class="slds-input" placeholder="" disabled="true"/> 
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-md-12">
+                                            <div class="slds-form-element">
+                                                <label class="slds-form-element__label" for="form-element-01">Reason</label>
+                                                <div class="slds-form-element__control" tilte="{!v.Timeoff.ERP7__Reason__c}">
+                                                    <ui:inputTextArea maxlength="200" rows="3" class="slds-textarea" value="{!v.Timeoff.ERP7__Reason__c}" placeholder="Enter reason here..." />    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer mr-class7">
+                            <button class="slds-button slds-button_neutral" onclick="{!c.TimeoffPopup}" data-activity="hide" data-action="cancel">Cancel</button>&nbsp;
+                            <button class="slds-button slds-button_brand mr-class23" onclick="{!c.saveTimeoff}"><i class="fa fa-check-circle" aria-hidden="true"></i>&nbsp;Save</button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </aura:if>
+            
+        </div>
+    </div>     
+</aura:component>

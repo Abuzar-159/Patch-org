@@ -1,0 +1,389 @@
+<apex:page controller="PickPackShipController" sidebar="false" cache="false" id="mainPg" docType="html-5.0" showHeader="true" action="{!fetchInternalShippingDetails}">    
+    
+    <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>        
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}"/>    
+    <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}"/>    
+        
+    <style>
+    .epr_Mark7 .navbar-default .navbar-nav > .active > a, .epr_Mark7 .navbar-default .navbar-nav > .active > a:hover, .epr_Mark7 .navbar-default .navbar-nav > .active > a:focus {
+        color: #555;
+        background-color: #ffffff;
+    }
+    .epr_Mark7 .active{
+        background:#3A6690;
+    }   
+    input {
+        padding-top: 0;
+        border: 1px solid #ddd;
+        border-radius : 5px;
+        padding: 5px;
+    } 
+    .slds .slds-table--bordered td {
+        border-top: 1px solid #f7f7f7;
+    }
+    .dateFormat {
+        padding: 0 2px;
+        display: none;
+    }
+    </style>
+    </head>
+    
+    <body>
+        <apex:form id="mainFrm">
+            
+            <apex:pageMessages />
+                        
+            <apex:actionFunction name="beforeDelete" action="{!Is.deleteShipmentFlow}" reRender="mainFrm" immediate="true"> 
+                <apex:param assignTo="{!Is.sfId}" name="sfId" value=""/>
+            </apex:actionFunction>        
+                        
+            <apex:actionFunction name="NewPack" action="{!Is.NewShipmentFlow}" reRender="mainFrm"/>
+            
+            <apex:actionFunction name="goBack" action="{!back2ShipmentPage}" immediate="true" />
+            
+            <div class="slds slds-container--fluid">            
+            
+                <div class="epr_Mark7">                
+                    <nav class="navbar  slds-theme--alt-inverse slds-m-bottom--x-small" style="margin-bottom: 0px;">
+                        <div class="container-fluid">
+                            <ul class="nav navbar-nav navbar-left">
+                              <li>
+                                  <a href="#"  style="text-decoration:none;"><i class="fa fa-truck" aria-hidden="true" style="color:#a094ed;"></i> Internal Shipment </a>
+                              </li>                               
+                            </ul>
+                            
+                            <ul class="nav navbar-nav navbar-right">
+                                <li>
+                                    <a href="#" style="text-decoration:none;" onclick="goBack();"><i class="fa fa-chevron-left" aria-hidden="true"  style="color:#ffffff;"></i> Back</a>
+                                </li>
+                            </ul>                          
+                        </div>
+                    </nav>
+                </div>                
+                               
+                <div class="epr_Mark7"> 
+                    <div class="container-fluid">
+                        <div class="row padding-t-5">
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">Customer</p>
+                                <div class="slds-form-element">                    
+                                    <div class="slds-form-element__control">    
+                                        <apex:inputField id="cust" value="{!Shipment.Customer__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Customer Contact </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="cc" value="{!Shipment.Customer_Contact__c}"/>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Sales Order </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="so" value="{!Shipment.Sales_Order__c}"/>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    Shipment Date
+                                </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField value="{!Shipment.Shipment_Date__c}" id="shipdate" StyleClass="slds-input"/>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Shipment Status </p>
+                                <div class="slds-form-element">                                    
+                                    <div class="slds-form-element__control">
+                                        <div class="slds-select_container">
+                                            <apex:inputField value="{!Shipment.Status__c}" id="shipstatus" StyleClass="slds-select" style="height:30px;"/>                                     
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Shipment Delivery Date </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField value="{!Shipment.Shipment_Delivery_Date__c}" id="shipdelDate" StyleClass="slds-input"/>                              
+                                </div>
+                            </div>
+                        </div>
+                    <!-- @end of Row 1 -->
+
+                    <!-- Row 2-->
+                        <div class="slds row padding-t-5">
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">Shipment Type </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element">                
+                                            <div class="slds-form-element__control">
+                                                <div class="slds-select_container">
+                                                    <apex:inputField id="shipType" value="{!Shipment.Shipment_Type__c}" StyleClass="slds-select"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 slds-p-top--xx-small ">
+                                    <p class="greyhead" style="font-size:14px;">Shipping Amount </p>
+                                    <div class="slds-form-element__control">
+                                        <apex:inputField id="shipamt" value="{!Shipment.Shipping_Amount__c}" StyleClass="slds-input" html-placeholder="Shipping Amount"/> 
+                                    </div>
+                                </div>
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Declared Value </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="declaredValue" value="{!Shipment.Declared_Value__c}" html-placeholder="Package Insured Value" StyleClass="slds-input"/> 
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                   Tracking No
+                                </p>
+                                <div class="slds-form-element__control">
+                                     <apex:inputField value="{!Shipment.TrackingNumber__c}" id="shiptrck" html-placeholder="Tracking Number" StyleClass="slds-input"/>
+                                </div>
+                            </div>
+                            <div class=" col-md-2 slds-p-top--xx-small" style="text-align:left;">
+                                <p class="greyhead" style="font-size:14px;"> Shipment Identification No </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="shipIdNo" value="{!Shipment.Shipment_Identification_Number__c}" html-placeholder="Shipment Number" StyleClass="slds-inputslds-input"/>
+                                </div>                    
+                            </div>
+                            <div class=" col-md-2 slds-p-top--xx-small" style="text-align:left;">
+                               <p class="greyhead" style="font-size:14px;"> Admin Shipping Amount </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="adshipamt" value="{!Shipment.Admin_Shipping_Amount__c}" StyleClass="slds-input"/>
+                                </div>                    
+                            </div>                            
+                        </div>
+    
+                        <div class="slds row padding-t-5 ">
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">Package Weight </p>
+                                <div class="slds-form-element">                    
+                                    <div class="slds-form-element__control">
+                                        <apex:inputField id="packweight" value="{!Shipment.Package_Weight__c}" html-placeholder="Weight" StyleClass="slds-input"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small ">
+                                <p class="greyhead" style="font-size:14px;"> Package Weight Unit </p>
+                                <div class="slds-form-element">                                                                    
+                                    <div class="slds-form-element__control">
+                                        <div class="slds-select_container">
+                                            <apex:inputField id="packweightunit" value="{!Shipment.UPS_Package_Weight_Unit__c}" StyleClass="slds-select"/>                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Package Type </p>
+                                <div class="slds-form-element">                                    
+                                    <div class="slds-form-element__control">
+                                        <div class="slds-select_container">
+                                            <apex:inputField id="packtype" value="{!Shipment.UPS_Package_Type__c}" StyleClass="slds-select"/>                                        
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Length </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="length" value="{!Shipment.Length__c}" html-placeholder="Length" StyleClass="slds-input"/>
+                                </div>
+                            </div>
+                            <div class=" col-md-2 slds-p-top--xx-small" style=" text-align:left;">
+                               <p class="greyhead" style="font-size:14px;"> Width </p>
+                               <div class="slds-form-element__control">
+                                    <apex:inputField id="width" value="{!Shipment.Width__c}" html-placeholder="Width" StyleClass="slds-input"/>
+                               </div>                    
+                            </div>
+                            <div class=" col-md-2 slds-p-top--xx-small" style="text-align:left;">
+                                <p class="greyhead" style="font-size:14px;"> Height </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="height" value="{!Shipment.Height__c}" html-placeholder="Height" StyleClass="slds-input"/>
+                                </div>                    
+                            </div>        
+                        </div>
+    
+                        <div class="slds row padding-t-5 ">
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">Billing Address </p>
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <apex:inputField id="ba" value="{!Shipment.Billing_Address__c}"/> 
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small ">
+                                <p class="greyhead" style="font-size:14px;"> Shipping Address </p>
+                                <div class="slds-form-element__control">
+                                    <apex:inputField id="sa" value="{!Shipment.Shipping_Address__c}"/>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Check In </p>
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-checkbox">
+                                            <apex:inputField id="check" value="{!Shipment.Check_In__c}"/>
+                                            <span class="slds-checkbox--faux"></span>                                    
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;"> Active </p>
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-checkbox">
+                                            <apex:inputField id="act" value="{!Shipment.Active__c}"/>
+                                            <span class="slds-checkbox--faux"></span>                                        
+                                        </label>
+                                    </div>
+                              </div>
+                          </div>        
+                      </div>
+                  </div>    
+              </div>
+              
+              <div class="slds-m-top--small " style="float:left;width:100%;">
+                  <div class="slds-theme--info slds-p-around--xx-small">
+                      <p>Package List Items</p>
+                  </div>
+              </div> 
+            
+              <div class="slds-card slds-m-top--small ">                     
+                  <div class="slds-card__body">
+                      <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                          <thead>
+                              <tr>          
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Code</th>
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Product</th>
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Package</th>
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Quantity </th>
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Price</th>
+                                  <th class="slds-text-heading--label slds-size--1-of-6" scope="col">Shipping Price</th>
+                              </tr>
+                          </thead>
+                          
+                          <tbody>
+                              <apex:variable value="{!0}" var="itemCounter"/>
+                              <apex:repeat var="item" value="{!Is.ProductLineItem}"  id="rp"> 
+                              <tr class="slds-hint-parent">             
+                                 <td class="slds-size--1-of-6" data-label="Code"><apex:outputText value="{!item.Code}" /></td>
+                                 <td class="slds-size--1-of-6" data-label="Product"><apex:outputText value="{!item.Product}" /></td>
+                                 <td class="slds-size--1-of-6" data-label="Package"><apex:outputText value="{!item.PackName}" /></td>
+                                 <td class="slds-size--1-of-6" data-label="Quantity"><apex:outputText value="{!item.Quantity}" /></td>
+                                 <td class="slds-size--1-of-6" data-label="Price"><apex:outputText value="{!item.Totalprice}" /></td>
+                                 <td class="slds-size--1-of-6" data-label="Shipping Price"><apex:outputText value="{!item.totalShippingAmount}" /></td>
+                              </tr>
+                              <apex:variable var="itemCounter" value="{!itemCounter + 1}"/>
+                              </apex:repeat>
+                          </tbody>        
+                      </table>
+      
+                      <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                          <thead>
+                              <tr>          
+                                  <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Total Price </th>
+                                  <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Shipment Price </th>
+                                  <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Total Shipment Price </th>
+                                  <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Shipment Value </th>                                    
+                              </tr>
+                          </thead>
+                          
+                          <tbody>
+                              <tr class="slds-hint-parent">             
+                                  <td class="slds-size--1-of-4" data-label="Total Price"><apex:outputText value="{!Is.TotalPrice}" /></td>
+                                  <td class="slds-size--1-of-4" data-label="Shipment Price"><apex:outputText value="{!Is.ShippingAmount+Is.AdminShippingAmount}" /></td>
+                                  <td class="slds-size--1-of-4" data-label="Total Shipment Price"><apex:outputText value="{!Shipment.Shipping_Amount__c+Shipment.Admin_Shipping_Amount__c}" /></td>
+                                  <td class="slds-size--1-of-4" data-label="Shipment Value"><apex:outputText value="{!Shipment.Shipping_Amount__c+Shipment.Admin_Shipping_Amount__c+Is.TotalPrice}" /></td>
+                              </tr>
+                          </tbody>        
+                      </table>
+                  </div>    
+              </div>  
+               
+              <div class="slds-m-top--small " style="float:left;width:100%;">
+                  <div class="slds-theme--info slds-p-around--xx-small">
+                      <p><i class="fa fa-plus-circle" aria-hidden="true" style="color:#ffffff;" onclick="NewPack();"></i> &nbsp;Shipment Flows  </p>
+                  </div>
+              </div>             
+              
+              <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                  <apex:variable value="{!0}" var="itemCounter" />
+                  <apex:repeat value="{!Is.Shipflows}" var="sf" id="rpt">
+                  <tr style="background:#ffffff;">
+                      <td class="greyhead" colspan="7">
+                          <i class="fa fa-minus-circle" title="Delete Shipment Flow" onclick="var r = confirm('Are you sure you want to delete?'); if (r == true) { beforeDelete('{!itemCounter}'); }" style="cursor:pointer;font-size:18px; color:#ff0000;"></i>&nbsp;&nbsp;
+                          <span>Shipment Flow&nbsp;-&nbsp;{!itemCounter+1}</span>
+                      </td>
+                  </tr>
+                  
+                  <tr>          
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Name </th>
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Transportation Allocation </th>
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Pickup point </th>
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Dropoff point </th>
+                  </tr>
+                  
+                  <tbody>
+                      <tr class="slds-hint-parent">             
+                          <td class="slds-size--1-of-4" data-label="Total Price">
+                              <apex:inputField value="{!sf.Name}" required="true" styleClass="slds-input"/>
+                          </td>
+                          <td class="slds-size--1-of-4" data-label="Shipment Price">
+                              <apex:inputField value="{!sf.Transportation_Allocation__c}" style="width: 98%; height: 36px;"/>
+                          </td>
+                          <td class="slds-size--1-of-4" data-label="Total Shipment Price">
+                              <apex:inputField value="{!sf.Loading_point__c}" style="width: 98%; height: 36px;"/>
+                          </td>
+                          <td class="slds-size--1-of-4" data-label="Shipment Value ">
+                              <apex:inputField value="{!sf.Shipping_point__c}" style="width: 98%; height: 36px;"/>
+                          </td>
+                      </tr>
+                  </tbody> 
+                  
+                  <tr>                                             
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Start Date </th>
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">End Date </th>
+                      <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Active </th>                                  
+                  </tr>
+                  
+                  <tbody>
+                      <tr>
+                          <td class="slds-size--1-of-4" data-label="Total Shipment Price">
+                              <apex:inputField value="{!sf.Shipment_Flow_Start_Date__c}" styleClass="slds-input"/>
+                          </td>
+                          <td class="slds-size--1-of-4" data-label="Total Shipment Price">
+                              <apex:inputField value="{!sf.Shipment_Flow_End_Date__c}" styleClass="slds-input"/>
+                          </td>
+                          <td class="slds-size--1-of-4" data-label="Total Shipment Price">
+                              <label class="slds-checkbox">
+                                  <apex:inputField value="{!sf.Active__c}"/>    
+                                  <span class="slds-checkbox--faux"></span>                                        
+                              </label>                              
+                          </td>                          
+                      </tr>
+                  </tbody>
+                  <apex:variable var="itemCounter" value="{!itemCounter + 1}" />
+                  </apex:repeat>       
+              </table>
+                
+              <div class="slds-p-top--medium"></div>
+                  <div class="slds-text-align--center slds-p-around--medium">
+                      <apex:commandButton value="Save" action="{!Is.SaveDetails}" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Shipment__c.Createable && $ObjectType.Shipment__c.Updateable}"/>              
+                  </div>
+              </div>
+            
+        </apex:form>
+    </body>
+    </html>
+</apex:page>

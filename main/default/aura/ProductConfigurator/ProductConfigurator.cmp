@@ -1,0 +1,366 @@
+<aura:component controller="ProductConfigurator" access="global" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction">
+	<head>
+		<ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"/>
+		<ltng:require styles="{!join(',', $Resource.BankReconcile + '/css/font-awesome.css')}" />
+		<ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-ltng.css')}" />
+		<ltng:require styles="{!join(',',$Resource.ERPFonts + '/src/stylesheet.css')}" />
+		<ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Contact-Form-Clean.css"/>
+		<ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Features-Boxed.css"/>
+		<ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/styles.css"/>
+		<ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/nouislider.css,
+			/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/range-slider.css"/>
+		<ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js, 
+			/resource/ERP7__bootStrap/js/bootstrap.min.js" 
+			/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ProductConfiguator.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    <aura:attribute Name="fullScreen" type="Boolean" default="false"/>
+    <aura:attribute Name="RoutingConfigure" type="Boolean" default="true"/>
+	<aura:attribute name="SelectedRouting" type="Object"/>
+    <aura:attribute name="SelectedVersion" type="Object"/>
+	<aura:attribute name="NewRouting" type="Object"/>
+	<aura:attribute name="NewVersion" type="Object"/>
+	<aura:attribute name="BOMS" type="Object"/>
+	<aura:attribute name="BOMWrapperList" type="Object"/>
+	
+    <aura:attribute name="RD" type="String" />
+	<aura:attribute name="NAV" type="String" />
+	<aura:attribute Name="RId" type="String"/>
+	<aura:attribute Name="errorMsg" type="String" default=""/>
+	
+    <aura:handler name="init" value="{!this}" action="{!c.Configure}" />
+	
+    <body class="erp_mark7 ProductConfigurator-newClass1" aura:id="body">
+		<span class="ProductConfigurator-newClass2">
+			<lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+		</span>
+		<div class="erp_Mark7">
+			<div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),'ProductConfigurator-newClass4 slds-notify_container slds-is-fixed','ProductConfigurator-newClass3 slds-notify_container slds-is-fixed')}">
+				<div class="slds-notify slds-notify_toast slds-theme_error ProductConfigurator-newClass4" role="status">
+					<span class="slds-assistive-text">error</span>
+					<span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+					</span>
+					<div class="slds-notify__content">
+						<h2 class="slds-text-heading_x-small ProductConfigurator-newClass5">{!v.errorMsg}
+						</h2>
+					</div>
+					<div class="slds-notify__close ProductConfigurator-newClass6">
+						<button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="close!" title="close" />
+							<span class="slds-assistive-text">Close</span>
+						</button>
+					</div>
+				</div>
+			</div>
+			<div class="container-fluid ProductConfigurator-newClass7">
+				<div >
+                    <div class="ProductConfigurator-newClass8">
+                        <div class="card-header text-center ProductConfigurator-newClass9">
+                            <div class="row">
+                                <div class="col-6 p-0 ProductConfigurator-newClass10">
+                                    <div class="slds-grid">
+                                        <div class="col-3 pl-0 pr-0 text-right ProductConfigurator-newClass11">
+                                            <strong>Version &nbsp;<span class="ProductConfigurator-newClass12">*</span></strong> &nbsp;
+                                        </div>
+                                        <div class="col-9 pl-0">
+                                            <lightning:input type="text" variant="label-hidden" value="{!v.NewVersion.Name}" class="slds-truncate"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <aura:renderIf isTrue="{!(v.RoutingConfigure == true)}">
+                                    <div class="col-6 p-0 ProductConfigurator-newClass10">
+                                        <div class="slds-grid">
+                                            <div class="col-3 pl-0 pr-0 text-right ProductConfigurator-newClass11">
+                                                <strong>Routing &nbsp;<span class="ProductConfigurator-newClass12">*</span></strong>&nbsp; 
+                                            </div>
+                                            <div class="col-9 pl-0">
+                                                <lightning:input type="text" variant="label-hidden" value="{!v.NewRouting.Name}" class="slds-truncate"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aura:renderIf>
+                            </div>
+                        </div>
+                        <div class="row mt-1 ProductConfigurator-newClass13">
+                            <div class="col-md-8 ProductConfigurator-newClass14">
+                                <article class="slds-card">
+                                    <div class="slds-card__header slds-grid mt-1 ProductConfigurator-newClass17 productconfig-bgblue">
+                                        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container slds-icon-action-back slds-p-around_xx-small" title="">
+                                                    <lightning:icon iconName="utility:description" variant="inverse" size="x-small" alternativeText="description" title="description" />
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__body">
+                                                <h2 class="slds-card__header-title">
+                                                    <span>Configuration - {!v.SelectedVersion.ERP7__Product__r.Name}</span>
+                                                </h2>
+                                            </div>
+                                        </header>
+                                    </div>
+                                </article>
+                                <div class="Service-Description maq">
+                                    <div class="scroll-bar-wrap">
+                                        <div class="scroll-box ProductConfigurator-newClass19 ">
+                                            <div class="ProductConfigurator-newClass20">
+                                                <aura:iteration var="BOMW" indexVar="count" items="{!v.BOMWrapperList}">
+                                                    <div class="ProductConfigurator-newClass22">
+                                                        <div class="container-fluid">
+                                                            <aura:renderIf isTrue="{!(BOMW.BOM.ERP7__Product_Feature__c != undefined)}">
+                                                                <div class="col-md-6 pl-0" >
+                                                                    <div class="slds-form-element">
+                                                                        <label class="slds-form-element__label ProductConfigurator-newClass23"><strong>{!count+1}. Select {!BOMW.BOM.ERP7__Product_Feature__r.Name} </strong>? </label>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:renderIf>
+                                                        </div>
+                                                        <table class="slds-table slds-table_cell-buffer slds-table_condensed slds-no-row-hover ProductConfigurator-newClass24">
+                                                            <thead>
+                                                                <tr class="slds-line-height_reset">
+                                                                    <th class="ProductConfigurator-newClass25" scope="col" width="5%" align="top" >
+                                                                        <div class="slds-truncate2" title="">Action</div>
+                                                                    </th>
+                                                                    <th class="ProductConfigurator-newClass25" scope="col" width="35%" align="top">
+                                                                        <div class="slds-truncate2" title="">Product</div>
+                                                                    </th>
+                                                                    <th class="ProductConfigurator-newClass25" scope="col" width="10%" align="top">
+                                                                        <div class="slds-truncate2" title="">Quantity</div>
+                                                                    </th>
+                                                                    <th class="ProductConfigurator-newClass25" scope="col" width="10%" align="top">
+                                                                        <div class="slds-truncate2" title="">Price</div>
+                                                                    </th>
+                                                                    <th class="ProductConfigurator-newClass25" scope="col" width="40%" align="top">
+                                                                        <div class="slds-truncate2" title="">Description</div>
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr class="slds-hint-parent">
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <lightning:input type="checkbox" checked="{!BOMW.BOM.ERP7__Active__c}" name="{!count}" value="{!BOMW.BOM.Id}" onchange="{!c.VarianceSelection}"/>
+                                                                    </td>
+                                                                    <th data-label="" scope="row" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2 slds-grid" title="">
+                                                                            <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12 slds-p-right_xx-small">
+                                                                                <a href="{!'/'+BOMW.BOM.ERP7__BOM_Component__c}" tabindex="-1" class="ProductConfigurator-newClass25">{!BOMW.BOM.ERP7__BOM_Component__r.Name}</a>
+                                                                            </div>
+                                                                            <aura:renderIf isTrue="{!(BOMW.BOM.ERP7__BOM_Component__r.ERP7__Picture__c != undefined)}">
+                                                                                <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                                    <img src="{!BOMW.BOM.ERP7__BOM_Component__r.ERP7__Picture__c}" class="zoom-erp ProductConfigurator-newClass26" />
+                                                                                </div>
+                                                                            </aura:renderIf>
+                                                                        </div>
+                                                                    </th>
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">
+                                                                            <aura:renderIf isTrue="{!BOMW.BOM.ERP7__Exact_Quantity__c == true}">
+                                                                                {!BOMW.BOM.ERP7__Quantity__c}&nbsp;{!BOMW.BOM.ERP7__Unit_of_Measure__c}
+                                                                            </aura:renderIf>
+                                                                            <aura:renderIf isTrue="{!BOMW.BOM.ERP7__Exact_Quantity__c != true}">
+                                                                                <lightning:input type="number" variant="label-hidden" value="{!BOMW.BOM.ERP7__Quantity__c}" class="width100"/>
+                                                                            </aura:renderIf>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">
+                                                                            <aura:renderIf isTrue="{!BOMW.BOM.ERP7__Exact_Quantity__c == true}">
+                                                                            	<lightning:formattedNumber style="currency" value="{!BOMW.BOM.ERP7__Cost_Price__c}" class=" width100"/>
+                                                                            </aura:renderIf>
+                                                                            <aura:renderIf isTrue="{!BOMW.BOM.ERP7__Exact_Quantity__c != true}">
+                                                                                <lightning:input type="number" formatter="currency" step="0.01" value="{!BOMW.BOM.ERP7__Cost_Price__c}" class="width100"/>
+                                                                            </aura:renderIf>
+                                                                        </div>
+                                                                    </td> 
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="" >
+                                                                            <div class="scroll-bar-wrap">
+                                                                                <div class="scroll-box ProductConfigurator-newClass29">
+                                                                                    <lightning:formattedRichText value="{!BOMW.BOM.ERP7__Description__c}"/>
+                                                                                </div>
+                                                                                
+                                                                            </div>
+                                                                            <div class="cover-bar"></div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                                <aura:iteration var="Variance" indexVar="vcount" items="{!BOMW.Variances}">
+                                                                    <tr class="slds-hint-parent">
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <lightning:input type="checkbox" checked="{!Variance.ERP7__Active__c}" name="{!count}" value="{!Variance.Id}" onchange="{!c.VarianceSelection}"/>
+                                                                        </td>
+                                                                        <th data-label="" scope="row" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2 slds-grid" title="">
+                                                                                <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12 slds-p-right_xx-small">
+                                                                                    <a href="{!'/'+Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__c}" tabindex="-1" class="ProductConfigurator-newClass25">{!Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.Name}</a>
+                                                                                </div>
+                                                                                <aura:renderIf isTrue="{!(Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.ERP7__Picture__c != undefined)}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                                        <img src="{!Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.ERP7__Picture__c}" class="zoom-erp ProductConfigurator-newClass26" />
+                                                                                    </div>
+                                                                                </aura:renderIf>
+                                                                            </div>
+                                                                        </th>
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2" title="">
+                                                                                <aura:renderIf isTrue="{!Variance.ERP7__BOM_Variance__r.ERP7__Exact_Quantity__c == true}">
+                                                                                    {!Variance.ERP7__BOM_Variance__r.ERP7__Quantity__c}&nbsp;{!Variance.ERP7__BOM_Variance__r.ERP7__Unit_of_Measure__c}
+                                                                                </aura:renderIf>
+                                                                                <aura:renderIf isTrue="{!Variance.ERP7__BOM_Variance__r.ERP7__Exact_Quantity__c != true}">
+                                                                                    <lightning:input type="number" value="{!Variance.ERP7__BOM_Variance__r.ERP7__Quantity__c}"/>
+                                                                                </aura:renderIf>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2" title="">
+                                                                                <aura:renderIf isTrue="{!Variance.ERP7__BOM_Variance__r.ERP7__Exact_Quantity__c == true}">
+                                                                                    <lightning:formattedNumber style="currency" value="{!Variance.ERP7__BOM_Variance__r.ERP7__Cost_Price__c}"/>
+                                                                                </aura:renderIf>
+                                                                                <aura:renderIf isTrue="{!Variance.ERP7__BOM_Variance__r.ERP7__Exact_Quantity__c != true}">
+                                                                                   <lightning:input type="number" formatter="currency" step="0.01" value="{!Variance.ERP7__BOM_Variance__r.ERP7__Cost_Price__c}"/>
+                                                                                </aura:renderIf>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2 maq" title="" >
+                                                                                <div class="scroll-bar-wrap">
+                                                                                    <div class="scroll-box ProductConfigurator-newClass29">
+                                                                                        <lightning:formattedRichText value="{!Variance.ERP7__BOM_Variance__r.ERP7__Description__c}"/>
+                                                                                    </div>
+                                                                                    <div class="cover-bar"></div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                </aura:iteration>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </aura:iteration>
+                                            </div>
+                                        </div>
+                                        <div class="cover-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 ProductConfigurator-newClass16 ">
+                                <article class="slds-card">
+                                    <div class="slds-card__header slds-grid mt-1 ProductConfigurator-newClass17 productconfig-bgblue">
+                                        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container slds-icon-action-back slds-p-around_xx-small" title="">
+                                                    <lightning:icon iconName="action:following" variant="inverse" size="x-small" alternativeText="following" title="following" />
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__body">
+                                                <h2 class="slds-card__header-title ProductConfigurator-newClass18">
+                                                    <span>Selected Bill of Materials (BOMs)</span>
+                                                </h2>
+                                            </div>
+                                        </header>
+                                    </div>
+                                </article>
+                                <div class="Service-Description maq">
+                                    <div class="scroll-bar-wrap">
+                                        <div class="scroll-box ProductConfigurator-newClass21">
+                                            <div class="ProductConfigurator-newClass20">
+                                                <aura:iteration var="BOMW" indexVar="count" items="{!v.BOMWrapperList}">
+                                                    <div class="ProductConfigurator-newClass22">
+                                                        <div class="container-fluid">
+                                                            <aura:renderIf isTrue="{!(BOMW.BOM.ERP7__Product_Feature__c != undefined)}">
+                                                                <div class="col-md-6 pl-0" >
+                                                                    <div class="slds-form-element">
+                                                                        <label class="slds-form-element__label ProductConfigurator-newClass23"><strong>{!count+1}. {!BOMW.BOM.ERP7__Product_Feature__r.Name} </strong> </label>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:renderIf>
+                                                        </div>
+                                                        <table class="slds-table slds-table_cell-buffer slds-table_condensed slds-no-row-hover ProductConfigurator-newClass24">
+                                                            <thead>
+                                                                <tr class="slds-line-height_reset">
+                                                                    <th  scope="col" width="50%" align="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">Product</div>
+                                                                    </th>
+                                                                    <th  scope="col" width="25%" align="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">Quantity</div>
+                                                                    </th>
+                                                                    <th  scope="col" width="25%" align="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">Price</div>
+                                                                    </th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <aura:renderIf isTrue="{!(BOMW.BOM.ERP7__Active__c == true)}">
+                                                                <tr class="slds-hint-parent">
+                                                                    <th data-label="" scope="row" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2 slds-grid" title="">
+                                                                            <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12 slds-p-right_xx-small">
+                                                                                <a href="{!'/'+BOMW.BOM.ERP7__BOM_Component__c}" tabindex="-1" class="ProductConfigurator-newClass25">{!BOMW.BOM.ERP7__BOM_Component__r.Name}</a>
+                                                                            </div>
+                                                                            <aura:renderIf isTrue="{!(BOMW.BOM.ERP7__BOM_Component__r.ERP7__Picture__c != undefined)}">
+                                                                                <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                                    <img src="{!BOMW.BOM.ERP7__BOM_Component__r.ERP7__Picture__c}" class="zoom-erp ProductConfigurator-newClass26" />
+                                                                                </div>
+                                                                            </aura:renderIf>
+                                                                        </div>
+                                                                    </th>
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title="">{!BOMW.BOM.ERP7__Quantity__c}&nbsp;{!BOMW.BOM.ERP7__Unit_of_Measure__c}</div>
+                                                                    </td>
+                                                                    <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                        <div class="slds-truncate2" title=""><lightning:formattedNumber style="currency" value="{!BOMW.BOM.ERP7__Cost_Price__c}"/></div>
+                                                                    </td> 
+                                                                </tr>
+                                                                </aura:renderIf>
+                                                                <aura:iteration var="Variance" indexVar="vcount" items="{!BOMW.Variances}">
+                                                                    <aura:renderIf isTrue="{!(Variance.ERP7__Active__c == true)}">
+                                                                    <tr class="slds-hint-parent">
+                                                                        <th data-label="" scope="row" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2 slds-grid" title="">
+                                                                                <div class="slds-col slds-size_1-of-1 slds-large-size_10-of-12 slds-p-right_xx-small">
+                                                                                    <a href="{!'/'+Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__c}" tabindex="-1" class="ProductConfigurator-newClass25">{!Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.Name}</a>
+                                                                                </div>
+                                                                                <aura:renderIf isTrue="{!(Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.ERP7__Picture__c != undefined)}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                                        <img src="{!Variance.ERP7__BOM_Variance__r.ERP7__BOM_Component__r.ERP7__Picture__c}" class="zoom-erp ProductConfigurator-newClass26" />
+                                                                                    </div>
+                                                                                </aura:renderIf>
+                                                                            </div>
+                                                                        </th>
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2" title="">{!Variance.ERP7__BOM_Variance__r.ERP7__Quantity__c}&nbsp;{!Variance.ERP7__BOM_Variance__r.ERP7__Unit_of_Measure__c} </div>
+                                                                        </td>
+                                                                        <td data-label="" valign="top" class="ProductConfigurator-newClass25">
+                                                                            <div class="slds-truncate2" title=""><lightning:formattedNumber style="currency" value="{!Variance.ERP7__BOM_Variance__r.ERP7__Cost_Price__c}"/></div>
+                                                                        </td>
+                                                                    </tr>
+                                                                    </aura:renderIf>
+                                                                </aura:iteration>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </aura:iteration>
+                                            </div>
+                                        </div>
+                                        <div class="cover-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                         
+                       <div class="slds-docked-form-footer slds-float_right ProductConfigurator-newClass27">   
+                           <a href="javascript:void(0);" onclick="{!c.Back}" class="slds-button slds-button--neutral ProductConfigurator-newClass28">Cancel</a>
+                           <aura:renderIf isTrue="{!(v.RoutingConfigure == true)}">
+                               <lightning:button class="slds-button slds-button--brand" disabled="{!if(v.BOMWrapperList.length > 0, false, true)}" onclick="{!c.Confirm}">Confirm Configuration</lightning:button>
+                           </aura:renderIf>
+                           <aura:renderIf isTrue="{!(v.RoutingConfigure == false)}">
+                               <lightning:button class="slds-button slds-button--brand" disabled="{!if(v.BOMWrapperList.length > 0, false, true)}" onclick="{!c.ConfirmNew}">Confirm Configuration</lightning:button>
+                           </aura:renderIf> 
+                        </div> 
+                    </div>
+				</div>
+			</div>
+		</div>
+	</body>
+</aura:component>

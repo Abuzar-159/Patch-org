@@ -1,0 +1,799 @@
+<aura:component controller="BudgetPlannerUpdated" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+       <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <!--ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-dashboard.css"/-->
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>   
+    
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    </head>
+    <aura:attribute name="ShowBudgetType" type="Boolean" default="true"/>
+    <aura:attribute name="isMonthlyManage" type="Boolean" default="false"/>
+    <aura:attribute name="unposted" type="Boolean" default="false"/>
+    <aura:attribute name="BudgetId" type="String"/>
+    <aura:attribute name="setRT" type="String"/>
+    <aura:attribute name="budgetType" type="String"/>
+    <aura:attribute name="totalBudget" type="Integer" default="0"/>
+    <aura:attribute name="consumeBudget" type="Integer" default="0"/>
+    <aura:attribute name="committedBudget" type="Integer" default="0"/>
+    <aura:attribute name="budgetUsed" type="Integer" default="0"/>
+    <aura:attribute name="thresholdvalue" type="Integer" default="100"/>
+    <aura:attribute name="selectedMonth" type="String" default="January"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="unpostedExpenditure" type="Boolean" default="false"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/> 
+    <aura:attribute name="Project" type="Map" default="{}"/> 
+    <aura:attribute name="ProjectWrapperList" type="list" default="{'sObjectType' : 'projectWrapper'}"/> 
+    <aura:attribute name="fetchRecordsBool" type="Boolean" default="true"/>
+    <aura:attribute name="years" type="String[]" />
+    <aura:attribute name="options" type="List" default="[
+                                                        {'label': 'Posted Actual Expenditures', 'value': 'Posted Actual Expenditures'},
+                                                        {'label': 'UnPosted Actual Expenditures', 'value': 'UnPosted Actual Expenditures'}
+                                                        ]"/>
+    <aura:attribute name="selectedYear" type="String" />
+    <aura:attribute name="selectedOption" type="String" default="Posted Actual Expenditures"/>
+    <aura:attribute name="MonthlyBudgetAccount" type="list" default="{'sObjectType' : 'budgetWrapper'}"/>
+    <body style="background:#f7f8f9;">
+        <div class="erp_mark7 bg-gp erp">
+        <aura:if isTrue="{!!v.ShowBudgetType}">
+            <aura:if isTrue="{!v.setRT=='Monthly Budget'}">
+                <div class="card3-header slds-p-around_small">
+                    <div class="card3-header slds-page-header__row">
+                        <div class="slds-page-header__col-title slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-budget" title="">
+                                    <lightning:icon iconName="standard:budget" size="medium"></lightning:icon>
+                                    
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate" title="">Monthly Budget Forecasting</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <p class="slds-page-header__name-meta">{!v.selectedMonth} &nbsp;{!v.selectedYear}</p>
+                            </div>
+                            <div class="slds-p-right_small" style="display: flex;">
+                                
+                                <div style="margin-left: 10px;">
+                                    <div class="slds-grid">
+                                        
+                                        <div class="color-card" >
+                                            <!--p class="mb-0 color-card-head">Budget Configurations&nbsp;<lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                            </lightning:helptext></p-->
+                                            
+                                                <lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" disabled="true" />
+                                           
+                                        </div>
+                                        <div class="slds-p-top_small">
+                                            <lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                            </lightning:helptext>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <div style="margin-left: 10px;">
+                                    <c:CustomInputLookUp label="Organisation" objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                            IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')" hideRemove="true"/>  
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-p-left_small slds-p-right_small slds-p-top_xx-small">
+                    <div class="slds-grid slds-wrap">
+                    	<div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                        	<div class="slds-grid slds-wrap">
+                        
+                       
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-right_small">
+                            
+                            <div class="card l-bg-cvd mb-2 mt-0">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" >
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">Total Budget Amount</p>
+                                            <h5 class="text-left mb-0 pt-1">
+                                                <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" />
+                                            </h5>
+                                        </div>
+                                        <lightning:icon iconName="standard:budget_category_value" size="small" class="mt-2"></lightning:icon>
+                                    </div>
+                                    
+                                </div>
+                            </div>  
+                            
+                        </div>
+                         <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-right_small">
+                             <div class="card l-bg-cvd mb-2 mt-0">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" >
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">Total Committed</p>
+                                            <h5 class="text-left mb-0 pt-1">
+                                                <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.committedBudget}" />
+                                            </h5>
+                                        </div>
+                                        <lightning:icon iconName="standard:budget_category_value" size="small" class="mt-2"></lightning:icon>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                           
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-right_small">
+                            <div class="card l-bg-cvd mb-2 mt-0">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" >
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">Total Consumed</p>
+                                            <h5 class="text-left mb-0 pt-1">
+                                                <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.consumeBudget}" /> 
+                                            </h5>
+                                        </div>
+                                        <lightning:icon iconName="standard:bundles_pricing" size="small" class="mt-2"></lightning:icon>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-right_small">
+                            <div class="card l-bg-cvd mb-2 mt-0">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" >
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">Total Balance</p>
+                                            <h5 class="text-left mb-0 pt-1">
+                                                <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(v.totalBudget-v.consumeBudget-v.committedBudget)}" /> 
+                                            </h5>
+                                        </div>
+                                        <lightning:icon iconName="standard:disclosure_and_compliance" size="small" class="mt-2"></lightning:icon>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                            <div class="card l-bg-cvd mb-2 mt-0">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" >
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">Amount Utilized(%)</p>
+                                            <h5 class="text-left mb-0 pt-1">
+                                                <lightning:formattedNumber currencyDisplayAs="code"  value="{!v.budgetUsed}" /> 
+                                            </h5>
+                                        </div>
+                                        <lightning:icon iconName="standard:expense_report_entry" size="small" class="mt-2"></lightning:icon>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            
+                        </div>
+                                
+                    </div>
+                        </div>
+                        
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="erp_Mark7 table-responsive mb-pb100">
+                                
+                                <aura:iteration var="wrap" items="{!v.ProjectWrapperList}" indexVar="Index">
+                                    <div class="card2 shadow-sm" style="min-height: 657px;">  
+                                        <div class="card-body p-2">
+                                            <div class="slds-grid slds-p-bottom_small">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                    <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                    <div class="slds-truncate-custom" data-index="{!Index}" data-value="{!wrap.Project}" onmouseleave="{!c.lookupClickProject}" >
+                                                        <c:CustomInputLookUp label="Project" objectAPIName="ERP7__Project__c" selectedRecordId="{!wrap.Project}"
+                                                                                IconName="standard:account" placeholder="Search Project...." hideRemove="true"/> 
+                                                    </div>
+                                                </div>
+                                                <aura:if isTrue="{!!v.unposted}">
+                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                    </div>
+                                                </aura:if>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                                    <label  class="slds-form-element__label" >Budget Amount</label>
+                                                    <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectBudgetAmount}" /> 
+                                                </div>
+                                                <aura:if isTrue="{!v.unposted}">
+                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                                        <label  class="slds-form-element__label" >Committed</label>
+                                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectCommittedAmount}" /> 
+                                                    </div>
+                                                </aura:if>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                                    <label  class="slds-form-element__label" >Consumed</label>
+                                                    <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectConsumeAmount}" /> 
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                                    <label  class="slds-form-element__label" >Balance</label>
+                                                    <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(wrap.ProjectBudgetAmount-wrap.ProjectConsumeAmount-wrap.ProjectCommittedAmount)}" /> 
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                                    <label  class="slds-form-element__label" >Amount Utilized(%)</label>
+                                                    <br/><lightning:formattedNumber formatter="percentage" value="{!wrap.ProjectAmountUsed}" disabled="true"/> 
+                                                </div>
+                                                
+                                            </div>
+                                            
+                                            <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover">
+                                                <thead>
+                                                    
+                                                    <tr>
+                                                        <th scope="col" width="5%">SI No</th>
+                                                        <th scope="col">Budget Sub Category</th>
+                                                        <th scope="col">Account Number</th>
+                                                        <th scope="col">Account Type</th>
+                                                        <th scope="col">Approved</th>
+                                                        <aura:if isTrue="{!v.unposted}">
+                                                            <th scope="col">Committed</th>
+                                                        </aura:if>
+                                                        <th scope="col">Consumed</th>
+                                                        <th scope="col">Balance</th>
+                                                        <th scope="col">Budget Utilized(%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration var="budget" items="{!wrap.budgetAccount}" indexVar="Indexed">
+                                                        <tr>
+                                                            <td>{!Indexed+1}</td>
+                                                            <td><div class="slds-truncate-custom" data-index="{!Index}" data-indexed="{!Indexed}" data-value="{!budget.CoaId}"><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="custom:custom57" selectedRecordId="{!budget.CoaId}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true" hideRemove="true"/></div></td>
+                                                            <td>{!budget.AccountNumber}</td>
+                                                            <td>{!budget.AccountType}</td>
+                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.budgetAmount}" formatter="currency" disabled="true"/></td>
+                                                            <aura:if isTrue="{!v.unposted}">
+                                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.committedAmount}" formatter="currency" disabled="true"/></td>
+                                                            </aura:if>
+                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.consumedAmount}" formatter="currency" disabled="true"/></td>
+                                                            <aura:if isTrue="{!v.unposted}">
+                                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.remainingAmount}" formatter="currency" disabled="true"/></td>
+                                                                <aura:set attribute="else">
+                                                                    <td><lightning:input type="currency" name="{!Index}" value="{!(budget.budgetAmount-budget.consumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            
+                                                            <td><lightning:input formatter="percentage" value="{!budget.budgetUsed}" disabled="true"/></td>
+                                                        </tr>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>    
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+               
+                <div class="slds-docked-form-footer">
+                    <lightning:button label="Back" iconName="utility:chevronleft" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                </div>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.setRT=='Quarterly Budget'}">
+                <div class="card3-header slds-p-around_small">
+                    <div class="card3-header slds-page-header__row">
+                        <div class="slds-page-header__col-title slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-budget" title="">
+                                    <lightning:icon iconName="standard:budget" size="medium"></lightning:icon>
+                                    
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate" title="">Quarter Budget Forecasting</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <p class="slds-page-header__name-meta">{!v.selectedYear}</p>
+                            </div>
+                            <div class="slds-p-right_small" style="display: flex;">
+                                
+                                <div style="margin-left: 10px;">
+                                    <c:CustomInputLookUp label="Organisation" objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                            IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')" hideRemove="true"/>  
+                                </div>
+                                <div style="margin-left: 10px;">
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-p-left_small slds-p-right_small slds-p-top_small">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-file-text"></i>&nbsp;Budget Configurations</label>
+                                            <lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                            </lightning:helptext>
+                                        </span>
+                                        
+                                        <p><lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" disabled="true"/></p>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Budget Amount
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Consumed
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.consumeBudget}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Balance
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(v.totalBudget-v.consumeBudget)}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Amount Utilized(%)
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.budgetUsed}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="erp_Mark7  mb-pb100">
+                    
+                    <aura:iteration var="wrap" items="{!v.ProjectWrapperList}" indexVar="Index">
+                        <div class="card2 shadow-sm m-2"> 
+                            <div class="card-body p-2">
+                                <div class="slds-grid slds-p-bottom_small">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                        <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                        <div class="slds-truncate-custom" data-index="{!Index}" data-value="{!wrap.Project}" onmouseleave="{!c.lookupClickProject}" >
+                                            <c:CustomInputLookUp label="Project" objectAPIName="ERP7__Project__c" selectedRecordId="{!wrap.Project}"
+                                                                    IconName="standard:account" placeholder="Search Project...." hideRemove="true"/> 
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Budget Amount</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectBudgetAmount}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Consumed</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectConsumeAmount}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Balance</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(wrap.ProjectBudgetAmount-wrap.ProjectConsumeAmount)}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Amount Utilized(%)</label>
+                                        <br/>{!wrap.ProjectAmountUsed} 
+                                    </div>
+                                    
+                                </div>
+                                <div class="table-responsive">
+                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover" style="border-right: 1px solid #ddd;">
+                                    <thead>
+                                        
+                                        <tr>
+                                            <th scope="col" width="100px">SI No</th>
+                                            <th scope="col" width="140px">Budget Sub Category</th>
+                                            <th scope="col" width="170px">Account Number</th>
+                                            <th scope="col" width="170px">Account Type</th>
+                                            <th scope="col" width="170px">Approved(Q1)</th>
+                                            <th scope="col" width="170px">Consumed(Q1)</th>
+                                            <th scope="col"  width="170px">Balance(Q1)</th>
+                                            <th scope="col"  width="170px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="170px">Approved(Q2)</th>
+                                            <th scope="col"  width="170px">Consumed(Q2)</th>
+                                            <th scope="col"  width="170px">Balance(Q2)</th>
+                                            <th scope="col"  width="170px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="170px">Approved(Q3)</th>
+                                            <th scope="col"  width="170px">Consumed(Q3)</th>
+                                            <th scope="col"  width="170px">Balance(Q3)</th>
+                                            <th scope="col"  width="170px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="170px">Approved(Q4)</th>
+                                            <th scope="col"  width="170px">Consumed(Q4)</th>
+                                            <th scope="col"  width="170px">Balance(Q4)</th>
+                                            <th scope="col"  width="170px">Budget Utilized(%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration var="budget" items="{!wrap.budgetAccount}" indexVar="Indexed">
+                                            <tr>
+                                                <td>{!Indexed+1}</td>
+                                                <td><div class="slds-truncate-custom" data-index="{!Index}" data-indexed="{!Indexed}" data-value="{!budget.CoaId}"><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="custom:custom57" selectedRecordId="{!budget.CoaId}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true" hideRemove="true"/></div></td>
+                                                <td>{!budget.AccountNumber}</td>
+                                                <td>{!budget.AccountType}</td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q1budgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q1consumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.Q1budgetAmount-budget.Q1consumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.Q1budgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q2budgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q2consumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.Q2budgetAmount-budget.Q2consumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.Q2budgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q3budgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q3consumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.Q3budgetAmount-budget.Q3consumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.Q3budgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q4budgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.Q4consumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.Q4budgetAmount-budget.Q4consumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.Q4budgetUsed}" disabled="true"/></td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>   
+                               </div>
+                            </div>
+                        </div>
+                    </aura:iteration>
+                    
+                </div>
+                <div class="slds-docked-form-footer">
+                    <lightning:button label="Back" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!v.setRT=='Yearly Budget'}">
+                
+                <div class="card3-header slds-p-around_small">
+                    <div class="card3-header slds-page-header__row">
+                        <div class="slds-page-header__col-title slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-budget" title="">
+                                    <lightning:icon iconName="standard:budget" size="medium"></lightning:icon>
+                                    
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate" title="">Year Budget Forecasting</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <p class="slds-page-header__name-meta">{!v.selectedYear}</p>
+                            </div>
+                            <div class="slds-p-right_small" style="display: flex;">
+                                
+                                <div style="margin-left: 10px;">
+                                    <c:CustomInputLookUp label="Organisation" objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                            IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')" hideRemove="true"/>  
+                                </div>
+                                <div style="margin-left: 10px;">
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-p-left_small slds-p-right_small slds-p-top_small">
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-file-text"></i>&nbsp;Budget Configurations</label>
+                                            <lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                            </lightning:helptext>
+                                        </span>
+                                        
+                                        <p><lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" disabled="true"/></p>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Budget Amount
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Consumed
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.consumeBudget}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Balance
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(v.totalBudget-v.consumeBudget)}" /> 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-left_medium">
+                            <div class="erp_Mark7">
+                                <div class="card2 stat-widget">
+                                    <div class="card-body">
+                                        <span class="card-title">
+                                            <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                <i class="fa fa-calculator"></i>&nbsp;Amount Used(%)
+                                            </label>
+                                        </span><br/>
+                                        <h4 class="pt-3">
+                                            {!v.budgetUsed} 
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="erp_Mark7  mb-pb100">
+                    
+                    <aura:iteration var="wrap" items="{!v.ProjectWrapperList}" indexVar="Index">
+                        <div class="card2 shadow-sm m-2"> 
+                            <div class="card-body p-2">
+                                <div class="slds-grid slds-p-bottom_small">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                        <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                        <div class="slds-truncate-custom" data-index="{!Index}" data-value="{!wrap.Project}" onmouseleave="{!c.lookupClickProject}" >
+                                            <c:CustomInputLookUp label="Project" objectAPIName="ERP7__Project__c" selectedRecordId="{!wrap.Project}"
+                                                                    IconName="standard:account" placeholder="Search Project...." hideRemove="true"/> 
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Budget Amount</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectBudgetAmount}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Consumed</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectConsumeAmount}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Balance</label>
+                                        <br/><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!(wrap.ProjectBudgetAmount-wrap.ProjectConsumeAmount)}" /> 
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 slds-p-top_medium">
+                                       <label  class="slds-form-element__label" >Amount Utilized(%)</label>
+                                        <br/>{!wrap.ProjectAmountUsed} 
+                                    </div>
+                                    
+                                </div>
+                                <div class="table-responsive">
+                                <table class="slds-table slds-table_bordered slds-table_fixed-layout  slds-no-row-hover" style="border-right: 1px solid #ddd;">
+                                    <thead>
+                                        
+                                        <tr>
+                                            <th scope="col" width="100px">SI No</th>
+                                            <th scope="col" width="140px">Budget Sub Category</th>
+                                            <th scope="col" width="170px">Account Number</th>
+                                            <th scope="col" width="170px">Account Type</th>
+                                            <th scope="col" width="120px">Approved(Jan)</th>
+                                            <th scope="col" width="120px">Consumed(Jan)</th>
+                                            <th scope="col"  width="120px">Balance(Jan)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Feb)</th>
+                                            <th scope="col"  width="120px">Consumed(Feb)</th>
+                                            <th scope="col"  width="120px">Balance(Feb)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Mar)</th>
+                                            <th scope="col"  width="120px">Consumed(Mar)</th>
+                                            <th scope="col"  width="120px">Balance(Mar)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Apr)</th>
+                                            <th scope="col"  width="120px">Consumed(Apr)</th>
+                                            <th scope="col"  width="120px">Balance(Apr)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(May)</th>
+                                            <th scope="col"  width="120px">Consumed(May)</th>
+                                            <th scope="col"  width="120px">Balance(May)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Jun)</th>
+                                            <th scope="col"  width="120px">Consumed(Jun)</th>
+                                            <th scope="col"  width="120px">Balance(Jun)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Jul)</th>
+                                            <th scope="col"  width="120px">Consumed(Jul)</th>
+                                            <th scope="col"  width="120px">Balance(Jul)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Aug)</th>
+                                            <th scope="col"  width="120px">Consumed(Aug)</th>
+                                            <th scope="col"  width="120px">Balance(Aug)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Sep)</th>
+                                            <th scope="col"  width="120px">Consumed(Sep)</th>
+                                            <th scope="col"  width="120px">Balance(Sep)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Oct)</th>
+                                            <th scope="col"  width="120px">Consumed(Oct)</th>
+                                            <th scope="col"  width="120px">Balance(Oct)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Nov)</th>
+                                            <th scope="col"  width="120px">Consumed(Nov)</th>
+                                            <th scope="col"  width="120px">Balance(Nov)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                            <th scope="col"  width="120px">Approved(Dec)</th>
+                                            <th scope="col"  width="120px">Consumed(Dec)</th>
+                                            <th scope="col"  width="120px">Balance(Dec)</th>
+                                            <th scope="col"  width="120px">Budget Utilized(%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration var="budget" items="{!wrap.budgetAccount}" indexVar="Indexed">
+                                            <tr>
+                                                <td>{!Indexed+1}</td>
+                                                <td><div class="slds-truncate-custom" data-index="{!Index}" data-indexed="{!Indexed}" data-value="{!budget.CoaId}"><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="custom:custom57" selectedRecordId="{!budget.CoaId}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true" hideRemove="true"/></div></td>
+                                                <td>{!budget.AccountNumber}</td>
+                                                <td>{!budget.AccountType}</td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.janbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.janconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.janbudgetAmount-budget.janconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.janbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.febbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.febconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.febbudgetAmount-budget.febconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.febbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.marbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.marconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.marbudgetAmount-budget.marconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.marbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.aprbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.aprconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.aprbudgetAmount-budget.aprconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.aprbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.maybudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.mayconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.maybudgetAmount-budget.mayconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.maybudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.junbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.junconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.junbudgetAmount-budget.junconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.junbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.julbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.julconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.julbudgetAmount-budget.julconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.julbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.augbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.augconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.augbudgetAmount-budget.augconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.augbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.sepbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.sepconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.sepbudgetAmount-budget.sepconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.sepbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.octbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.octconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.octbudgetAmount-budget.octconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.octbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.novbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.novconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.novbudgetAmount-budget.novconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.novbudgetUsed}" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.decbudgetAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!budget.decconsumedAmount}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input type="currency" name="{!Index}" value="{!(budget.decbudgetAmount-budget.decconsumedAmount)}" formatter="currency" disabled="true"/></td>
+                                                <td><lightning:input formatter="percentage" value="{!budget.decbudgetUsed}" disabled="true"/></td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>   
+                               </div>
+                            </div>
+                        </div>
+                    </aura:iteration>
+                    
+                </div>
+                <div class="slds-docked-form-footer">
+                    <lightning:button label="Back" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                </div>
+            </aura:if>
+        </aura:if>
+        
+        <aura:if isTrue="{!v.showMmainSpin}">
+            <span class="mbr-class37">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>
+        </div>
+    </body>
+</aura:component>

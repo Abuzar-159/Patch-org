@@ -1,0 +1,279 @@
+<aura:component controller="CreateTO" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,lightning:actionOverride" access="global">
+    
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}"/>    
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/CreateTransferOrder.css"/>
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:attribute name="prodRecordId" type="String"  />
+    
+    <aura:attribute name = "Mtask" type="Actions_Tasks__c"/>
+    <aura:attribute name = "projectId" type="String"/>
+    <aura:attribute name = "currentMilestones" type = "object"/>
+    <aura:attribute name = "currentProject" type = "Project__c"/>
+    <aura:attribute name = "TOLI" type = "Object[]" />
+    <aura:attribute name = "prodType" type = "Boolean" default="false"/>
+    <aura:attribute name = "disaSave" type = "Boolean" default="false"/>
+    <aura:attribute name = "exceptionError" type = "String" default=""/>
+    <aura:attribute name = "toDCqry" type = "String" default=""/>
+    <aura:attribute name = "availableQty" type ="Integer" default="0"/>
+    <aura:attribute name = "TO" type = "Transfer_Order__c" default="{sObjectType :'ERP7__Transfer_Order__c',
+                                                                          'Name':'',
+                                                                          'ERP7__Status__c':'--none--',
+                                                                          'ERP7__Channel__c': '',
+                                                                          'ERP7__Distribution_Channel__c': '',
+                                                                          'ERP7__From_Site__c': '',
+                                                                          'ERP7__From_Address__c':'',
+                                                                          'ERP7__To_Channel__c': '',
+                                                                          'ERP7__To_Distribution_Channel__c': '',
+                                                                          'ERP7__To_Site__c': '',
+                                                                          'ERP7__To_Address__c': '',
+                                                                          'ERP7__Description__c': '',
+                                                                          'ERP7__Ready_To_Pick_Pack__c': '',
+                                                                          'ERP7__Ready_To_Receive__c':'',
+                                                                          'ERP7__Active__c': '',
+                                                                          'ERP7__Shipment_type__c':'',
+                                                                          'ERP7__Shipment_Preference_Speed__c':''
+                                                                          }"/>
+    <aura:handler event="c:IndexingEvent" action="{!c.deletetoli}"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name = "change" value = "{!v.TO.ERP7__To_Channel__c}" action = "{!c.toChannelchange}"/>
+    <aura:handler name = "change" value = "{!v.TO.ERP7__Channel__c}" action = "{!c.fromChannelchange}"/>
+    <aura:handler name = "change" value = "{!v.TO.ERP7__Distribution_Channel__c}" action = "{!c.fromDCchange}"/>
+    <aura:attribute name="toShipmentype" type="List"/>
+    <aura:attribute name="toStatusOptions" type="List"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    
+    <aura:attribute name="showDCbelow" type="Boolean" default="false"/>
+    <aura:attribute name="showToChannel" type="Boolean" default="true"/>
+    <aura:attribute name="showTOName" type="Boolean" default="true"/>
+    <aura:attribute name="showReadyPickPickTO" type="Boolean" default="true"/>
+    <aura:attribute name="processSNBatch" type="Boolean" default="true"/>
+    
+     <!-- For Shipment Dependent Picklists -->
+    <aura:attribute name="objDetail" type="string" default="ERP7__Transfer_Order__c" />
+    <aura:attribute name="controllingFieldAPI" type="string" default="ERP7__Shipment_type__c" description="store field API name of Controller field"/>
+    <aura:attribute name="dependingFieldAPI" type="string" default="ERP7__Shipment_Preference_Speed__c" description="store field API name of dependent field"/>
+    <aura:attribute name="listDependingValues" type="list" default="['--None--']" description="to store dependent field values"/>
+    <aura:attribute name="listControllingValues" type="String" default="" description="to store controller field values"/>
+    <aura:attribute name="bDisabledDependentFld" type="boolean" default="true"/> 
+    <aura:attribute name="depnedentFieldMap" type="object" description="map to store dependent values with controlling value"/>
+    <aura:attribute name="showchecklistvalue" type="boolean" default="false"/>
+    <aura:attribute name="ControllingValue" type="String" default="" description="to store controller field values"/>
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    
+    <div class="erp_mark7 createTo-class1" aura:id="body">
+        <!--Error Message-->
+        <aura:if isTrue="{!not(empty(v.exceptionError))}">
+            <div class="slds-notify_container slds-is-absolute top15" >
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="status" >
+                    <span class="slds-assistive-text">{!$Label.c.error}</span>
+                    <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" size="x-small"/>
+                    </span>
+                    <div class="slds-notify__content">
+                        <p class="slds-text-heading_x-small mb-0">
+                            <lightning:formattedText value="{!v.exceptionError}"/>
+                        </p>
+                    </div>
+                    <div class="slds-notify__close" >
+                        <a onclick="{!c.closeError}" class="textdeccolor">
+                            <lightning:icon iconName="utility:close" variant="inverse" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" size="x-small"/>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aura:if>
+        <!--Error Message End-->
+        <aura:if isTrue="{!v.showSpinner}">
+            <span class="createTo-class2">
+                 
+                <div class="custom-spinner slds-spinner_container ">
+                    <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                        
+                    </div>
+                    <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                </div>
+            
+                <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"  class="mainSpinClass"/-->
+            </span>
+        </aura:if>
+        <div class="slds-page-header">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container">
+                                <lightning:icon iconName="standard:product_transfer" ></lightning:icon>
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <div class="slds-truncate createTo-class4"  >
+                                            <div class="slds-media__body">
+                                                <p class="slds-text-title--caps slds-line-height--reset">{!$Label.c.Transfer_Order_Create}</p>
+                                                <h1 class="slds-page-header__title slds-m-right--small slds-align-middle" title="">{!$Label.c.Transfer_Order}</h1>
+                                            </div>
+                                        </div>
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col  slds-no-flex slds-grid slds-align-top createTo-class5">
+                    <div class="slds-button" role="group">
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top" >
+                            <div class="slds-grid" >
+                                <div class="slds-col slds-m-right-\-xx-small createTo-class6">
+                                    <div class="createTo-class7" >
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" required="true" aura:id="toFromChannel" IconName="custom:custom24" selectedRecordId="{!v.TO.ERP7__Channel__c}" label="{!$Label.c.Transfer_Order_From_Channel}"/>
+                                    </div>
+                                </div> 
+                                <aura:if isTrue="{!!v.showDCbelow}">
+                                    <div class="slds-col " >
+                                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon-\-right">
+                                            <div class="createTo-class7" > 
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" aura:id="toFromDC" IconName="custom:custom32" selectedRecordId="{!v.TO.ERP7__Distribution_Channel__c}" label="{!$Label.c.Transfer_Order_From_Distribution_Center}" qry="{!'And ERP7__Channel__c = \''+v.TO.ERP7__Channel__c+'\''}"  />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </aura:if>
+                            </div>      
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class=" slds-container--fluid">
+            <div class="epr_Mark7 createTo-class8"> 
+                <div class="slds-grid slds-wrap padding-t-5">
+                    <aura:if isTrue="{!v.showTOName}">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small"> 
+                            <label class="slds-form-element__label" style="margin-right: 0.5rem;">{!$Label.c.Transfer_Order_Number}</label>
+                            <lightning:helptext content="It will be auto-populated in format TO-00001" class="customIcon"/>
+                            <lightning:input type="text" variant="label-hidden" value="{!v.TO.Name}" aura:id="toName"  placeholder="{!$Label.c.Transfer_Order_Enter_Number}"/> <!-- required="true"  -->
+                        </div>
+                    </aura:if>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                            {!$Label.c.Expected_Date}
+                        </label>
+                        <lightning:input aura:id="toExpectedDate" value="{!v.TO.ERP7__Expected_Date__c}" type="date" name="Expecteddate" placeholder="{!$Label.c.Transfer_Order_Enter_Date}"/>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <lightning:select aura:id="toStatus" value="{!v.TO.ERP7__Status__c}" label="{!$Label.c.Acc_Recev_Status_Entered}">
+                            <aura:iteration items="{!v.toStatusOptions}" var="option">
+                                <option value="{!option.value}" label="{!option.label}" selected="{!equals(v.TO.ERP7__Status__c, option.value)}"/>
+                            </aura:iteration>
+                        </lightning:select>
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                            {!$Label.c.Delivery_By_Date}
+                        </label>
+                        <lightning:input aura:id="toDeliveryBydate" value="{!v.TO.ERP7__Delivery_by_date__c}" type="date" name="DeliveryBydate"  placeholder="{!$Label.c.Transfer_Order_Enter_Date}"/>
+                    </div>
+                    
+                    <aura:if isTrue="{!v.showToChannel}">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small "> 
+                            <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" IconName="custom:custom24" aura:id="tochannelId" selectedRecordId="{!v.TO.ERP7__To_Channel__c}" label="{!$Label.c.To_Channel_CreateTO}" required="true"/>
+                        </div>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!v.showDCbelow}">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small ">  
+                            <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" aura:id="toFromDC" IconName="custom:custom32" selectedRecordId="{!v.TO.ERP7__Distribution_Channel__c}" label="{!$Label.c.Transfer_Order_From_Distribution_Center}" qry="{!'And ERP7__Channel__c = \''+v.TO.ERP7__Channel__c+'\''}"  />
+                        </div>
+                    </aura:if>
+                    
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small ">  
+                        <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" aura:id="toDC" IconName="custom:custom32" selectedRecordId="{!v.TO.ERP7__To_Distribution_Channel__c}" label="{!$Label.c.Transfer_Order_To_Distribution_Center}" qry="{!v.toDCqry}" />
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <lightning:select name="parentField" aura:id="parentField"
+                                          value="{!v.TO.ERP7__Shipment_type__c}"
+                                          label="{!$Label.c.Transfer_Order_Shipment_Type}"
+                                          onchange="{!c.parentFieldChange}">
+                            <aura:iteration items="{!v.listControllingValues}" var="value">
+                                <option value="{!value}">{!value}</option>
+                            </aura:iteration>
+                        </lightning:select>
+                        
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                       <lightning:select name="childField"
+                                               value="{!v.TO.ERP7__Shipment_Preference_Speed__c}"
+                                               label="{!$Label.c.Transfer_Order_Shipping_Speed_Preference}"
+                                               disabled="{!v.bDisabledDependentFld}">
+                                 <aura:iteration items="{!v.listDependingValues}" var="value">
+                                     <option value="{!value}">{!value}</option>
+                                 </aura:iteration>
+                             </lightning:select>
+                    </div>
+                    
+                   
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                            {!$Label.c.Add_Subscriptions_Special_Instructions}
+                        </label>
+                        <lightning:textarea variant="label-hidden" name="description" aura:id="toDescription" value="{!v.TO.ERP7__Description__c}"  placeholder="{!$Label.c.Transfer_Order_Enter_Description}" maxlength="32768" messageWhenTooLong="A maximum of 32768 characters are allowed."/>
+                    </div>
+                    <aura:if isTrue="{!v.showReadyPickPickTO}">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-top--xx-small slds-p-bottom_x-small slds-p-right_small">
+                        <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                            {!$Label.c.Ready_To_Pick_Pack}
+                        </label> <br/>
+                        <lightning:input type="checkbox" value="{!v.TO.ERP7__Ready_To_Pick_Pack__c}"  variant="label-hidden" onclick="{!c.checkready2pick}"/>
+                    </div>
+                    </aura:if>
+                </div>
+            </div>
+            
+            <table class="slds-table slds-table_bordered slds-table_cell-buffer createTo-class14">
+                <thead>
+                    <tr class="createTo-class15">
+                        <th class="width10">
+                            <a data-target="#myModal" onclick="{!c.addNew}" data-record="New" class="createTo-class16" data-toggle="modal" title="Add" data-aura-rendered-by="907:0" href="">
+                                <!-- <i class="fa fa-plus createTo-class23" aria-hidden="true" data-aura-rendered-by="908:0"></i>&nbsp;-->
+                                <i class="fa fa-plus createTo-class23" aria-hidden="true" data-aura-rendered-by="908:0"></i>&nbsp;{!$Label.c.New_AddTimeCardEntry}
+                            </a>
+                        </th>
+                        <th class="slds-text-heading--label width15" scope="col">{!$Label.c.AddSubscription_Product}<span class="createTo-class22">*</span></th>
+                        <th class="slds-text-heading--label width10" scope="col">{!$Label.c.Name_ManageLeave}</th>
+                        <aura:if isTrue="{!v.processSNBatch}">
+                        	<th class="slds-text-heading--label width15" scope="col"> {!$Label.c.Serial_StockTake} <span class="createTo-class22">*</span></th>
+                            <th class="slds-text-heading--label width15" scope="col"> {!$Label.c.Lot_StockTake} <span class="createTo-class22">*</span></th>
+                        </aura:if>
+                        <th class="slds-text-heading--label width10" scope="col">{!$Label.c.Tansfer_Order_Requested_Quantity} <span class="createTo-class22">*</span></th>  
+                        <th class="slds-text-heading--label width20" scope="col">{!$Label.c.ContractConsole_Description}</th>
+                        <th class="slds-text-heading--label width15 createTo-class21" scope="col">{!$Label.c.Transfer_Order_Available_Quantity}</th>
+                    </tr>
+                </thead> 
+                <tbody>
+                    <aura:iteration items="{!v.TOLI}" var="item" indexVar="toliIndex">
+                        <c:TransferOrderLineItem item="{!item}" aura:Id="TOLIcmp" FDId="{!v.TO.ERP7__Distribution_Channel__c}" index="{!toliIndex}" deleteIndex="{!v.Index2del}" toli="{!v.TOLI}" isDelete="{!v.isDelete}" SerialorBatch = "{!v.prodType}" processSNBatch = "{!v.processSNBatch}" SerialProd = "{!item.Serial}" BatchProd = "{!item.batch}"/>
+                    </aura:iteration>
+                </tbody>    
+            </table>
+            <div class="slds-p-top--small"> </div>
+            <div class="slds-docked-form-footer">
+                <aura:if isTrue="{!v.Mtask}">
+                    <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}"  class="slds-button slds-button--neutral" onclick="{!c.goBackTask}"/> &nbsp;
+                    <aura:set attribute="else">
+                        <lightning:button label="{!$Label.c.Cancel_ManageLeave}"  class="slds-button slds-button--neutral" onclick="{!c.cancelclick}"/> &nbsp;
+                    </aura:set>
+                </aura:if>
+                <lightning:button label="{!$Label.c.ContractConsole_Save}" variant="brand" class="slds-button slds-button--brand white" onclick="{!c.saveclick}" disabled="{!v.disaSave}"/>
+            </div>
+        </div>
+    </div>
+</aura:component>

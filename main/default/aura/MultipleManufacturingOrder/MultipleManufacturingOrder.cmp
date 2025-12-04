@@ -1,0 +1,562 @@
+<aura:component controller="MultipleManufacturingOrder" implements="force:appHostable">
+    <aura:attribute name="errorMsg" type="String" default=""/>
+	<aura:attribute name="flows" type="String" default="initial"/>
+    <aura:attribute name="Container" type="Object"/>
+    <aura:attribute name="selProdStockList" type="String[]"/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="channelId" type="String" default=""/>
+    <aura:attribute name="dChannelId" type="String" default=""/>
+    <aura:attribute name="itemToDel" type="String" default=""/>
+    <!--<aura:attribute name="MOrderStatus" type="List"/>-->
+    <aura:attribute name="MOrder2Insert" type="object"/>
+    <!--<aura:attribute name="CreatedMOs" type="Object"/>-->
+    <aura:attribute name="SOAccess" type="boolean" default="true"/>
+    <aura:attribute name="show" type="String" default="{!$Label.c.Pagination_Default_Limit}"/><!--10-->
+    
+    
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <!--<aura:handler name="init" value="{!this}" action="{!c.fetchAllProducts}"/>-->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.dChannelId}" action="{!c.fetchAllProducts}"/>
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css" />
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/MultipleManufacturingOrder.css"/>
+    <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+	   
+    <aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>        
+    </aura:if>
+    
+    <div class="theme-bg multiplemanufacturing bgmain">    
+        <div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),'slds-notify_container slds-is-fixed displaynone1','slds-notify_container slds-is-fixed displaynone')}">           
+            <div class="slds-notify slds-notify_toast slds-theme_error" role="status" >
+                <span class="slds-assistive-text">{!$Label.c.error}</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top slds-icon1">
+                    <lightning:buttonIcon iconName="utility:error" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" size="medium" variant="bare-inverse" />
+                </span>
+                <div class="slds-notify__content">
+                    <div > <!--class="alert alert-danger" role="alert">-->
+                        {!v.errorMsg}
+                    </div>
+                    
+                </div>
+                <div class="slds-notify__close" >
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:buttonIcon iconName="utility:close"  variant="bare-inverse" title="Close" alternativeText="{!$Label.c.Close_window}" size="medium"/>
+                        <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        
+        <aura:if isTrue="{!equals(v.flows,'initial')}">
+            <div class=" slds-container--fluid theme-bg cpq ">
+                <div class="container-fluid theme-bg mt-2">
+                    
+                    <div class="row">
+                        <div class="col-sm-12">
+                           
+                            <div class="card">
+                                <div class="card-body profile-user-box">
+                                    
+                                    <div class="row">
+                                        <div class="col-sm-8">
+                                            <div class="row align-items-center">
+                                                <div class="col-auto">
+                                                    <div class="avatar-md">
+                                                        <img src="/resource/ERP7__axoltmain/Assets/img/3876332-200.png" alt="" class="rounded-circle img-thumbnail"/>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div>
+                                                            <h4 class="mt-1 mb-1">{!$Label.c.Multi_Manufacturing_Orders}</h4>
+                                                            
+                                                            <ul class="mb-0 list-inline">
+                                                                <li class="list-inline-item me-3">
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-col">
+                                                                            <Lightning:input placeholder="{!$Label.c.Search_Products}" value="{!v.searchText}" oncommit ="{!c.LoadNow}" maxlength='80'/>
+                                                                        </div>
+                                                                        
+                                                                    </div>
+                                                                </li>
+                                                               
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div> <!-- end col-->
+                                            
+                                            <div class="col-sm-4 p-0">
+                                                <div class="text-left mt-sm-0 mt-3 text-sm-start">
+                                                    <div class="slds-grid" >
+                                                        <div class="slds-col slds-m-right--xx-small">
+                                                            <div class="newClass5">
+                                                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" IconName="custom:custom24" selectedRecordId="{!v.channelId}" label="{!$Label.c.Channel_StockTake}" />
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-col">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                                <div class="newClass5"> 
+                                                                    <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" IconName="custom:custom32"  selectedRecordId="{!v.dChannelId}" label="{!$Label.c.Distribution_Channel_StockRunRate}" qry="{!'And ERP7__Channel__c = \''+v.channelId+'\''}" inputStyleclass=""/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                    </div> 
+                                                </div>
+                                            </div> 
+                                        </div>
+                                        
+                                    </div> 
+                                </div>
+                            </div> 
+                        </div>
+                    
+              	  
+                </div>
+            
+        
+            
+           </div>  
+           
+            <div class="container-fluid bg-white">
+            	<div class="card mb-0">
+                    <div class="card-body">
+                        <table class="slds-table slds-table_bordered">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>{!$Label.c.Name_ManageLeave}</th>
+                                    <th>{!$Label.c.UOM}</th>
+                                    <th>{!$Label.c.InventoryConsole_Items_in_Stock}</th>
+                                    <th>{!$Label.c.POLI_Awaiting_Stock}</th>
+                                    <th>{!$Label.c.Demand_UsersShiftMatch}</th>
+                                    
+                                    <th width="12%">{!$Label.c.Quantity_To_Produce}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.Container.prodStockList}" var="pro" indexVar="ind">
+                                    <tr>                                        
+                                        <td>
+                                            <lightning:input type="checkbox" checked="{!pro.isSelected}" onchange="{!c.SelectItem}" class="no-input-lable" title="{!pro.prod.Id}"/>
+                                        </td>
+                                        <td>
+                                            <div class="max-width200p">
+                                                <lightning:formattedUrl value="{!'/'+pro.prod.Id}" label="{!pro.prod.Name}"  target="_blank" title="{!pro.prod.Name}"/>
+                                            </div>
+                                            </td>
+                                        <td>
+                                            <div class="slds-truncate max-width140p" title="{!pro.prod.QuantityUnitOfMeasure}">
+                                          	  {!pro.prod.QuantityUnitOfMeasure}
+                                            </div>
+                                            </td>
+                                        <td>
+                                            <aura:if isTrue="{!pro.demand > pro.stock}">
+                                                <div class="badge bg-danger width60c">
+                                                    {!pro.stock}
+                                                </div>
+                                                <aura:set attribute="else">
+                                                    <div class="badge bg-success width60c">
+                                                        {!pro.stock}
+                                                    </div>
+                                                </aura:set>
+                                            </aura:if>
+                                        </td>
+                                        <td>
+                                             <div class="badge bg-warning width50c">
+                                        		{!pro.AwaitingStock}
+                                            </div>
+                                        </td>
+                                        <td>
+                                             <div class="badge bg-warning width60c">
+                                        		{!pro.demand}
+                                            </div>
+                                        </td>
+                                        
+                                        <td width="12%"> 
+                                            <lightning:input type="number" class="no-input-lable" value="{!pro.prod.ERP7__MOQ__c}" maxlength="10"/>
+                                        </td>
+                                    </tr>
+                                </aura:iteration>                                
+                            </tbody>                            
+                        </table>
+                        <aura:if isTrue="{!v.Container.prodStockList.length == 0}">
+                            <div class="slds-notify slds-notify_alert slds-alert_warning" role="alert">
+                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>                                        
+                                <h2>{!$Label.c.Product_Not_Found}</h2>                                    
+                            </div>
+                        </aura:if>
+                    </div>
+            </div>
+            </div>
+            <div class="cpq">
+                <div class="row m-0 pb-70 pt-2 bg-white">
+                    <div class="col-lg-2 class38">
+                        <div class="slds-grid" >
+                            <div class="slds-col text-right pt-1">
+                                {!$Label.c.Acc_Recev_Show}&nbsp;&nbsp;
+                            </div>
+                            <div class="slds-col" >
+                                <lightning:select value="{!v.show}" onchange="{!c.SetShow}" variant="label-hidden" class="display-lable">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center pt-2" >
+                        {!$Label.c.Acc_Recev_Showing} <span class="text-lightblue">{!v.Container.startCount}-{!v.Container.endCount}</span> {!$Label.c.Acc_Recev_of_total} <span class="text-lightblue"> {!v.Container.recSize} </span> {!$Label.c.Acc_Recev_Records}
+                    </div>
+                    
+                    <div class="col-md-4 class41">
+                        <nav aria-label="Page navigation example">
+                            <ul class="pagination class42">
+                                <li class="class43" >
+                                    <a class="{!if(1 >= v.Container.startCount,'class44','class45')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> 
+                                </li>
+                                <li class="class50" >
+                                    <a class="{!if(1 >= v.Container.startCount,'class44','class45')}"  onclick="{!c.Previous}">  {!$Label.c.Previous}</a> 
+                                </li>                                
+                                <li class="class50" >
+                                    <a class="{!if(v.Container.endCount == v.Container.recSize,'class46','class47')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} </a> 
+                                </li>
+                                <li class="class51" >
+                                    <a class="{!if(v.Container.endCount == v.Container.recSize,'class46','class47')}" onclick="{!c.NextLast}">&gt;&gt; </a> 
+                                </li>
+                            </ul>
+                        </nav> 
+                    </div>
+                    
+                    
+                    <div class="col-md-3" >
+                        <div class="slds-grid">
+                            <div class="slds-col pr-2 text-right pt-1">
+                                Page 
+                            </div>
+                            <div class="col-5 class53">
+                                <lightning:input type="number" value="{!v.Container.PageNum}" variant="label-hidden" class="display-lable width100" oncommit="{!c.OfsetChange}" maxlength="10"/>
+                            </div>
+                            <div class="slds-col text-left pl-2" ><span class="text-lightblue"> of {!v.Container.PNS.length}</span>
+                            </div>
+                        </div>
+                    </div> 
+                    
+                </div> 
+            </div>
+            <div class="slds-docked-form-footer">
+                	
+                    <lightning:button label="{!'Continue ('+v.selProdStockList.length+')'}" onclick="{!c.multiMOPage}" variant="brand"  disabled="{!v.selProdStockList.length == 0}" iconName="utility:chevronright" iconPosition="right"/>&nbsp;
+                	<!--<span class="slds-button slds-button_neutral cursor" onclick="{!c.openModal}">
+                       <i class="fa fa-cart-arrow-down me-1"></i> 
+                        <lightning:formattedText value="{!'Selected ('+v.selProdStockList.length+')'}" class="cursor ">
+                                              
+                         </lightning:formattedText>
+                	</span>-->
+            </div>
+            
+        </aura:if>
+        
+        <aura:if isTrue="{!equals(v.flows,'multiMOPage')}">
+            <div class="container-fluid shakaal">
+                <div class="card mt-2">
+                    <div class="card-body pb-5">
+                        <table class="slds-table slds-table_bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>{!$Label.c.AddSubscription_Product}</th>
+                                    <th>Version</th>
+                                    <th>{!$Label.c.Routing}</th>
+                                    <th>{!$Label.c.MO_Owner}</th>
+                                    <th>{!$Label.c.QuotationPDF_Quantity}</th>
+                                    <th>{!$Label.c.Expected_Date}</th>
+                                    <!--<th>Status</th>-->
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.MOrder2Insert}" var="mo" indexVar="ind">
+                                    <tr class="{!if(mo.ERP7__Product__c=='','displaynone','displaynone1')}"><!---->
+                                        <td>{!ind+1} </td>
+                                        <td>
+                                            <div class="slds-form-element__control">
+                                                <c:CustomInputLookUp objectAPIName="Product2" aura:id="mpr" IconName="standard:product" selectedRecordId="{!mo.ERP7__Product__c}" hideRemove="true" required="true"/> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-form-element__control">
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="mvr" IconName="standard:flow" selectedRecordId="{!mo.ERP7__Version__c}" qry="{!' And ERP7__Product__c = \''+mo.ERP7__Product__c+'\''}" required="true"/> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-form-element__control">																		
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Routing__c" aura:id="mrt" IconName="standard:environment_hub" selectedRecordId="{!mo.ERP7__Routing__c}" qry="{!' AND ERP7__Product__c =\''+mo.ERP7__Product__c+'\' AND ERP7__BOM_Version__c =\''+mo.ERP7__Version__c+'\''}" required="true"/> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-form-element__control">																		
+                                                <c:CustomInputLookUp objectAPIName="User" aura:id="mrt" IconName="standard:avatar" selectedRecordId="{!mo.ERP7__Owner__c}" qry="{!' AND IsActive =true'}" required="true"/> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-form-element__control no-display">
+                                                <lightning:input type="Number"  value="{!mo.ERP7__Quantity__c}" maxlength="10"/> 
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-form-element__control">
+                                                <lightning:input type="datetime" value="{!mo.ERP7__ExpectedDate__c}" variant="label-hidden" required="true"/> 
+                                            </div>
+                                        </td>                            
+                                        <!--<td>
+                                <span class="badge bg-primary width60c">Draft</span>
+                            </td>-->
+                                        <td>
+                                            <lightning:buttonIcon alternativeText="{!$Label.c.Delete_UserAvailabilities}" onclick='{!c.delOpenModal}' iconName="utility:delete"  variant="destructive" title="{!mo.ERP7__Product__c}" class="delete-icon" />
+                                            <!--<lightning:icon  iconName="action:delete" size="xx-small" variant="error" onclick="{!c.removeItem}" title="{!ind}" class="cursor"  ></lightning:icon>-->
+                                        </td>
+                                    </tr>
+                                </aura:iteration>  
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.selProdStockList.length ==0}">
+                <div class="slds-notify slds-notify_alert slds-alert_warning" role="alert">
+                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                    
+                    <h2>{!$Label.c.Item_Not_Available}</h2>                                    
+                </div>
+            </aura:if>
+            
+            <!--<div class="margbt">
+                <aura:iteration items="{!v.MOrder2Insert}" var="mo" indexVar="index">
+                    <div class="container-fluid">
+                        <div class="card mt-2">
+                            <div class="card-body">
+                                <div class="dropdown float-end">
+                                    <a href="#" class="dropdown-toggle arrow-none card-drop" data-bs-toggle="dropdown" aria-expanded="false">
+                                      <lightning:icon iconName="utility:chevrondown" size="x-small"></lightning:icon> 
+                                    </a>
+                                   
+                                </div>
+                                
+                                <h4 class="header-title mb-1">MO - {!index+1}</h4>
+                                <div class="card-body MOs_class15">
+                                    <div class="row >slds-p-around-/-xx-small MOs_class16"
+                                       
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Product <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control" onclick="{!c.lookupClickProduct}">
+                                                        <c:CustomInputLookUp objectAPIName="Product2" aura:id="mpr" IconName="standard:product" selectedRecordId="{!mo.ERP7__Product__c}" inputStyleclass="slds-input" hideRemove="true" required="true"/> 
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Production Version <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control" onmouseover="{!c.lookupClickVersion}">
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="mvr" IconName="standard:flow" selectedRecordId="{!mo.ERP7__Version__c}" inputStyleclass="slds-input" qry="{!' And ERP7__Product__c = \''+mo.ERP7__Product__c+'\''}" required="true"/> 
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">{!$Label.c.MO_ProductQty} <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control no-display">
+                                                        <lightning:input type="Number"  value="{!mo.ERP7__Quantity__c}"/> </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> 
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:select  aura:id="moStatus" value="{!mo.ERP7__Status__c}" label="Status">
+                                                            <aura:iteration items="{!v.MOrderStatus}" var="pckopt"  >
+                                                                <option value="{!pckopt.value}" selected="{!(pckopt.value == mo.ERP7__Status__c)}">{!pckopt.label}</option>   
+                                                            </aura:iteration>
+                                                        </lightning:select> 
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                   
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Routing <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control" onmouseover="{!c.lookupClickRouting}">																		
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Routing__c" aura:id="mrt" IconName="standard:environment_hub" selectedRecordId="{!mo.ERP7__Routing__c}" qry="{!' AND ERP7__Product__c =\''+mo.ERP7__Product__c+'\' AND ERP7__BOM_Version__c =\''+mo.ERP7__Version__c+'\''}" required="true"/> 
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Start Date <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:input type="datetime"  value="{!mo.ERP7__StartDate__c}"  variant="label-hidden" required="true"/> </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="">
+                                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Expected Date <span class="MOs_class17">*</span></label>
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:input type="datetime" value="{!mo.ERP7__ExpectedDate__c}" variant="label-hidden" required="true"/> </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+</div>
+                            </div>
+                        </div> 
+            </div>
+            </aura:iteration>
+            </div>-->
+            
+            
+            
+            
+            <div class="slds-docked-form-footer">
+                <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}"  onclick="{!c.backToInitial}" iconName="utility:chevronleft" class="width140p" iconPosition="left"/>
+                <lightning:button label="{!$Label.c.Schedule_MO}" variant="brand" iconName="utility:chevronright"  onclick="{!c.createMO}" iconPosition="right" disabled="{!v.selProdStockList.length ==0}"/><!---->
+            </div>
+        </aura:if>
+        
+        <section aura:id="delModal" role="dialog" tabindex="-1" aria-labelledby="delModalHeading" aria-modal="true" aria-describedby="delModalBody" class="slds-modal slds-modal_xx-small">
+            <div class="slds-modal__container wd30">
+                <div class="slds-modal__content slds-p-around_medium" id="ModalBody">
+                    <p class="align-text">
+                        {!$Label.c.Do_you_want_to_Delete_Item}
+                    </p><br/><br/>
+                    <div class="slds-grid align-center">
+                        <lightning:button onclick="{!c.delcloseModal}" variant="neutral">{!$Label.c.Cancel_UserAvailabilities}</lightning:button>
+                        <lightning:button onclick="{!c.removeItem}" variant="brand" >{!$Label.c.Delete_UserAvailabilities}</lightning:button>
+                    </div>                    
+                </div>
+            </div>
+        </section>
+        <div aura:id="delModalBackdrop" class="slds-backdrop"></div>
+        
+        
+        <!--<aura:if isTrue="{!equals(v.flows,'MOListPage')}">
+            
+           <div class="container-fluid mt-2">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-3">All Created Manufacturing Orders</h4>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover table-centered mb-0">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Name</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.CreatedMOs}" var="cmo" indexVar="ind">
+                                <tr>
+                                    <td>{!ind+1}</td>
+                                    <td>{!cmo.Name}</td>
+                                    <td>{!cmo.ERP7__Quantity__c}</td>
+                                    <td><span class="{!if((cmo.ERP7__Status__c == 'Draft'),'badge bg-primary width60c displaynone1','badge bg-secondary displaynone')}">
+                                        {!cmo.ERP7__Status__c}
+                                        </span>
+                                        <span class="{!if((cmo.ERP7__Status__c == 'Release'),'badge bg-secondary width60c displaynone1','badge bg-primary displaynone')}">
+                                        {!cmo.ERP7__Status__c}
+                                        </span>
+                                        <span class="{!if((cmo.ERP7__Status__c == 'In Progress'),'badge bg-warning width60c displaynone1','badge bg-warning displaynone')}">
+                                        {!cmo.ERP7__Status__c}
+                                        </span>
+                                        <span class="{!if((cmo.ERP7__Status__c == 'Complete'),'badge bg-success width60c displaynone1','badge bg-success displaynone')}">
+                                        {!cmo.ERP7__Status__c}
+                                        </span>
+                                        <span class="{!if((cmo.ERP7__Status__c == 'Cancelled'),'badge bg-danger width60c displaynone1','badge bg-danger displaynone')}">
+                                        {!cmo.ERP7__Status__c}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </aura:iteration>
+                                
+                               
+                            </tbody>
+                        </table>
+                    </div> 
+                </div> 
+            </div>
+            </div>
+            <div class="slds-docked-form-footer">
+                <lightning:button label="Home" variant="brand" class="width140p" onclick="{!c.navigateHome}" iconPosition="left" iconName="utility:home"/>
+            </div>
+        </aura:if>-->
+        
+    </div>
+    <!--<section aura:id="selectedModal" role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+        <div class="slds-modal__container">
+            <header class="slds-modal__header">
+                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                    <lightning:icon iconName="utility:close" variant="inverse" onclick="{!c.closeModal}"></lightning:icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+                <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Selected Products</h2>
+            </header>
+            <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                <table class="table table-hover table-centered mb-0">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Name</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                        <tbody>
+                            <aura:iteration items="{!v.selProdStockList}" var="sel" indexVar="ind">
+                                <tr> 
+                                    <td>{!ind+1}</td>
+                                    <td>{!sel.prod.Name}</td>
+                                    <td>{!sel.prod.ERP7__MOQ__c}</td>
+                                    <td>
+                                        <span class="badge bg-primary width60c">Draft</span>
+                                    </td>
+                                    <td>
+                                        <lightning:icon  iconName="utility:clear" size="x-small" variant="error" onclick="{!c.removeItem}" title="{!sel.prod.Id}" class="cursor"  ></lightning:icon>
+                                    </td>
+                                </tr>
+                            </aura:iteration>  
+                            
+                        </tbody>
+                </table>
+                <aura:if isTrue="{!v.selProdStockList.length ==0}">
+                    <div class="slds-notify slds-notify_alert slds-alert_warning" role="alert">
+                        <span class="slds-assistive-text">warning</span>
+                        
+                        <h2>Item Not Available</h2>                                    
+                    </div>
+                </aura:if>
+            </div>
+            <footer class="slds-modal__footer text-center">
+                <lightning:button onclick="{!c.closeModal}" class="slds-button slds-button_neutral" label="Back" iconName="utility:chevronleft"/>
+            </footer>
+        </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open" aura:id="selectedModalBackDrop"></div>-->
+</aura:component>

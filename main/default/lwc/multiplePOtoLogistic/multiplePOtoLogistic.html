@@ -1,0 +1,459 @@
+<template>
+
+	
+<div class="erp_mark7" style="background:#fff;">
+	
+<div class="spinner">
+<template if:true={isLoading}>
+		<lightning-spinner alternative-text="Loading" variant="brand" size="large">
+		</lightning-spinner> 
+</template>
+</div>	
+		
+	<div class="slds-page-header">
+			<div class="slds-page-header__row">
+					<div class="slds-page-header__col-title">
+							<div class="slds-media">
+									<div class="slds-media__figure">
+											<span class="slds-icon_container slds-icon-standard-opportunity">
+												
+													<lightning-icon icon-name="custom:custom57" title="Purchase Orders to Logistic"></lightning-icon>
+											</span>
+									</div> 
+									<div class="slds-media__body">
+											<div class="slds-page-header__name">
+													<div class="slds-page-header__name-title">
+															<h1>
+																
+																	<span class="slds-page-header__title slds-truncate" title="Purchase Orders To Logistic">Purchase Orders To Logistic</span>
+															</h1>
+													</div>
+													<div class="slds-page-header__name-switcher">
+															<div class="slds-dropdown-trigger slds-dropdown-trigger_click">
+																&nbsp;<lightning-button-icon size="medium" icon-name="utility:refresh" variant="bare" onclick={refreshPage} alternative-text="Refresh" title="Refresh" ></lightning-button-icon>
+															</div>
+													</div>
+											</div>
+									</div>
+							</div>
+					</div>
+					<div class="slds-page-header__col-actions">
+							<div class="slds-page-header__controls">
+									<div class="slds-page-header__control">
+											<ul class="slds-button-group-list">
+													<li class="slds-p-right_small">
+															<div class="cpo-class3" style="width:250px;" >
+																	<strong>Channel</strong>
+																	<c-custom-input-lookup-l-w-c obj-name="ERP7__Channel__c" search-placeholder="Search Channel" icon-name="custom:custom24" onremove={removeClicked} onlookupselected={onChannelSelect}  selected-value={currChannel.Id} selected-name={currChannel.Name} is-value-selected={ChannelSelected} selected-name-url = {channelURL}> </c-custom-input-lookup-l-w-c>
+
+																	<!-- <span>Channel</span>
+				<span><c-input-lookup-w-e-b object-api-name="ERP7__Channel__c"  onrecordselection={onChannelSel}  selected-record-id = {currChannel} icon-name="custom:custom24" selected-value={currChannel} ></c-input-lookup-w-e-b>
+				</span>   -->                     </div>
+													</li>
+													<li>
+															<div class="cpo-class3" style="width:250px;" > 
+																	<strong>Distribution Channel</strong>
+																	<c-custom-input-lookup-l-w-c obj-name="ERP7__Distribution_Channel__c" class="DC" search-placeholder="Search Distribution Channel" icon-name="custom:custom32" onlookupselected={onDCSel} onremove={removeSelectedDC} filter={qryDCId} selected-value={CurrDCId.Id} selected-name={CurrDCId.Name} selected-name-url ={DCURL} is-value-selected={DCSelected}> </c-custom-input-lookup-l-w-c>
+																	<!--<span><c-input-lookup-w-e-b object-api-name="ERP7__Distribution_Channel__c"  onrecordselection={onDCSel} selected-record-id = {DChannelId}  qry={qryDCId} icon-name="custom:custom32"  ></c-input-lookup-w-e-b>
+					</span>   -->                         </div>
+													</li>
+
+											</ul>
+									</div>
+							</div>
+					</div>
+			</div>
+	</div>
+	
+	<template if:false={showtab2}>
+		<div class="slds-docked-form-footer">
+			<lightning-button slot="actions" label="Create Logistic" title="Create Logistic" onclick={createlogistic} icon-name="utility:chevronright" icon-position="right" variant="brand"></lightning-button>
+</div>	
+	<div class="erp_Mark7 maqsood">
+			<div class="card shadow-custom m-2">
+					<div class="card-body pt-1">
+							<div class="slds-grid">
+									<div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12">
+											<lightning-input type="search" title="Search Orders by name" onkeypress={handleKeyChange} class="slds-m-bottom_small"  placeholder="Search.." max-length="80"></lightning-input>
+
+									</div>
+							</div>
+
+							<!--<lightning-datatable  data={purchaseList} columns={cols} key-field="Id" >  
+							</lightning-datatable>-->
+							<div > <!--class="table-responsive"-->
+								<table class="slds-table slds-table_condensed slds-table_fixed-layout" id="Selected-row">
+									<thead>
+										<tr class="slds-text-title_caps">
+											<th width="7%" scope="col">Action</th>
+											<th scope="col">Name</th>
+											<th scope="col">Total QTY</th>
+											<th scope="col">Total Logistic QTY</th>
+											<th scope="col">Total Line Items</th>
+											<th scope="col">Vendor</th>
+											<th scope="col">Vendor Contact</th>
+										</tr>
+									</thead>
+									<tbody>
+										<template if:true={purchaseList}>
+										<template for:each={purchaseList} for:item="row">
+											<tr key={row.PO.Id} >
+												<td>
+													<lightning-input type="checkbox" title='Select Orders' data-record-id={row.PO.Id} onchange={getSelected} checked={row.isSelected}></lightning-input>
+												</td>
+												<td>
+														<div class="slds-truncate">
+															<lightning-formatted-text value={row.PO.Name} onclick={NavRecordPO} title={row.PO.Name} id={row.PO.Id} linkify class="blue"></lightning-formatted-text>
+														</div>
+											</td>
+												<td>
+														<div class="slds-truncate">
+														{row.PO.ERP7__Total_Quantity__c}
+														</div>
+																</td>
+												<td>
+														<div class="slds-truncate">
+														{row.PO.ERP7__Logistic_Quantity__c}
+														</div>		
+																</td>
+											<td>
+													<div class="slds-truncate">
+													{row.PO.ERP7__Count_PO_Line_Items__c}
+													</div>
+															</td>
+												<td>
+													<div if:true={row.PO.ERP7__Vendor__c} class="slds-truncate">
+														{row.PO.ERP7__Vendor__r.Name}
+													</div>
+												</td> 
+												
+										<td>
+											<div if:true={row.PO.ERP7__Vendor_Contact__c}  class="slds-truncate">
+												{row.PO.ERP7__Vendor_Contact__r.Name}
+											</div>
+										
+									</td> 
+												</tr>
+											
+										</template>
+										</template>
+									</tbody>
+										</table>
+										</div> 
+					</div>
+			</div>
+	</div>
+	<template if:true={isDisplayNoRecords}>
+		<div class="slds-align_absolute-center">
+			<br/>
+			<div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+				<span class="slds-assistive-text">error</span>
+				<span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+					<lightning-icon icon-name=utility:error variant="inverse" size="x-small" alternative-text="error" title="error" ></lightning-icon>
+				</span>
+				<div class="slds-notify__content">
+					<h2 class="slds-text-heading_x-small" >No Records Found
+					</h2>
+				</div>
+			
+			</div>
+		  
+		</div>
+	</template>
+<div class="slds-p-around_small">
+		
+	<br/>
+	<div class="slds-align_absolute-center"> 
+		<div class="slds-p-right_xx-small">
+				 
+			<lightning-button label="Prev"
+			disabled={isPrev} onclick={handlePrev}
+								variant="brand"
+								icon-name="utility:chevronleft"
+								name="prev"></lightning-button>  
+		</div>
+			<div class="slds-grid" >
+					<div class="slds-p-around_small">
+							
+							<div class="slds-col" >
+									<div class="slds-grid">
+											<label for="limitSelect" class="slds-p-right_small slds-p-top--xx-small">Show</label>
+											<select class="slds-select width50" name = "optionSelect" onchange={setpagesize} id="limitSelect">
+													<option value="50">50</option>
+													<option value="100">100</option>
+													<option value="10">10</option>
+													<option value="20">20</option>	
+											</select>
+									
+
+
+									<span class="slds-p-top-4-small"> <!--slds-badge slds-badge_lightest-->
+											{recordStart}-{recordEnd} of {totalRecords} | Page {pageNumber} of {totalPages}
+									</span>
+											</div>
+							</div>
+					</div>
+			</div>
+		<div class="slds-p-left_xx-small">
+			<lightning-button label="Next"
+			disabled={isNext} onclick={handleNext}
+								variant="brand"
+								icon-name="utility:chevronright"
+								icon-position="right"
+								name="next"></lightning-button>
+		</div>
+	</div>   	
+	<!--<c-do-pagination  onprevious={previousHandler2} onnext={nextHandler2} onselected={changeHandler2} onfirstpage={firstpagehandler} onlastpage={lastpagehandler} total-records={v_TotalRecords}></c-do-pagination>-->
+
+	</div>
+
+	<div class="slds-p-around_large">
+	</div>
+
+	</template>
+
+
+	
+	<template if:true={showtab2}>
+		<div class="erp_Mark7 maqsood">
+			<div class="card shadow-custom m-2" style="min-height: 500px;">
+				<div class="card-body pt-1">
+					<br/>
+					<div class="slds-grid">
+						<lightning-icon icon-name="standard:contract" alternative-text="Event" title="Logistic Details" size="small"></lightning-icon> &nbsp;<strong><h5>Logistic Details</h5></strong>
+				</div>
+
+				<br/>
+				<div class="slds-grid slds-wrap">
+					<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium">
+						<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Name:</strong></label>
+						<lightning-input type="text" value={log.Name} oncommit={setName} variant="label-hidden" placeholder="Name"></lightning-input>
+					</div>
+					<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium">
+						<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Account:</strong></label>
+						<template if:true={log.ERP7__Account__c}>
+						<c-custom-input-lookup-l-w-c obj-name="Account" search-placeholder="Search Account" icon-name="standard:account" onlookupselected={onAccSel}   selected-value={log.ERP7__Account__c} selected-name={log.ERP7__Account__r.Name} is-value-selected="true" selected-name-url={ACURL}> </c-custom-input-lookup-l-w-c>
+					</template>
+						
+				</div>
+				<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium">
+					<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Contact:</strong></label>
+					<template if:true={log.ERP7__Contact__c}>
+					<c-custom-input-lookup-l-w-c obj-name="Contact" search-placeholder="Search Contact" icon-name="standard:contact" onlookupselected={onconSel}   selected-value={log.ERP7__Contact__c} selected-name={log.ERP7__Contact__r.FirstName} is-value-selected="true" filter={qryCon} selected-name-url={ConURL}> </c-custom-input-lookup-l-w-c>
+				</template>
+					
+			</div>
+				<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium slds-p-top_medium">
+					<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Expected Date:</strong></label> 
+					<lightning-input type="date" value={log.ERP7__Logistic_Expected_Date__c} onchange={setvaluedate} variant="label-hidden" placeholder="Expected Date"></lightning-input>
+				</div>
+				<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium slds-p-top_medium">
+						<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Barcode:</strong></label>
+						<lightning-input type="test" value={log.ERP7__Logistic_Barcode__c} onchange={setvaluebarcode} variant="label-hidden" placeholder="Barcode"></lightning-input>
+				</div>
+					</div>
+					<br/> <br/>
+				<div class="slds-grid">
+						<lightning-icon icon-name="standard:display_text" alternative-text="Event" title="Logistic Lines" size="small"></lightning-icon> &nbsp;
+						<strong><h5>Logistic Lines</h5></strong>
+				</div>
+				<br/>
+				<div><!--  class="table-responsive"--->
+					<table class="table  slds-table_fixed-layout">
+						<thead>
+								<tr class="slds-text-title_caps">
+										<th width="5%"><lightning-input type="checkbox" data-id="CheckAll" onchange={selectAll} checked></lightning-input></th>
+										<!--<th scope="col">Name</th>-->
+										<th scope="col">Purchase Line item</th>
+										<th scope="col">Purchase Order</th>
+										<th width="25%" scope="col">Product</th>
+										<th scope="col">Qty</th>
+										<th scope="col"> Unit Price</th>
+										<th scope="col">Total Price</th>
+								</tr>
+						</thead>
+						<tbody>
+							</tbody>
+							<template for:each={logline} for:item="row" for:index="index" >
+								<tr key={row.ERP7__Purchase_Line_Items__c} >	
+									<td>
+										<lightning-input type="checkbox" name={row.index} title='Select Line items' data-record-id={row.ERP7__Purchase_Line_Items__c} onchange={selectsingle} data-id="boxpack" checked></lightning-input>
+									</td>
+										<!--<td>
+												<lightning-input type="text" value={row.Name} ></lightning-input>
+										</td>-->
+										<td>
+												<div class="slds-truncate">
+
+														<template if:true={row.ERP7__Purchase_Line_Items__c}>
+																{row.ERP7__Purchase_Line_Items__r.Name}
+														</template>
+
+												</div>
+										</td>
+										<td>
+												<div class="slds-truncate">
+											<template if:true={row.ERP7__Purchase_Line_Items__c}>
+												{row.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__r.Name}
+											</template>
+												</div>
+										</td> 
+										<td>
+												<div class="slds-truncate">
+											<template if:true={row.ERP7__Product__c}>
+												{row.ERP7__Product__r.Name}
+											</template>
+												</div>
+										</td>
+										<td><lightning-input type="text" variant="label-hidden" value={row.ERP7__Quantity__c} name={row.ERP7__Purchase_Line_Items__c} oncommit={verifyQuantity} ></lightning-input></td>
+										<td><lightning-input type="number" formatter="currency" step="0.01" value={row.ERP7__Price_Product__c}  disabled="true"  variant="label-hidden"></lightning-input></td>
+										<td><lightning-formatted-number value={row.Total} ></lightning-formatted-number></td>
+								</tr>
+
+						</template>
+							</table>
+				</div>
+				<div class="slds-docked-form-footer">
+					<lightning-button  label="Back" title="Back" onclick={goback} class="slds-m-left_x-small" icon-name="utility:chevronleft" icon-position="left"></lightning-button>
+					<lightning-button variant="brand" label="Save" title="Save" onclick={updateLogistic} class="slds-m-left_x-small" icon-name="utility:success" icon-position="right" disabled={Nolineitems}></lightning-button>
+				<!--	<lightning-button variant="brand" label="Home" title="Home" onclick={navigatetohome} class="slds-m-left_x-small" icon-name="utility:home" icon-position="right"></lightning-button>
+				   <lightning-button variant="brand" label="Navigate To Inbound" title="Navigate To Inbound" onclick={navigatetoInbound} class="slds-m-left_x-small" icon-name="utility:checkout" icon-position="right"></lightning-button>-->
+				   
+					<!--<lightning-button variant="brand" label="Receive" title="Primary action" onclick={navigatetoInbound} class="slds-m-left_x-small" icon-name="utility:success" icon-position="right"></lightning-button>-->
+				</div>
+				</div>
+			</div>
+		</div>
+	</template>
+</div>
+
+<!--<template if:true={showtab2}>
+		<div class="erp_mark" style="background:#fff;height:100%;">
+		<div class="slds-page-header">
+			<div class="slds-page-header__row">
+					<div class="slds-page-header__col-title">
+							<div class="slds-media">
+									<div class="slds-media__figure">
+											<span class="slds-icon_container slds-icon-standard-opportunity">
+												
+													<lightning-icon icon-name="custom:custom57" title="Purchase Orders to Logistics"></lightning-icon>
+											</span>
+									</div> 
+									<div class="slds-media__body">
+											<div class="slds-page-header__name">
+													<div class="slds-page-header__name-title">
+															<h1>
+																
+																	<span class="slds-page-header__title slds-truncate" title="Recently Viewed">Purchase Orders To Logistics</span>
+																	
+															</h1>
+													</div>
+													
+											</div>
+									</div>
+							</div>
+					</div>
+					<div class="slds-page-header__col-actions">
+							<div class="slds-page-header__controls">
+									<div class="slds-page-header__control">
+											<ul class="slds-button-group-list">
+													<li class="slds-p-right_small">
+														
+													</li>
+													<li>
+															
+													</li>
+
+											</ul>
+									</div>
+							</div>
+					</div>
+			</div>
+	</div>
+<div class="erp_Mark7 maqsood">
+			<div class="card shadow-custom m-2" style="min-height: 500px;">
+					<div class="card-body pt-1">
+							<br/>
+							<div class="slds-grid">
+										<lightning-icon icon-name="standard:contract" alternative-text="Event" title="Event" size="small"></lightning-icon> &nbsp;<strong><h5>Logistic Details</h5></strong>
+							</div>
+							
+							<br/>
+								<div class="slds-grid slds-wrap">
+									<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+											<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Name:</strong></label>
+												<lightning-formatted-text value={log.Name}  onclick={NavRecord} title={log.Id} id={log.Id} linkify class="blue"></lightning-formatted-text>
+									</div>
+										<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+												<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Channel:</strong></label>
+												{log.ERP7__Channel__r.Name}
+										</div>
+										<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+												<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Distribution Channel:</strong></label>
+												{log.ERP7__Distribution_Channel__r.Name}
+										</div>
+										<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+												<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Total QTY:</strong></label>
+													{log.ERP7__Total_Quantity__c}
+										</div>
+											<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium">
+												<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Expected Date:</strong></label> 
+												<lightning-input type="date" value={log.ERP7__Logistic_Expected_Date__c} onchange={setvaluedate} variant="label-hidden"></lightning-input>
+										</div>
+											<div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_medium">
+												<label class="slds-form-element__label" for="stacked-input-id-01"><strong>Barcode:</strong></label>
+												<lightning-input type="test" value={log.ERP7__Logistic_Barcode__c} onchange={setvaluebarcode} variant="label-hidden"></lightning-input>
+										</div>
+							</div>
+
+
+<br/> <br/>
+<div class="slds-grid">
+	<lightning-icon icon-name="standard:display_text" alternative-text="Event" title="Event" size="small"></lightning-icon> &nbsp;
+				<strong><h5>Logistine Lines</h5></strong>
+</div>
+<div class="table-responsive">
+<table class="table">
+<thead>
+	<tr class="slds-text-title_caps">
+		<th scope="col">Name</th>
+		<th scope="col">Product</th>
+		<th scope="col">Qty</th>
+		<td>Version</td> 
+		<th scope="col">Purchase Line item</th>
+	</tr>
+</thead>
+<tbody>
+	<template for:each={logline} for:item="row">
+		<tr key={row.Id} >
+			<td>
+											<lightning-formatted-text value={row.Name} onclick={NavRecord} title={row.Id} linkify class="blue"></lightning-formatted-text></td>
+			
+			
+			
+				<td>{row.ERP7__Product__r.Name}</td>
+				<td>{row.ERP7__Quantity__c}</td>
+			
+			
+			<td>{row.ERP7__Purchase_Line_Items__r.Name}</td> 
+			<td>{row.ERP7__Production_Version__r.Name}</td>
+			</tr>
+		
+	</template>
+</tbody>
+	</table>
+		</div>
+			</div>
+				</div>
+				</div>
+		<div class="slds-docked-form-footer">
+				<lightning-button variant="brand" label="Save" title="Primary action" onclick={updateLogistic} class="slds-m-left_x-small" icon-name="utility:success" icon-position="right"></lightning-button>
+				<lightning-button variant="brand" label="Home" title="Home" onclick={navigatetohome} class="slds-m-left_x-small" icon-name="utility:home" icon-position="right"></lightning-button>
+				<lightning-button variant="brand" label="Navigate To Inbound" title="Navigate To Inbound" onclick={navigatetoInbound} class="slds-m-left_x-small" icon-name="utility:checkout" icon-position="right"></lightning-button>
+				
+					<<lightning-button variant="brand" label="Receive" title="Primary action" onclick={navigatetoInbound} class="slds-m-left_x-small" icon-name="utility:success" icon-position="right"></lightning-button>
+				</div>
+		</div>
+</template>-->
+
+</template>

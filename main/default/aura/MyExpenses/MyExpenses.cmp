@@ -1,0 +1,1597 @@
+<aura:component Controller="ERP7.ExpenseSheetLC" implements="force:appHostable" >
+    <head>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/MyExpenses.css"/>
+       
+        <!--<ltng:require styles="/resource/ERP7__SupplierPoratalComm/SupplierPortalComm/CSS/overiding-standard.css"/>-->
+        
+    </head>
+    
+    <!-- varibales & handlers starts -->
+    <aura:attribute name="table" type="Expense__c[]" />
+    <aura:attribute name="ExpenseListWP" type="ExpenseSheetLC[]"/>
+    <aura:attribute name="table2" type="Expense__c[]" />
+    <aura:attribute name="table4" type="Expense__c[]" />
+    <aura:attribute name="ApprovedExpenseListWP" type="ExpenseSheetLC[]"/>
+    <aura:attribute name="empExpenses" type="Expense__c[]" />
+    <aura:attribute name="EmpExpenseListWP" type="ExpenseSheetLC[]"/>
+    <aura:attribute name="AddExpenseFLSCheck" type="object" default="{'sObjectType' : 'AddExpenseFLSCheck'}"/>
+    <aura:attribute name="EmpDetails" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute type="ExpenseSheetLC" name="counts" />
+    <aura:attribute name="currency" type="Map" default="{'EUR' : '€', 'GBP' : '£', 'USD' : '$', 'GHS' :'¢'}" />
+    <aura:attribute name="currencyCode" type="String" />
+    <aura:attribute name="emp" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute name="Expense" type="Expense__c" />
+    <aura:attribute name="eLineItem" type="Expense_Line_Item__c[]" />
+    <aura:attribute name="TimeSheetObj" type="ExpenseSheetLC" />
+    <aura:attribute name="TimeSheetObjMul" type="ExpenseSheetLC[]" />
+    <aura:attribute type="Boolean" name="sortAsc" />
+    <aura:attribute name="accessAllExpenses" type="boolean" default="false"/>
+    <aura:attribute type="String" name="sortField" />
+    <aura:attribute name="ftctrl" type="boolean" default="true"/>
+    <aura:attribute name="approvalProcess" type="Boolean" default="true"/>
+    <aura:attribute name="Tab" type="String" default="tab1"/>
+    <aura:attribute name="UserId" type="String" default=""/>
+    <aura:attribute name="View" type="String" default="List"/>
+    <aura:attribute name="tabSort" type="String" default="S"/>
+    <aura:attribute name="selectedFY" type="String" default="THIS_FISCAL_YEAR"/>
+    <aura:attribute name = "serverSuccess" type = "String" default=""/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:attribute name="editIndex" type="Integer" default="0"/>
+    <aura:attribute name="A_Rcomment" type="String" default=""/>
+    <aura:attribute name="empExpenseId" type="String" default=""/>
+    <aura:attribute name="CurrentExpId" type="String" default=""/>
+    <aura:attribute name="empARIndex" type="Integer" default="0"/>
+    <aura:attribute name="TempUserId" type="String" default=""/>
+    <aura:attribute name="selectedRows" access="global" type="List"/>
+    <aura:attribute name="RowIndex" access="global" type="List"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:handler name="change" value="{!v.UserId}" action="{!c.display}" />
+    <aura:handler name="init" value="{!this}" action="{!c.display}" />
+    <aura:handler name="init" value="{!this}" action="{!c.displayApproved}" />
+    <aura:handler name="init" value="{!this}" action="{!c.displayRefund}" />
+    <!--<aura:handler name="init" value="{!this}" action="{!c.getExpenseDetailsApproved}" />-->
+    <aura:handler name="init" value="{!this}" action="{!c.doesInit}" />
+    <aura:handler name="init" value="{!this}" action="{!c.getExpDetailsEmp}" />
+    <aura:attribute name="allLIselected" type="Boolean" default="false"/> 
+    <aura:attribute name="allselected" type="Boolean" default="false"/> 
+    
+    <aura:handler name="delete" action="{!c.handleExpenseDelete}" />
+    <!-- <aura:registerEvent name="edit" type="ERP7:editTimesheetEvent" />-->
+    <aura:registerEvent name="delete" type="c:leaveDelete" /> 
+    <!--<aura:handler name="init" value="{!this}" action="{!c.getExpenseDetails}" />-->
+    <!-- varibales & handlers ends -->
+    <!--<body aura:id="body" class="myExpenese-newClass1">-->
+        <div class="erp_mark7 maqsood myExpenese-newClass2" aura:id="body">
+            <span class="myExpenese-newClass25">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+            <!--Success Message-->
+            <div class="{!if(and(v.serverSuccess != '', v.serverSuccess != undefined),'myExpenese-newClass3 slds-notify_container slds-is-fixed','myExpenese-newClass4 slds-notify_container slds-is-fixed')}">
+                <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.success_AddTimesheets}</span>
+                    <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                       <lightning:icon iconName="action:approval" size="x-small" alternativeText="{!$Label.c.Success}" title="Success" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_small ">{!v.serverSuccess}</h2>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeSuccess}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="{!$Label.c.Close_Timesheets}" />	
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!--Success Message End-->
+            
+            <!--Error Message-->
+            <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'myExpenese-newClass3 slds-notify_container slds-is-fixed','myExpenese-newClass4 slds-notify_container slds-is-fixed')}">
+                <div class="slds-notify slds-notify_toast slds-theme_error myExpenese-newClass5" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.error_MyExpenses}</span>
+                    <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                        <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="{!$Label.c.error_MyExpenses}" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small myExpenese-newClass6">{!v.exceptionError}
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close myExpenese-newClass7">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="{!$Label.c.Close_Timesheets}" />	
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!--Error Message End-->
+            
+            <div class="maqsood erp_mark7 erp_Mark7 myExpenese-newClass8">
+                
+                
+                
+                <div class="panel-collapse">
+                    <div class="panel-body myExpenese-newClass8 pt-0 pl-4">
+                        <div class="d-flex align-items-center mb-1 myExpenese-newClass9">
+                            <ul class="nav nav-tabs col-lg-7 col-7 myExpenese-newClass10" role="tablist" >
+                                <li class="{!(v.Tab == 'tab1')?'nav-item active slds-p-right_small':'nav-item slds-p-right_small'}"> 
+                                    <a class="nav-link myExpenese-newClass11"  data-tab = "tab1"  onclick="{!c.toggleTabs}"><!-- onclick="Back2ManufacturingPlanner();" -->
+                                        <div class="slds-grid">
+                                           
+                                            <aura:if isTrue="{!!v.approvalProcess}">
+                                                	<div class="mobile-display-none pt-2">{!$Label.c.Expense_My_Expenses}</div>
+                                            	<aura:set attribute="else">
+                                                	<div class="mobile-display-none pt-2">{!$Label.c.Draft_Submitted_ManageLeave}</div>
+                                                </aura:set>
+                                            </aura:if>
+                                            
+                                        </div>   
+                                    </a>
+                                </li>
+                                <aura:if isTrue="{!!v.approvalProcess}">
+                                <li class="{!(v.Tab == 'tab4')?'nav-item active slds-p-right_small':'nav-item slds-p-right_small'}"> 
+                                    <a class="nav-link slds-grid myExpenese-newClass11"  data-tab = "tab4"  onclick="{!c.toggleTabs}"><!-- onclick="Back2ManufacturingPlanner();" -->
+                                        <div class="slds-grid">
+                                           
+                                            <div class="mobile-display-none pt-2" >{!$Label.c.Expense_Refund_Expenses}</div>
+                                        </div>
+                                    </a>
+                                </li>
+                                </aura:if>
+                                <aura:if isTrue="{!v.approvalProcess}">
+                                <li class="{!(v.Tab == 'tab2')?'nav-item active slds-p-right_small':'nav-item slds-p-right_small'}"> 
+                                    <a class="nav-link slds-grid myExpenese-newClass11"  data-tab = "tab2"  onclick="{!c.toggleTabs}"><!-- onclick="Back2ManufacturingPlanner();" -->
+                                        <div class="slds-grid">
+                                          
+                                            <div class="mobile-display-none pt-2" >{!$Label.c.Approved_Rejected_ManageLeave}</div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li class="{!(v.Tab == 'tab3')?'nav-item active ':'nav-item'}"> 
+                                    <a class="nav-link slds-grid myExpenese-newClass11"  data-tab = "tab3"  onclick="{!c.toggleTabs}"><!-- onclick="Back2ManufacturingPlanner();" -->
+                                        <div class="slds-grid">
+                                            
+                                            <div class="mobile-display-none pt-2">{!$Label.c.Expense_Submitted_for_your_Approval}</div>
+                                        </div>  
+                                    </a>
+                                </li>
+                                </aura:if>
+                            </ul>
+                            
+                            
+                            <div class="slds-grid col-lg-5 col-5 myExpenese-newClass12">
+                                <div class="mr-2 pt-1">
+                                    <lightning:select aura:id="InputSelectDynamic" variant="label-hidden" onchange="{!c.selectFY}" value="{!v.selectedFY}" class="nolabel">
+                                        <option value="THIS_FISCAL_YEAR" selected="true">{!$Label.c.Current_FY_ManageLeave}</option>
+                                        <option value="">{!$Label.c.To_Date_Timesheets}</option>
+                                        <option value="THIS_MONTH">{!$Label.c.Current_Month}</option>
+                                        <option value="THIS_QUARTER">{!$Label.c.Current_Quarter}</option>
+                                        <option value="LAST_QUARTER">{!$Label.c.Last_Quarter}</option>
+                                        <option value="LAST_FISCAL_YEAR">{!$Label.c.Previous_FY_ManageLeave}</option>
+                                        <!--<option value="NEXT_FISCAL_YEAR">Next FY</option>-->
+                                        <!--<option value="LAST_N_FISCAL_YEARS:2">Previous 2 FY</option>-->
+                                        
+                                    </lightning:select>
+                                </div>
+                                <a onclick="{!c.CreateExpense}" data-record="Add" class="addNewBTN" title="Add" href="javascript:void(0);">
+                                    &nbsp;<i class="fa fa-plus myExpenese-newClass13" aria-hidden="true"></i>
+                                    &nbsp;&nbsp;<strong>{!$Label.c.Expense}</strong>
+                                </a>
+                                <aura:if isTrue="{!v.accessAllExpenses}">
+                                    <div class="width150p">
+                                	<c:CustomInputLookUp objectAPIName="User" aura:id="OrgName" IconName="standard:account" selectedRecordId="{!v.UserId}"/>
+                                    </div>
+                                </aura:if>
+                                <div class="myExpenese-newClass14 ">
+                                    <a class="{!(v.View == 'Grid')?'myExpenese-newClass15 acitve-list2':'myExpenese-newClass16'}" title="Grid View" data-tab = "Grid" href="javascript:void(0);" onclick="{!c.toggleViews}">
+                                        <i class="fa fa-th-large"></i>
+                                    </a>
+                                    <a class="{!(v.View == 'List')?'myExpenese-newClass15 acitve-list2':'myExpenese-newClass16'}" title="List View" data-tab = "List" href="javascript:void(0);" onclick="{!c.toggleViews}">
+                                        <i class="fa fa-list"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <aura:if isTrue="{!v.approvalProcess}">
+                <div class="row p-2 m-0 erp_mark7">
+                    
+                    <div class="col-xl-4 col-lg-6">
+                        <div class="card background-inprogress">
+                            <div class="card-body text-center myExpenese-newClass17" data-status="Draft">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:clock" size="x-small" alternativeText="{!$Label.c.clock}" title="Clock" variant="bare"/>  
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 myExpenese-newClass20">
+                                            {!$Label.c.Expense_Submitted_Amount}
+                                        </h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="myExpenese-newClass18"><strong>{!v.currencyCode}</strong>&nbsp;{!v.counts.numAmountSub}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-lg-6">
+                        <div class="card background-new">
+                            <div class="card-body text-center myExpenese-newClass17" data-status="Cancelled">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:check" size="x-small" alternativeText="{!$Label.c.new_task}" title="new_task" variant="bare" />
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 myExpenese-newClass20">
+                                            &nbsp;{!$Label.c.Expense_Approved_Amount}</h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="myExpenese-newClass18"><strong>{!v.currencyCode}</strong>&nbsp;{!v.counts.numAmountApp}</div>
+                                    </div>    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-lg-6">
+                        <div class="card background-success">
+                            <div class="card-body text-center myExpenese-newClass17" data-status="In Progress">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:warranty_term" size="x-small" alternativeText="{!$Label.c.approval}" title="approval" variant="bare"/>
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 myExpenese-newClass20">
+                                           Rejected Amount
+                                        </h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="myExpenese-newClass18"><strong>{!v.currencyCode}</strong>&nbsp;{!v.counts.numAmountRej}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </aura:if>
+                
+             <aura:if isTrue="{!!v.approvalProcess}">   
+                 <div class="row m-0" >
+                     <div class="col-12">
+                         <div class="card widget-inline border-0 " >
+                             <div class="card-body p-0 m-0" >
+                                 <div class="row g-0 m-0" >
+                                     <div class="col-sm-6 col-xl-4 pr-0" >
+                                         <div class="card shadow-none m-0 border-0" >
+                                             <div class="card-body text-center"  >
+                                                 <i class="fa fa-briefcase text-muted font-24" ></i>
+                                                 <h3  class="mb-0 color-blue"><span >{!v.currencyCode}&nbsp;{!v.counts.numAmountSub}</span></h3>
+                                                 <p class="text-muted font-15 mb-0" >{!$Label.c.Expense_Amount}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                     <div class="col-sm-6 col-xl-4 pl-0 pr-0 border-start" >
+                                         <div class="card shadow-none m-0  border-0" >
+                                             <div class="card-body text-center" >
+                                                 <i class="fa fa-percent text-muted font-24"  ></i>
+                                                 <h3 class="mb-0 color-red"><span >{!v.currencyCode}&nbsp;{!v.counts.numAmountTax}</span></h3>
+                                                 <p class="text-muted font-15 mb-0" >{!$Label.c.Expense_Tax_Amount}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                     <div class="col-sm-6 col-xl-4 pl-0 pr-0 border-start " >
+                                         <div class="card shadow-none m-0 border-0" >
+                                             <div class="card-body text-center" >
+                                                 <i class="fa fa-money text-muted font-24"  ></i>
+                                                 <h3  class="mb-0 color-green"><span >{!v.currencyCode}&nbsp;{!v.counts.numAmountPaid}</span></h3>
+                                                 <p class="text-muted font-15 mb-0">{!$Label.c.SalesOrderToPurchaseOrder_SO_Total_Amount}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                     
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                </aura:if>
+            </div>
+            
+            <div class="erp_Mark7 myExpenese-newClass8">
+                <div class="tab-content"><!-- margin-bottom: 60px; -->
+                    <!--List View-->
+                    <div class="{!(v.View == 'List')?'slds-show':'slds-hide'}" aura:id="mosList">
+                        <div class="{!(v.Tab == 'tab1')?'slds-show':'slds-hide'}" aura:id="mosList">
+                            <div class="maqsood erp_Mark7 container-fluid">
+                                <div class="card shadow-mrr myExpenese-newClass21">
+                                    <div class="card-body">
+                                        <div class="table-responsive myExpenese-newClass22" tabindex="1">
+                                            <table class="table">
+                                                <thead>
+                                                    <tr class="slds-text-title--caps">
+                                                        <th scope="col" >
+                                                            
+                                                         <lightning:input type="checkbox" onchange="{!c.handleChange}" aura:id="expAllId" checked="{!v.allLIselected}" /> 
+                                                                    
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByName}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Name_ManageLeave}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByProject}" class="myExpenese-newClass23">{!$Label.c.EmployeeReviewV2_Project}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        </aura:if>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByDate}" class="fcolor1 myExpenese-newClass23">Date</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByAmount}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Submitted_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24"  aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <!--th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByVat}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Epense_VAT_TAX}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24"  aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>-->
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByVat}" class="fcolor1 myExpenese-newClass23">STATUS</a>&nbsp;&nbsp;&nbsp;
+                                                            </span>
+                                                        </th>
+                                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                                        <!--th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByClaimed}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Claimed_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th-->
+                                                        </aura:if>
+                                                        <th data-label="Action" colspan="2" width="10%" style="text-align:right">
+                                                                           
+                                                                                <!--a class="svg" onclick="{!c.submitforApprovalMainClick}">
+                                                                                    <lightning:icon iconName='action:submit_for_approval' alternativeText='submit_for_approval' size='x-small' title='submit_for_approval'/>
+                                                                                </a>&nbsp;&nbsp;-->
+                                                                                <a class="svg" onclick="{!c.EditMainClick}" >
+                                                                                    <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                </a>&nbsp;&nbsp;
+                                                                                <a class="svg" onclick="{!c.handleDelMainClick}" >
+                                                                                    <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                </a>
+                                                                          
+                                                        </th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:if isTrue="{!not(greaterthan(v.table.length, 0))}">
+                                                        <tr>
+                                                            <td colspan="8">
+                                                                <div class="no projects myExpenese-newClass26">
+                                                                    <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                             <div>
+                                                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="slds-notify__content myExpenese-newClass28">
+                                                                                <h2 class="slds-text-heading_small myExpenese-newClass48">{!$Label.c.Expense_No_Pending_Expenses}</h2>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.table}" var="account" indexVar="i">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td scope="row" data-label="">
+                                                                         <lightning:input type="checkbox"  onchange="{!c.handleCheckboxChange}" value="{!account.Id}" title="{!i}" aura:id="expId"/> 
+                                                                            
+                                                                    </td>
+                                                                    <td scope="row" data-label="">
+                                                                        <div class="projectName " aura:id="reqSuppName">
+                                                                            <div class="slds-grid"> 
+                                                                                <div class="pr-1">
+                                                                                    <!--ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;-->
+                                                                                </div>
+                                                                                <div class="pr-1">
+                                                                                    <aura:if isTrue="{!account.ERP7__Status__c == 'Rejected'}">
+                                                                                        <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.ERP7__Status__c}"></i>&nbsp;
+                                                                                        <aura:set attribute="else">
+                                                                                            <i title="{!account.ERP7__Status__c}" class="{!(account.ERP7__Status__c == 'Draft')?'myExpenese-newClass30 fa fa-check-circle' : (account.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.ERP7__Status__c == 'Submitted')?'myExpenese-newClass33 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                </div>
+                                                                                <div class="slds-col  slds-truncate2 myExpenese-newClass34">
+                                                                                    <strong>
+                                                                                        <ui:outputURL value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/>
+                                                                                    </strong>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                                                                    <td data-label="Start Date">
+                                                                        <div class="startime-maq myExpenese-newClass40">
+                                                                            <span class="slds-truncate2">
+                                                                                {!account.ERP7__Project__r.Name}
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    </aura:if>
+                                                                    <td data-label="End Date">
+                                                                        <div class="endime-maq myExpenese-newClass41">
+                                                                            <span class="slds-truncate2">
+                                                                                <lightning:formattedDateTime value="{!account.ERP7__Date__c}" year="numeric" month="numeric" day="numeric" timeZone="{!$Locale.timezone}"/>
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="Number Of Days">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!v.currencyCode}</strong>&nbsp;<lightning:formattedNumber value="{!account.ERP7__Amount__c}" maximumFractionDigits="3"/>
+                                                                            <!--<lightning:formattedNumber value="{!account.ERP7__Amount_Submitted__c}" maximumFractionDigits="3"/>-->
+                                                                        </span>
+                                                                    </td>
+                                                                    <td data-label="Leave Type">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!account.ERP7__Status__c}</strong>
+                                                                                <!--{!v.currencyCode}</strong>&nbsp;<lightning:formattedNumber value="{!account.ERP7__VAT_Amount__c}" maximumFractionDigits="3"/>-->
+                                                                        </span>
+                                                                    </td>
+                                                                    <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                                                    <!--td data-label="End Date">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!v.currencyCode}</strong>&nbsp;<lightning:formattedNumber value="{!account.ERP7__Amount__c}" maximumFractionDigits="3"/>
+                                                                        </span>
+                                                                    </td>-->
+                                                                    </aura:if>
+                                                                    <aura:if isTrue="{!v.approvalProcess}">
+                                                                    <aura:if isTrue="{!account.ERP7__Status__c!='Draft'}">
+                                                                        <td data-label="Action" colspan="2" style="text-align:right">
+                                                                            
+                                                                                
+                                                                                    <a class="myExpenese-newClass42">
+                                                                                        <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                    </a>&nbsp;&nbsp;
+                                                                               
+                                                                               
+                                                                                    <a class="myExpenese-newClass42">
+                                                                                        <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                    </a>
+                                                                                
+                                                                            
+                                                                        </td>
+                                                                        <aura:set attribute="else">
+                                                                           
+                                                                            <td data-label="Action" colspan="2"  style="text-align:right">
+                                                                                
+                                                                                     <a class="svg" onclick="{!c.EditClick}" data-index="{!i}" data-record="{!account.Id}"> 
+                                                                                            <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                        </a>&nbsp;&nbsp;
+                                                                                     <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-id="{!account.Id}">
+                                                                                            <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                        </a>
+                                                                               
+                                                                            </td>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                        <aura:set attribute="else">
+                                                                            <td data-label="Action" colspan="2"  style="text-align:right">
+                                                                                
+                                                                                    <a class="svg" onclick="{!c.EditClick}" data-index="{!i}" data-record="{!account.Id}">
+                                                                                        <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                    </a>&nbsp;&nbsp;
+                                                                                    <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-id="{!account.Id}">
+                                                                                        <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                    </a>
+                                                                               
+                                                                            </td>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                    <td style="paddig-left:0px;">
+                                                                        <a class="svg" onclick="{!c.handlesubmitforApproval}" data-index="{!i}" data-recordId="{!account.Id}">
+                                                                            <lightning:icon iconName='action:submit_for_approval' alternativeText='submit_for_approval' size='x-small' title='submit_for_approval'/>
+                                                                        </a>&nbsp;&nbsp;
+                                                                    </td>
+                                                                     
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="{!(v.Tab == 'tab2')?'slds-show':'slds-hide'}" aura:id="mosList">
+                            <div class="maqsood erp_Mark7 container-fluid">
+                                <div class="card shadow-mrr myExpenese-newClass21">
+                                    <div class="card-body">
+                                        <div class="table-responsive myExpenese-newClass22" tabindex="1">
+                                            <table class="table">
+                                                <thead>
+                                                    <tr class="slds-text-title--caps">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByNameApproved}" class="myExpenese-newClass23">{!$Label.c.Name_ManageLeave}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByProjectApproved}" class="myExpenese-newClass23">{!$Label.c.EmployeeReviewV2_Project}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'Project__r.Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'Project__r.Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByDateApproved}" class="myExpenese-newClass23">Date</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByAmountApproved}" class="myExpenese-newClass23">{!$Label.c.Expense_Submitted_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <!--th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByVatApproved}" class="myExpenese-newClass23">{!$Label.c.Epense_VAT_TAX}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>-->
+                                                        <!--th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByClaimedApproved}" class="myExpenese-newClass23">{!$Label.c.Expense_Claimed_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'A', greaterthan(v.table2.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>-->
+                                                        <!--<th scope="col">
+                                                            <span class="slds-truncate">{!$Label.c.Acc_Recev_Paid}</span>
+                                                        </th>-->
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">STATUS</span>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:if isTrue="{!not(greaterthan(v.table2.length, 0))}">
+                                                        <tr>
+                                                            <td colspan="8">
+                                                                <div class="no projects myExpenese-newClass26">
+                                                                    <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                            <div>
+                                                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="slds-notify__content myExpenese-newClass28">
+                                                                                <h2 class="slds-text-heading_small myExpenese-newClass29">{!$Label.c.Expense_Sorry_No_Approved_Rejected_Expenses}</h2>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.table2}" var="ExpApproved" indexVar="i">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td data-label="Name">
+                                                                        <div class="projectName " aura:id="reqSuppName">
+                                                                            <div class="slds-grid"> 
+                                                                                <div class="pr-1">
+                                                                                    <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                                                </div>
+                                                                                <div class="pr-1">
+                                                                                    <aura:if isTrue="{!ExpApproved.ERP7__Status__c == 'Rejected'}">
+                                                                                        <i class="fa fa-times-circle myExpenese-newClass30" title="{!ExpApproved.ERP7__Status__c}"></i>&nbsp;
+                                                                                        <aura:set attribute="else">
+                                                                                            <i title="{!ExpApproved.ERP7__Status__c}" class="{!(ExpApproved.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (ExpApproved.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (ExpApproved.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                </div>
+                                                                                <div class="slds-col  slds-truncate2 myExpenese-newClass34">
+                                                                                    <strong>
+                                                                                        <ui:outputURL value="{!'/'+ExpApproved.Id}" label="{!ExpApproved.Name}" target="_blank" class="fcolor1"/>
+                                                                                    </strong>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="Start Date">
+                                                                        <div class="startime-maq myExpenese-newClass40">
+                                                                            <span class="slds-truncate2">
+                                                                                {!ExpApproved.ERP7__Project__r.Name}
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="End Date">
+                                                                        <div class="endime-maq myExpenese-newClass41" >
+                                                                            <span class="slds-truncate2">
+                                                                                <lightning:formattedDateTime value="{!ExpApproved.ERP7__Date__c}" />
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <!--td data-label="Submitted Amount">
+                                                                        <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!ExpApproved.ERP7__Amount_Submitted__c}</span>
+                                                                    </td>-->
+                                                                    <!--td data-label="Vat Amount">
+                                                                        <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!ExpApproved.ERP7__VAT_Amount__c}</span>
+                                                                    </td>-->
+                                                                    <td data-label="Claimed Amount">
+                                                                        <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!ExpApproved.ERP7__Amount__c}</span>
+                                                                    </td>
+                                                                    <!--td data-label="Paid">
+                                                                        <lightning:input type="checkbox" variant="label-hidden" checked="{!ExpApproved.ERP7__Paid__c}" disabled="true"/>
+									
+                                                                    </td>-->
+                                                                    <td>
+                                                                        {!ExpApproved.ERP7__Status__c}
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="{!(v.Tab == 'tab3')?'slds-show':'slds-hide'}" aura:id="mosList">
+                            <div class="maqsood erp_Mark7 container-fluid">
+                                <div class="card shadow-mrr myExpenese-newClass21">
+                                    <div class="card-body">
+                                        <div class="table-responsive myExpenese-newClass22" tabindex="1">
+                                            <table class="table">
+                                                <thead>
+                                                    <tr class="slds-text-title--caps">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByNameEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Name_ManageLeave}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.empExpenses.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByEmpNameEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Employee_Name_ManageLeave}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.empExpenses.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Employee__r.ERP7__First_Name__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Employee__r.ERP7__First_Name__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByProjectEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.EmployeeReviewV2_Project}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.empExpenses.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortBySubmittedEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Submitted_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.table.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <!--th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByVatEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Epense_VAT_TAX}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.empExpenses.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByClaimedEmp}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Claimed_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'E', greaterthan(v.empExpenses.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col" class="myExpenese-newClass49">
+                                                        </th>-->
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:if isTrue="{!not(greaterthan(v.empExpenses.length, 0))}">
+                                                        <tr>
+                                                            <td colspan="8">
+                                                                <div class="no projects myExpenese-newClass26">
+                                                                    <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                            <div>
+                                                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="slds-notify__content myExpenese-newClass28">
+                                                                                <h2 class="slds-text-heading_small myExpenese-newClass29">{!$Label.c.Expense_No_Pending_Employee_Expenses}</h2>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.empExpenses}" var="account" indexVar="i">
+                                                                <tr class="slds-hint-parent">
+                                                                    <aura:renderIf isTrue="{!account.ERP7__Status__c=='Draft'||account.ERP7__Status__c=='Rejected'||account.ERP7__Status__c=='Approved'}">
+                                                                        <aura:set attribute="else">
+                                                                            <td data-label="Employee Name">
+                                                                                <div class="projectName " aura:id="reqSuppName">
+                                                                                    <div class="slds-grid"> 
+                                                                                        <div class="pr-1">
+                                                                                            <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                                                        </div>
+                                                                                        <div class="pr-1">
+                                                                                            <aura:if isTrue="{!account.ERP7__Status__c == 'Rejected'}">
+                                                                                                <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.ERP7__Status__c}"></i>&nbsp;
+                                                                                                <aura:set attribute="else">
+                                                                                                    <i title="{!account.ERP7__Status__c}" class="{!(account.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (account.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                        <div class="slds-col  slds-truncate2 myExpenese-newClass34">
+                                                                                            <strong>
+                                                                                                <a class="Name" target="_blank" href="{!'/' + account.Id}">
+                                                                                                    <span class="slds-truncate">{!account.Name}</span>
+                                                                                                </a>
+                                                                                            </strong>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td data-label="Expense Name">
+                                                                                <div class="startime-maq myExpenese-newClass40">
+                                                                                    <span class="slds-truncate2">
+                                                                                        <a class="Name myExpenese-newClass23" target="_blank" href="{!'/' + account.ERP7__Employees__c}"  >
+                                                                                            <span class="slds-truncate">{!account.ERP7__Employees__r.ERP7__First_Name__c}&nbsp;{!account.ERP7__Employees__r.ERP7__Last_Name__c}</span>
+                                                                                        </a>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td data-label="Project">
+                                                                                <div class="endime-maq myExpenese-newClass41">
+                                                                                    <span class="slds-truncate">{!account.ERP7__Project__r.Name}</span>
+                                                                                </div>
+                                                                            </td>
+                                                                            <!--td data-label="Submitted Amount">
+                                                                                <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__Amount_Submitted__c}</span>
+                                                                            </td>
+                                                                            <td data-label="Vat Amount">
+                                                                                <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__VAT_Amount__c}</span>
+                                                                            </td>-->
+                                                                            <td data-label="Claimed Amount">
+                                                                                <span class="slds-truncate"><strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__Amount__c}</span>
+                                                                            </td>
+                                                                            <td data-label="Action">
+                                                                                <center>
+                                                                                    <a onclick="{!c.openApproveModal}" title="Approve" data-index="{!i}" data-record-id="{!account.Id}" class="myExpenese-newClass43" href="javascript:void(0);">
+                                                                                        <i class="fa fa-check myExpenese-newClass50" aria-hidden="true" ></i>
+                                                                                    </a>&nbsp;&nbsp;
+                                                                                    <a onclick="{!c.openRejectModal}" title="Reject" data-index="{!i}" data-record-id="{!account.Id}" class="myExpenese-newClass44" href="javascript:void(0);">
+                                                                                        <i class="fa fa-times myExpenese-newClass50" aria-hidden="true" ></i>
+                                                                                    </a>
+                                                                                </center>
+                                                                            </td>
+                                                                        </aura:set>
+                                                                    </aura:renderIf>
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="{!(v.Tab == 'tab4')?'slds-show':'slds-hide'}" aura:id="mosList">
+                            <div class="maqsood erp_Mark7 container-fluid">
+                                <div class="card shadow-mrr myExpenese-newClass21">
+                                    <div class="card-body">
+                                        <div class="table-responsive myExpenese-newClass22" tabindex="1">
+                                            <table class="table">
+                                                <thead>
+                                                    <tr class="slds-text-title--caps">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByName}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Name_ManageLeave}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByProject}" class="myExpenese-newClass23">{!$Label.c.EmployeeReviewV2_Project}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Project__r.Name' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        </aura:if>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByDate}" class="fcolor1 myExpenese-newClass23">Date</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Date__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByAmount}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Submitted_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount_Submitted__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24"  aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByVat}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Epense_VAT_TAX}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__VAT_Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24"  aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                                        <th scope="col">
+                                                            <span class="slds-truncate">
+                                                                <a onclick="{!c.sortByClaimed}" class="fcolor1 myExpenese-newClass23">{!$Label.c.Expense_Claimed_Amount}</a>&nbsp;&nbsp;&nbsp;
+                                                                <aura:if isTrue="{!and(v.tabSort == 'S', greaterthan(v.table4.length, 1))}">
+                                                                    <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,v.sortAsc)}">
+                                                                        <i class="fa fa-long-arrow-up myExpenese-newClass24" aria-hidden="true"></i>
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!and(v.sortField == 'ERP7__Amount__c' ,not(v.sortAsc))}">
+                                                                                <i class="fa fa-long-arrow-down myExpenese-newClass24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:if>
+                                                            </span>
+                                                        </th>
+                                                        </aura:if>
+                                                        <th scope="col" >
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:if isTrue="{!not(greaterthan(v.table4.length, 0))}">
+                                                        <tr>
+                                                            <td colspan="8">
+                                                                <div class="no projects myExpenese-newClass26">
+                                                                    <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                             <div>
+                                                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                                </span>
+                                                                            </div>
+                                                                            <div class="slds-notify__content myExpenese-newClass28">
+                                                                                <h2 class="slds-text-heading_small myExpenese-newClass48">{!$Label.c.Expense_No_Pending_Expenses}</h2>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.table4}" var="account" indexVar="i">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td scope="row" data-label="">
+                                                                        <div class="projectName " aura:id="reqSuppName">
+                                                                            <div class="slds-grid"> 
+                                                                                <div class="pr-1">
+                                                                                    <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                                                </div>
+                                                                                <div class="pr-1">
+                                                                                    <aura:if isTrue="{!account.ERP7__Status__c == 'Rejected'}">
+                                                                                        <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.ERP7__Status__c}"></i>&nbsp;
+                                                                                        <aura:set attribute="else">
+                                                                                            <i title="{!account.ERP7__Status__c}" class="{!(account.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (account.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                </div>
+                                                                                <div class="slds-col  slds-truncate2 myExpenese-newClass34">
+                                                                                    <strong>
+                                                                                        <ui:outputURL value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/>
+                                                                                    </strong>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                                                                    <td data-label="Start Date">
+                                                                        <div class="startime-maq myExpenese-newClass40">
+                                                                            <span class="slds-truncate2">
+                                                                                {!account.ERP7__Project__r.Name}
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    </aura:if>
+                                                                    <td data-label="End Date">
+                                                                        <div class="endime-maq myExpenese-newClass41">
+                                                                            <span class="slds-truncate2">
+                                                                                <lightning:formattedDateTime value="{!account.ERP7__Date__c}"/>
+                                                                            </span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="Number Of Days">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__Amount_Submitted__c}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td data-label="Leave Type">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__VAT_Amount__c}
+                                                                        </span>
+                                                                    </td>
+                                                                    <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                                                    <td data-label="End Date">
+                                                                        <span class="slds-truncate2">
+                                                                            <strong>{!v.currencyCode}</strong>&nbsp;{!account.ERP7__Amount__c}
+                                                                        </span>
+                                                                    </td>
+                                                                    </aura:if>
+                                                                    <aura:if isTrue="{!v.approvalProcess}">
+                                                                    <aura:if isTrue="{!account.ERP7__Status__c!='Draft'}">
+                                                                        <td data-label="Action" colspan="2">
+                                                                            <center>
+                                                                                <a class="myExpenese-newClass42">
+                                                                                    <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                </a>&nbsp;&nbsp;
+                                                                                <a class="myExpenese-newClass42">
+                                                                                    <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                </a>
+                                                                            </center>
+                                                                        </td>
+                                                                        <aura:set attribute="else">
+                                                                            <td data-label="Action" colspan="2">
+                                                                                <center>
+                                                                                    <a class="svg" onclick="{!c.EditClick}" data-index="{!i}" data-record="{!account.Id}">
+                                                                                       <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                    </a>&nbsp;&nbsp;
+                                                                                    <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                                        <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                    </a>
+                                                                                </center>
+                                                                            </td>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                        <aura:set attribute="else">
+                                                                            <td data-label="Action" colspan="2">
+                                                                                <center>
+                                                                                    <a class="svg" onclick="{!c.EditClick}" data-index="{!i}" data-record="{!account.Id}">
+                                                                                        <lightning:icon iconName="action:edit" size="x-small" alternativeText="{!$Label.c.Edit}" title="Edit" />
+                                                                                    </a>&nbsp;&nbsp;
+                                                                                    <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                                        <lightning:icon iconName="action:delete" size="x-small" alternativeText="{!$Label.c.Delete}" title="delete" />
+                                                                                    </a>
+                                                                                </center>
+                                                                            </td>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="{!(v.View == 'Grid')?'slds-show ':'slds-hide'}" aura:id="mosList">
+                        <div class="{!(v.Tab == 'tab1')?'slds-show':'slds-hide'}" aura:id="mosList">
+                          <div class="row m-0"> 
+                            <aura:if isTrue="{!not(greaterthan(v.ExpenseListWP.length, 0))}">
+                                <center class="myExpenese-newClass38">
+                                    <div class="no projects myExpenese-newClass26">
+                                        <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                <div>
+                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                        <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                    </span>
+                                                </div>
+                                                <div class="slds-notify__content myExpenese-newClass28">
+                                                    <h2 class="slds-text-heading_small myExpenese-newClass29" >{!$Label.c.Expense_No_Pending_Expenses}</h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </center>
+                                
+                                <aura:set attribute="else">
+                                     
+                                    <aura:iteration items="{!v.ExpenseListWP}" var="account" indexVar="i">
+                                        
+                                        <div class="col-md-3">
+                                            <div class="card shadow-mrr erp_Mark7 myExpenese-newClass39">
+                                                <div class="card-body myExpenese-newClass45">
+                                                    <div class="d-flex justify-content-between" >
+                                                        <h5 class="mb-0 myExpenese-newClass46"> 
+                                                            <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                            <div class="pr-1">
+                                                                <aura:if isTrue="{!account.Expense1.ERP7__Status__c == 'Rejected'}">
+                                                                    <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.Expense1.ERP7__Status__c}"></i>&nbsp;
+                                                                    <aura:set attribute="else">
+                                                                        <i title="{!account.Expense1.ERP7__Status__c}" class="{!(account.Expense1.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="slds-truncate myExpenese-newClass35">
+                                                                <strong>
+                                                                    <ui:outputURL value="{!'/'+account.Expense1.Id}" label="{!account.Expense1.Name}" target="_blank" class="fcolor1"/>
+                                                                </strong>
+                                                            </div>
+                                                        </h5>
+                                                        <div>
+                                                            <aura:if isTrue="{!account.Expense1.ERP7__Status__c == 'Draft'}">
+                                                                <lightning:buttonMenu alternativeText="{!$Label.c.Show_menu}" variant="container" onselect="{!c.expenseManager}" name="{!i}" value="{!account.Expense1.Id}"><!--bgforico1-->
+                                                                    <lightning:menuItem value="Edit" label="{!$Label.c.EditLabel}" prefixIconName="utility:edit"/>
+                                                                    <lightning:menuItem value="Delete" label="{!$Label.c.Delete_UserAvailabilities}" prefixIconName="utility:delete"/>
+                                                                </lightning:buttonMenu>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-muted small mt-3 mb-3" >{!$Label.c.Cash_Payment_Amount} <strong>{!v.currencyCode}</strong>&nbsp;{!account.Expense1.ERP7__Amount_Submitted__c}</div>
+                                                    <div class="scroll-bar-wrap">
+                                                        <div class="scroll-box myExpenese-newClass36">
+                                                            <aura:iteration var="EXLI" indexVar="WOCount" items="{!account.ExpenseLines1}">
+                                                                <p class="">
+                                                                    <div class="mb-1 slds-grid mr-2 mt-2">  
+                                                                        <div class="{!((account.Expense1.ERP7__Status__c == 'Draft')?'Issuedgrid':'') || ((account.Expense1.ERP7__Status__c == 'Submitted')?'InProgressgrid':'')}"> <!--class="{!((TCE.ERP7__Activity_Status__c == 'Issued')?'Issuedgrid':'')||((TCE.ERP7__Activity_Status__c == 'In Progress')?'InProgressgrid':'')||((TCE.ERP7__Activity_Status__c == 'Complete')?'Completegrid':'')|| ((TCE.ERP7__Activity_Status__c == 'Backlog')?'Backloggrid':'')}"-->
+                                                                            <div class="slds-grid col-12 p-0">
+                                                                                <div class="slds-truncate4 col-8 text-left pl-0" >
+                                                                                    <ui:outputText title="{!EXLI.Name}" value="{!EXLI.Name}" class="whitetext"/>
+                                                                                </div>
+                                                                                <div class="col-4 text-right pr-0">
+                                                                                    <strong>{!v.currencyCode}</strong>&nbsp;{!EXLI.ERP7__Expensed_Submitted__c}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </p>
+                                                            </aura:iteration>
+                                                        </div>
+                                                        <div class="cover-bar"></div>
+                                                    </div>
+                                                    <div class="row m-0">
+                                                        <div class="col-12 p-0">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col col-6 myExpenese-newClass37">
+                                                                    <div class="startime-maq slds-truncate myExpenese-newClass40">
+                                                                        <strong>
+                                                                            <ui:outputText value="{!account.Expense1.ERP7__Project__r.Name}" title="Project"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="slds-col col-6 myExpenese-newClass37"> 
+                                                                    <div class="endime-maq slds-truncate myExpenese-newClass41">
+                                                                        <strong>
+                                                                            <lightning:formattedDateTime value="{!account.Expense1.ERP7__Date__c}"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:iteration>
+                                          
+                                </aura:set>
+                                   
+                            </aura:if>
+                            </div>
+                        </div>
+                        <div class="{!(v.Tab == 'tab2')?'slds-show':'slds-hide'}" aura:id="mosList">
+                             <div class="row m-0">
+                            <aura:if isTrue="{!not(greaterthan(v.ApprovedExpenseListWP.length, 0))}">
+                                <center class="myExpenese-newClass38">
+                                    <div class="no projects myExpenese-newClass26">
+                                        <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                <div>
+                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                        <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                    </span>
+                                                </div>
+                                                <div class="slds-notify__content myExpenese-newClass28">
+                                                    <h2 class="slds-text-heading_small myExpenese-newClass29" >{!$Label.c.Expense_Sorry_No_Approved_Rejected_Expenses}</h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </center>
+                                <aura:set attribute="else">
+                                   
+                                    <aura:iteration items="{!v.ApprovedExpenseListWP}" var="account" indexVar="i">
+                                        <div class="col-md-3">
+                                            <div class="card shadow-mrr erp_Mark7 myExpenese-newClass39">
+                                                <div class="card-body myExpenese-newClass45">
+                                                    <div class="d-flex justify-content-between" >
+                                                        <h5 class="mb-0 myExpenese-newClass46"> 
+                                                            <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                            <div class="pr-1">
+                                                                <aura:if isTrue="{!account.Expense1.ERP7__Status__c == 'Rejected'}">
+                                                                    <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.Expense1.ERP7__Status__c}"></i>&nbsp;
+                                                                    <aura:set attribute="else">
+                                                                        <i title="{!account.Expense1.ERP7__Status__c}" class="{!(account.Expense1.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="slds-truncate myExpenese-newClass35">
+                                                                <strong>
+                                                                    <ui:outputURL value="{!'/'+account.Expense1.Id}" label="{!account.Expense1.Name}" target="_blank" class="fcolor1"/>
+                                                                </strong>
+                                                            </div>
+                                                        </h5> 
+                                                        <div>
+                                                            <aura:if isTrue="{!account.Expense1.ERP7__Status__c == 'Draft'}">
+                                                                <lightning:buttonMenu alternativeText="{!$Label.c.Show_menu}" variant="container" onselect="{!c.ExpenseManager}" name="{!i}" value="{!account.Expense1.Id}"><!--bgforico1-->
+                                                                    <lightning:menuItem value="Edit" label="{!$Label.c.EditLabel}" prefixIconName="utility:edit"/>
+                                                                    <lightning:menuItem value="Delete" label="{!$Label.c.Delete_UserAvailabilities}" prefixIconName="utility:delete"/>
+                                                                </lightning:buttonMenu>
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-muted small mt-3 mb-3" >{!$Label.c.PaySlip_Amount} <strong>{!v.currencyCode}</strong>&nbsp;{!account.Expense1.ERP7__Amount__c}</div>
+                                                    <div class="scroll-bar-wrap">
+                                                        <div class="scroll-box myExpenese-newClass36">
+                                                            <aura:iteration var="EXLI" indexVar="WOCount" items="{!account.ExpenseLines1}">
+                                                                <p class="">
+                                                                    <div class="mb-1 slds-grid mr-2 mt-2">  
+                                                                        <div class="{!((account.Expense1.ERP7__Status__c == 'Approved')?'Completegrid':'') || ((account.Expense1.ERP7__Status__c == 'Rejected')?'Backloggrid':'')}">
+                                                                            <div class="slds-grid col-12 p-0">
+                                                                                <div class="slds-truncate4 col-8 text-left pl-0" >
+                                                                                    <ui:outputText title="{!EXLI.Name}" value="{!EXLI.Name}" class="whitetext"/>
+                                                                                </div>
+                                                                                <div class="col-4 text-right pr-0">
+                                                                                    <strong>{!v.currencyCode}</strong>&nbsp;{!EXLI.ERP7__Claimed_Amount__c}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </p>
+                                                            </aura:iteration>
+                                                        </div>
+                                                        <div class="cover-bar"></div>
+                                                    </div>
+                                                    <div class="row m-0">
+                                                        <div class="col-12 p-0">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col col-6 myExpenese-newClass37">
+                                                                    <div class="startime-maq slds-truncate myExpenese-newClass40">
+                                                                        <strong>
+                                                                            <ui:outputText value="{!account.Expense1.ERP7__Project__r.Name}" title="Project"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="slds-col col-6 myExpenese-newClass37"> 
+                                                                    <div class="endime-maq slds-truncate myExpenese-newClass41">
+                                                                        <strong>
+                                                                            <lightning:formattedDateTime value="{!account.Expense1.ERP7__Date__c}"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:iteration>
+                                   
+                                </aura:set>
+                            </aura:if>
+                                  </div>
+                        </div>
+                        <div class="{!(v.Tab == 'tab3')?'slds-show':'slds-hide'}" aura:id="mosList">
+                               <div class="row m-0">
+                            <aura:if isTrue="{!not(greaterthan(v.EmpExpenseListWP.length, 0))}">
+                                <center  class="myExpenese-newClass38">
+                                    <div class="no projects myExpenese-newClass26">
+                                        <div class="slds-notify_container slds-is-relative myExpenese-newClass27">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                <div>
+                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                        <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                    </span>
+                                                </div>
+                                                <div class="slds-notify__content myExpenese-newClass28">
+                                                    <h2 class="slds-text-heading_small myExpenese-newClass29" >{!$Label.c.Expense_No_Pending_Employee_Expenses}</h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </center>
+                                <aura:set attribute="else">
+                                  
+                                    <aura:iteration items="{!v.EmpExpenseListWP}" var="account" indexVar="i">
+                                        <div class="col-md-3">
+                                            <div class="card shadow-mrr erp_Mark7 myExpenese-newClass39">
+                                                <div class="card-body myExpenese-newClass45">
+                                                    <div class="d-flex justify-content-between" >
+                                                        <h5 class="mb-0 myExpenese-newClass46"> 
+                                                            <ui:outputText value = "{!i + 1 + '.'}"/>&nbsp;&nbsp;
+                                                            <div class="pr-1">
+                                                                <aura:if isTrue="{!account.Expense1.ERP7__Status__c == 'Rejected'}">
+                                                                    <i class="fa fa-times-circle myExpenese-newClass30" title="{!account.Expense1.ERP7__Status__c}"></i>&nbsp;
+                                                                    <aura:set attribute="else">
+                                                                        <i title="{!account.Expense1.ERP7__Status__c}" class="{!(account.Expense1.ERP7__Status__c == 'Draft')?'myExpenese-newClass33 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Approved')?'myExpenese-newClass32 fa fa-check-circle' : (account.Expense1.ERP7__Status__c == 'Submitted')?'myExpenese-newClass31 fa fa-check-circle' : 'myExpenese-newClass30 fa fa-check-circle'}"></i>&nbsp;
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                            <div class="slds-truncate myExpenese-newClass35">
+                                                                <strong>
+                                                                    <ui:outputURL value="{!'/'+account.Expense1.Id}" label="{!account.Expense1.Name}" target="_blank" class="fcolor1"/>
+                                                                </strong>
+                                                            </div>
+                                                        </h5>
+                                                        <div>
+                                                            <lightning:buttonMenu alternativeText="{!$Label.c.Show_menu}" variant="container" onselect="{!c.EMPleaveManager}" name="{!i}" value="{!account.Expense1.Id}"><!--bgforico1-->
+                                                                <lightning:menuItem value="Approve" label="{!$Label.c.Approve_ManageLeave}" prefixIconName="utility:check"/>
+                                                                <lightning:menuItem value="Reject" label="{!$Label.c.Reject_ManageLeave}" prefixIconName="utility:close"/>
+                                                            </lightning:buttonMenu>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-muted small mt-2 mb-2" >
+                                                        <div class="col-12">
+                                                            <div class = "col-6">
+                                                                <a class="Name myExpenese-newClass23" target="_blank" href="{!'/' + account.Expense1.ERP7__Employees__c}">
+                                                                    <span class="slds-truncate">{!account.Expense1.ERP7__Employees__r.ERP7__First_Name__c}&nbsp;{!account.Expense1.ERP7__Employees__r.ERP7__Last_Name__c}</span>
+                                                                </a>
+                                                            </div>
+                                                            <div class = "col-6">
+                                                                {!$Label.c.Cash_Payment_Amount} <strong>{!v.currencyCode}</strong>&nbsp;{!account.Expense1.ERP7__Amount__c}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="scroll-bar-wrap">
+                                                        <div class="scroll-box myExpenese-newClass36">
+                                                            <aura:iteration var="EXLI" indexVar="WOCount" items="{!account.ExpenseLines1}">
+                                                                <p class="">
+                                                                    <div class="mb-1 slds-grid mr-2 mt-2">  
+                                                                        <div class="{!((account.Expense1.ERP7__Status__c == 'Draft')?'Issuedgrid':'') || ((account.Expense1.ERP7__Status__c == 'Submitted')?'InProgressgrid':'')}"> <!--class="{!((TCE.ERP7__Activity_Status__c == 'Issued')?'Issuedgrid':'')||((TCE.ERP7__Activity_Status__c == 'In Progress')?'InProgressgrid':'')||((TCE.ERP7__Activity_Status__c == 'Complete')?'Completegrid':'')|| ((TCE.ERP7__Activity_Status__c == 'Backlog')?'Backloggrid':'')}"-->
+                                                                            <div class="slds-grid col-12 p-0">
+                                                                                <div class="slds-truncate4 col-8 text-left pl-0" >
+                                                                                    <ui:outputText title="{!EXLI.Name}" value="{!EXLI.Name}" class="whitetext"/>
+                                                                                </div>
+                                                                                <div class="col-4 text-right pr-0">
+                                                                                    <strong>{!v.currencyCode}</strong>&nbsp;{!EXLI.ERP7__Claimed_Amount__c}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </p>
+                                                            </aura:iteration>
+                                                        </div>
+                                                        <div class="cover-bar"></div>
+                                                    </div>
+                                                    <div class="row m-0">
+                                                        <div class="col-12 p-0">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col col-6 myExpenese-newClass37">
+                                                                    <div class="startime-maq slds-truncate myExpenese-newClass40">
+                                                                        <strong>
+                                                                            <ui:outputText value="{!account.Expense1.ERP7__Project__r.Name}" title="Project"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="slds-col col-6 myExpenese-newClass37"> 
+                                                                    <div class="endime-maq slds-truncate myExpenese-newClass41">
+                                                                        <strong>
+                                                                            <lightning:formattedDateTime value="{!account.Expense1.ERP7__Date__c}"/>
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:iteration>
+                                    
+                                </aura:set>
+                            </aura:if>
+                            </div>
+                        </div>
+                    </div> 
+                    <!--List View End-->
+                </div>
+            </div>
+        </div>
+        <div class="editMSmodal" aura:id="allLeaveModals">
+            <section aura:id="approveExpenseModal" role="dialog" class="slds-modal myExpenese-newClass47">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-modal__header_empty">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeApproveModal1}" variant="bare-inverse" size="large"/>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:inputRichText value="{!v.A_Rcomment}" variant="label-hidden" placeholder="{!$Label.c.Enter_Comment_Timesheets}"/>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button  label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.closeApproveModal1}" variant="neutral"/>
+                        <lightning:button onclick="{!c.Approve}" label="{!$Label.c.Approve_ManageLeave}" variant="Success"/>
+                    </footer>
+                </div>
+            </section>
+            <section aura:id="rejectExpenseModal" role="dialog" class="slds-modal myExpenese-newClass47">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header slds-modal__header_empty">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeRejectModal}" variant="bare-inverse" size="large"/>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                            <div class="slds-form-element__control">
+                                <lightning:inputRichText value="{!v.A_Rcomment}" variant="label-hidden" placeholder="{!$Label.c.Enter_Comment_Timesheets}"/>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closeRejectModal}" variant="neutral"/>
+                        <lightning:button onclick="{!c.Reject}" label="{!$Label.c.Reject_ManageLeave}" variant="destructive"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop" aura:id="newExpenseModalBackdrop"></div>
+        </div>
+        <section aura:id="approveModal" role="dialog" tabindex="-1" class="slds-modal">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header slds-modal__header_empty">
+                    <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeApproveModal}" variant="bare-inverse" size="large"/>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-right_small slds-p-top_small">
+                        <div class="slds-form-element__control">
+                            <lightning:inputRichText aura:id="ReasonApproved" value="{!v.A_Rcomment}" variant="label-hidden" placeholder="{!$Label.c.Enter_Comment_ManageLeave}"/>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning:button  label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.closeApproveModal}" variant="neutral"/>
+                    <lightning:button onclick="{!c.submitExp}" label="Submit For Approval" variant="Brand"/>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop" aura:id="newTimeOffModalBackdrop"></div>
+    <!--</body>-->
+</aura:component>

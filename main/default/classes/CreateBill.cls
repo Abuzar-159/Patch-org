@@ -1488,6 +1488,110 @@ public static Map<String, List<Map<String, String>>> getAllDocs(Id parentId) {
         }
         return extractedText;
     }
+
+    // for the expance part 
+
+    @AuraEnabled
+public static String extractExpenseItemsFromText(String invoiceText) {
+    System.debug('🧾 [EXPENSE OCR] Received Text: ' + invoiceText);
+
+    // Fetch Credentials
+    Credentials__c cred;
+    try {
+        cred = [
+            SELECT ERP7__Encrypted_Key__c, ERP7__End_Point__c, URL__c,
+                   ERP7__Active__c, Name
+            FROM Credentials__c
+            WHERE Type__c = 'OCR' AND ERP7__Active__c = true AND Name = 'OCR'
+            LIMIT 1
+        ];
+    } catch (Exception e) {
+        return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
+    }
+
+    if (cred == null || String.isBlank(cred.ERP7__Encrypted_Key__c))
+        return 'Error: OCR credential missing API Key.';
+
+    String baseUrl = String.isBlank(cred.ERP7__End_Point__c) ? cred.URL__c : cred.ERP7__End_Point__c;
+
+    if (String.isBlank(baseUrl))
+        return 'Error: OCR credential missing Endpoint/URL.';
+
+    // Format endpoint
+    if (!baseUrl.contains('?key=')) {
+        if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) baseUrl += 'key=';
+        else if (baseUrl.contains('?')) baseUrl += '&key=';
+        else baseUrl += '?key=';
+    }
+
+    // --------- AI PROMPT FOR EXPENSE ITEMS ----------
+    String requestPayload = '{"contents":[{"parts":[{"text":"Extract ONLY expense line items in this exact format:\\n\\n' +
+        'QTY\\nUNIT_PRICE\\nDISCOUNT_AMOUNT\\nTAX_PERCENT\\nTAX_AMOUNT\\n\\n' +
+        'Rules:\\n' +
+        '- No product names.\\n' +
+        '- Ignore currency symbols.\\n' +
+        '- Return only numbers.\\n' +
+        '- Each line item must be 5 lines. No extra text.\\n\\n' +
+        'Invoice:\\n\\n' + invoiceText.replaceAll('"','\\"') + '"}]}]}' ;
+
+    // HTTP CALL
+    Http http = new Http();
+    try {
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(baseUrl + cred.ERP7__Encrypted_Key__c);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        req.setTimeout(120000);
+        req.setBody(requestPayload);
+
+        HttpResponse res = http.send(req);
+
+        if (res.getStatusCode() == 200) {
+            return parseGeminiExpenseResponse(res.getBody());
+        } else {
+            return 'Error: ' + res.getStatusCode() + ' → ' + res.getBody();
+        }
+    } catch (Exception e) {
+        return 'Error calling OCR API: ' + e.getMessage();
+    }
+}
+
+
+// ----------------- PARSER --------------------
+private static String parseGeminiExpenseResponse(String body) {
+    System.debug('🔍 [EXPENSE PARSER] Parsing Response...');
+
+    String extractedText = '';
+
+    try {
+        Map<String, Object> result = (Map<String, Object>) JSON.deserializeUntyped(body);
+
+        if (result.containsKey('candidates')) {
+            List<Object> candidates = (List<Object>) result.get('candidates');
+            if (!candidates.isEmpty()) {
+                Map<String, Object> firstCandidate = (Map<String, Object>) candidates.get(0);
+                if (firstCandidate.containsKey('content')) {
+                    Map<String, Object> content = (Map<String, Object>) firstCandidate.get('content');
+                    if (content.containsKey('parts')) {
+                        List<Object> parts = (List<Object>) content.get('parts');
+                        if (!parts.isEmpty()) {
+                            Map<String, Object> firstPart = (Map<String, Object>) parts.get(0);
+                            if (firstPart.containsKey('text')) {
+                                extractedText = (String) firstPart.get('text');
+                                System.debug('🧾 [EXPENSE PARSER OUTPUT] ' + extractedText);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception e) {
+        System.debug('❌ [PARSER ERROR] ' + e.getMessage());
+    }
+
+    return extractedText;
+}
+
     
     @AuraEnabled
     public static String checkPOName(String poName) {

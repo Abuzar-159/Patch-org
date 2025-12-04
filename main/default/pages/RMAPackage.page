@@ -1,0 +1,550 @@
+<apex:page controller="RMAPackage" id="mainPg" showHeader="false" sidebar="false">
+    <!--
+	<html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+
+    <head>
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}" />
+
+        <style> 
+         .epr_Mark7 .nav-tabs > li > a {
+    margin-right: 70px;
+    line-height: 1.42857143;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+    color:#60cdde;
+    text-transform:uppercase;
+}
+     .epr_Mark7 .nav>li>a:hover,
+    .epr_Mark7 .nav>li>a:focus {        
+        text-decoration: none;
+        background-color: #fff;
+        border-bottom: 2px solid #0070d2!important;
+    }   
+    .epr_Mark7 .nav-tabs > li.active > a, .epr_Mark7 .nav-tabs > li.active > a:hover, .epr_Mark7 .nav-tabs > li.active > a:focus {
+        color: #7cdbff;
+        cursor: default!important;
+        background-color: #fff!important;
+        border: 0;
+        border-bottom: 3px solid #2196f3!important;
+    }        
+    .epr_Mark7 .nav-tabs > li > a:hover {
+        border-color: #fff #fff #fff;    
+    }
+        
+            input {
+                padding-top: 0;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 5px;
+            }
+
+            .input {
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 5px;
+                width: 95%;
+            }
+
+            .epr_Mark7 .row {
+                margin-right: 0px;
+                margin-left: 0px;
+            }
+
+            .dateFormat {
+                padding: 0 2px;
+                display: none;
+            }
+
+            .epr_Mark7 .nav>li>a:hover,
+            .epr_Mark7 .nav>li>a:focus {
+                background-color: transparent !important;
+            }
+
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a,
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a:hover,
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a:focus {
+                color: #555;
+                background-color: #ffffff;
+            }
+
+            .epr_Mark7 .active {
+                background: none;
+            }
+
+            input {
+                padding-top: 0;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 5px;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <apex:form id="mainFrm">
+            <apex:outputPanel rendered="{!if(showUPSComponent == true || showInternalShippingComponent == true || showFedexComponent == true, false, true)}">
+                <apex:pageMessages ></apex:pageMessages>
+    
+                <apex:actionFunction name="populatePkgDetails" action="{!populatePackDetails}" reRender="packPnl" immediate="true">
+                    <apex:param name="pickVal" value="" assignTo="{!pkgTypeValue}" />
+                </apex:actionFunction>
+                
+                <apex:actionFunction name="createShipments" action="{!createShipments}" immediate="true"/>
+                
+                <apex:actionFunction name="goBack" action="{!back}" immediate="true" />
+                
+                <apex:actionFunction name="deletePackage" action="{!deletePackage}" immediate="true"/>
+                <apex:actionFunction name="beforeDelete" reRender="ik" oncomplete="deletePackage();" immediate="true">
+                    <apex:param assignTo="{!pack2updateId}" name="pack2updateId" value="" />
+                </apex:actionFunction>
+                
+                <div class="erp_mark7">
+                    <div style="display: {!if(errorMsg != null && errorMsg != '', '', 'none')}" class="slds-notify slds-notify--alert slds-theme--alert-texture slds-theme--error" role="alert">
+                        <span class="slds-assistive-text">error</span>
+                        <span class="slds-icon_container slds-icon-utility-ban slds-m-right--x-small" title="Description of icon when needed">
+                        <svg class="slds-icon slds-icon--x-small" aria-hidden="true">
+                            <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/utility-sprite/svg/symbols.svg#ban')}" />
+                        </svg>
+                        </span>
+                        <p><apex:outputText value="{!errorMsg}" /> </p>
+                    
+                    </div>
+                    <div class="slds-page-header">
+                        <div class="slds-grid">
+                            <div class="slds-col slds-has-flexi-truncate">
+                                <div class="slds-media slds-no-space slds-grow">
+                                    <div class="slds-media__figure">
+                                        <svg class="slds-icon slds-icon-standard-opportunity slds-p-around--xx-small" aria-hidden="true">
+                                                <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/action-sprite/svg/symbols.svg#record')}"></use>
+                                            </svg>
+                                    </div>
+                                    <div class="slds-media__body">
+                                        <p class="slds-text-title--caps slds-line-height--reset">Return Merchandise Authrization (RMA)</p>
+                                        <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">Package</h1>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-no-flex slds-grid slds-align-top">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="epr_Mark7 erp_mark7" >
+                    <div  class="panel-collapse collapse in">
+                        <div class="panel-body" style="padding:0px;">
+                            <ul class="nav nav-tabs " role="tablist">
+                                <li class="nav-item active"> 
+                                    <a class="nav-link" data-toggle="tab" href="#SF" role="tab">
+                                    <i class="fa fa-archive" aria-hidden="true" style="font-size: 15px;" ></i>&nbsp;Package </a>
+                                </li>
+                                <li class="nav-item"> 
+                                    <a class="nav-link" data-toggle="tab" href="#ship" role="tab" onclick="createShipments();">
+                                   <i class="fa fa-plane" aria-hidden="true" style="font-size: 15px;" ></i> &nbsp;Shipment </a>
+                                </li>
+                                
+                            </ul>
+                            
+                        </div>
+                    </div>
+                </div>
+                
+                <apex:outputPanel rendered="{!showPackList}">
+        <div class="erp_mark7">
+            <div class="slds-m-top--small"></div>   
+                <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th class="slds-is-sortable" scope="col"> 
+                                    <span class="slds-truncate">ACTION</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">NAME</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">RMA</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">CUSTOMER</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">STATUS</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">TYPE</span>
+                                </th>                         
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">SHIPMENT TYPE</span>
+                                </th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <span class="slds-truncate">SHIPMENT</span>
+                                </th>
+                                
+                                <th>&nbsp;</th>
+                                <th scope="col" class="slds-is-sortable">
+                                    <label class="slds-checkbox">
+                                        <apex:inputCheckbox id="selectAll1">
+                                            <apex:actionSupport event="onclick" onsubmit="checkAll1(this)" rerender="Selected_PBS" immediate="true"/>
+                                        </apex:inputCheckbox>
+                                        <span class="slds-checkbox--faux"></span>
+                                    </label>
+                                </th>
+                            </tr>
+                        </thead>
+        
+                        <tbody>
+                            <apex:repeat value="{!selectedWrapLst}" var="packs">
+                                <tr class="slds-hint-parent">
+                                    <td class="" data-label="Action">
+                                        <table class="slds-table slds-no-row-hover" style="border: 0px solid #d8dde6;">
+                                            <tr>
+                                                <td data-label="Action" style="padding:0px !important; border-top: 0px solid #d8dde6; cursor: pointer;">
+                                                    <apex:commandLink action="{!editPackage}" immediate="true">
+                                                        <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/edit_60_green.png')}" width="18" height="18" title="Edit Item"/>
+                                                        <apex:param assignTo="{!pack2updateId}" name="pack2updateId" value="{!packs.pack.Id}"/>                                                        
+                                                    </apex:commandLink>                                              
+                                                </td>
+                                                <td align="left" width="70%" style="padding:0px !important; border-top: 0px solid #d8dde6; cursor:pointer;">|&nbsp;
+                                                    <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="18" height="18" title="Remove Item" onclick="var r = confirm('Are you sure you want to delete?'); if (r == true) { beforeDelete('{!packs.pack.Id}'); }"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputLink value="/{!packs.pack.Id}" target="_blank">{!packs.pack.name}</apex:outputLink>
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputLink value="/{!packs.pack.Return_Merchandise_Authorisation__c}" target="_blank">{!packs.pack.Return_Merchandise_Authorisation__r.Name}</apex:outputLink>
+                                    </td> 
+                                    <td class="greyheadlabel">
+                                        <apex:outputLink value="/{!packs.pack.Return_Merchandise_Authorisation__r.Account__c}" target="_blank">{!packs.pack.Return_Merchandise_Authorisation__r.ERP7__Account__r.Name}</apex:outputLink>
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputField value="{!packs.pack.Status__c}" />
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputField value="{!packs.pack.Package_Type__c}" />
+                                    </td>                                    
+                                    <td class="greyheadlabel">
+                                        <apex:outputField value="{!packs.pack.Shipment_Type__c}" />
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputLink value="/{!packs.pack.Shipment__c}" target="_blank">{!packs.pack.Shipment__r.Name}</apex:outputLink> 
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <apex:outputPanel rendered="{!if(packs.pack.Shipment__r.Name != null, false, true)}">
+                                            <i class="fa fa-plane" aria-hidden="true" style="color:#00c6b7;"></i>&nbsp; 
+                                            <apex:commandLink value="Ship" action="{!initiateShipment}">
+                                                <apex:param name="pkgId" value="{!packs.pack.Id}" assignTo="{!packageId}" />
+                                            </apex:commandLink>&nbsp;&nbsp;
+                                        </apex:outputPanel> 
+                                    </td>
+                                    <td class="greyheadlabel">
+                                        <label class="slds-checkbox">
+                                             <apex:inputCheckbox selected="{!packs.pkgSelected}" value="{!packs.pkgSelected}" id="checkedone1" style="display:{!if(packs.pack.Status__c == 'Shipped' || packs.pack.Status__c == 'Picked Up' || packs.pack.Status__c == 'Delivered', 'none','')}"/>
+                                             <span class="slds-checkbox--faux"></span>
+                                         </label>
+                                    </td>
+                                </tr>
+                            </apex:repeat>
+                        </tbody>
+                    </table>
+                </div>  
+                </apex:outputPanel>
+                
+                <apex:outputPanel rendered="{!showPackpnl}">
+                    <div class="erp_mark7 slds-container--fluid">
+                        <table border="0" width="100%" cellpadding="1" cellspacing="0" style="margin-left: -290px; display: {!if(errorMsg != null && errorMsg != '', '', 'none')}">
+                            <tr><td>&nbsp;</td></tr>
+                            <tr>
+                                <td align="center" valign="middle">
+                                    <apex:outputText value="{!errorMsg}" id="errmsg" style="color:#FF0000; font-weight:lighter; font-size:12px;"/>
+                                </td>
+                            </tr>
+                        </table>
+                        <apex:outputPanel id="packPnl">
+                            <div class="epr_Mark7" style="padding:10px;">
+                                <div class="row padding-t-5">
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Name</p>
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <apex:inputField value="{!pack.Name}" style="width:100%;" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Weight <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <apex:inputField value="{!pack.Weight__c}" style="width:100%" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Weight Unit <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <div class="slds-select_container">
+                                                <apex:inputField value="{!pack.Weight_Unit__c}" styleClass="slds-select" required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Length <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Length__c}" style="width:100%" />
+                                        </div>
+                                    </div>
+                                </div>
+        
+                                <div class="row padding-t-5">
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <p class="greyhead" style="font-size:14px;">Width <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Width__c}" style="width:100%" />
+                                        </div>
+                                    </div>
+        
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <p class="greyhead" style="font-size:14px;">Height <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Height__c}" style="width:100%" />
+                                        </div>
+                                    </div>
+        
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Package Type <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <div class="slds-select_container">
+                                                <apex:inputField value="{!pack.Package_Type__c}" styleClass="slds-select" onchange="populatePkgDetails(this.value);" required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Declared Value <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Declared_Value__c}" style="width:100%" />
+                                        </div>
+                                    </div>
+                                </div>
+        
+                                <div class="row padding-t-5">
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Deposit Tag</p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Deposit_Tag__c}" styleClass="slds-input" />
+                                        </div>
+                                    </div>
+        
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Shipment Type <span style="color: red;">*</span></p>
+                                        <div class="slds-form-element__control">
+                                            <div class="slds-select_container">
+                                                <apex:inputField value="{!pack.Shipment_Type__c}" styleClass="slds-select" required="true" />
+                                            </div>
+                                        </div>
+                                    </div>
+        
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">RMA</p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pack.Return_Merchandise_Authorisation__c}" styleClass="slds-select" />
+                                        </div>
+                                    </div>
+        
+                                    <div class="col-md-3 slds-p-top--xx-small">
+                                        <p class="greyhead" style="font-size:14px;">Description</p>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputTextarea value="{!pack.Description__c}" styleClass="slds-input" rows="1" />
+                                        </div>
+                                    </div>
+        
+                                </div>
+                            </div>
+                        </apex:outputPanel>
+                       <div class="erp_mark7">
+                            <div class=" slds-m-top--small"></div>  
+                            <apex:outputPanel id="poliPnl" >
+                                <div class="slds-card">
+                                    <div class="slds-card__body">
+                                        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th class="slds-is-sortable" scope="col">
+                                                        <label class="slds-checkbox">
+                                                            <apex:inputCheckbox id="selectAll">
+                                                                <apex:actionSupport event="onclick" onsubmit="checkAll(this)" rerender="Selected_PBS" immediate="true"/>
+                                                            </apex:inputCheckbox> 
+                                                            <span class="slds-checkbox--faux"></span>
+                                                        </label>
+                                                    </th>
+                                                    <th class="slds-text-heading--label" scope="col">LINE ITEM</th>
+                                                    <th class="slds-text-heading--label" scope="col">PRODUCT</th>
+                                                    <th class="slds-text-heading--label" scope="col">ORDER</th>
+                                                    <th class="slds-text-heading--label" scope="col">CUSTOMER</th>
+                                                    <th class="slds-text-heading--label" scope="col">QUANTITY</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <apex:outputPanel id="palis">
+                                                 
+                                                    
+                                                    <apex:variable var="poliCounter" value="{!0}" />
+                                                    <apex:repeat value="{!packWrapLst}" var="pl">
+                                                        <tr class="slds-hint-parent">
+                                                            <td>
+                                                                <label class="slds-checkbox">
+                                                                    <apex:inputCheckbox value="{!pl.pkgSelected}" id="checkedone2" onclick="uncheckSelectAllBox2(this.checked);"/>
+                                                                    <span class="slds-checkbox--faux"></span>
+                                                                </label>
+                                                            </td>
+                                                            <td data-label="LINE ITEM">
+                                                                <apex:outputField value="{!pl.pkgList.Name}" />
+                                                            </td>
+                                                            <td data-label="PRODUCT">
+                                                                <apex:outputField value="{!pl.pkgList.RMA_Line_Item__r.Product__r.Name}" />
+                                                            </td>
+                                                            <td data-label="ORDER">
+                                                                <apex:outputField value="{!pl.pkgList.RMA_Line_Item__r.Name}" />
+                                                            </td>
+                                                            <td data-label="CUSTOMER">
+                                                                <apex:outputField value="{!pl.pkgList.Return_Merchandise_Authorisation__r.ERP7__Account__r.Name}" />
+                                                            </td>
+                                                            <td data-label="QUANTITY">
+                                                                <apex:outputField value="{!pl.pkgList.Quantity__c}" id="quan"/>
+                                                            </td>
+                                                        </tr>
+                                                        <apex:variable var="poliCounter" value="{!poliCounter+1}" />
+                                                    </apex:repeat>
+                                                </apex:outputPanel>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </apex:outputPanel>
+                            
+                            
+                            
+                            <apex:outputPanel id="editPoliPnl" rendered="false">
+                                <div class="slds-card">
+                                    <div class="slds-card__body">
+                                        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th class="slds-is-sortable" scope="col">
+                                                        <label class="slds-checkbox">
+                                                            <apex:inputCheckbox id="selectAll2">
+                                                                <apex:actionSupport event="onclick" onsubmit="checkAll2(this)" rerender="Selected_PBS" immediate="true"/>
+                                                            </apex:inputCheckbox> 
+                                                            <span class="slds-checkbox--faux"></span>
+                                                        </label>
+                                                    </th>
+                                                    <th class="slds-text-heading--label" scope="col">LINE ITEM</th>
+                                                    <th class="slds-text-heading--label" scope="col">PRODUCT</th>
+                                                    <th class="slds-text-heading--label" scope="col">ORDER</th>
+                                                    <th class="slds-text-heading--label" scope="col">CUSTOMER</th>
+                                                    <th class="slds-text-heading--label" scope="col">QUANTITY</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <apex:outputPanel id="editpalis" >
+                                                    <apex:variable var="poliCounter" value="{!0}" />
+                                                    <apex:repeat value="{!editWrapLst}" var="pl">
+                                                        <tr class="slds-hint-parent">
+                                                            <td>
+                                                                <label class="slds-checkbox">
+                                                                    <apex:inputCheckbox value="{!pl.pkgSelected}" id="checkedone3" onclick="uncheckSelectAllBox2(this.checked);"/>
+                                                                    <span class="slds-checkbox--faux"></span>
+                                                                </label>
+                                                            </td>
+                                                            <td data-label="LINE ITEM">
+                                                                <apex:outputField value="{!pl.pkgList.Name}" />
+                                                            </td>
+                                                            <td data-label="PRODUCT">
+                                                                <apex:outputField value="{!pl.pkgList.RMA_Line_Item__r.Product__r.Name}" />
+                                                            </td>
+                                                            <td data-label="ORDER">
+                                                                <apex:outputField value="{!pl.pkgList.RMA_Line_Item__r.Name}" />
+                                                            </td>
+                                                            <td data-label="CUSTOMER">
+                                                                <apex:outputField value="{!pl.pkgList.Return_Merchandise_Authorisation__r.ERP7__Account__r.Name}" />
+                                                            </td>
+                                                            <td data-label="QUANTITY">
+                                                                <apex:outputField value="{!pl.pkgList.Quantity__c}" id="quan"/>
+                                                            </td>
+                                                        </tr>
+                                                        <apex:variable var="poliCounter" value="{!poliCounter+1}" />
+                                                    </apex:repeat>
+                                                </apex:outputPanel>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </apex:outputPanel>
+                            
+                            
+                            
+                            
+                            <div class="slds-p-top--small"></div>
+                            <div class="slds-text-align--center slds-p-around--medium">
+                                <apex:commandButton value="Save" action="{!createPackAndLI}" styleClass="slds-button slds-button--brand"/>
+                                <apex:commandButton styleClass="slds-button slds-button--neutral" value="Cancel" action="{!''+$currentPage.parameters.retURL+'?Id='+$currentPage.parameters.Id+'&Name='+$currentPage.parameters.Name}" immediate="true"/>
+                            </div>
+                        </div>
+                    </div>
+                </apex:outputPanel>
+            </apex:outputPanel>
+            <apex:outputPanel rendered="{!showFedexComponent}">                                    
+                <c:Fedex_Component packageIds="{!selectedPackIds}" shipmentId="{!shipId}" returnValue="{!retValue}"/>
+            </apex:outputPanel>
+            
+            <apex:outputPanel rendered="{!showUPSComponent}">                                    
+                <c:UPS_Component packageIds="{!selectedPackIds}" shipmentId="{!shipId}" returnValue="{!retValue}"/>
+            </apex:outputPanel>
+            
+            <apex:outputPanel rendered="{!showInternalShippingComponent}">                                    
+                <c:Shipment_Component packageIds="{!selectedPackIds}" shipmentId="{!shipId}" returnValue="{!retValue}"/>
+            </apex:outputPanel>
+            
+            
+        </apex:form>
+    </body>
+
+    </html>
+	-->
+    <!--script>
+        function checkAll(cb) {
+            var inputElem = document.getElementsByTagName("input");
+            for (var i = 0; i < inputElem.length; i++) {
+                if (inputElem[i].id.indexOf("checkedone2") != -1) {
+                    inputElem[i].checked = cb.checked;
+                }
+            }
+        }
+        
+        function checkAll1(cb) {
+            var inputElem = document.getElementsByTagName("input");
+            for (var i = 0; i < inputElem.length; i++) {
+                if (inputElem[i].id.indexOf("checkedone1") != -1) {
+                    inputElem[i].checked = cb.checked;
+                }
+            }
+        } 
+        
+        function checkAll2(cb) {
+            var inputElem = document.getElementsByTagName("input");
+            for (var i = 0; i < inputElem.length; i++) {
+                if (inputElem[i].id.indexOf("checkedone3") != -1) {
+                    inputElem[i].checked = cb.checked;
+                }
+            }
+        }
+    </script-->
+
+</apex:page>

@@ -1,0 +1,302 @@
+<aura:component Controller="ERP7.POSLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="Global">
+   	<ltng:require styles="/resource/ERP7__Order_Console/assets/styles/font-awesome.css" />
+   	<ltng:require styles="/resource/ERP7__SLDS213/assets/styles/salesforce-lightning-design-system-vf.css" />
+   	<ltng:require styles="/resource/ERP7__SLDS213/assets/styles/salesforce-lightning-design.css" />
+   	<ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/cardpayment.css"/>
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    
+	<aura:attribute name="SON" type="String" />
+    <aura:attribute name="IVN" type="String" />
+    <aura:attribute name="AccountId" type="String" />
+   	<aura:attribute name="DueAmount" type="String" />
+   	<aura:attribute name="Invoice" type="Invoice__c" default="{sobjectType : 'Invoice__c','ERP7__Account__c':''}" />
+   	<aura:attribute name="SalesOrder" type="Object" />
+   	<aura:attribute name="Payment" type="Object" />
+   	<aura:attribute name="PaymentMethod" type="Object" />
+   	<aura:attribute name="CVV" type="String" />
+   	<aura:attribute name="CardError" type="String"/>
+   	<aura:attribute name="BillingAddress" type="Address__c" default="{sobjectType:'Address__c','ERP7__Contact__c': ''}"/>
+   	<aura:attribute name="Country" type="String"/>
+   	<aura:attribute name="County" type="String"/>
+   	<aura:attribute name="exceptionError" type="String"/>
+   	<aura:attribute name="finalDue" type="Decimal" default="0"/>
+   	<aura:attribute name="logo" type="String"/>
+    <aura:attribute name="spinner" type="String"/>
+   	<aura:attribute name="Customer" type="Account"/>
+    <aura:attribute name="cardTypeOptions" type="List"/>
+    <aura:attribute name="expiryMonthOptions" type="List"/>
+    <aura:attribute name="expiryYearOptions" type="List"/>
+    <aura:attribute name="CountryListOptions" type="List"/>
+    <aura:attribute name="CountyListOptions" type="List"/>
+   	<aura:attribute name="displaySelect" type="Boolean" default="true"/>
+   	<aura:attribute name="rad1" type="Boolean" default="true"/>
+   	<aura:attribute name="rad2" type="Boolean" default="false"/>
+   	<aura:attribute name="paymentSuccess" type="Boolean" default="false"/>
+   	<aura:attribute name="businessId" type="String"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getAllPaymentsDetails}" />
+	<div class="erp_mark7 CardPayment-Class1">
+      	<div class="epr_Mark7 CardPayment-Class1">
+            <div class="slds-page-header slds-page-header--object-home CardPayment-Class2">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container CardPayment-Class3">
+                                    <span class="slds-icon slds-icon-standard-lead CardPayment-Class4" aria-hidden="true">
+                                        <i class="fa fa-credit-card CardPayment-Class5"></i>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <aura:if isTrue="{!v.paymentSuccess}">
+                                    <p class="slds-text-title--caps slds-line-height--reset">
+                                        Payment Successful
+                                    </p>
+                                    <aura:set attribute="else">
+                                        <p class="slds-text-title--caps slds-line-height--reset">
+                                            SECURED Card Payment
+                                            <img id="cardPayment" src='https://erp-mark-7-dev-ed--c.eu37.content.force.com/servlet/servlet.ImageServer?id=01506000006OQdb&amp;oid=00D24000000q8Wb' class="CardPayment-Class6" />
+                                        </p>
+                                    </aura:set>
+                                </aura:if>
+                            </div>
+                        </div>
+                    </div>
+                    <aura:if isTrue="{!not(v.paymentSuccess)}">
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small">
+                            <div class="slds-button-group" role="group" >
+                                <aura:renderIf isTrue="{!(v.logo != '')}">
+                                    <img src="{!v.logo}"  class="CardPayment-Class7" alt="LOGO" />
+                                </aura:renderIf>
+                            </div>
+                        </div>
+                    </aura:if>
+                </div>
+            </div>
+                    
+            <aura:if isTrue="{!v.paymentSuccess}">
+                <div class="container-fluid CardPayment-Class8">
+                    <center>
+                        <lightning:icon iconName="utility:success" size ="large" variant = "success" alternativeText="Payment Successfull" title="Payment Successfull" /><br/>
+                        <h1>Your Payment has been successful</h1>
+                    </center>
+                </div>
+                <aura:set attribute="else">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <aura:if isTrue="{!v.AccountId==undefined}">   
+                                <div class="col-md-3 col-xs-4 slds-m-top--small">
+                                    <label class="slds-form-element__label" for="input-03">
+                                        ORDER #&nbsp;:
+                                        <span class="CardPayment-Class9">
+                                            <lightning:formattedText value="{!v.SalesOrder.Name}"/>
+                                        </span>
+                                    </label>  
+                                </div>
+                            </aura:if>    
+                            <div class="col-md-3 col-xs-4 slds-m-top--small">
+                                <label class="slds-form-element__label" for="input-01">
+                                    AMOUNT&nbsp;:
+                                    <span class="CardPayment-Class9">
+                                        <lightning:formattedNumber style="decimal" aura:id="pAmt" value="{!v.Payment.ERP7__Total_Amount__c}" />
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-md-6 col-sm-6 col-xs-12 CardPayment-Class10">
+                                <span class="CardPayment-Class11"></span>
+                                <br/>
+                                <span class="CardPayment-Class11">
+                                    <lightning:formattedText aura:id="exceptionError" value="{!v.exceptionError}"/>
+                                </span>
+                            </div>
+                        </div>
+                        <fieldset class="slds-form--compound">
+                            <div class="row">
+                                <div class="col-md-6 ">
+                                    <div class="slds-form-element__group billingdetailswrapbg">
+                                        <div class="row display-tr CardPayment-Class12">
+                                            <h3 class="panel-title display-td" >BILLING DETAILS</h3>
+                                            <div class="display-td" ></div>
+                                        </div>
+                                        <div class="row slds-m-top--small">
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13">*</span>First Name</label>
+                                               <lightning:input type="text" variant="label-hidden" aura:id="pAmt" value="{!v.Payment.ERP7__First_Name__c}" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13" >*</span>Last Name</label>
+                                                <lightning:input type="text" variant="label-hidden" aura:id="pAmt" value="{!v.Payment.ERP7__Last_Name__c}" />
+                                            </div>
+                                            <aura:if isTrue="{!(v.SON != '')}">
+                                                <div class="col-md-4">
+                                                    <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13">*</span>Email</label>
+                                                    <lightning:input type="Email" variant="label-hidden" value="{!v.SalesOrder.ERP7__Customer_Email__c}"/>
+                                                </div>
+                                            </aura:if>
+                                            <aura:if isTrue="{!or(v.IVN != '',v.AccountId != '')}">
+                                                <div class="col-md-4">
+                                                    <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13">*</span>Email</label>
+                                                    <lightning:input type="Email" variant="label-hidden" value="{!v.Payment.ERP7__Email_Address__c}"/>
+                                                </div>
+                                            </aura:if>                                    
+                                        </div>
+                                        <div class="row slds-m-top--small">
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-01"><span class="CardPayment-Class13">*</span>Address Line1</label>
+                                                <lightning:input type="text" variant="label-hidden" aura:id="ncphn" value="{!v.BillingAddress.ERP7__Address_Line1__c}"/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-02"><span class="CardPayment-Class13">*</span>Town / City</label>
+                                                <lightning:input type="text" variant="label-hidden" aura:id="ncphn" value="{!v.BillingAddress.ERP7__City__c}"/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13">*</span>County / State</label>
+                                                <div class="slds-form-element">
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-select_container">
+                                                            <lightning:select  aura:id="CountyList" value="{!v.County}" variant="label-hidden"  class="display-lable">
+                                                                <aura:iteration items="{!v.CountyListOptions}" var="option">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.County, option.value)}"/>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row slds-m-top--small">
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-01"><span class="CardPayment-Class13">*</span>Postcode / Zip</label>
+                                                <lightning:input type="text" variant="label-hidden" aura:id="ncphn" value="{!v.BillingAddress.ERP7__Postal_Code__c}"/>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="slds-form-element__label" for="input-02"><span class="CardPayment-Class13">*</span>Country</label>
+                                                <div class="slds-form-element">
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-select_container">
+                                                            <lightning:select aura:id="CountryList" value="{!v.Country}" variant="label-hidden"  class="display-lable">
+                                                                <aura:iteration items="{!v.CountryListOptions}" var="option">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Country, option.value)}"/>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="creditwrapbg">
+                                        <input type="radio" onclick="{!c.getPanel}" checked="{!v.rad1}" data-record="cdc" aura:id="com1"/>
+                                        <label class="slds-radio__label" for="radio-1">
+                                            <span class="slds-radio_faux"></span>
+                                            <span class="slds-form-element__label CardPayment-Class14">&nbsp;  <img class="img-responsive pull-right" src="https://i.imgur.com/gIMFDbp.png"/></span>
+                                        </label><br/>
+                                        <aura:if isTrue="{!v.displaySelect==true}">
+                                            <fieldset class="slds-form-element ">
+                                               <div class="slds-form-element__group ">
+                                                    <div class="row display-tr CardPayment-Class12">
+                                                        <p class="CardPayment-Class15"> 
+                                                            <lightning:formattedText aura:id="paymentError" value="{!v.CardError}"/>
+                                                        </p>
+                                                    </div>
+                                                    <div class="row slds-m-top--small">
+                                                        <div class="col-xs-8 col-md-8">
+                                                            <label class="slds-form-element__label" for="input-02"><span class="CardPayment-Class13">*</span>Card Number</label>
+                                                            <lightning:input type="text" variant="label-hidden" aura:id="pAmt" value="{!v.PaymentMethod.ERP7__Card_Number__c}" />
+                                                        </div>
+                                                        <div class="col-xs-4 col-md-4">
+                                                            <label class="slds-form-element__label" for="input-03"><span class="CardPayment-Class13">*</span>CVV</label>
+                                                            <lightning:input type="password" aura:id="cvv" maxlength="4" value="{!v.CVV}" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="row slds-m-top--small">
+                                                        <div class="col-xs-4 col-md-4">
+                                                            <label class="slds-form-element__label" for="input-01"><span class="CardPayment-Class13">*</span>Card Type</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element--control">
+                                                                    <div class="slds-select_container">
+                                                                        <lightning:select aura:id="cardType" value="{!v.PaymentMethod.ERP7__CardType__c}" variant="label-hidden"  class="display-lable">
+                                                                            <aura:iteration items="{!v.cardTypeOptions}" var="option">
+                                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.PaymentMethod.ERP7__CardType__c, option.value)}"/>
+                                                                            </aura:iteration>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-4 col-md-4">
+                                                            <label class="slds-form-element__label" for="input-02"><span class="CardPayment-Class13">*</span>Expiry Year</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element--control">
+                                                                    <div class="slds-select_container">
+                                                                        <lightning:select aura:id="expiryYear" value="{!v.PaymentMethod.ERP7__Card_Expiration_Year__c}" variant="label-hidden"  class="display-lable">
+                                                                            <aura:iteration items="{!v.expiryYearOptions}" var="option">
+                                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.PaymentMethod.ERP7__Card_Expiration_Year__c, option.value)}"/>
+                                                                            </aura:iteration>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-4 col-md-4 pull-right">
+                                                            <label class="slds-form-element__label" for="input-01"><span class="CardPayment-Class13">*</span>Expiry Month</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element--control">
+                                                                    <div class="slds-select_container">
+                                                                        <lightning:select aura:id="expiryMonth" value="{!v.PaymentMethod.ERP7__Card_Expiration_Month__c}" variant="label-hidden"  class="display-lable">
+                                                                            <aura:iteration items="{!v.expiryMonthOptions}" var="option">
+                                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.PaymentMethod.ERP7__Card_Expiration_Month__c, option.value)}"/>
+                                                                            </aura:iteration>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row slds-m-top--small"> </div>
+                                                    <div class="row slds-m-top--small">
+                                                        <div class="col-md-12 CardPayment-Class16">
+                                                            <lightning:button variant="brand" onclick="{!c.CardPayment}" label="Pay Now"/>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </aura:if> 
+                                    </div>
+                                    <div class="{!if((v.businessId == '' || v.businessId == undefined),'paypaldetailswrapbg CardPayment-Class17','paypaldetailswrapbg')}">
+                                        <input type="radio" onclick="{!c.getPanel}" checked="" data-record="paypal" aura:id="com2"/>
+                                        <label class="slds-radio__label" for="radio-1">
+                                            <span class="slds-radio_faux"></span>
+                                            <span class="slds-form-element__label CardPayment-Class18">&nbsp;<img class="img-responsive pull-right CardPayment-Class19" src="https://erp-mark-7-dev-ed--c.eu5.content.force.com/servlet/servlet.ImageServer?id=01524000004tt9l&amp;oid=00D24000000q8Wb"/></span>
+                                        </label>
+                                        <aura:if isTrue="{!v.displaySelect==false}">
+                                            <div class="row slds-p-bottom--large">
+                                                <div class="col-md-12 ">
+                                                    <div class="slds-form-element__group ">
+                                                        <div class="row display-tr CardPayment-Class12">
+                                                            <p>You'll be redirected to PayPal to link a verified account</p>
+                                                        </div>
+                                                        <div class="row slds-m-top-small">
+                                                            <div class="col-md-5">
+                                                                <c:PayNow Invoice_amount="{!v.Payment.ERP7__Total_Amount__c}" soId="{!v.SON}" MerchantId="{!v.businessId}"/>
+                                                                <p class="CardPayment-Class16">The safer, easier way to pay</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+                </aura:set>
+            </aura:if>
+        </div>
+   </div>
+    
+</aura:component>

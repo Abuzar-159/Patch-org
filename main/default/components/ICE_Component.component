@@ -1,0 +1,807 @@
+<apex:component controller="NewCase" access="public" allowDML="true">
+       
+    <apex:attribute type="String" access="public" name="objID" description="object Id" assignTo="{!objectID}"/>                
+    <apex:attribute name="objName" type="String" description="object name" access="public" assignTo="{!objectName}"/>
+        
+    <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+    
+    <!-- Css for ICE button -->    
+    <style>
+    .ice-lwrap {    
+        background: rgb(255,48,25); /* Old browsers */
+        background: -moz-linear-gradient(top,  rgba(255,48,25,1) 0%, rgba(207,4,4,1) 100%); /* FF3.6+ */
+        background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(255,48,25,1)), color-stop(100%,rgba(207,4,4,1))); /* Chrome,Safari4+ */
+        background: -webkit-linear-gradient(top,  rgba(255,48,25,1) 0%,rgba(207,4,4,1) 100%); /* Chrome10+,Safari5.1+ */
+        background: -o-linear-gradient(top,  rgba(255,48,25,1) 0%,rgba(207,4,4,1) 100%); /* Opera 11.10+ */
+        background: -ms-linear-gradient(top,  rgba(255,48,25,1) 0%,rgba(207,4,4,1) 100%); /* IE10+ */
+        background: linear-gradient(to bottom,  rgba(255,48,25,1) 0%,rgba(207,4,4,1) 100%); /* W3C */
+        filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ff3019', endColorstr='#cf0404',GradientType=0 ); /* IE6-9 */
+        
+        padding-top: 17px;
+        position: fixed;
+        right: 0px;
+        top:45%;
+    }
+    .ice-rwrap {
+        padding-bottom: 17px;
+    }
+    .ice-wrap {
+        width: 28px;
+    }
+    .ice-mraafi {
+        background:url({!URLFOR($Resource.ICE_NewCase,'SRC/images/ice-mraafi.png')}) no-repeat -115px center;
+        cursor: pointer;
+        height:70px;
+    }
+    .wrap{
+        width:960px;
+        height:5000px;
+        float:left;
+        margin:0 auto;
+    }
+  </style>    
+  
+  <script>
+  <!-- Function for Showing popup -->
+    function OpenICEpopup()
+    {
+        // alert('hello popup');     
+         document.getElementById('light10').style.display = 'block';
+         document.getElementById('fade1').style.display = 'block';
+         //testFunction();
+         popLookup();
+    } 
+ 
+  <!-- Function for closing popup -->
+    function closeIcePopup() {      
+        document.getElementById('light10').style.display = 'none';
+        document.getElementById('fade1').style.display = 'none';  
+        hideIcePopup();
+    }
+      
+  <!-- Attachment popup -->                        
+    function popupAttach(identifier) {
+        document.getElementById('light9').style.display = 'block';
+        document.getElementById('fade').style.display = 'block';        
+        document.getElementById('{!$Component.popform.indexvalform}').value = identifier;
+    }
+
+  <!-- Hide attachment popup -->            
+    function closeAttachmentPopup() {
+        document.getElementById('light9').style.display = 'none';
+        document.getElementById('fade').style.display = 'none';
+        document.getElementById('{!$Component.popform.abodynew}').value = null;
+    }                        
+    
+  <!-- Adding multiple attachment -->
+    function addAttachment(index) {
+        //alert('index in addAttachment : = ' + index);
+        document.getElementById('{!$Component.myFrm.cntValue}').value = index;
+        addAttachments();
+    }
+    
+  <!-- Remove attachment -->    
+    function removeAttachment(index) {
+        //alert('index in removeAttachment : = ' + index);                
+        document.getElementById('{!$Component.myFrm.cntValue}').value = index;
+        var r = confirm("Are you sure you want to delete?");
+        if (r == true) {            
+            removeAttachments(index);                       
+        }
+    }                  
+            
+  <!-- Ice form vaidation -->           
+    function iceValidate() {
+        //alert('ice validate ');             
+        var sub = document.getElementById('{!$Component.myFrm.sub}').value;     
+        var assistance = $('[id$=assist]').val();
+        var topic = $('[id$=topic]').val();
+        var sev = $('[id$=sev]').val();
+        var desp = $('[id$=desp]').val();        
+        
+        if (assistance == '' || topic == '' || sev == '-- Select severity level --' || sub == '' || desp == '') {         
+            if (assistance == '') {
+                document.getElementById('cat').style.display = '';
+            } else {
+                document.getElementById('cat').style.display = 'none';
+            }
+
+            if (topic == '' || topic == null) {
+                document.getElementById('top').style.display = '';
+            } else {
+                document.getElementById('top').style.display = 'none';
+            }
+
+            if (sev == '-- Select severity level --') {
+                document.getElementById('seve').style.display = '';
+            } else {
+                document.getElementById('seve').style.display = 'none';
+            }
+
+            if (sub == '' || sub == null) {
+                document.getElementById('sub').style.display = '';
+            } else {
+                document.getElementById('sub').style.display = 'none';
+            }
+
+            if (desp == '' || desp == null) {
+                document.getElementById('desp').style.display = '';
+            } else {
+                document.getElementById('desp').style.display = 'none';
+            }
+        } else {      
+            newICE(assistance, topic, sev, sub, desp);
+        } 
+    }     
+            
+  <!-- Hide error messages -->
+    function hideErr(val, str) {
+        if (val != '' && str == 'top') {
+            document.getElementById('top').style.display = 'none';
+        } else if (val != '' && str == 'sever') {
+            document.getElementById('seve').style.display = 'none';
+        } else if (val != '' && str == 'sub') {
+            document.getElementById('sub').style.display = 'none';
+        } else if (val != '' && str == 'desp') {
+            document.getElementById('desp').style.display = 'none';
+        } else if (val != '' && str == 'comDes') {
+            document.getElementById('comDes').style.display = 'none';
+        }
+    }
+
+  <!-- OnChange pass value to controller -->
+    function passValue(value) {
+        //alert('2 funct : = ' + value);        
+        popLookup(value);
+    }        
+       
+  <!-- comment validation -->            
+    function commentValidate() {
+        //alert('inside commentValidate');
+        var comDesp = document.getElementById('{!$Component.myFrm.comments}').value;
+        
+        if (comDesp == '') {
+            if (comDesp == '') {
+                document.getElementById('comDes').style.display = '';
+            } else {
+                document.getElementById('comDes').style.display = 'none';
+            }
+        } else {
+            uploadComments(comDesp);
+        }
+    }       
+ </script>
+ 
+ <!-- All realted css for popup -->
+  <style>
+  .popupBackground {
+        background-color: black;
+        opacity: 0.20;
+        filter: alpha(opacity=20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+        display: none;
+        position:fixed;
+    }
+  .customPopup1 {
+        background: #ffffff;
+        border-style: solid;
+        border-width: 0px;
+        left:20%;
+        top:0;
+        display: none;
+        border-radius: 7px;
+        position: absolute;
+        z-index: 9999;
+        width: 65%;
+        height: auto;
+        
+        margin:0 auto;
+    }    
+  .newcase-btn {
+        background: #ff1c1c;
+        background-image: -webkit-linear-gradient(top, #ff1c1c, #cf1922);
+        background-image: -moz-linear-gradient(top, #ff1c1c, #cf1922);
+        background-image: -ms-linear-gradient(top, #ff1c1c, #cf1922);
+        background-image: -o-linear-gradient(top, #ff1c1c, #cf1922);
+        background-image: linear-gradient(to bottom, #ff1c1c, #cf1922);
+        -webkit-border-radius: 8;
+        -moz-border-radius: 8;
+        border-radius: 4px;
+        font-family: Arial;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 10px 15px 10px 15px;
+        text-decoration: none;
+    }
+  .newcase-btn:hover {
+        background: #ff0318;
+        background-image: -webkit-linear-gradient(top, #ff0318, #cc0606);
+        background-image: -moz-linear-gradient(top, #ff0318, #cc0606);
+        background-image: -ms-linear-gradient(top, #ff0318, #cc0606);
+        background-image: -o-linear-gradient(top, #ff0318, #cc0606);
+        background-image: linear-gradient(to bottom, #ff0318, #cc0606);
+        text-decoration: none;
+        color: #fff;
+    }                       
+  .popupBackground {
+        background-color: black;
+        opacity: 0.20;
+        filter: alpha(opacity=20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+        display: none;
+    }
+  .customPopup {
+        //background: #ffffff;
+        background: #000;
+        border-style: solid;
+        border-width: 0px;
+        left: 35%;
+        display: none;
+        border-radius: 7px;
+        position: absolute;
+        z-index: 9999;
+        width: 380px;
+        height: 170px;
+        top: 180px;
+    }
+  .ui-btnsubmit {
+        height: 40px;
+        width: 156px;
+        border: 1px solid #fff;
+    }
+    );
+        cursor:pointer;
+    }
+  .ui-btnsubmit:hover {
+        height: 40px;
+        width: 156px;
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+  .ui-btncancel {
+        height:40px;
+        width:156px;
+        border:1px solid #fff;
+    }
+    );
+        cursor:pointer;
+    }
+  .ui-btncancel:hover {
+        height:40px;
+        width:156px;
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+  .ui-btnsave {
+        height:40px;
+        width:156px;
+        border:1px solid #fff;
+    }
+    );
+        cursor:pointer;
+    }
+  .ui-btnsave:hover {
+        height:40px;
+        width:156px;
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+ </style> 
+  
+  <!-- ICE button div -->  
+  <div class="ice-lwrap">
+      <div class="ice-rwrap">
+          <div class="ice-wrap">
+              <div class="ice-mraafi" onclick="OpenICEpopup();">
+              </div>
+          </div>
+      </div>
+  </div>     
+    
+    <apex:form id="myFrm">
+        <apex:actionFunction name="addAttachments" action="{!addAttachment}" reRender="showAttach,commAttach" />
+            
+        <apex:actionFunction name="removeAttachments" action="{!removeAttachment}" reRender="showAttach,commAttach">
+            <apex:param name="index" value="" assignTo="{!currentIndex}"/>
+        </apex:actionFunction>
+            
+        <apex:actionFunction name="newICE" action="{!saveNewICE}" reRender="commnts,commAttach,iceDetails" status="spinner1"> 
+            <apex:param name="assistance" value="" assignTo="{!category}" />
+            <apex:param name="topic" value="" assignTo="{!topic}" />
+            <apex:param name="sev" value="" assignTo="{!severity}" />
+            <apex:param name="sub" value="" assignTo="{!subject}" />
+            <apex:param name="desp" value="" assignTo="{!description}" />
+        </apex:actionFunction>
+                                    
+        <apex:actionFunction name="popLookup" action="{!fetchLookup}" reRender="lookupLabelPanel,lookupPanelValue,topic" status="spinner3"> 
+            <apex:param name="lookupId" value="" assignTo="{!lookupId}" />
+        </apex:actionFunction>
+        
+        <apex:actionFunction name="hideIcePopup" action="{!hideIcePopup}" 
+            reRender="commnts,showAttach,commAttach,lookupLabelPanel,category,topic,sev,sub,desp,lookupPanelValue"/>
+         
+        <apex:actionFunction name="uploadComments" action="{!uploadComment}" reRender="comments,dispComment" status="spinner4">
+            <apex:param name="param1" value="" assignTo="{!noteDesp}"/>
+        </apex:actionFunction>                
+            
+    <div id="fade1" class="popupBackground" style="display:{!if(showIcepopup,'block','none')}"></div>
+        <div id="light10" class="customPopup1" style="display:{!if(showIcepopup,'block','none')}">               
+        
+            <!-- main DIV -->
+                <div class="mainicelayout" style="border:1px solid #e7e7e7; width:100%; min-height:450px; height:auto; float:left; padding-bottom:10px;">                   
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:10px; " align="center">
+                        <tr>
+                            <td>
+                                <div class="newcase-btn">
+                                    <h1><span style="font-size:20px; font-weight:normal; color:#ffffff;">ICE&nbsp; </span> 
+                                    <span style="font-size:20px; font-weight:lighter">-&nbsp;New Case</span></h1>
+                                    
+                                    <div style="float:right;">
+                                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/close.png')}" width="30px" height="30px"
+                                            onclick="closeIcePopup()"></apex:image>
+                                    </div>
+                                </div>                              
+                            </td>
+                        </tr>
+                    </table>
+            
+                    <!-- left DIV -->
+                    <div style="border:px solid; width:48%; min-height:350px; height:auto; float:left;background-color:white;" class="pure-form">
+                        <table border="0" width="100%">
+                            <tr>
+                                <td>
+                                    <table border="0" width="100%">
+                                        <tr>
+                                        
+                                            <td width="50%">
+                                                <span style="font-weight:bold; margin-left:15px;" class="icefiledsERP"> I need assistance with </span>
+                                                &nbsp;&nbsp;
+                                                <apex:actionStatus id="spinner3">
+                                                    <apex:facet name="start">
+                                                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/spinner24.gif')}" height="19px;" width="19px;" /> </apex:facet>
+                                                </apex:actionStatus>
+                                            </td>
+                                            
+                                            <td width="50%">
+                                                <apex:outputPanel id="lookupLabelPanel">
+                                                    <apex:outputPanel rendered="{!lookupLabel}"> 
+                                                        <apex:outputLabel styleClass="icefiledsERP"> <b> {!customLabel} </b> &nbsp; </apex:outputLabel>
+                                                    </apex:outputPanel> 
+                                                </apex:outputPanel>
+                                            </td>                                           
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>              
+                                <apex:outputPanel id="lookupPanelValue">
+                                    <apex:outputPanel id="lookupValue">
+                                    <table border="0" width="100%">                                                                               
+                                        <tr>
+                                            <td width="50%">
+                                                <span style="font-weight:bold; margin-left:12px;">                                                                                                          
+                                                  <apex:selectList size="1" value="{!category}" id="assist" onchange="hideErr(this.value,'cat');passValue(this.value);" rendered="{!$ObjectType.RecordType.fields.Name.Accessible}">
+                                                      <apex:selectOptions value="{!rTypeList}"></apex:selectOptions>
+                                                  </apex:selectList>                                    
+                                              </span><br/>
+                                                <label id="cat" for="cat" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please select a category</label>
+                                            </td>
+                                            
+                                            <td width="50%">           
+                                                <apex:repeat value="{!fetchLookup}" var="f">                                                    
+                                                    <apex:inputField value="{!newICE[f]}"/>
+                                                </apex:repeat>                                                                                                                                
+                                            </td>
+                                        </tr>
+                                    </table> 
+                                    </apex:outputPanel>
+                                </apex:outputPanel>     
+                                </td>                                                            
+                            </tr>
+                            
+                            <tr><td>&nbsp;</td></tr>
+
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;" class="icefiledsERP"> Specific topic </span>
+                                </td>
+                            </tr>
+                            
+                            <apex:outputPanel id="topicValue">
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;">                                   
+                                        <apex:inputField value="{!topicList.Topic__c}" id="topic" onchange="hideErr(this.value,'top');" style="width:76%;"/> 
+                                    </span><br/>
+                                    <label id="top" for="top" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please select a topic</label>
+                                </td>
+                            </tr>
+                            </apex:outputPanel>
+    
+                            <tr><td>&nbsp;</td></tr>
+    
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;" class="icefiledsERP"> Severity </span>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;">                                                                    
+                                        <apex:selectList size="1" id="sev" style="width:76%;" value="{!severity}" rendered="{!$ObjectType.ICE__c.fields.Priority__c.Accessible}">
+                                            <apex:selectOptions value="{!Priority}"></apex:selectOptions>
+                                        </apex:selectList>
+                                    </span><br/>
+                                    <label id="seve" for="seve" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please select a severity</label>
+                                </td>
+                            </tr>
+    
+                            <tr><td>&nbsp;</td></tr>
+    
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;" class="icefiledsERP"> Subject </span>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;">
+                                        <apex:inputText size="71" id="sub" onkeyup="hideErr(this.value,'sub');" value="{!subject}" style="width:76%;" rendered="{!$ObjectType.ICE__c.fields.Subject__c.Accessible}"/>
+                                    </span><br/>
+                                    <label id="sub" for="sub" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please enter a subject</label>
+                                </td>
+                            </tr>
+    
+                            <tr><td>&nbsp;</td></tr>
+    
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;" class="icefiledsERP"> Description </span>
+                                </td>
+                            </tr>
+                            
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; margin-left:15px;"> 
+                                      <apex:inputTextarea rows="4" cols="68" id="desp" value="{!description}" onkeyup="hideErr(this.value,'desp');" style="width:76%;" rendered="{!$ObjectType.ICE__c.fields.Description__c.Accessible}"/> 
+                                    </span><br/>
+                                    <label id="desp" for="desp" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please enter a description</label>
+                                </td>
+                            </tr>
+    
+                            <tr><td>&nbsp;</td></tr>
+    
+                            <tr>
+                                <td align="center"> 
+                                    <apex:commandLink value="Cancel" onclick="closeIcePopup();" reRender="none" styleClass="newcase-btn" style="margin-bottom:10px;" />&nbsp;&nbsp;&nbsp;
+                                    <input type="button" value="Submit Case" onclick="iceValidate();" Class="newcase-btn" style="border:0px;" /> &nbsp;&nbsp;&nbsp;                                                                        
+                                    <apex:actionStatus id="spinner1">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/spinner24.gif')}" height="24px;" width="24px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus>
+                                </td>                            
+                            </tr>                        
+                        </table>
+                    </div>
+                    <!-- end of left DIV -->
+                    
+                    <!-- right DIV -->
+                    <div style="border-top:px solid; border-bottom:px solid #e7e7e7; border-left:1px solid #e7e7e7; width:48%; min-height:350px; height:auto; float:right;" class="pure-form">
+                        
+                    <!-- Comments & Attachments Block -->     
+                    <apex:outputPanel id="commAttach">
+                    <apex:outputPanel rendered="{!showComments_Attachcments}">  
+                        <table border="0" width="100%" style="margin-top:15px;">
+                            <tr>
+                                <td>
+                                    <span style="font-weight:bold; font-size:20px; margin-left:15px;" class="icefiledsERP"> Comments &amp; Attachments </span>
+                                    <apex:inputHidden value="{!currentIndex}" id="cntValue" />
+                                </td>
+                            </tr>
+                            
+                            <tr> <td>&nbsp;</td> </tr>
+                            
+                            <tr>
+                                <td>
+                                    <table border="0" width="100%" bgcolor="f9f9f9" >
+                                        <tr>
+                                            <td width="4%"><apex:image url="{!URLFOR($Resource.ICE_NewCase,'SRC/images/comment_icon.png')}" width="28" height="28"/></td>
+                                            <td width="10%">                                    
+                                                <apex:commandLink status="spinner5" value="Comment" action="{!uploadComment_Attachment}" id="comm" reRender="commnts,showAttach" style="color:#666; text-decoration:none; font-size:15px; font-weight:bold;" rendered="{!$ObjectType.Note.Accessible}">
+                                                    <apex:param name="selectValue" value="Comment" assignTo="{!selectValue}" />
+                                                </apex:commandLink>                                  
+                                            </td>
+                                             <td width="4%"><apex:image url="{!URLFOR($Resource.ICE_NewCase,'SRC/images/attachment_icon.png')}" width="28" height="28"/></td>
+                                            <td width="10%">
+                                                <apex:commandLink status="spinner5" value="Attachment" action="{!uploadComment_Attachment}" id="attach" reRender="showAttach,commnts" style="color:#666; text-decoration:none; font-size:15px; font-weight:bold;" rendered="{!$ObjectType.Note.Accessible}">
+                                                    <apex:param name="selectValue" value="Attachment" assignTo="{!selectValue}" /> 
+                                                </apex:commandLink>
+                                            </td>
+                                             
+                                            <td>&nbsp;</td>
+                                            
+                                            <td>
+                                                <apex:actionStatus id="spinner5">
+                                                    <apex:facet name="start">
+                                                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/spinner24.gif')}" height="20px;" width="20px;"/>
+                                                    </apex:facet>
+                                                </apex:actionStatus>            
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>                        
+                        </table> 
+                    </apex:outputPanel> 
+                    </apex:outputPanel>
+                    <!-- end of show comments & attachment block -->  
+                    
+                    <!-- Add Comments -->
+                    <apex:outputPanel id="commnts">
+                    <apex:outputPanel id="comment" rendered="{!showCommentBlock}">
+                        <table border="" width="100%"  bgcolor="f9f9f9" >
+                            <tr>
+                                <td> 
+                                    <span>
+                                    <apex:inputTextarea rows="4" id="comments" cols="68" value="{!noteDesp}" onkeyup="hideErr(this.value,'comDes');" style="width:98.5%;" rendered="{!$ObjectType.Note.fields.Body.Accessible}"/> 
+                                    </span><br/>
+                                    <label id="comDes" for="comDes" style="margin-left:15px; font-size:12px;display:none; color:red;">* Please enter a description</label>
+                                </td>                                                                    
+                            </tr>
+                            
+                            <tr><td>&nbsp;</td></tr>
+                            
+                            <tr>                                    
+                                <td align="right">                                    
+                                    <apex:actionStatus id="spinner4">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/spinner24.gif')}" height="22px;" width="22px;"/>
+                                        </apex:facet>
+                                    </apex:actionStatus> &nbsp;&nbsp;&nbsp;&nbsp;                                   
+                                    <input type="button" value="Add" onclick="commentValidate();" Class="newcase-btn" style="border:0px; margin-bottom:10px;" />&nbsp;&nbsp;&nbsp;
+                                </td>
+                            </tr>
+                            
+                            <tr><td>&nbsp;</td></tr>
+                         </table> <br/> 
+                         
+                        <apex:outputPanel id="dispComment">
+                        <table border="" width="100%">
+                        <apex:repeat value="{!notesList}" var="nl">
+                            <tr>
+                                <td>
+                                    <span style="margin-left:15px; display:{!if($ObjectType.Note.fields.Body.Accessible,'none',' ')}"> {!nl.Body} </span>
+                                </td>
+                            </tr>      
+                            
+                            <tr><td>&nbsp;</td></tr>                      
+                            
+                            <tr>
+                                <td>
+                                    <span style="margin-left:15px; display:{!if($ObjectType.User.fields.FirstName.Accessible && $ObjectType.User.fields.LastName.Accessible,'none',' ')}" > {!$User.FirstName} {!$User.LastName} </span>
+                                </td>
+                            </tr>
+                            
+                            <tr><td>&nbsp;</td></tr>
+                            
+                            <tr>
+                                <td>
+                                <span style="margin-left:15px;" > 
+                                    <apex:outputText value="{0,date, dd/MM/YYYY HH:mm}" rendered="{!$ObjectType.Note.fields.CreatedDate.Accessible}">
+                                        <apex:param value="{!nl.CreatedDate}"/>
+                                    </apex:outputText>
+                                </span>     
+                                </td>
+                             </tr>
+                             
+                            <tr><td>&nbsp;</td></tr>
+                            </apex:repeat>
+                        </table>       
+                        </apex:outputPanel>
+                        <!-- end of display Comment panel -->
+                        
+                     </apex:outputPanel>       
+                 </apex:outputPanel>       
+                 <!-- end of showComments list panel -->
+                  
+                <!-- Add Atachments -->      
+                <apex:outputPanel id="showAttach">                
+                <apex:outputPanel id="attachment" rendered="{!showAttachBlock}">                    
+                    <table border="" width="100%">
+                        <tr>
+                            <td align="center" width="25%" style="font-weight:bold;" class="icefiledsERP">FileName</td>
+                            <td align="center" width="25%" style="font-weight:bold;" class="icefiledsERP">Select Attachment</td>
+                            <td align="center" width="25%" style="font-weight:bold;" class="icefiledsERP">Attached Date</td>
+                            <td align="center" width="25%" style="font-weight:bold;" class="icefiledsERP"> Action </td>
+                        </tr>
+
+                        <apex:variable var="attachmentCounter" value="{!0}" />
+                        <apex:repeat value="{!attachmentList}" var="attach">
+                        <tr>
+                            <td align="center">
+                                   
+                                <apex:outputLink value="{!URLFOR($Action.Attachment.Download,attach.Att.Id)}" styleClass="titlesB" style="color:red;" 
+                                rendered="{!if(attach.Att.id != Null,true,false)}" target="_blank">
+                                    <apex:outputText value="{!attach.attName}" rendered="{!$ObjectType.Attachment.fields.Name.Accessible}"/>
+                                </apex:outputLink> 
+                            </td>
+
+                            <td align="center">
+                                <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteplus.png')}" title="Add Attachment" onclick=" if('{!preventDisplay}' == 'false') { popupAttach('{!attachmentCounter + 1}');}" />
+                            </td>
+
+                            <td align="center">
+                                <apex:outputText value="{0,date, dd/MM/YYYY HH:MM}" rendered="{!$ObjectType.attachment.fields.createdDate.Accessible}">
+                                    <apex:param value="{!attach.dt}" />
+                                </apex:outputText>
+                            </td>
+
+                            <td align="center">
+                                <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/plus.png')}" style="cursor:pointer;" 
+                                    rendered="{!if(attachmentCounter == 0 && !(preventDisplay), true, false)}" onclick="addAttachment('{!attachmentCounter + 1}');" title="Add Attachment"></apex:image>
+                                                
+                                <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/minus.png')}" rendered="{!if(attachmentCounter != 0 && attachmentListSize > 1 && !(preventDisplay), true, false)}"
+                                    style="cursor:pointer;" onclick="removeAttachment('{!attachmentCounter + 1}');" title="Remove Attachment"></apex:image>    
+                            </td>
+                        </tr>
+                        <apex:variable var="attachmentCounter" value="{!attachmentCounter + 1}" />
+                        </apex:repeat>
+                    </table>                            
+                </apex:outputPanel> 
+                </apex:outputPanel>
+                <!-- end of attachment list panel -->
+                
+                </div>
+                <!-- end of right DIV -->
+                    
+                </div>
+                <!-- end of main DIV -->
+                                                
+                </div>
+                <!-- end of popup DIV -->
+                
+                <!-- Attachment Popup block -->
+                <div id="fade" class="popupBackground"></div>
+                <div id="light9" class="customPopup" style="border:1px solid;">
+                    <DIV class="headerTitle"></DIV>
+                    <div style="position:absolute; top: -1px; left:358px;">
+                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/close.png')}" onclick="closeAttachmentPopup();"></apex:image>
+                    </div>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td height="30">&nbsp;</td>
+                        </tr>
+
+                        <tr>
+                            <td width="7%"> 
+                                <apex:inputHidden value="{!currentIndex}" id="indexvalform" />
+                            </td>
+                            <td width="24%" class="rtext" style="font-weight:bold;">File Upload:</td>
+                            <td width="69%" align="left">
+                                <apex:inputFile value="{!newAttachment.body}" filename="{!newAttachment.name}" id="attId" />
+                            </td>
+                        </tr>
+                    </table>                               
+                               
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td width="55%" align="center" height="40">&nbsp;</td>
+                        </tr>
+                        
+                        <tr>
+                            <td width="55%" align="center">
+                                <apex:commandLink value="Upload" action="{!uploadAttachment}" styleClass="newcase-btn"
+                                    onclick="var ik = document.getElementById('{!$Component.popform.attId}').value; if(ik == '') return false;" rendered="{!$ObjectType.Attachment.Deletable}"/>
+                            </td>
+                        </tr>
+                        
+                        <tr><td width="14%">&nbsp;</td></tr>
+                </table>
+                </div> 
+                <!-- end of attachment popup -->
+                </apex:form>                        
+                
+    <style>
+  .popupBackground {
+        background-color: #ffffff;
+        opacity: 0.20;
+        filter: alpha(opacity=20);
+        position: absolute;
+        width: 100%;
+        height: 1000%;
+        top: 0;
+        left: 0;
+        z-index: 9998;
+        display: none;
+    }
+  .customPopup {
+        background: #ffffff;
+        border-style: solid;
+        border-width: 0px;
+        left: 35%;
+        display: none;
+        border-radius: 7px;
+        position: absolute;
+        z-index: 9999;
+        width: 380px;
+        height: 170px;
+        top: 180px;
+    }
+  .ui-btnsubmit {
+        height: 40px;
+        width: 156px;
+        border: 1px solid #fff;
+        background: url({!URLFOR($Resource.SCM,'SCM/Images/submitbtn.png')
+    }
+    );
+        cursor:pointer;
+    }
+  .ui-btnsubmit:hover {
+        height: 40px;
+        width: 156px;
+        background: url({!URLFOR($Resource.SCM,'SCM/Images/submitbtnh.png')
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+  .ui-btncancel {
+        height:40px;
+        width:156px;
+        border:1px solid #fff;
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/cancel_icon.png')
+    }   
+    );
+        cursor:pointer;
+    }
+  .ui-btncancel:hover {
+        height:40px;
+        width:156px;
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/cancel_iconh.png')
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+  .ui-btnsave {
+        height:40px;
+        width:156px;
+        border:1px solid #fff;
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/save_icon.png')
+    }
+    );
+        cursor:pointer;
+    }
+  .ui-btnsave:hover {
+        height:40px;
+        width:156px;
+        background:url({!URLFOR($Resource.SCM,'SCM/Images/save_iconh.png')
+    }
+    );
+        border:1px solid #fff;
+        cursor:pointer;
+    }
+ </style> 
+</apex:component>

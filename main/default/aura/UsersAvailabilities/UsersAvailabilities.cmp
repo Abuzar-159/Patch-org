@@ -1,0 +1,327 @@
+<aura:component controller="UsersShiftMatch" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+        <ltng:require styles="/resource/ERP7__bootstrap/bootstrap/css/bootstrap.css"/>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__bootstrap/bootstrap/css/font-awesome.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/UsersAvailabilities.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute Name="StartTime" type="Time"/> 
+    <aura:attribute name="UserFilter" type="String" default=" AND IsActive=true"/> 
+    <aura:attribute Name="EndTime" type="Time"/>
+    <aura:attribute name="UserIds" type="String[]"/>
+    <aura:attribute name="ProgramId" type="String" default=""/>
+    <aura:attribute name="ServiceId" type="String" />
+    <aura:attribute name="LocationId" type="String" />    
+    <aura:attribute name="GroupId" type="String"/>
+    <aura:attribute name="ResourceWrapperList" type="list"/>
+    <aura:attribute name="selectedDate" type="Date"/>
+    <aura:attribute name="UserRecord" type="object"/>
+    <aura:attribute name="DayDetails" type="list"/>
+    <aura:attribute name="GroupWrapperList" type="list"/>
+    <aura:attribute name="StartDate" type="Date"/>
+    <aura:attribute name="EndDate" type="Date"/>
+    <aura:handler name="change" value="{!group.GroupId}" action="{!c.fetchResourcesByGroup}"/> 
+    <aura:attribute name="SaveErrorMsg" type="String" default=""/>
+    <aura:attribute name="GroupIndex" type="Integer"/>
+    <aura:attribute name="GroupRecord" type="object"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/> 
+    <aura:attribute name="CallResourcesByGroup" type="Boolean" default="true"/> 
+    <aura:attribute name="UserId" type="String"/>
+    <aura:attribute name="LocationsFilter" type="String" default="AND Id=null"/> <!--  AND Id=null  -->
+    <aura:attribute name="GroupsFilter" type="String" default="AND Id=null"/> 
+    <aura:attribute name="showPrevious" type="Boolean" default="false" />
+    <aura:attribute name="GIndex" type="Integer"/>
+    <aura:attribute name="UIndex" type="Integer"/>
+    <aura:attribute name="RIndex" type="Integer"/>
+    <aura:attribute name="RenderBody" type="Boolean" default="true"/> 
+    <aura:attribute name="TimeErrorMsg" type="String" default=""/>
+    <div class="erp_mark7 UsrAvail-class1" aura:id="body">
+        <div class="erp_Mark7">
+            <section >
+                <div class="">
+                    <header class="slds-modal__header UsrAvail-class2" >
+                        <div class="card mb-1 UsrAvail-class3;">
+                            <div class="row no-gutters">
+                                <div class="col-md-8">
+                                    <div class="card-body text-left">
+                                        <h1 class="card-title">
+                                            <i class="fa fa-calendar UsrAvail-class4" aria-hidden="true"></i>&nbsp;
+                                            <b> {!$Label.c.Manage_Availabilities_UserAvailabilities} </b>
+                                        </h1>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mt-2 pr-4 UsrAvail-class5">     <!-- fa-object-group  -->
+                                    <button class="slds-button slds-button--brand" onclick="{!c.addGroup}" title="{!$Label.c.Add_Group_UserAvailabilities}">{!$Label.c.Group_UserAvailabilities} &nbsp; <i class="fa fa-plus-circle" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    
+                    <aura:if isTrue="{!and(v.SaveErrorMsg!=undefined, v.SaveErrorMsg!='')}">
+                        <div class="slds-notify_container slds-is-fixed UsrAvail-class6" >
+                            <div class="slds-notify slds-notify_toast slds-theme_warning UsrAvail-class7" role="status">
+                                <span class="slds-assistive-text">{!$Label.c.warning_UserAvailabilities}</span>
+                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="{!$Label.c.Description_of_icon_when_needed_UserAvailabilities}">
+                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                </span>
+                                <div class="slds-notify__content">
+                                    <h2 class="slds-text-heading_small ">{!v.SaveErrorMsg}
+                                    </h2>
+                                </div>
+                                <div class="slds-notify__close">
+                                    <lightning:icon iconName="utility:close" size="small" alternativeText="close" onclick="{!c.onClick}" />
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                     <div class="slds-modal__content slds-p-around_xx-medium UsrAvail-class8" id="modal-content-id-1" >
+                        <div>
+                            <aura:iteration items="{!v.GroupWrapperList}" var="group" indexVar="Index">
+                                <div class="{!Index!=0?'shadow-sm maqborder UsrAvail-class9':'maqborderAll shadow-sm UsrAvail-class9'}">
+                                    <!-- HEADER ROW -->                        
+                                    <div class="slds-grid slds-wrap UsrAvail-class10" onmouseover="{!c.setIndex}" data-record="{!Index}" data-GIndex="{!Index}">                               
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-2">
+                                            <h1 class="UsrAvail-class11"><strong>{!$Label.c.Product_UserAvailabilities}</strong><span class="UsrAvail-class12">*</span>
+                                                <span onclick="{!c.changeService}" data-Index="{!Index}">
+                                                    <c:CustomInputLookUp aura:value="ServiceId" objectAPIName="Product2" selectedRecordId="{!group.ServiceId}" IconName="standard:product"
+                                                                            placeholder="Search Product..."/> <!--  v.ServiceId qry="{! ' AND ERP7__Membership_Program__c=\''+v.ProgramId+'\' AND ERP7__Membership_Program__c!=null'}"  -->
+                                                </span></h1>
+                                        </div> 
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-2">
+                                            <h1 class="UsrAvail-class11"><strong>{!$Label.c.Work_Center_UserAvailabilities}</strong><span class="UsrAvail-class12">*</span>
+                                                <span onclick="{!c.changeLocation}" data-Index="{!Index}">
+                                                    <c:CustomInputLookUp aura:id="locationId" objectAPIName="ERP7__Work_Center__c"  selectedRecordId="{!group.LocationId}" IconName="standard:address"
+                                                                            placeholder="Search Work Center..." qry="{!v.LocationsFilter}"/> <!-- v.LocationId qry="{!v.LocationsFilter}"  -->
+                                                </span></h1>
+                                        </div> 
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-2">
+                                               <h1 class="UsrAvail-class11"><strong>{!$Label.c.Group_UserAvailabilities}</strong>
+                                                <span onclick="{!c.changeGroup}" data-Index="{!Index}"><!-- onclick="{!c.UsersAvailibilityByGroup}" data-record="{!Index}"  -->
+                                                    <c:CustomInputLookUp objectAPIName="ERP7__Resource_Group__c" selectedRecordId="{!group.GroupId}" 
+                                                                            IconName="standard:groups" placeholder="Search group..." qry="{!v.GroupsFilter}"/>  <!-- GroupId --> 
+                                                </span>   
+                                            </h1>                    
+                                        </div> 
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-2"> 
+                                            <h1 class="UsrAvail-class11"><strong>{!$Label.c.Start_Date_UserAvailabilities}</strong>&nbsp; <lightning:input type="date" variant="label-hidden" class="display-lable maqform" onchange="{!c.fetchUsersAvailibilityByGroup}" name="{!Index}" value="{!group.StartDate}"/></h1>
+                                            
+                                        </div> 
+                                        
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-2"> 
+                                             <h1 class="UsrAvail-class11"><strong>{!$Label.c.End_Date_UserAvailabilities}</strong> &nbsp; <lightning:input type="date" variant="label-hidden" class="display-lable maqform" onchange="{!c.fetchUsersAvailibilityByGroup}" name="{!Index}" value="{!group.EndDate}"/></h1>
+                                        </div> 
+               
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_2-of-12 pr-2 pt-3">
+                                                <div>
+                                                    <span data-record="{!Index}" onclick="{!c.addUser}"><button class="slds-button slds-button_neutral"> <b> &nbsp;<i class="fa fa-user-plus" aria-hidden="true"></i>&nbsp;{!$Label.c.Resource_UserAvailabilities} <!-- Resource--></b></button> </span>
+                                                    <!--<aura:if isTrue="{!0>=group.UserAvailabilityList.length || group.UserAvailabilityList==undefined || group.UserAvailabilityList=='' || group.UserAvailabilityList==null}"> --> &nbsp;   
+                                                    <aura:if isTrue="{!not(empty(group.UserAvailabilityList))==false}"> 
+                                                        <span data-record="{!Index}" onclick="{!c.removeGroup}" class="UsrAvail-class13">
+                                                            <img class="" src="/resource/EventRoK__eventRok_lightning/assets/icons/action/delete_60_red.png" width="20" height="20" Title="{!$Label.c.Delete_UserAvailabilities}"/> 
+                                                        </span>
+                                                    </aura:if>     
+                                                </div>
+                                            </div> 
+                                    </div>
+                                    <div class="">
+                                        <div class="slds-grid mt-2 UsrAvail-class14" >
+                                            <div class="slds-col UsrAvail-class15">&nbsp;</div> 
+                                            <table width="100%" cellpadding="0" cellspacing="0">
+                                                    <tr>
+                                                        <aura:iteration items="{!v.DayDetails}" var="d" indexVar="DayIndex">
+                                                            <td width="11%" class="{!or(equals(DayIndex, 5), equals(DayIndex, 6))?(DayIndex!=0)?'weekendBack UsrAvail-class16':'weekendBack UsrAvail-class17':(DayIndex!=0)?'UsrAvail-class16':'UsrAvail-class17'}"> 
+                                                               <center> <h1 class="UsrAvail-class18">
+                                                                    <lightning:formattedDateTime value="{!d}" weekday="long"/> <!-- EEE d/M/YYYY -->
+                                                                </h1>
+                                                                   </center>
+                                                            </td>
+                                                        </aura:iteration> 
+                                                    </tr>
+                                                </table>
+                                            <div class="slds-col UsrAvail-class19" >&nbsp;</div>  
+                                        </div>
+                                    </div>  
+                                    <aura:if isTrue="{!not(empty(group.UserAvailabilityList))}">        
+                                        <!-- USER AVAILITIES-->    
+                                        <aura:iteration items="{!group.UserAvailabilityList}" var="u" indexVar="UIndex">  <!--@{!u.User.Name}, {!u.User.Email}#  -->
+                                                <aura:if isTrue="{!u.ResourceAvailabilityList.length>0}"> 
+                                                    <div class="slds-grid mt-1 UsrAvail-class28"> 
+                                                        <div class="UsrAvail-class11 UsrAvail-class29" >
+                                                            <div>
+                                                                <h1 class="UsrAvail-class31">
+                                                                    <p class="card-text2 mr-2 UsrAvail-class30" >     
+                                                                        <aura:if isTrue="{!u.User.Name!=undefined}">
+                                                                        <i class="fa fa-user" aria-hidden="true" title="{!u.User.Name}"></i>&nbsp;{!$Label.c.Name_UserAvailabilities} &nbsp;{!u.User.Name}
+                                                                        <aura:set Attribute="else">   
+                                                                            <span class="{!and(v.LoginUserId!=undefined,v.LoginUserId!=null)?'UsrAvail-class32':''}">
+                                                                                <c:CustomInputLookUp aura:value="UserId" objectAPIName="User" selectedRecordId="{!u.User.Id}" IconName="standard:user"
+                                                                                                        placeholder="Search User*" qry="{!v.UserFilter}"/>
+                                                                            </span>
+                                                                        </aura:set> 
+                                                                    </aura:if>     
+                                                                </p>
+                                                            </h1>
+                                                        </div>
+                                                    </div>
+                                                    <div class=" pr-2 UsrAvail-class33">
+                                                            <span data-record="{!Index}" data-UIndex="{!UIndex}" onclick="{!c.addResource}"><button class="slds-button slds-button_neutral UsrAvail-class34" ><b><i class="fa fa-plus-circle" aria-hidden="true"></i>&nbsp;{!$Label.c.Time_UserAvailabilities} </b></button> </span>
+                                                        </div>
+                                                </div> 
+                                            </aura:if>
+                                            
+                                            <!-- RESOURCE AVAILITIES-->    
+                                            <aura:iteration items="{!u.ResourceAvailabilityList}" var="r" indexVar="RIndex">  <!--  onmouseover="{!c.setIndexForValidateTime}" @{!r.Id}#  -->
+                                                    <div class="slds-grid slds-card-maq UsrAvail-class35" 
+                                                         data-record="{!Index}" data-RIndex="{!RIndex}" data-UIndex="{!UIndex}" data-RId="{!r.Id}" onmouseover="{!c.setIndexForValidateTime}"> <!-- padding-bottom:10px;padding-top:20px;-->
+                                                        <aura:iteration items="{!r.TimeOffList}" var="t" indexVar="timeIndex">
+                                                            <aura:if isTrue="{!v.RenderBody}">   
+                                                                <div class="{!equals(timeIndex%2, 0)?equals(timeIndex, 5)?'slds-col UsrAvail-class36':equals(timeIndex, 6)?'slds-col UsrAvail-class37':'slds-col UsrAvail-class38':equals(timeIndex, 5)?'UsrAvail-class36 slds-col timeslotSeperator':equals(timeIndex, 6)?'UsrAvail-class37 slds-col timeslotSeperator':'UsrAvail-class38 slds-col timeslotSeperator'}">
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-col UsrAvail-class39">
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="slds-grid"> 
+                                                                        
+                                                                        <aura:if isTrue="{!timeIndex==0}"> <div class="UsrAvail-class40"><i class="fa fa-clock-o"></i></div> </aura:if>
+                                                                        <div class="slds-col mr-1"> <!--@{!t.StartTime}# -->
+                                                                            <lightning:input type="time" tabindex="{!timeIndex}" onchange="{!c.validateSelectedTime}" name="StartTime" value="{!t.StartTime}" placeholder=""  title="{!!t.isAvailable?'Not Available':''}" min="07:00:00.000Z" max="17:00:00.000Z"/>
+                                                                        </div>
+                                                                        <!--@{!t.IsValid}#-->
+                                                                        
+                                                                        
+                                                                        <div class="slds-col">  <!-- change="{!c.changeTime}"  onblur -->
+                                                                            <lightning:input type="time" tabindex="{!timeIndex}" onchange="{!c.validateSelectedTime}" name="EndTime" value="{!t.EndTime}"  placeholder="" title="{!!t.isAvailable?'Not Available':''}" min="07:00:00.000Z" max="17:00:00.000Z"/>
+                                                                        </div>  <!--  min="{!t.StartTime}" reportValidity="Invalid" showHelpMessageIfInvalid="BI" -->
+                                                                        
+                                                                    </div>
+                                                                    <br/>
+                                                                    
+                                                                    <div class="slds-grid"> 
+                                                                        <div class="slds-col mr-1">
+                                                                            
+                                                                            <span class="{!t.IsValid==false?'slds-show UsrAvail-class12':'slds-hide UsrAvail-class12'}">
+                                                                                <!-- Invalid time duration -->
+                                                                                {!v.TimeErrorMsg} 
+                                                                            </span>
+                                                                        </div> 
+                                                                    </div>
+                                                                    
+                                                                    
+                                                                    <div class="slds-grid"> 
+                                                                        <aura:if isTrue="{!timeIndex==0}"> <div class="UsrAvail-class40"><i class="fa fa-coffee" aria-hidden="true"></i></div></aura:if>
+                                                                        <div class="slds-col mr-1">
+                                                                            
+                                                                            <!-- class="{!t.isAvailable?'maqetext':'maqetextRed'}" title="{!!t.isAvailable?'Not Available':''}"  -->
+                                                                            
+                                                                            <lightning:input type="time" tabindex="{!timeIndex}" onchange="{!c.validateSelectedBreakTime}" name="StartTime" value="{!t.BSTime}" placeholder=""  title="{!!t.isAvailable?'Not Available':''}" min="07:00:00.000Z" max="17:00:00.000Z"/>
+                                                                        </div> <!-- class="{!t.isAvailable?'displaymaq':'maqetextRed'}"  -->
+                                                                        <div class="slds-col">
+                                                                            <lightning:input type="time" tabindex="{!timeIndex}" onchange="{!c.validateSelectedBreakTime}" name="EndTime" value="{!t.BETime}"  placeholder=""  title="{!!t.isAvailable?'Not Available':''}" min="07:00:00.000Z" max="17:00:00.000Z"/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="slds-grid">
+                                                                        <div class="slds-col UsrAvail-class39">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:if> 
+                                                        </aura:iteration>
+                                                        &nbsp;
+                                                        <div class="slds-col"> 
+                                                            <table>
+                                                                <tr>
+                                                                    <td align="top" height="50">
+                                                                        <span class="UsrAvail-class41" onclick="{!c.cloneRecord}" data-record="{!Index}" data-RIndex="{!RIndex}" data-UIndex="{!UIndex}" data-RId="{!r.Id}">
+                                                                            <i class="fas fa-clone UsrAvail-class42" aria-hidden="true"></i>
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td> <span data-record="{!Index}" data-RIndex="{!RIndex}" data-UIndex="{!UIndex}" data-RId="{!r.Id}" onclick="{!c.removeResourceConfirmation}" class="UsrAvail-class13">
+                                                                        <i class="fas fa-trash-alt UsrAvail-class43" ></i>
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                                
+                                                            </table>
+                                                        </div>
+                                                    </div>       
+                                                </aura:iteration> 
+                                        </aura:iteration>
+                                        
+                                        <aura:set Attribute="else">  
+                                                <div class="slds-notify_container slds-is-relative">
+                                                    <div class="slds-notify slds-notify_toast slds-theme_warning UsrAvail-class7" role="status">
+                                                        <span class="slds-assistive-text">{!$Label.c.warning_UserAvailabilities}</span>
+                                                        <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="{!$Label.c.Description_of_icon_when_needed_UserAvailabilities}">
+                                                            <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                        </span>
+                                                        <div class="slds-notify__content">
+                                                            <h2 class="slds-text-heading_small ">{!$Label.c.No_user_available_UserAvailabilities}
+                                                            </h2>
+                                                        </div>
+                                                        
+                                                    </div>
+                                                </div>
+                                            </aura:set>    
+                                    </aura:if>    
+                                </div> 
+                            </aura:iteration>
+                            <div class="UsrAvail-class26"></div>
+                        </div>
+                    </div>                
+                    <div class="slds-m-bottom--large UsrAvail-class25"></div>                    
+                    <footer class="footermaqfixed UsrAvail-class24" >
+                        <lightning:button onclick="{!c.navHome}" label="{!$Label.c.Cancel_UserAvailabilities}"/>&nbsp;
+                        <lightning:button onclick="{!c.SaveAndHome}" label="{!$Label.c.Save_UserAvailabilities}" iconName="utility:success" variant="brand"/>
+                    </footer>
+                </div>
+            </section>
+        </div>
+        <!--   ====================================  RESOURCE DELETE =========================================== -->                    
+        <div aria-hidden="true" class="slds slds-hide" aura:id="resourceDeleteConfirmId"> 
+            <div aria-hidden="false" role="dialog" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container UsrAvail-class21">
+                    <div class="slds-modal__content"> 
+                        <div class="slds-modal__content slds-p-around--medium"> 
+                            <div class="slds-form-element__control">
+                                <label class="slds-radio">
+                                    <span class="slds-form-element__label"> </span> <br/>
+                                    <p class="UsrAvail-class27">{!$Label.c.Are_you_sure_you_want_to_delete_this_record_UserAvailabilities}</p>
+                                </label>
+                            </div> 
+                        </div>  
+                        <div  class="modal-footer UsrAvail-class23" >  
+                            <span >
+                                <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-record="delete" value="Yes"  aura:id="yesId" onclick="{!c.removeResource}">{!$Label.c.Yes_UserAvailabilities}</button> 
+                                <button type="button" value="No" class="slds-button slds-button--neutral" data-record="NO"  aura:id="noId" onclick="{!c.cancelRemoveResourceConfirmation}">{!$Label.c.No_UserAvailabilities}</button> 
+                            </span>   
+                        </div>
+                    </div> 
+                </div>                    
+            </div>       
+            <div class="slds-backdrop slds-backdrop--open"></div>         
+        </div> 
+        
+        <aura:if isTrue="{!v.showMmainSpin}">
+            <span class="UsrAvail-class20">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+        </aura:if>   
+        
+        <!-- user details Popup Ends here -->
+        <div class="row">                      
+            <div class="col-md-3">
+            </div>
+            <div class="col-md-3">
+            </div> 
+        </div>
+    </div> 
+    
+</aura:component>

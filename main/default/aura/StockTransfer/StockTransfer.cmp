@@ -1,0 +1,516 @@
+<aura:component controller="InternalStockTransfer" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global">
+    
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" /> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StockTransfer.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="proceedSiteIdChangeHandler" type="Boolean" default="true"/>  
+    <aura:handler name="change" value="{!v.site.Id}" action="{!c.PopulateEmployeeCart}" />
+    <aura:attribute name="proceedCartIdChangeHandler" type="Boolean" default="true"/>  
+    <aura:handler name="change" value="{!v.cart.Id}" action="{!c.getItemList}" />
+    <aura:handler name="change" value="{!v.selectedIndex2Delete}" action="{!c.opendeleteModal}" />
+    <aura:attribute name="site" type="Map" default="{Id:'',Name:''}" />
+    <aura:attribute name="site_dest" type="Map" default="{Id:'',Name:''}" /> 
+    <aura:attribute name="ShowTab1" type="Boolean" default="true" />
+    <aura:attribute name="AllowNew" type="Boolean" default="true" />
+    <aura:attribute name="ShowTab2" type="Boolean" />
+    <aura:attribute name="selectedIndex2Delete" type="Integer" />
+    <aura:attribute name="recordIndex" type="Integer[]" />
+    <aura:attribute name="CartInfo" type="Cart__c[]" />
+    <aura:attribute name="step" type="String" default=""/>
+    <aura:attribute name="CartItemInfo" type="object[]" />
+    <aura:attribute name="CartPutawayItems" type="Cart_Putaway_Item__c[]" />
+    <aura:attribute name="cart" type="Map" default="{ sobjectType: 'Cart__c',
+                                                    Id:null,
+                                                    Name: '',
+                                                    ERP7__Employee__c:'',
+                                                    ERP7__Site__c:'',ERP7__Site__r:{Id:'',Name:''}}" />
+    <aura:attribute name="cartItem" type="Object[]" />
+    <aura:attribute name="newStoli" type="Stock_Outward_Line_Item__c" default="{ 'sobjectType': 'Stock_Outward_Line_Item__c','Name': ''}" />
+    <aura:attribute name="cartId" type="String[]" />
+    <aura:attribute name="cartItemId" type="String[]" />
+    <aura:attribute name="productId" type="String[]" />
+    <aura:attribute name="cartPutawayItem" type="Object[]" />
+    <aura:attribute name="NewRow" type="Boolean" default="false" />
+    <aura:attribute name="checkValidation" type="Boolean" default='false'/>
+    <aura:attribute name="addPutawayItems" type="object[]" />
+    <aura:attribute name="PutawayItems" type="List" />
+    <aura:attribute name="SelecteditemWrapper" type="object[]" />
+    <aura:attribute name="putawayId" type="String[]" />
+    <aura:attribute name="qry" type="String" />
+    <aura:attribute name="scanCode" type="String" />
+    <aura:attribute name="prevscanCode" type="String" default=''/>
+    <aura:attribute name="globalSelectedLocation" type="String"  default=""/>
+    <aura:attribute name="selectedToLocation" type="Location__c"/>
+    <aura:attribute name="selectedProduct" type="String" />
+    <aura:attribute name="selectedProducts" type="String[]" />
+    <aura:attribute name="fromSiteCode" type="String" />
+    <aura:attribute name="Nosite" type="String" default=''/>
+    <aura:attribute name="allSites" type="set" default="['']"/>
+    <aura:handler name="change" value="{!v.fromSiteCode}" action="{!c.fromSiteCodeChange}"/>
+    <aura:attribute name="destSiteCode" type="String" />
+    <aura:handler name="change" value="{!v.destSiteCode}" action="{!c.destSiteCodeChange}"/>
+    <aura:handler name="change" value="{!v.scanCode}" action="{!c.barcodeChange}"/>
+    <aura:attribute name="Scanned_val" type="String" default=""/>
+    <aura:attribute name="errMsg_putaway" type="String" default="{!$Label.c.No_Items_in_Cart}"/>
+    <aura:attribute name="errMsg" type="String" default="{!$Label.c.No_Items_in_Cart}"/>
+    <aura:attribute name="AllowcartinfoSet" type="Boolean" default='true'/>
+    <aura:attribute name="openSerialModal" type="Boolean" default="false"/>
+    <aura:attribute name="fromCartItems" type="Boolean" default="false"/>
+    <aura:attribute name="ShowglobaLocation" type="Boolean" default="false"/>
+
+    <aura:attribute name="Showputaway" type="Boolean" />
+    <aura:handler name="change" value="{!v.Showputaway}" action="{!c.onclickTab2}"/>	
+     <aura:attribute name="SelectedLoCationId" type="String" default=""/>
+    <!-- tab  3 attribute -->
+    <aura:attribute name="ShowTab3" type="Boolean" />
+    <aura:attribute name="startdate" type="Datetime" />
+    <aura:attribute name="Enddate" type="Datetime" />
+    <aura:attribute name="Allputawayitems" type="List" />
+    <aura:handler name="change" value="{!v.startdate}" action="{!c.getAllitems}" />
+    <aura:handler name="change" value="{!v.Enddate}" action="{!c.getAllitems}" />
+    
+    <aura:attribute name="showSpinnerItem" type="Boolean" default='false'/>  
+    <aura:attribute name="scanValue" type="String" default=""/>
+    <aura:attribute name="selectAll" type="Boolean" default='false'/>
+    <aura:attribute name="selectAllPick" type="Boolean" default='false'/>
+    <aura:attribute name="deleting" type="Boolean" default='false'/>
+    <aura:attribute name="showMultidelete" type="Boolean" default='false'/>
+    <aura:attribute name="showdeleteModal" type="Boolean" default='false'/>
+    <aura:attribute name="scannedValueChanged" type="Boolean" default='false'/>
+    <aura:attribute name="prodRecordId" type="String"  />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <!--Added by Asra for pickscreenscanflow-->
+    <aura:attribute name="serialModalOpen" type="Boolean" default="false" />
+    <aura:attribute name="storeProdId" type="String"  />
+    <aura:attribute name="PickSelectedSerialNos" type="object[]" />
+    <aura:attribute name="PickSerialNos" type="object[]" />
+    <aura:attribute name="SearchSerialNos" type="String" default=""/>
+    <aura:attribute name="fromMultipick" type="Boolean" default="false"/>
+    <aura:attribute name="storeCompIndex" type="Integer" access="global" default="0"/>
+    <aura:attribute name="callAddSerials" type="Boolean" default="false"/>
+    <aura:attribute name="callPickMultiSerials" type="Boolean" default="false"/>
+    <aura:attribute name="callsaveAsDraft" type="Boolean" default="false"/>
+    <aura:attribute name="callRemoveAllSerials" type="Boolean" default="false"/>
+    <aura:attribute name="callFindSerials" type="Boolean" default="false"/>
+    <aura:attribute name="fromScanFlowforMultiPick" type="Boolean" default="false"/>
+    <aura:attribute name="Location" type="String" default="" />
+    <aura:attribute name="callChangeLocation" type="Boolean" default="false" />
+    <aura:attribute name="reRenderLIS" type="Boolean" default="true"/>
+    
+    <div aura:id="cmpbody" class="erp_mark7 bg-white scanMN">   
+        <div aura:id="stocktransscan" >
+            <aura:if isTrue="{!v.showSpinner}">
+                <span class="cl2">
+                    
+                    <div class="custom-spinner slds-spinner_container ">
+                        <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                            <span class="slds-assistive-text">Loading</span>
+                            <div class="slds-spinner__dot-a"></div>
+                            <div class="slds-spinner__dot-b"></div>
+                            
+                        </div>
+                        <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                    </div>
+                    
+                    <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/-->
+                </span>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.showSpinnerItem}">
+                <span class="cl2">
+                    
+                    <div class="custom-spinner slds-spinner_container ">
+                        <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                            <span class="slds-assistive-text">Loading</span>
+                            <div class="slds-spinner__dot-a"></div>
+                            <div class="slds-spinner__dot-b"></div>
+                            
+                        </div>
+                        <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                    </div>
+                    
+                    <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/-->
+                </span>
+                <!--lightning:spinner variant="brand" size="large" aura:id="spinner" class="mainSpinClass"/-->
+            </aura:if>
+            
+            <div class="slds-container--fluid">
+                
+                <aura:if isTrue="{!v.showdeleteModal}">
+                    <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content" class="slds-modal slds-fade-in-open">
+                        <div class="slds-modal__container">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse">
+                                <lightning:icon iconName='utility:close' alternativeText='close' variant='inverse' size='small' title='close' onclick="{!c.closedeleteModal}"></lightning:icon>
+                                <span class="slds-assistive-text">Cancel and close</span>
+                            </button>
+                            <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1" style="min-height: 99px">
+                                <h1 style="padding-top: 24px;padding-left: 175px;font-size: 19px;">{!$Label.c.Are_you_sure_you_want_to_delete}</h1>
+                            </div>
+                            <div class="slds-modal__footer">
+                                <button class="slds-button slds-button_neutral" aria-label="Cancel and close" onclick="{!c.closedeleteModal}">{!$Label.c.Cancel_ManageLeave}</button>
+                                <button class="slds-button slds-button_destructive" onclick="{!c.deleteSlctd}">{!$Label.c.EmployeeReviewV2_Delete}</button>
+                            </div>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+                </aura:if>
+                
+                
+                <div class="slds-page-header2 slds-page-header--object-home" role="banner">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-standard-account slds-icon--large cl1"> 
+                                        <img src="/resource/1482140524000/erp7__SLDS213/assets/icons/custom/stock_disp.png" width="58"/>
+                                    </span>
+                                </div>
+                                <div class="slds-media__bod cl2">
+                                    <p class="slds-text-title--caps slds-line-height--reset"></p>
+                                    <nav class="slds-context-bar__secondary" role="navigation">
+                                        <ul class="slds-grid">
+                                            <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger--hover slds-p-top_small cl3" aria-haspopup="true">
+                                                <a class="slds-context-bar__label-action cl4" title="Menu Item" onclick="{!c.Cancel}">
+                                                    <span class="slds-truncate"><h1 class="slds-page-header__title slds-truncate" title="{!$Label.c.Stock_Trans_Picking_Putaway}">{!$Label.c.Stock_Trans_Picking_Putaway}</h1></span>
+                                                </a>
+                                            </li>
+                                            
+                                        </ul>
+                                    </nav>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom_xx-small">
+                            <div class="slds-form-element" >
+                                <div class="{!if(or(v.ShowTab1,v.ShowTab3),'cl5 scanMN','cl6 scanMN')}"><c:CustomInputLookUp objectAPIName="ERP7__Site__c" IconName="custom:custom32" selectedRecord="{!v.site}" NameValue="{!v.site.Name}" label="{!$Label.c.Stock_Trans_Source_Site}" required="true" /></div>
+                                <div class="{!if(or(v.ShowTab2,v.ShowTab3),'cl5 scanMN','cl6 scanMN')}"><c:CustomInputLookUp objectAPIName="ERP7__Site__c" IconName="custom:custom32" selectedRecord="{!v.site_dest}" NameValue="{!v.site_dest.Name}" label="{!$Label.c.Destination_Site}" required="true"   /></div><!--hideRemove="{!not(empty(v.recordId))}"--> <!--qry="{!'And Id != \''+v.site.Id+'\''}" removed by shaguftha as user should be able to transfer within site from 1 location to another -->
+                            </div>&nbsp;
+                            <div class="slds-form-element">
+                                <div class="{!if(v.ShowTab1,'cl5 scanMN','cl6 scanMN')}"><c:CustomInputLookUp objectAPIName="ERP7__Cart__c" IconPath="https://erp-mark-7-dev-ed.my.salesforce.com/img/icon/custom51_100/shoppingCart32.png" selectedRecord="{!v.cart}" NameValue="{!v.cart.Name}" label="{!$Label.c.Cart}" qry="{!'AND (ERP7__Site__c =\''+v.site.Id+'\' OR ERP7__Site__c = \''+v.Nosite+'\') AND ERP7__Active__c=true '}" required="true"/></div><!--qry="{!' AND ERP7__Site__c =\''+v.site.Id+'\''}"  -->
+                            </div>   
+                        </div>
+                    </div>
+                </div>
+                
+                <!--
+            <div class="slds">
+                <lightning:progressIndicator currentStep="{!v.step}" title="Barcode Meter">
+                    <lightning:progressStep label="Select Location" value="location" />
+                    <lightning:progressStep label="Scan Serial/Batch" value="serialcode"/>
+                </lightning:progressIndicator>
+            </div>-->
+                <div class="card m-2">
+                    <div class="card-body">
+                        <div class="slds-tabs_default">
+                            <div class="slds-grid">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_7-of-12 slds-large-size_7-of-12">
+                                    <ul class="slds-tabs--default__nav" role="tablist">
+                                        <li onclick="{!c.onclickTab1}" class="{!(v.ShowTab1)?'slds-tabs--default__item slds-active':'slds-tabs--default__item'}" title="Pick" role="presentation">
+                                            <a class="slds-tabs--default__link" href="javascript:void(0);" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-deafult-1__item">
+                                                <i class="fa fa-shopping-cart cl7" aria-hidden="true"></i> &nbsp;{!$Label.c.Pick_Outbound_logistics} ({!v.CartItemInfo.length})</a>
+                                        </li>
+                                        <li onclick="{!c.onclickTab2}" class="{!(v.ShowTab2)?'slds-tabs--default__item slds-active':'slds-tabs--default__item'}" title="Putaway" role="presentation">
+                                            <a class="slds-tabs--default__link" href="javascript:void(0);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                                <i class="fa fa-level-up cl7" aria-hidden="true"></i>&nbsp;{!$Label.c.Stock_Trans_Putaway}</a>
+                                        </li>
+                                        <li onclick="{!c.onclickTab3}" class="{!(v.ShowTab3)?'slds-tabs--default__item slds-active':'slds-tabs--default__item'}" title="Get Transfer Document" role="presentation">
+                                            <a class="slds-tabs--default__link" href="javascript:void(0);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                                <i class="fa fa-file cl7" aria-hidden="true"></i>&nbsp;{!$Label.c.Stock_Transfer_Document}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="{!(v.ShowTab2 &amp;&amp; v.site_dest.Id != '' &amp;&amp; v.ShowglobaLocation == true) ? 'slds-show slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12' : 'slds-hide'}" style="margin-left: 25%;">
+                                    <span class="slds-truncate" title="{!$Label.c.To_Location}">{!$Label.c.To_Location}</span>
+                                    <c:CustomInputLookUp objectAPIName="ERP7__Location__c" IconName="standard:location"  selectedRecordId="{!v.globalSelectedLocation}" dontshowList='false' qry="{!' AND ERP7__Site__c = \'' + v.site_dest.Id + '\''}"/>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_5-of-12 slds-large-size_5-of-12">
+                                    <ul class="slds-tabs--default__nav" role="tablist">
+                                        <li>
+                                            <div class="slds-grid">
+                                                <div class="{!if(v.ShowTab3,'cl51 scanMN mr-3','cl6 scanMN')}">
+                                                    <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="432:0">{!$Label.c.UPS_From}</label>
+                                                    <lightning:input type="datetime" label="From" required="true" value="{!v.startdate}" variant="label-hidden"/>
+                                                </div>  
+                                                <div class="{!if(v.ShowTab3,'cl51 scanMN','cl6 scanMN')}">
+                                                    <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="432:0">{!$Label.c.PackageSlip_To}</label>
+                                                    <lightning:input type="datetime" label="To" required="true" value="{!v.Enddate}" variant="label-hidden"/>                       
+                                                </div>  
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <!--========================================Tab1============================================-->
+                            <div id="tab-default-1" class="{!(v.ShowTab1)?'slds-tabs--default__content slds-show pd10':'slds-tabs--default__content slds-hide'}" role="tabpanel" aria-labelledby="tab-default-1__item">
+                                <div class="epr_Mark7">
+                                    <div class="container-fluid">
+                                        <!--Cart Information Ends here-->
+                                        
+                                        <!--<div class="epr_Mark7 row productconfiq slds-m-around-xx-small">
+                                        <div class="col-md-2" >
+                                        </div>
+                                        <div class="col-md-8">Items To Pick</div>
+                                    </div>-->
+                                        
+                                        <table class="slds-table slds-table_bordered slds-no-cell-focus slds-no-row-hover" role="grid" >
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th width="8%" class=" slds-text-title_caps align-center" aria-label="Add">
+                                                        <div class="slds-grid">
+                                                            <span class="slds-truncate slds-p-top_small slds-p-bottom_x-small" title="Add">&nbsp; <a onclick="{!c.AddNew}" data-record="Add" data-target="#myModal" class="cl8" data-toggle="modal" title="Create Stock Transfer"> <i class="fa fa-plus cl9" aria-hidden="true"></i>&nbsp;{!$Label.c.New_AddTimeCardEntry}</a></span>
+                                                            <aura:if isTrue="{!(v.CartItemInfo.length > 0)}">
+                                                                <span class="slds-truncate slds-p-top_small slds-p-left_small">
+                                                                    <lightning:input type="checkbox" variant="label-hidden" checked="{!v.selectAllPick}" onchange="{!c.selectAllPicked}"/>
+                                                                </span>
+                                                            </aura:if>
+                                                            
+                                                        </div>
+                                                    </th>
+                                                    <th width="15%" class=" slds-text-title_caps" aria-label="Product" >
+                                                        <span class="slds-truncate" title="{!$Label.c.AddSubscription_Product}">{!$Label.c.AddSubscription_Product}</span>
+                                                    </th>
+                                                    <th width="15%" class=" slds-text-title_caps" aria-label="From Location">
+                                                        <span class="slds-truncate" title="{!$Label.c.From_Location}">{!$Label.c.From_Location}</span>
+                                                    </th>
+                                                    <th width="15%" class="slds-text-title_caps" aria-label="Serial No / Batch Code"  title="Serial No / Batch Code">
+                                                        <span class="slds-truncate" title="{!$Label.c.Stock_Trans_Serial_No_Batch_Code}">{!$Label.c.Stock_Trans_Serial_No_Batch_Code}</span>
+                                                    </th>
+                                                    <th width="15%" class=" slds-text-title_caps" aria-label="Account Name" >
+                                                        <span class="slds-truncate" title="{!$Label.c.Pick_PICKED_QTY}">{!$Label.c.Pick_PICKED_QTY}</span>
+                                                    </th>
+                                                    <th width="15%" class="slds-text-title_caps" aria-label="Available Stock" >
+                                                        <span class="slds-truncate" title="{!$Label.c.Available_Stock_StockTake}">{!$Label.c.Available_Stock_StockTake} </span>
+                                                    </th>
+                                                    <th width="15%" class="slds-text-title_caps" aria-label="Actions">
+                                                        <aura:if isTrue="{!and(v.CartItemInfo.length > 1,v.showMultidelete)}">
+                                                            <span class="slds-truncate slds-p-top_small" title="Delete"><a onclick="{!c.deletePickItems}" data-record="Delete" data-target="#myModal" class="cl8-delete" data-toggle="modal" title="Delete"> <i class="fa fa-trash cl9-delete" aria-hidden="true"></i>&nbsp;Delete</a></span>
+                                                            <!--lightning:button label="All"  iconName="utility:delete"  iconPosition="left"  variant="destructive" onclick="{!c.deletePickItems}"></lightning:button-->
+                                                        </aura:if>
+                                                    </th>
+                                                </tr>   
+                                            </thead>
+                                            <tbody class="scanMN">
+                                                <aura:if isTrue="{!empty(v.CartItemInfo)}">
+                                                    <tr class="slds-hint-parent"  >
+                                                        <td colspan="8">
+                                                            <div class="slds-notify_container slds-is-relative">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning cl10" role="alert">
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                    <div class="slds-notify__content">
+                                                                        <h2 class="slds-text-heading_small cl12">{!v.errMsg}</h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:if>
+                                                <aura:if isTrue="{!v.reRenderLIS}">
+                                                <aura:iteration items="{!v.CartItemInfo}" var="ci">
+                                                    <aura:if isTrue="{!and(ci != undefined,ci.cpi !=undefined)}"><!--{!'childCmp_' + ci.index}//indexVar="itemIndex"//storeCompIndex="{!v.storeCompIndex}-->
+                                                        <c:CartPickedItem item="{!ci.cpi}" index="{!ci.index}" prodLocIds = "{!ci.locfilter}" availSerialIds = "{!ci.serialfilter}" availBatchIds = "{!ci.batchfilter}" availLocIds = "{!ci.locfilter}" openSerialModal = "{!v.openSerialModal}" fromMultipick="{!v.fromMultipick}" callAddSerials = "{!v.callAddSerials}" callPickMultiSerials = "{!v.callPickMultiSerials}" callsaveAsDraft = "{!v.callsaveAsDraft}" callRemoveAllSerials = "{!v.callRemoveAllSerials}" callFindSerials = "{!v.callFindSerials}"
+                                                                          siteID="{!v.site.Id}" serialErrMsg="{!ci.serialErrMsg}" assetErrMsg="{!ci.assetErrMsg}" delindex="{!v.selectedIndex2Delete}" AllowNew="{!v.AllowNew}" showSpinnerItem="{!v.showSpinnerItem}" cartID="{!v.cart.Id}" CartItemInfo = "{!v.CartItemInfo}" Showputaway = "{!v.Showputaway}" selected="{!ci.selected}" showMultidelete="{!v.showMultidelete}" scannedValueChanged = "{!v.scannedValueChanged}" serialModalOpen="{!v.serialModalOpen}" storeProdId="{!v.storeProdId}" PickSelectedSerialNos="{!v.PickSelectedSerialNos}" PickSerialNos="{!v.PickSerialNos}" SearchSerialNos="{!v.SearchSerialNos}" StopfecthInventory="{!v.fromCartItems}" storeCompIndex="{!v.storeCompIndex}" fromScanFlowforMultiPick="{!v.fromScanFlowforMultiPick}" Location="{!v.Location}" callChangeLocation="{v.callChangeLocation}"
+                                                        />
+                                                    </aura:if>
+                                                </aura:iteration>
+                                                </aura:if>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--Tab1 Ends-->
+                            
+                            <!--========================================Tab2============================================-->
+                            <div id="tab-default-2" class="{!(v.ShowTab2)?'slds-tabs--default__content slds-show pd10':'slds-tabs--default__content slds-hide'}" role="tabpanel" aria-labelledby="tab-default-2__item">
+                                <div class="epr_Mark7">
+                                    <table class="slds-table slds-table_fixed-layout slds-no-cell-focus " role="grid" >
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl13" aria-label="Action" scope="col">
+                                                    <center><span class="slds-truncate" title="Action">
+                                                        <aura:if isTrue="{!and(v.site_dest.Id != '', v.site_dest.Id != undefined)}">
+                                                            <lightning:input type="checkbox" variant="label-hidden" checked="{!v.selectAll}" onchange="{!c.selectAllPutaway}"/>
+                                                            <aura:set attribute="else">
+                                                                {!$Label.c.AddSubscription_Action}
+                                                            </aura:set>
+                                                        </aura:if>  
+                                                        </span></center>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl14" aria-label="{!$Label.c.Serial_Batch_NO}" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Serial_Batch_NO}">{!$Label.c.Serial_Batch_NO}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl14" aria-label="{!$Label.c.Product_Fixed_Asset}" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Product_Fixed_Asset}">{!$Label.c.Product_Fixed_Asset}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl14" aria-label="{!$Label.c.To_Location}" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.To_Location}">{!$Label.c.To_Location}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl14" aria-label="{!$Label.c.Qty_Pick}" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Qty_Pick}"> {!$Label.c.Qty_Pick}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable slds-text-title_caps cl14" aria-label="{!$Label.c.Putaway_Qty}" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Putaway_Qty}">{!$Label.c.Putaway_Qty}</span>
+                                                </th>
+                                            </tr>   
+                                        </thead>
+                                        <tbody class="scanMN">
+                                            <aura:if isTrue="{!empty(v.PutawayItems)}">
+                                                <tr >
+                                                    <td colspan="6">
+                                                        <div class="slds-notify_container slds-is-relative">
+                                                            <div class="slds-notify slds-notify_toast slds-theme_success cl15" role="alert">
+                                                                <span class="slds-assistive-text">{!$Label.c.Success1}</span>
+                                                                <lightning:icon iconName="utility:success" size="small" alternativeText="{!$Label.c.Success1}"/>
+                                                                
+                                                                <div class="slds-notify__content">
+                                                                    <h2 class="slds-text-heading_small cl12">{!v.errMsg_putaway}</h2>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </aura:if>
+                                            <aura:iteration items="{!v.PutawayItems}" var="obj">
+                                                <c:CartPutawayItem item="{!obj}" sitedestId="{!v.site_dest.Id}" globalLocation ="{!v.globalSelectedLocation}"/>
+                                            </aura:iteration>
+                                        </tbody>
+                                    </table>
+                                    <div class="slds-docked-form-footer"> 
+                                        <lightning:button class="slds-button slds-button--brand" onclick="{!c.Putaway}" label="{!$Label.c.Stock_Trans_Putaway}"/>
+                                        <lightning:button class="slds-button slds-button--neutral" onclick="{!c.cancel}" label="{!$Label.c.Cancel_UserAvailabilities}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--Tab2 data Ends-->
+                            
+                            <!--========================================Tab3============================================-->
+                            <div id="tab-default-1" class="{!(v.ShowTab3)?'slds-tabs--default__content slds-show pd10':'slds-tabs--default__content slds-hide'}" role="tabpanel" aria-labelledby="tab-default-1__item">
+                                <div class="epr_Mark7">
+                                    <div class="container-fluid">
+                                        <table class="slds-table slds-table_fixed-layout slds-no-cell-focus slds-table_edit slds-no-row-hover" role="grid" >
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th width="5%" class=" slds-text-title_caps " aria-label="{!$Label.c.S_No}">
+                                                        <span class="slds-truncate" title="{!$Label.c.S_No}"> {!$Label.c.S_No}</span>
+                                                    </th>
+                                                    <th width="20%" class=" slds-text-title_caps " aria-label="{!$Label.c.Product_Name_StockTake}">
+                                                        <span class="slds-truncate" title="{!$Label.c.Product_Name_StockTake}"> {!$Label.c.Product_Name_StockTake}</span>
+                                                    </th>
+                                                    <th width="7%"  class=" slds-text-title_caps" aria-label="{!$Label.c.PackageSlip_List_Quantity}" >
+                                                        <span class="slds-truncate" title="{!$Label.c.PackageSlip_List_Quantity}">{!$Label.c.PackageSlip_List_Quantity}</span>
+                                                    </th>
+                                                    <th class=" slds-text-title_caps" aria-label="{!$Label.c.From_Location}">
+                                                        <span class="slds-truncate" title="{!$Label.c.From_Location}">{!$Label.c.From_Location}</span>
+                                                    </th>
+                                                    <th class=" slds-text-title_caps" aria-label="{!$Label.c.Cart}">
+                                                        <span class="slds-truncate" title="{!$Label.c.Cart}">{!$Label.c.Cart} </span>
+                                                    </th>
+                                                    <th class=" slds-text-title_caps" aria-label="{!$Label.c.To_Location}">
+                                                        <span class="slds-truncate" title="{!$Label.c.To_Location}">{!$Label.c.To_Location}</span>
+                                                    </th>
+                                                    <th class="slds-text-title_caps" aria-label="Serial No / Batch Code">
+                                                        <span class="slds-truncate" title="{!$Label.c.Serial_No_Batch_Code}">{!$Label.c.Serial_No} <br/>{!$Label.c.Stock_Trans_Batch_Code}</span>
+                                                    </th>
+                                                    <th class="slds-text-title_caps" aria-label="" title="{!$Label.c.Stock_Trans_Transferred_Date}">
+                                                        <span class="slds-truncate" title="{!$Label.c.Stock_Trans_Transferred_Date}">{!$Label.c.Stock_Trans_Transferred_Date}</span>
+                                                    </th>
+                                                    
+                                                </tr>   
+                                            </thead>
+                                            <tbody class="scanMN">
+                                                <aura:if isTrue="{!empty(v.Allputawayitems)}">
+                                                    <tr class="slds-hint-parent"  >
+                                                        <td colspan="6">
+                                                            <div class="slds-notify_container slds-is-relative">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning cl10" role="alert">
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                    <div class="slds-notify__content">
+                                                                        <h2 class="slds-text-heading_small cl12">{!$Label.c.No_items_available}</h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:if>                                    
+                                                <aura:iteration items="{!v.Allputawayitems}" var="obj" indexVar="ind">
+                                                    <tr class="slds-hint-parent"  >
+                                                        <td width="5%" class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!ind + 1}
+                                                            </div>
+                                                        </td>
+                                                        <td width="20%" class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!obj.ERP7__Cart_Item__r.ERP7__Product__r.Name}
+                                                            </div>
+                                                        </td>
+                                                        <td width="7%" class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!obj.ERP7__Putaway_Quantity__c}
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!obj.ERP7__Cart_Item__r.ERP7__From_Location__r.Name}
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!obj.ERP7__Cart_Item__r.ERP7__Cart__r.Name}
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-cell-edit valigntop" role="gridcell">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                {!obj.ERP7__To_Location__r.Name}
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-cell-edit valigntop" role="gridcell">
+                                                            <aura:if isTrue="{!obj.ERP7__Cart_Item__r.ERP7__Product__r.ERP7__Lot_Tracked__c}">
+                                                                <div class="slds-truncate white-space-normal">
+                                                                    {!obj.ERP7__Cart_Item__r.ERP7__Batch_Lot__r.Name}
+                                                                </div>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!obj.ERP7__Cart_Item__r.ERP7__Product__r.ERP7__Serialise__c}">
+                                                                <div class="slds-truncate white-space-normal">
+                                                                    {!obj.ERP7__Cart_Item__r.ERP7__Serial_Number__r.Name}
+                                                                </div>
+                                                            </aura:if>
+                                                        </td>
+                                                        <td class="valigntop">
+                                                            <div class="slds-truncate white-space-normal">
+                                                                <lightning:formattedDateTime aura:id="dt"  value="{!obj.CreatedDate}"     month="short"     day="numeric" year="numeric" timeZone="{!$Locale.timezone}"/>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                </aura:iteration>
+                                            </tbody>
+                                        </table>
+                                        <aura:if isTrue="{!(v.Allputawayitems.length > 0)}">
+                                            <div class="slds-docked-form-footer">
+                                                <lightning:button label="{!$Label.c.Print}"  class="slds-button slds-button_brand buttonextraST" onclick="{!c.showPDF}"></lightning:button>
+                                            </div> 
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</aura:component>

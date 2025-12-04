@@ -1,0 +1,586 @@
+<aura:component implements="force:appHostable,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:actionOverride,lightning:isUrlAddressable" access="global" controller="StockTake">
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StockTake.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.bootStrap + '/css/bootstrap-4.1.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"  />
+    <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+    <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StockTakeList.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.fetchAllDetails}"/>
+    
+    <aura:handler name="change" value="{!v.currentEmpChannel}" action="{!c.LoadChannelChange}"/>
+    
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    
+    <aura:method name="fetchAllDetails" action="{!c.fetchAllDetails}"></aura:method>
+    
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    
+    <aura:handler name="change" value="{!v.stockTakeId}" action="{!c.fetchAllDetails}"/>
+    
+    <aura:handler name="change" value="{!v.stockTake.ERP7__Location__c}" action="{!c.onChangeLocation}"/><!-- changed to onlcick-->
+    
+    <!--aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.handleComponentEvent}"/-->
+    <aura:attribute name="stockInwardItem" type="Map" default="{ERP7__Product__c:'',ERP7__Product__r :{Id:'',Name:'',ERP7__Is_Asset__c:false,StockKeepingUnit:''},
+                                                               ERP7__Fixed_Asset__c :'',ERP7__Fixed_Asset__r:{Id:'',Name:''},
+                                                               ERP7__Quantity__c :0.00,ERP7__Reason__c :'',
+                                                               ERP7__Location__c : '',ERP7__Location__r:{Id:'',Name:''},
+                                                               ERP7__Material_Batch_Lot__c:'',ERP7__Material_Batch_Lot__r:{Id:'',Name:''},
+                                                               ERP7__Serial__c:'',ERP7__Serial__r:{Id:'',Name:''},
+                                                               ERP7__Site_ProductService_InventoryStock__c	:'',ERP7__Site_ProductService_InventoryStock__r:{Id:'',Name:''},
+                                                               ERP7__StorageContainer__c:'',ERP7__StorageContainer__r:{Id:'',Name:''},
+                                                               ERP7__Notes__c	:'',ERP7__Scrap__c :false,
+                                                               ERP7__Purchase_Orders__c:'',ERP7__Purchase_Orders__r:{Id:'',Name:''},
+                                                               ERP7__Purchase_Line_Items__c:'',ERP7__Purchase_Line_Items__r:{Id:'',Name:''},
+                                                               ERP7__Stock_Take_Line_Item__c:'',ERP7__Stock_Take_Line_Item__r:{Id:'',Name:''},
+                                                               Name:''}"/>
+    
+    <aura:attribute name="stockOutwardItem" type="Map" default="{ERP7__Product__c:'',ERP7__Product__r :{Id:'',Name:'',ERP7__Is_Asset__c:false},
+                                                                ERP7__Fixed_Asset__c :'',ERP7__Fixed_Asset__r:{Id:'',Name:''},
+                                                                ERP7__Quantity__c :0.00,ERP7__Scrap__c :false,
+                                                                ERP7__Material_Batch_Lot__c:'',ERP7__Material_Batch_Lot__r:{Id:'',Name:''},
+                                                                ERP7__Serial__c:'',ERP7__Serial__r:{Id:'',Name:''},
+                                                                ERP7__Site_Product_Service_Inventory_Stock__c :'',ERP7__Site_Product_Service_Inventory_Stock__r:{Id:'',Name:''},
+                                                                ERP7__Notes__c	:'',ERP7__Status__c :'',
+                                                                ERP7__Stock_Take_Line_Item__c:'',ERP7__Stock_Take_Line_Item__r:{Id:'',Name:''},
+                                                                Name:''}"/>
+    
+    <aura:attribute name="message" type="Map" default='{"Title":"Error","Severity":"error","Text":""}'/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="step" type="String" default="Site"/>
+    <aura:attribute name="productBarcode" type="String" default=''/>
+    <aura:attribute name="recordId" type="String" default=""/>  
+    <aura:attribute name="stockTakeId" type="String" access="global" default=""/>
+    <aura:attribute name="currentEmpChannel" type="String" access="global" default=""/>
+    <aura:attribute name="stockTakeStat" type="String" access="global" default=""/>
+    <aura:attribute name="siteId" type="String" access="global" default=""/>
+    <aura:attribute name="stockTake" type="Map" default="{Id:'',Name:'',ERP7__Site__c:'',ERP7__Audit_Period__c:'',ERP7__Full_Audit__c:'',ERP7__Site__r:{Id:'',Name:''}, ERP7__Employee__c :'', ERP7__Employee__r:{Id:'',Name:''}, ERP7__Approver__c :'', ERP7__Approver__r:{Id:'',Name:''},ERP7__Start_Date__c:'',ERP7__End_Date__c:''}"/>
+    <aura:attribute name="site" type="Map" default="{Id:'',Name:''}"/>
+    <aura:attribute name="Employee" type="Map" default="{Id:'',Name:''}"/>
+    <aura:attribute name="Approver" type="Map" default="{Id:'',Name:''}"/>
+    <aura:attribute name="locationlist" type="List" default="[]"/>
+    <aura:attribute name="outWardStatus" type="List" default="[]"/> 
+    <aura:attribute name="inWardReason" type="List" default="[]"/> 
+    <aura:attribute name="storageBinList" type="List" default="[]"/>
+    <aura:attribute name="products" type="List" default="[]"/>
+    <aura:attribute name="adjustedProducts" type="List" default="[]"/>
+    <aura:attribute name="Allproducts" type="List" default="[]"/>
+    <aura:attribute name="HideSave" type="Boolean" default="false"/>
+    <aura:attribute name="Prevent" type="Boolean" default="false"/>
+    <aura:attribute name="fireonChange" type="Boolean" default='true'/>
+    <aura:attribute name="HideStockTakeItemPopup" type="Boolean" default="false"/>
+    <aura:attribute name="show" type="String" default="100"/>    
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="1"/>
+    <aura:attribute name="searchString" type="String" default=""/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="selectedChannel" type="String" default=""/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="loadlocationhelper" type="Boolean" default="false"/>
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{
+                                                                              'sobjectType' : 'Employees__c',
+                                                                              'ERP7__Channel__c' : '',
+                                                                              'Name' : '',
+                                                                              }" />
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="showStockAddress" type="Boolean" default="false"/>
+    <aura:attribute name="showVenCode" type="Boolean" default="false"/>
+    <aura:attribute name="scannedInventory" type="String" default=""/>
+    <aura:attribute name="scannedIndx" type="String" default="-1"/>
+    <aura:attribute name="scannedProduct" type="String" default=""/>
+    <aura:attribute name="scannedProductName" type="String" default=""/>
+    <aura:attribute name="selectedlocation" type="String" default=""/>
+    <aura:attribute name="selectedlocName" type="String" default=""/>
+    <aura:attribute name="scannedSerial" type="String" default=""/>
+    <aura:attribute name="scannedBatch" type="String" default=""/>
+    <aura:attribute name="stSiteOptions" type="List"/>
+    <aura:attribute name="stStatusOptions" type="List"/>
+    <aura:attribute name="stauditOptions" type="List"/>
+    <aura:attribute name="ShowAudit" type="Boolean" default="false"/>
+    <aura:attribute name="showProdCode" type="Boolean" default="false"/>
+    <aura:attribute name="isNew" type="Boolean" default="false"/>
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/>
+    <aura:attribute name="allProductsList" type="List" default="[]"/>
+    <aura:attribute name="allProductsListdum" type="List" default="[]"/>
+    <aura:attribute name="scanmsg" type="String" default=""/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="disaSave" type="Boolean" default="false"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false"/>
+    <aura:attribute name="showApprover" type="Boolean" default="false"/>
+    <aura:attribute name="showAdjustedQty" type="Boolean" default="true"/>
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    
+    <aura:attribute name="prodRecordId" type="String"  />
+    
+    <aura:attribute name="showLocationStocks" type="Boolean" default="false"/>
+    
+    <body aura:id="cmpbody" class="cl1">
+        <div aura:id="stocktakescan" class="erp_mark7 cl2 bg-white" > <!--onclick="{!c.focusTOscan}"--> 
+            <aura:if isTrue="{!v.showSpinner}">
+                <span class="cl3">
+                    <div class="custom-spinner slds-spinner_container ">
+                        <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                            <span class="slds-assistive-text">Loading</span>
+                            <div class="slds-spinner__dot-a"></div>
+                            <div class="slds-spinner__dot-b"></div>
+                            
+                        </div>
+                        <div class="custom-loading-text">
+                            {!v.spinnerContent}
+                        </div>
+                    </div>
+                    <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/-->
+                </span>
+            </aura:if>
+            <aura:if isTrue="{!not(empty(v.exceptionError))}">
+                <div class="slds-notify_container slds-is-absolute top15" >
+                    <div class="slds-notify slds-notify_toast slds-theme_error" role="status" >
+                        <span class="slds-assistive-text">{!$Label.c.error}</span>
+                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                            <lightning:icon iconName="utility:error" variant="inverse" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" size="x-small"/>
+                        </span>
+                        <div class="slds-notify__content">
+                            <p class="slds-text-heading_x-small mb-0">
+                                <lightning:formattedText value="{!v.exceptionError}"/>
+                            </p>
+                        </div>
+                        <div class="slds-notify__close" >
+                            <a onclick="{!c.closeError}" class="textdeccolor">
+                                <lightning:icon iconName="utility:close" variant="inverse" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" size="x-small"/>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+            <div class="slds-page-header">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate cl4">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <lightning:icon iconName="standard:orders"  size="large" alternativeText="{!$Label.c.Stock_Take_Label}" title="{!$Label.c.Stock_Take_Label}" /> 
+                            </div>
+                            <div class="slds-media__bod cl5">
+                                <p class="slds-text-title__caps slds-line-height__reset"></p>
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger__hover cl6" aria-haspopup="true">
+                                            <a href="javascript:void(0);" class="slds-context-bar__label-action cl7 slds-p-left_xxx-small" title="Menu Item">
+                                                <span class="slds-truncate"><h1 class="slds-page-header__title slds-truncate" title="{!$Label.c.Stock_Take_Label}">{!$Label.c.Stock_Take_Label}</h1></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </nav>
+                                <div class="slds-form-element cl8 scanMN">
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Stock_Take__c" IconName="standard:custom" selectedRecordId="{!v.stockTakeId}" qry=" AND ERP7__Status__c = 'Open'"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!--End of Page Header-->
+            
+            <!--progresssteps-->
+            <aura:if isTrue="{!empty(v.recordId)}">
+                <div class="slds cl9">
+                    <lightning:progressIndicator currentStep="{!v.step}" title="Barcode Meter">
+                        <lightning:progressStep label="{!$Label.c.Select_a_Site_StockTake}" value="Site" />                 <!--onclick="{!c.siteStepmethod}"-->
+                        <aura:if isTrue="{!and(and(v.selectedlocation != undefined,v.selectedlocation != null),v.selectedlocation != '')}">
+                            <lightning:progressStep label="{!v.selectedlocName}" value="location" /> <!--onclick="{!c.locStepmethod}"-->
+                            <aura:set attribute="else">
+                                <lightning:progressStep label="{!$Label.c.Scan_a_Location_StockTake}" value="location" /> <!--onclick="{!c.locStepmethod}"-->
+                            </aura:set>
+                        </aura:if>
+                        <lightning:progressStep label="{!$Label.c.Scan_Product_StockTake}" value="product" /> <!--onclick="{!c.prodStepmethod}"-->
+                    </lightning:progressIndicator>
+                </div>
+            </aura:if>
+            <!--progresssteps-->
+            
+            <div class="epr_Mark7 cl9">
+                <div class="row slds-grid  cl10">
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                            <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                <lightning:input type="text" label="{!$Label.c.Name_UserAvailabilities}" value="{!v.stockTake.Name}" disabled="true" placeholder="{!$Label.c.Name_UserAvailabilities}"/>
+                                <aura:set attribute="else">
+                                    <lightning:input class="scanMN" type="text" label="{!$Label.c.Name_UserAvailabilities}" value="{!v.stockTake.Name}" required="true" placeholder="{!$Label.c.Enter_Name_ManageLeave}"/>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                            <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                <lightning:input type="text" label="{!$Label.c.Channel_StockTake}" value="{!v.stockTake.ERP7__Channel__r.Name}" disabled="true" placeholder="{!$Label.c.Channel_StockTake}"/>
+                            </aura:if>
+                            <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                                <c:CustomInputLookUp label="{!$Label.c.Channel_StockTake}" objectAPIName="ERP7__Channel__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.currentEmpChannel}" placeholder="{!$Label.c.Search_Channel_StockTake}"/>
+                            </aura:if>
+                        </div>
+                    </div> 
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                            <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                <lightning:select label="{!$Label.c.Site_StockTake}" value="{!v.stockTake.ERP7__Site__c}" disabled="true" />
+                                <aura:set attribute="else">
+                                    <lightning:select  label="{!$Label.c.Site_StockTake}" aura:id="stSite" value="{!v.selectedSite}" onchange="{!c.onChangeSite}">
+                                        <aura:iteration items="{!v.stSiteOptions}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div> 
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                            <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                <lightning:input type="text" label="{!$Label.c.InventoryConsole_Location}" value="{!v.stockTake.ERP7__Location__r.Name}" disabled="true" placeholder="{!$Label.c.Employee_StockTake}"/>
+                            </aura:if>
+                                <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                                    <!-- <ERP7:CustomInputLookUp label="Employee" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecord="{!v.stockTake.ERP7__Employee__r}"  /> -->
+                                    <div  ><!--onclick="{!c.onChangeLocation}"-->
+                                        <c:CustomInputLookUp label="{!$Label.c.InventoryConsole_Location}" objectAPIName="ERP7__Location__c" IconName="standard:location" selectedRecordId="{!v.stockTake.ERP7__Location__c}" qry="{!'And ERP7__Site__c = \''+v.selectedSite+'\''}"/>
+                                    </div>
+                                </aura:if>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-xs-3">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                            <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                <lightning:input type="text" label="{!$Label.c.Employee_StockTake}" value="{!v.stockTake.ERP7__Employee__r.Name}" disabled="true" placeholder="{!$Label.c.Employee_StockTake}"/>
+                            </aura:if>
+                                <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                                    <!-- <ERP7:CustomInputLookUp label="Employee" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecord="{!v.stockTake.ERP7__Employee__r}"  /> -->
+                                    <c:CustomInputLookUp label="{!$Label.c.Employee_StockTake}" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecordId="{!v.stockTake.ERP7__Employee__c}"  placeholder="{!$Label.c.Employee_StockTake}"/>
+                                </aura:if>
+                        </div>
+                    </div>
+                </div>
+                <div class="row slds-grid  cl10">
+                    <aura:if isTrue="{!v.showApprover}">
+                        <div class="col-md-3 col-xs-3">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                                
+                                <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                                    <!-- <ERP7:CustomInputLookUp label="Approver" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecord="{!v.stockTake.ERP7__Approver__r}"  /> -->
+                                    <c:CustomInputLookUp label="{!$Label.c.Approver_Timesheets}" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecordId="{!v.stockTake.ERP7__Approver__c}"  placeholder="{!$Label.c.Approver_Timesheets}"/>
+                                </aura:if>
+                                <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                                    <lightning:input type="text" label="{!$Label.c.Approver_Timesheets}" value="{!v.stockTake.ERP7__Approver__r.Name}" disabled="true" placeholder="{!$Label.c.Approver_Timesheets}"/>
+                                </aura:if>
+                                
+                            </div>
+                        </div>
+                    </aura:if>
+                    <div class="col-md-3 ">
+                        <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                            <lightning:input aura:id="startDate" type="Date" label="{!$Label.c.AddSubscription_Start_Date}" value="{!v.stockTake.ERP7__Start_Date__c}" placeholder="{!$Label.c.AddSubscription_Start_Date}"/>
+                        </aura:if>
+                        <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                            <lightning:input aura:id="startDate" type="Date" label="{!$Label.c.AddSubscription_Start_Date}" value="{!v.stockTake.ERP7__Start_Date__c}" disabled="true" placeholder="{!$Label.c.AddSubscription_Start_Date}"/>
+                        </aura:if>
+                    </div>
+                    <div class="col-md-3">
+                        <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                            <lightning:input aura:id="endDate" type="Date" label="{!$Label.c.CreateClubcard_End_Date}" value="{!v.stockTake.ERP7__End_Date__c}" placeholder="{!$Label.c.CreateClubcard_End_Date}"/>
+                        </aura:if>
+                        <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                            <lightning:input aura:id="endDate" type="Date" label="{!$Label.c.CreateClubcard_End_Date}" value="{!v.stockTake.ERP7__End_Date__c}" disabled="true" placeholder="{!$Label.c.CreateClubcard_End_Date}"/> 
+                        </aura:if>
+                    </div> 
+                    <div class="col-md-3">
+                        <lightning:select aura:id="stStatus" value="{!v.stockTake.ERP7__Status__c}" label="{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}" disabled="{!v.stockTakeStat == 'Closed'}">
+                            <aura:iteration items="{!v.stStatusOptions}" var="option">
+                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.stockTake.ERP7__Status__c, option.value)}"/>
+                            </aura:iteration>
+                        </lightning:select>
+                    </div>
+                </div>
+                <div class="row cl11" id="swapper-first">
+                    <div class="col-md-3 scanMN">
+                        <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                            <lightning:textarea aura:id="sa" value="{!v.stockTake.ERP7__Description__c}" label="{!$Label.c.AddSubscription_Description}" maxlength="250" placeholder="{!$Label.c.AddSubscription_Description}"/> 
+                        </aura:if>
+                        <aura:if isTrue="{!v.stockTakeStat == 'Closed'}">
+                            <lightning:textarea aura:id="sas" value="{!v.stockTake.ERP7__Description__c}" label="{!$Label.c.AddSubscription_Description}" disabled="true" maxlength="250" placeholder="{!$Label.c.AddSubscription_Description}"/> 
+                        </aura:if>
+                    </div>
+                    <aura:if isTrue="{!v.ShowAudit}">
+                        <div class="col-md-3">
+                            <lightning:select aura:id="auditPer" value="{!v.stockTake.ERP7__Audit_Period__c}" label="{!$Label.c.Audit_Period}" disabled="{!v.stockTakeStat == 'Closed'}">
+                                <aura:iteration items="{!v.stauditOptions}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.stockTake.ERP7__Audit_Period__c, option.value)}"/>
+                                </aura:iteration>
+                            </lightning:select>
+                        </div>
+                    </aura:if>
+                    <div class="col-md-3 slds-p-top_large">
+                        <lightning:input type="checkbox" label="{!$Label.c.Show_Location_Stocks}"  onchange="{!c.getbasedonLocation}"/>                    
+                    </div>
+                    <!-- Moin added this 3 line on 06th February 2024 -->
+                    <!--<div class="col-md-3">
+                        <lightning:input type="checkbox" label="{!$Label.c.Acc_Recev_Post}"  checked="{!v.stockTake.ERP7__Posted__c}"/>                    
+                    </div>-->
+                    <!-- <aura:if isTrue="{!v.ShowAudit}">
+                        <div class="col-md-3">
+                            <label class="slds-form-element__label" for="lookup-348" data-aura-rendered-by="468:0">
+                                Full Audit</label><br/>
+                            <lightning:input type="checkbox" variant="label-hidden" checked="{!v.stockTake.ERP7__Full_Audit__c}" disabled="{!v.stockTakeStat == 'Closed'}"/>
+                            
+                        </div>
+                    </aura:if>-->
+                </div>
+                <div class="card shadow-custom">
+                    <aura:if isTrue="{!v.adjustedProducts.length > 0}">
+                        <div class="card mb-2 ">
+                            <div class="card-body p-1" >
+                                <h5 class="titlecss">{!$Label.c.Adjusted_Inventory}</h5> 
+                                <div class="slds-scrollable" style="height: auto;max-height: 300px;">
+                                    <table class="slds-table slds-table_bordered slds-table_fixed-layout" >
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <aura:if isTrue="{!!v.showProdCode}">
+                                                    <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15 " aria-label="Account Name" scope="col" >
+                                                        <span class="slds-truncate" title="{!$Label.c.Stock_Take_SKU}">{!$Label.c.Stock_Take_SKU} </span>
+                                                    </th>
+                                                </aura:if>
+                                               <aura:if isTrue="{!v.showVenCode}"> 
+                                                    <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15 " aria-label="Vendor code" scope="col" >
+                                                        <span class="slds-truncate" title="{!$Label.c.PO_Vendor_part_no}">{!$Label.c.PO_Vendor_part_no} </span>
+                                                    </th>
+                                                </aura:if>
+                                                <th width="27%" aria-sort="none" class="slds-is-sortable slds-is-resizable cl14" aria-label="Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Product_Name_StockTake}">{!$Label.c.Product_Name_StockTake}</span>
+                                                </th>
+                                                <th aria-sort="none" class="cl16-1" aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Stock_Address_override_in_Pick}">{!$Label.c.Inventory_Location_StockTake} </span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 " aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Serial_StockTake}">{!$Label.c.Serial_StockTake}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 " aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Lot_StockTake}">{!$Label.c.Lot_StockTake}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl16-1 " aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Available_Stock_StockTake}">{!$Label.c.Available_Stock_StockTake}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl16-1" aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Stock_In_Hand_StockTake}">{!$Label.c.Stock_In_Hand_StockTake}</span>
+                                                </th>
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15" aria-label="Account Name" scope="col">
+                                                    <span class="slds-truncate" title="{!$Label.c.Variance}">{!$Label.c.Variance}</span>
+                                                </th>
+                                                <aura:If isTrue="{!v.showAdjustedQty}">
+                                                    <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15" aria-label="Account Name" scope="col">
+                                                        <span class="slds-truncate" title="{!$Label.c.Adjusted_Qty}">{!$Label.c.Adjusted_Qty}</span>
+                                                    </th>
+                                                </aura:If>
+                                            </tr>   
+                                        </thead>
+                                        <aura:iteration items="{!v.adjustedProducts}" var="obj" indexVar="Index" >
+                                            <aura:if isTrue="{!obj.showSelected}">   <!-- Selectsite="{!v.stockTake.ERP7__Site__r}"  -->																															
+                                                <c:StockTakeItem stockTakeItem="{!obj.stockTakeLineItem}" stockInwardList="{!obj.stockInWardList}" stockOutwardList="{!obj.stockOutWardList}" SelectedBcrd="{!v.productBarcode}" saveHide="{!v.HideSave}" isNewStock="{!v.isNew}" isAdjusted="true" showProdCode="{!v.showProdCode}" showVenCode ="{!v.showVenCode}"
+                                                                 products = "{!v.products}" adjustedProducts = "{!v.adjustedProducts}" prdIndex ="{!Index}" stockOutWardStatus="{!v.outWardStatus}" stockInWardReason="{!v.inWardReason}" disabbled="{!v.stockTakeStat == 'Closed'}" showAdjustedQty="{!v.showAdjustedQty}"/>
+                                            </aura:if>
+                                        </aura:iteration>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.stockTakeStat != 'Closed'}">
+                        <div class="row">
+                            <div class="col-md-4 cl12">
+                                <!-- <ERP7:StockTakeSearch searchString="{!v.searchString}"/> -->
+                                <div class="slds-grid scanMN">
+                                    <lightning:input value="{!v.searchString}" variant-label="hidden" placeholder="{!$Label.c.EmpCustLookupPage_Search}" class="no-input-lable wd300"/>&nbsp;
+                                    <lightning:button onclick="{!c.onchangeSearch}" variant="brand" label="{!$Label.c.Find_StockTake}"/>
+                                </div>
+                            </div>
+                            <div class="{!if(and(v.scanmsg != undefined, v.scanmsg != ''),'col-md-12 Receive-class48','col-md-12 Receive-class49')}">{!v.scanmsg}</div>
+                            <!--
+                            <aura:if isTrue="{!and(and(v.selectedlocation != undefined,v.selectedlocation != null),v.selectedlocation != '')}">
+                                <aura:if isTrue="{!and(and(v.selectedlocName != undefined,v.selectedlocName != null),v.selectedlocName != '')}">
+                                    <div class="col-md-2 floatRight">
+                                        <lightning:pill label="{!v.selectedlocName}" title="Scanned Location" name="Scanned Location" onremove="{!c.removePillLoc}">
+                                            <aura:set attribute="media">
+                                                <lightning:icon iconName="standard:location"  alternativeText="Location"/>
+                                            </aura:set>
+                                        </lightning:pill>
+                                    </div>
+                                </aura:if>
+                            </aura:if>
+                            <aura:if isTrue="{!and(and(v.scannedProduct != undefined,v.scannedProduct != null),v.scannedProduct != '')}">
+                                <aura:if isTrue="{!and(and(v.scannedProductName != undefined,v.scannedProductName != null),v.scannedProductName != '')}">
+                                    <div class="col-md-2 floatRight">
+                                        <lightning:pill label="{!v.scannedProductName}" title="Scanned Product" name="Scanned Product" onremove="{!c.removePillProd}">
+                                            <aura:set attribute="media">
+                                                <lightning:icon iconName="standard:product"  alternativeText="Product"/>
+                                            </aura:set>
+                                        </lightning:pill>
+                                    </div>
+                                </aura:if>
+                            </aura:if>
+       -->
+                            <br/>
+                        </div>
+                        <div class="card mb-2 cl13">
+                            <div class="card-body p-1">
+                                
+                                <table class="slds-table slds-table_bordered slds-table_fixed-layout ">
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                             <aura:if isTrue="{!!v.showProdCode}">
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="ProductCodeSKU" >
+                                                <span class="slds-truncate" title="{!$Label.c.Stock_Take_SKU}">{!$Label.c.Stock_Take_SKU} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.showVenCode}">
+                                                <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15 " aria-label="Vendor code" scope="col" >
+                                                    <span class="slds-truncate" title="{!$Label.c.PO_Vendor_part_no}">{!$Label.c.PO_Vendor_part_no} </span>
+                                                </th>
+                                            </aura:if>
+                                            <th width="27%" aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 cursor-pointer" aria-label="Name" scope="col" onclick="{!c.sortBy}" id="ProductName" >
+                                                <span class="slds-truncate" title="{!$Label.c.Product_Name_StockTake}">{!$Label.c.Product_Name_StockTake} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="InventoryLocation">
+                                                <span class="slds-truncate" title="{!$Label.c.Stock_Address_override_in_Pick}">{!$Label.c.Stock_Address_override_in_Pick}&nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/> </span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="Serial">
+                                                <span class="slds-truncate" title="{!$Label.c.Serial_StockTake}">{!$Label.c.Serial_StockTake} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl14 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="Lot">
+                                                <span class="slds-truncate" title="{!$Label.c.Lot_StockTake}">{!$Label.c.Lot_StockTake} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl16-1 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="Stock">
+                                                <span class="slds-truncate" title="{!$Label.c.Available_Stock_StockTake}">{!$Label.c.Available_Stock_StockTake} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl16-1 cursor-pointer" aria-label="Account Name" scope="col" onclick="{!c.sortBy}" id="StockHand">
+                                                <span class="slds-truncate" title="{!$Label.c.Stock_In_Hand_StockTake}">{!$Label.c.Stock_In_Hand_StockTake} &nbsp; <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small"/></span>
+                                            </th>
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15" aria-label="Account Name" scope="col">
+                                                <span class="slds-truncate" title="{!$Label.c.Variance}">{!$Label.c.Variance}</span>
+                                            </th>
+                                            <aura:If isTrue="{!v.showAdjustedQty}">
+                                            <th aria-sort="none" class="slds-is-sortable slds-is-resizable cl15" aria-label="Account Name" scope="col">
+                                                <span class="slds-truncate" title="{!$Label.c.Adjusted_Qty}">{!$Label.c.Adjusted_Qty}</span>
+                                            </th>
+                                            </aura:If>
+                                        </tr>   
+                                    </thead>
+                                    <aura:if isTrue="{!(v.products.length > 0)}"> 
+                                        <aura:iteration items="{!v.products}" var="obj" indexVar="Index" >
+                                            <aura:if isTrue="{!obj.showSelected}">   <!-- Selectsite="{!v.stockTake.ERP7__Site__r}"  -->																															
+                                                <c:StockTakeItem aura:id="{!obj.stockTakeLineItem.ERP7__Inventory_Stock__c}" stockTakeItem="{!obj.stockTakeLineItem}" stockInwardList="{!obj.stockInWardList}" stockOutwardList="{!obj.stockOutWardList}" SelectedBcrd="{!v.productBarcode}" saveHide="{!v.HideSave}" isNewStock="{!v.isNew}" isAdjusted="false" showProdCode="{!v.showProdCode}"
+                                                                 products ="{!v.products}" allProductsList ="{!v.allProductsList}" adjustedProducts = "{!v.adjustedProducts}" prdIndex ="{!Index}" stockOutWardStatus="{!v.outWardStatus}" stockInWardReason="{!v.inWardReason}" disabbled="{!v.stockTakeStat == 'Closed'}" showVenCode="{!v.showVenCode}" />
+                                            </aura:if>
+                                        </aura:iteration>
+                                        <aura:set attribute="else">
+                                        	<tr>
+                                                <th colspan="9" style="text-align:center;">
+                                                    <div class="slds-notify_container slds-is-relative">
+                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                            <span class="slds-assistive-text">{!$Label.c.warning_UserAvailabilities}</span>
+                                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="">
+                                                                <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                            </span>
+                                                            <div class="slds-notify__content">
+                                                                <h2 class="slds-text-heading_small ">{!$Label.c.No_Inventory_Stocks_available}
+                                                                </h2>
+                                                            </div>
+                                                            
+                                                        </div>
+                                                    </div>    </th>
+                                            </tr>
+                                        </aura:set>
+                                    </aura:if>
+                                </table>
+                                
+                                <!--pagination-->
+                                <div class="epr_Mark7"><!--position:fixed;width:100%;bottom:0px;left:0;background: #ffffff;-->
+                                    <div class="row cl17">
+                                        <aura:if isTrue="{!and(v.Container.stockTakeWrapperList.length > 0,v.products.length > 0)}">
+                                            <div class="col-md-2 cl18">
+                                                <div class="slds-grid" >   
+                                                    <div class="slds-col cl19">
+                                                        {!$Label.c.Acc_Recev_Show}&nbsp;&nbsp;
+                                                    </div>
+                                                    <div class="slds-col">
+                                                        <lightning:select value="{!v.show}" onchange="{!c.SetShow}" variant="label-hidden" class="display-lable">
+                                                            <option value="50">50</option>
+                                                            <option value="100">100</option>
+                                                            <option value="200">200</option>
+                                                            <option value="500">500</option>
+                                                        </lightning:select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3 cl20">
+                                                {!$Label.c.Acc_Recev_Showing}&nbsp;<span class="text-lightblue">{!v.Container.startCount}-{!v.Container.endCount}&nbsp;</span> {!$Label.c.Acc_Recev_of_total} &nbsp;<span class="text-lightblue"> {!v.Container.recSize} &nbsp;</span> {!$Label.c.Acc_Recev_Records}
+                                            </div>
+                                            <div class="col-md-4 cl21">
+                                                <nav aria-label="Page navigation example">
+                                                    <ul class="pagination cl22">
+                                                        <li class="cl23">
+                                                            <a class="{!if(1 >= v.Container.startCount,'cl24','cl25')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> 
+                                                        </li>
+                                                        <li class="cl26">
+                                                            <a class="{!if(1 >= v.Container.startCount,'cl27','cl28v1')}"  onclick="{!c.Previous}">  {!$Label.c.Previous}</a> 
+                                                        </li>
+                                                        
+                                                        <li class="cl29">
+                                                            <a class="{!if(v.Container.endCount == v.Container.recSize,'cl30','cl31')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} </a> 
+                                                        </li>
+                                                        <li class="cl32">
+                                                            <a class="{!if(v.Container.endCount == v.Container.recSize,'cl30','cl31')}" onclick="{!c.NextLast}">&gt;&gt; </a> 
+                                                        </li>
+                                                    </ul>
+                                                </nav> 
+                                            </div>
+                                            <div class="col-md-3">
+                                                <table width="100%">
+                                                	<tr>
+                                                    	<td width="33%" align="right" class="text-right"><strong>{!$Label.c.page}</strong></td>
+                                                        <td width="33%"><lightning:input type="number" variant="label-hidden" value="{!v.Container.PageNum}" oncommit="{!c.OfsetChange}" class="width100"/></td>
+                                                        <td width="33%"><strong><span class="text-lightblue"> {!$Label.c.page_of}&nbsp; {!v.Container.PNS.length}</span></strong></td>
+                                                    </tr>
+                                                </table>
+                                                 
+                                            </div> 
+                                        </aura:if>
+                                    </div> 
+                                </div>
+                                <!--pagination-->
+                            </div>
+                        </div>
+                    </aura:if>
+                </div>
+            </div>
+            
+            <div class="slds-docked-form-footer scanMN">
+                <div>    <!--position:fixed;-->                          
+                    <lightning:button  label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.Cancel}"/>
+                    <aura:if isTrue="{!and(v.stockTakeStat != 'Closed',v.stockTakeStat != 'Cancelled')}">
+                        <aura:if isTrue="{!and(v.HideSave == false)}"> <!--,not(empty(v.products)-->
+                            <lightning:button class="scanMN" variant="brand" label="{!$Label.c.SalesOrderConsole_Save}" onclick="{!c.updateStock}" disabled="{!v.disaSave}"/>
+                        </aura:if>
+                    </aura:if>
+                </div>
+            </div>
+        </div>
+        <!--End of namespace erp_mark7-->
+    </body>
+</aura:component>

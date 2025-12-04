@@ -1,0 +1,337 @@
+<aura:component controller="ConvertRequisitionToPurchaseOrder" implements="lightning:actionOverride,force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction,lightning:isUrlAddressable" access="GLOBAL">
+   	<ltng:require styles="/resource/ERP7__CMP_CSS/CSS/convertRequistiontopurchase.css"/> 
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}" />
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    
+    <aura:handler event="c:RequisitionToPurchaseOrderEvent" action="{!c.deletePoli}"/>
+    <aura:attribute name="selectedTab" type="String" default="Purchase_Requisitions" />
+    <aura:attribute name="requisitionList" type="Object" />
+    <aura:attribute name="SelectedRequisition" type="List" /> 
+    <aura:attribute name="SelectedRequisitionPOLI" type="List" default="[]"/>
+    <aura:attribute name="singleRequisitionPOLI" type="String" />
+    <aura:attribute name="selectedCount" type="integer" default="0"/> 
+    <aura:attribute name="qry" type="String" />
+    <aura:attribute name="channelId" type="String" default=""/>
+    <aura:attribute name="fromReq" type="Boolean" default="true"/>
+    <aura:attribute name="Channel"  type="Map" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="distributionChannel" type="sObject" default="{'Id':'','Name':''}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getRecords}"/>
+    <aura:attribute name="nameUrl" type="String"/>
+    <aura:attribute name="setSearch" type="String" default=""/>
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="dcId" type="String" default=""/>
+    <aura:handler name="change" value="{!v.dcId}" action="{!c.fetchChannelsByEmp}"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.getRecords}"/>
+    <aura:attribute name="OrderBy" type="String" default="ERP7__Product__r.Name"/>
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="0"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/> 
+    <aura:attribute name="preventChanges" type="Boolean" default="false"/>
+    <aura:attribute name="fromDetail" type="Boolean" default="false"/>
+    <aura:attribute name="fromDetailPRId" type="String" default=""/>
+    <aura:attribute name="PROrder" type="String" default=""/>
+    <aura:attribute name="IsSalesOrder" type="Boolean" default="false"/>
+    <div class="maqsood erp_Mark7 erp_mark7 bg-white" aura:id="body">
+        <div class="slds-container--fluid crpt-class1">
+            
+            <div class="slds-page-header crpt-class2">
+                <div class="slds-grid" >
+                    <div class="slds-col slds-has-flexi-truncate">     
+                        <div class="slds-media">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container slds-icon-standard-account" title="">
+                                    <lightning:icon iconName="action:description" variant="inverse" size="x-medium" alternativeText="description" title="description" />
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <h1 class="slds-page-header__title slds-truncate slds-align-middle" title="Requisition to Purchase Order ">                         
+                                    {!$Label.c.Requisition_to_Purchase_Order}
+                                    <aura:if isTrue="{!v.selectedTab!='Purchase_Orders'}">
+                                        <i aria-hidden="true" class="fa fa-refresh crpt-class3" onclick="{!c.reload}"
+                                           >
+                                        </i>
+                                    </aura:if>    
+                                    
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top" >
+                        <div class="slds-col slds-m-right--xx-small">
+                            <div  class="crpt-class4">
+                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" IconName="custom:custom24" selectedRecordId="{!v.channelId}" label="{!$Label.c.Channel_StockTake}"/>
+                            </div>
+                        </div>
+                        <div class="slds-col">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                <div class="crpt-class4"> 
+                                    <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c" required="true" aura:id="dcId" 
+                                                            IconName="custom:custom32" selectedRecordId="{!v.dcId}" label="{!$Label.c.Distribution_Channel_StockRunRate}" qry="{!'And ERP7__Channel__c = \''+v.channelId+'\''}"/>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-custom crpt-class5">
+                <div class="card-body p-2">    
+                    <div class="slds-tabs--default slds-p-around--xx-small">
+                        <ul class="slds-tabs--default__nav " role="tablist">
+                            <span> 
+                                <c:Tab label="{!$Label.c.PURCHASE_REQUISITION_LINE_ITEMS}" name="Purchase_Requisitions" selectedTab="{!v.selectedTab}" iconclass="fa fa-list" />
+                            </span>
+                            <c:Tab label="{!$Label.c.Acc_Pay_Purchase_Orders}" name="Purchase_Orders" selectedTab="{!v.selectedTab}" iconclass="fa fa-file" />
+                            <li class="crpt-class6">&nbsp;</li>
+                            <aura:if isTrue="{!equals(v.selectedTab,'Purchase_Requisitions')}">
+                                <li class="crpt-class7">
+                                    <c:StockTakeSearch searchString="{!v.setSearch}"/>
+                                </li>
+                            </aura:if>
+                        </ul>
+                        <aura:if isTrue="{!equals(v.selectedTab,'Purchase_Requisitions')}">
+                            <div class="table-responsive crpt-class8" tabindex="1">
+                                <table class="table">
+                                    <thead>
+                                        <tr class="slds-text-title_caps">
+                                            <th class="slds-cell-shrink" scope="col">
+                                                    <lightning:input type="checkbox" aura:id="box3" onchange="{!c.selectAll}"/>
+                                            </th>
+                                             
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Product Name" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Product__r.Name">
+                                                    {!$Label.c.Product_Name_StockTake}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Quantity" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Quantity__c">
+                                                    {!$Label.c.ProductBundleManagement_Quantity}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col" title="Items in Stock">
+                                               {!$Label.c.InventoryConsole_Items_in_Stock}
+                                            </th>
+                                             <th scope="col"  title="Awaiting Stock">
+                                               {!$Label.c.POLI_Awaiting_Stock}
+                                            </th>
+                                            <th scope="col" title="Demand">
+                                               {!$Label.c.Demand_UsersShiftMatch}
+                                            </th>
+                                           
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Requisition" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Requisition__r.Name">{!$Label.c.REQUISITION}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Sales Order" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Requisition__r.ERP7__Sales_Order__r.Name" >
+                                                    {!$Label.c.PackageSlip_List_Sales_Order}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Expected Delivery Date" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Requisition__r.ERP7__Expected_Delivery_Date__c">
+                                                    {!$Label.c.UPS_Delivery_Date}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Requisition By" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Purchase_Requisition__r.ERP7__Employee_Requester__r.Name">
+                                                    {!$Label.c.REQUISITION_BY}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Default Vendor" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Product__r.ERP7__Default_Vendor__r.Name">
+                                                    {!$Label.c.DEFAULT_VENDOR}
+                                                    <lightning:icon iconName="utility:sort" alternativeText="Sort" title="Sort" size="xx-small" class="cursor-pointer" />
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate" title="Action">Action
+                                                </div>
+                                            </th>
+                                            
+                                            
+                                            <th class="slds-cell-shrink" scope="col"></th>
+                                        </tr> 
+                                    </thead>
+                                    <tbody>
+                                        <aura:if isTrue="{!v.requisitionList.length>0}">
+                                            <aura:iteration items="{!v.requisitionList}" var="req">
+                                                
+                                                <tr class="slds-hint-parent">
+                                                    <td class="slds-cell-shrink" data-label="Select Row">
+                                                        <lightning:input type="checkbox" value="{!req.reqline.Id}" checked="{!req.selected}" aura:id="boxPack" onchange="{!c.checkboxSelect}"/>
+                                                    </td>
+                                                    
+                                                    <th scope="row" data-label="Product Name">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Product__r.Name}">
+                                                            
+                                                            <a class="svg" target="_blank" onclick="{!c.showRLIDetailsPage}" href="{!v.nameUrl}" data-record="{!req.reqline.Id}">{!req.reqline.ERP7__Product__r.Name}</a>
+                                                        </div>
+                                                    </th>
+                                                    <td data-label="Quantity">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Quantity__c}">{!req.reqline.ERP7__Quantity__c}</div>
+                                                    </td>
+                                                     <td data-label="stock">
+                                                        <div class="slds-truncate crpt-class9">{!req.ItemsinStock}</div>
+                                                    </td>
+                                                     <td data-label="Awaitingstock">
+                                                         <div class="slds-truncate crpt-class9"> {!req.AwaitingStock}</div>
+                                                    </td>
+                                                     <td data-label="Demand">
+                                                         <div class="slds-truncate crpt-class9">{!req.demand}</div>
+                                                    </td>
+                                                    
+                                                    <td data-label="Requisition">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Purchase_Requisition__r.Name}"><a href="{!'/'+req.reqline.ERP7__Purchase_Requisition__r.Id}" target="__blank">{!req.reqline.ERP7__Purchase_Requisition__r.Name}</a></div>
+                                                    </td>
+                                                    <td data-label="Sales Order">
+                                                        <aura:if isTrue="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Sales_Order__c != null}">
+                                                            <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Sales_Order__r.Name}"><a href="{!'/'+req.reqline.ERP7__Purchase_Requisition__r.ERP7__Sales_Order__r.Id}" target="__blank">{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Sales_Order__r.Name}</a></div>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Order_S__r.Name != null}">
+                                                            <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Order_S__r.Name}"><a href="{!'/'+req.reqline.ERP7__Purchase_Requisition__r.ERP7__Order_S__r.Id}" target="__blank">{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Order_S__r.Name}</a></div>                                            
+                                                        </aura:if>
+                                                        
+                                                    </td>
+                                                    <td data-label="Expected Delivery Date">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Expected_Delivery_Date__c}">{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Expected_Delivery_Date__c}</div>
+                                                    </td>
+                                                    <td data-label="Requisition By">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Requisitioned_By__r.Name}">{!req.reqline.ERP7__Purchase_Requisition__r.ERP7__Requisitioned_By__r.Name}</div>
+                                                    </td>
+                                                    <th scope="row" data-label="Product Name">
+                                                        <div class="slds-truncate crpt-class9" title="{!req.reqline.ERP7__Product__r.ERP7__Default_Vendor__r.Name}">
+                                                            
+                                                            <a class="svg" target="_blank" onclick="{!c.showRLIDetailsPage}" href="{!v.nameUrl}" data-record="{!req.reqline.ERP7__Product__r.ERP7__Default_Vendor__c}">{!req.reqline.ERP7__Product__r.ERP7__Default_Vendor__r.Name}</a>
+                                                        </div>
+                                                    </th>
+                                                    <td data-label="Action">
+                                                        <a href="javascript:void(0);" onclick="{!c.convertToPOSingle}" data-record="{!req.reqline.Id}"><lightning:icon iconName="utility:chevronright" size="xx-small" vairant="bare"></lightning:icon>&nbsp;{!$Label.c.PO}</a>
+                                                    </td>    
+                                                    
+                                                    
+                                                </tr>
+                                            </aura:iteration> 
+                                            <aura:set attribute="else">
+                                                <tr>
+                                                    <td colspan="9" class="crpt-class10">
+                                                        <div class="slds-notify_container slds-is-relative crpt-class11">
+                                                            <div class="slds-notify slds-notify_toast slds-theme_warning crpt-class25" role="alert">
+                                                                <span class="slds-assistive-text">warning</span>
+                                                                <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                                <div class="slds-notify__content crpt-class12">
+                                                                    <h2 class="slds-text-heading_small crpt-class13">{!$Label.c.No_Records_Found}</h2>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </aura:set>
+                                        </aura:if>
+                                    </tbody>
+                                </table>
+                                <div class="slds-docked-form-footer">  
+                                    <lightning:button label="{!$Label.c.purchase_Order1}" onclick="{!c.convertMPRLI}" variant="brand" disabled="{!!v.SelectedRequisition.length>0}" aura:id="poConvertId"/> 
+                                </div>
+                                <div class="epr_Mark7 ">
+                                    <div class="row m-2">
+                                        <aura:if isTrue="{!v.requisitionList.length>0}">
+                                            <div class="col-md-2 crpt-class15">
+                                                <div class="slds-grid" >
+                                                    <div class="slds-col crpt-class16">
+                                                         {!$Label.c.Acc_Recev_Show}&nbsp;
+                                                    </div>  
+                                                    <div class="slds-col crpt-class17"> 
+                                                        <lightning:select class="slds-show_inline-block"  name="select1"  value="{!v.show}" onchange="{!c.setShow}">
+                                                            <option value="10">10</option>
+                                                            <option value="25">25</option>
+                                                            <option value="50">50</option>
+                                                            <option value="100">100</option>
+                                                            <option value="150">150</option>
+                                                        </lightning:select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.requisitionList.length>0}">
+                                            
+                                            <div class="col-md-3 crpt-class18">
+                                                {!$Label.c.Acc_Recev_Showing}&nbsp; <span class="text-lightblue">{!v.startCount}-{!v.endCount}</span> &nbsp;{!$Label.c.Acc_Recev_of_total}&nbsp;  <span class="text-lightblue"> {!v.recSize} </span> &nbsp;{!$Label.c.page_record}
+                                            </div>
+                                            
+                                        </aura:if> 
+                                        
+                                        <aura:if isTrue="{!v.requisitionList.length>0}">
+                                            
+                                            <div class="col-md-5 crpt-class19">
+                                                <nav aria-label="Page navigation example">
+                                                    <ul class="pagination crpt-class20">
+                                                        <li>
+                                                            <a class="{!if(1 >= v.startCount,'crpt-class21','crpt-class22')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> 
+                                                        </li>
+                                                        <li >
+                                                            <a class="{!if(1 >= v.startCount,'crpt-class21','crpt-class22')}"  onclick="{!c.Previous}"> &lt; {!$Label.c.Previous}</a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="{!if(v.endCount == v.recSize,'crpt-class21','crpt-class22')}" onclick="{!c.Next}">{!$Label.c.WorkOrderConsole_Next} &gt;</a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="{!if(v.endCount == v.recSize,'crpt-class21','crpt-class22')}" onclick="{!c.NextLast}">&gt;&gt; </a>
+                                                        </li>
+                                                    </ul>
+                                                </nav>
+                                            </div>
+                                        </aura:if> 
+                                        <aura:if isTrue="{!v.requisitionList.length>0}">
+                                            <div class="col-md-2">
+                                                <div class="slds-grid">
+                                                    <div class="slds-col crpt-class23">
+                                                        Page 
+                                                    </div>
+                                                    <div class="slds-col">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control">
+                                                                <lightning:input type="number" variant="label-hidden" class="width100p" aura:id="ik" value="{!v.PageNum}" oncommit="{!c.OfsetChange}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-col paddingtop6"><span class="text-lightblue"> {!$Label.c.page_of}&nbsp;{!v.PNS.length}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!equals(v.selectedTab,'Purchase_Orders')}">
+                            <div id="tab-default-1" class="epr_Mark7 slds-tabs--default__content slds-show" role="tabpanel" aria-labelledby="tab-default-1__item">
+                                <div class="container-fluid p-0"> 
+                                   
+                                        <c:CreatePurchaseOrder HideHeader="false" poli="{!v.SelectedRequisitionPOLI}" cancelclick="{!c.cancelPO}" salesOrder="{!v.IsSalesOrder}"
+                                                     prSelectedOrder="{!v.PROrder}"            channelId="{!v.channelId}" distributionChannel="{!v.distributionChannel}" fromRequisition="{!v.fromReq}"/>
+                                    
+                                </div>
+                            </div>
+                        </aura:if>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</aura:component>

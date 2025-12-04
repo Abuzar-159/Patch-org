@@ -1,0 +1,515 @@
+<aura:component controller="UsersShiftMatch" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    
+    <head>
+        <ltng:require styles="/resource/ERP7__bootstrap/bootstrap/css/bootstrap.css"/>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="{!join(',', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__fontawesome5/fontawesome5/css/all.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/UsersShiftMatch.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="ProgramId" type="String" default=""/>
+    <aura:attribute name="ServiceId" type="String" default=""/>
+    <aura:attribute name="LocationId" type="String" default=""/>    
+    <aura:attribute name="UserId" type="String" default=""/>
+    <aura:attribute name="selectedDate" type="Date"/>
+    <aura:attribute name="FirstDate" type="Date"/>
+    <aura:attribute name="LastDate" type="Date"/> 
+    <aura:handler name="change" value="{!v.ProgramId}" action="{!c.changeProgram}"/> 
+    <aura:handler name="change" value="{!v.ServiceId}" action="{!c.changeService}"/>  
+    <aura:handler name="change" value="{!v.LocationId}" action="{!c.changeLocation}"/>  
+    <aura:attribute name="LocationsFilter" type="String" default=" AND Id=null"/>
+    <aura:attribute name="UsersFilter" type="String" default=" AND Id=null"/>
+    <aura:attribute name="UserList" type="list" default=""/>  
+    <aura:attribute name="User" type="User"/>
+    <!--<aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUser}"/>-->
+    <aura:attribute name="UserListAll" type="list" default=""/>
+    <aura:attribute name="DaySlots" type="Object"/>
+    <aura:attribute name="ShiftPlanner" type="Object"/>
+    <aura:attribute name="showNext" type="Boolean" default="false" />
+    <aura:attribute name="showPrevious" type="Boolean" default="false" />
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/> 
+    <aura:attribute name="DayDetails" type="list"/>
+    <aura:attribute name="TimeZone" type="String" default=""/>
+    <aura:attribute name="showConfirmationPopup" type="Boolean" default="false"/> 
+    <aura:attribute name="selectedTime" type="DateTime" default=""/>
+    <aura:attribute name="SlotRecord" type="object" default=""/>
+    <aura:attribute name="SlotDuration" type="Integer" default="60"/>
+    <aura:attribute name="UserWrapperList" type="list" default=""/>
+    <aura:attribute name="NoSlotsMessage" type="String" default="No user available"/>
+    <!--<aura:handler name="Search_Event" event="ERP7:SearchEvent" action="{!c.searchUserRecord}"/> -->
+    <aura:attribute name="UserWrapperListDum" type="list" default=""/>
+    <aura:attribute name="SearchString" type="String" default=""/>     
+    <aura:attribute name="counter" type="Integer" default="0"/> 
+    <aura:attribute name="limitSize" type="Integer" default="10"/>
+    <aura:attribute name="totalSize" type="Integer" default="0"/>
+    <aura:attribute name="pageNumbers" type="String[]" default="1"/>     
+    <aura:attribute name="Entries" type="Integer" default="5"/> <!-- 5 -->
+    <aura:attribute name="nextDisa" type="Boolean" default="false"/>
+    <aura:attribute name="prevDisa" type="Boolean" default="true"/>
+    <aura:attribute name="ClickOn" type="String" default="Next"/>
+    <aura:attribute name="counterEnd" type="Integer" default="0"/>
+    <aura:attribute name="Action" type="String" default=""/>
+    <aura:attribute name="errorMessage" type="String" default=""/>
+    <aura:attribute name="RenderBody" type="Boolean" default="true"/>
+    <aura:attribute name="ProgramsFilter" type="String" default=" AND Id=null"/>
+    <aura:attribute name="ServicesFilter" type="String" default=" AND Id=null"/> 
+    <aura:attribute name="FromOtherComp" type="Boolean" default="false"/>
+    <aura:attribute name="WeekSelectedDate" type="Date" default=""/>
+    <aura:attribute name="UserType" type="String" default="normal"/>
+    <aura:attribute name="View" type="String" default="Grid"/>
+    <aura:attribute name="navWorkbench" type="String" default="MO"/>
+    <aura:attribute name="FilterShow" type="Boolean" default="false"/>
+    <aura:attribute name="UserRecords" type="String[]" /> 
+    <aura:attribute name="UserRecordspage" type="String[]" /> 
+    <aura:attribute name="UnfilteredUserRecords" type="String[]" /> 
+    <aura:attribute name="UnfilteredUserRecordspage" type="String[]" /> 
+    <aura:attribute name="filteruser" type="String" />  
+    <aura:handler name="change" value="{!v.filteruser}" action="{!c.doFilteruserlist}" /> 
+	<aura:attribute name="paginationPageNumb1" type="List" />
+    <aura:attribute name="pageSize1" type="Integer" default="5"/>
+    <aura:attribute name="pageSize" type="Integer" default="5"/>
+    <aura:attribute name="totalSize1" type="Integer"/>
+    <aura:attribute name="start1" type="Integer" />
+    <aura:attribute name="currentPageNumber1" type="Integer" default='1' />
+    <aura:attribute name="end1" type="Integer"/>
+    <aura:attribute name="PaginationSearch" type="Boolean" default="true" />
+    <aura:attribute name="currentTO_reason" type="String" default=""/>
+
+      <div class="booking-kare ShiftPlanner-class1" aura:id="body" >
+          <aura:if isTrue="{!v.showMmainSpin}">
+              <div class="exampleHolder"> 
+                  <lightning:spinner alternativeText="Loading" size="large" class="mainSpinClass" variant="brand"/> 
+              </div>
+          </aura:if>  
+          <aura:if isTrue="{!not(empty(v.errorMessage))}">
+              <div class="slds-notify_container slds-is-fixed" >
+                  <div class="slds-notify slds-notify_toast slds-theme_error ShiftPlanner-class42" role="status">
+                      <span class="slds-assistive-text">{!$Label.c.error}</span>
+                      <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                          <lightning:icon iconName="utility:error" variant="inverse" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="{!$Label.c.Error_UsersShiftMatch}" />
+                      </span>
+                      <div class="slds-notify__content">
+                          <h2 class="slds-text-heading_x-small ShiftPlanner-class41" >
+                              <lightning:formattedText value="{!v.errorMessage}"/>
+                          </h2>
+                      </div>
+                      <div class="slds-notify__close" >
+                          <a onclick="{!c.closeError}" class="ShiftPlanner-class20">
+                              <lightning:icon iconName="utility:close" variant="inverse" alternativeText="close!" title="Close" />
+                          </a>
+                          <!--<lightning:buttonIcon iconName="utility:close" variant="inverse" alternativeText="Close" title="Close" onclick="{!c.closeError}"/>-->
+                      </div>
+                  </div>
+              </div>
+          </aura:if>
+          <div class="maqsood erp_Mark7 bg-white">
+              
+              <div class="panel-body ShiftPlanner-class2" >
+                  <div class="d-flex align-items-center mb-1 ShiftPlanner-class3">
+                      <ul class="nav nav-tabs col-8 ShiftPlanner-class4" role="tablist" >
+                          <li class="nav-item active"> <a class="nav-link ShiftPlanner-class5" data-toggle="tab" role="tab" ><!-- onclick="Back2ManufacturingPlanner();" -->
+                              <i class="fa fa-list ShiftPlanner-class6" aria-hidden="true" ></i>&nbsp;{!$Label.c.Planner_UsersShiftMatch}</a> 
+                          </li>
+                          <aura:if isTrue="{!v.navWorkbench == 'MO'}">
+                              <li class="nav-item"> <a class="nav-link ShiftPlanner-class13" data-toggle="tab" role="tab" onclick="{!c.NavScheduler}" >
+                                  <i class="fa fa-clock-o ShiftPlanner-class6" aria-hidden="true" ></i>&nbsp;{!$Label.c.Schedule_UsersShiftMatch}</a> 
+                              </li>
+                              <li class="nav-item"> <a class="nav-link ShiftPlanner-class13" data-toggle="tab" role="tab" onclick="{!c.NavBuilder}">
+                                  <i class="fa fa-gears ShiftPlanner-class6" aria-hidden="true" ></i>&nbsp;{!$Label.c.Builder_UsersShiftMatch}</a> 
+                              </li>
+                          </aura:if>
+                          <aura:if isTrue="{!v.navWorkbench == 'WO'}">
+                              <li class="nav-item"> <a class="nav-link ShiftPlanner-class13" data-toggle="tab" role="tab" onclick="{!c.NavServiceScheduler}">
+                                  <i class="fa fa-clock-o ShiftPlanner-class6" aria-hidden="true"  ></i>&nbsp;{!$Label.c.Schedule_UsersShiftMatch}</a> 
+                              </li>
+                              <li class="nav-item"> <a class="nav-link ShiftPlanner-class13" data-toggle="tab" role="tab" onclick="{!c.NavServiceBuilder}">
+                                  <i class="fa fa-gears ShiftPlanner-class6" aria-hidden="true" ></i>&nbsp;{!$Label.c.Builder_UsersShiftMatch}</a> 
+                              </li>
+                          </aura:if>
+                          
+                          
+                      </ul>
+                      <div class="slds-grid col-4 ShiftPlanner-class14"> 
+                          
+                          <div onkeypress="{!c.searchUserRecord}" class="mr-2 ShiftPlanner-class15 nolabel pt-1" >
+                              <lightning:input onchange= "{!c.searchUserRecord}" type="Search" name="searchEmp" value="{!v.SearchString}" placeholder="{!$Label.c.Search_UsersShiftMatch}" />
+                          </div>
+                          
+                          <div class="slds-grid menuBubble">
+                              <!--<div class="slds-grid">-->
+                              <aura:if isTrue="{!v.navWorkbench == 'MO'}">
+                                  <a class="shiftMenuItems"  title="{!$Label.c.Manufacturing_Orders_UsersShiftMatch}" data-tab = "MO" onclick="{!c.toggleTabs}" href="javascript:void(0);">
+                                      <center><i class="fa fa-industry ShiftPlanner-class7" aria-hidden="true" ></i>&nbsp;</center>
+                                  </a>
+                              </aura:if>
+                              <aura:if isTrue="{!v.navWorkbench == 'WO'}">
+                                  <a class="shiftMenuItems"  title="{!$Label.c.Maintenance_Orders_UsersShiftMatch}" data-tab = "WO" onclick="{!c.toggleTabs}" href="javascript:void(0);">
+                                      <center><i class="fa fa-briefcase ShiftPlanner-class7" aria-hidden="true" ></i>&nbsp;</center>
+                                  </a>
+                              </aura:if>
+                              
+                              <a class="shiftMenuItems"  title="{!$Label.c.Manage_UsersShiftMatch}" onclick="{!c.UsersAvailabilities}" href="javascript:void(0);" >
+                                  <i class="fas fa-users-cog" title="{!$Label.c.Manage_Availabilities_UsersShiftMatch}"></i>&nbsp;&nbsp;
+                              </a>
+                              <a class="shiftMenuItems"  title="{!$Label.c.Time_off_UsersShiftMatch}" onclick="{!c.UsersTimeOff}" href="javascript:void(0);" >
+                                  <i class="fas fa-umbrella-beach" aria-hidden="true" title="{!$Label.c.Time_off_UsersShiftMatch}"></i>
+                              </a>
+                              <a class="shiftMenuItems" title="{!$Label.c.Filters_UsersShiftMatch}" onclick="{!c.clickFilter}" >
+                                  <center><i class="fa fa-filter"></i></center>
+                              </a>
+                              <!--</div>-->
+                          </div>
+                          
+                      </div>
+                  </div>
+              </div>
+              
+              
+              
+              <!-- === Popover == -->
+              <aura:If isTrue="{!v.FilterShow}">
+                  <div class="erp_Mark7">
+                      <section  aria-labelledby="panel-heading-id" class="slds-popover_panel  slds-popover_large slds-popover ShiftPlanner-class8" role="dialog" id="mypopover">
+                          <!--slds-nubbin_top-->
+                              <lightning:icon iconName="utility:close" class="slds-button slds-button_icon slds-button_icon slds-button_icon-small slds-float_right slds-popover__close" size="x-small"  onclick="{!c.FilterSet}" alternativeText="{!$Label.c.Close_UsersShiftMatch}" title="{!$Label.c.Close_UsersShiftMatch}" />
+                          <div class="row ">
+                              <div class="slds-popover__body slds-grid slds-wrap" >
+                                  <div class="col-md-6 col-xs-6">
+                                      <div class="slds-form-element">
+                                          <label class="slds-form-element__label " for="form-element-help-01"><strong>{!$Label.c.Product_UsersShiftMatch}</strong></label>
+                                          <div class="slds-form-element__icon">
+                                          </div>
+                                          <div class="slds-form-element__control">
+                                              <c:CustomInputLookUp aura:value="ServiceId" objectAPIName="Product2" selectedRecordId="{!v.ServiceId}" IconName="standard:product"
+                                                                   placeholder="{!$Label.c.Search_Product_UsersShiftMatch}" qry="{!v.ServicesFilter}"/>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div class="col-md-6 col-xs-6">
+                                      <div class="slds-form-element">
+                                          <label class="slds-form-element__label " for="form-element-help-01"><strong>{!$Label.c.Work_Center_UsersShiftMatch} </strong></label>
+                                          <div class="slds-form-element__icon">
+                                              
+                                          </div>
+                                          <div class="slds-form-element__control">
+                                              <c:CustomInputLookUp aura:id="locationId" objectAPIName="ERP7__Work_Center__c"  selectedRecordId="{!v.LocationId}" IconName="standard:address"
+                                                                   placeholder="{!$Label.c.Search_Work_Center_UsersShiftMatch}" qry="{!v.LocationsFilter}"/>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  
+                              </div>
+                          </div>
+                      </section>
+                  </div>
+              </aura:If>
+              <!-- === Ends here == -->
+              
+              <div class="maqsood ShiftPlanner-class9" >
+                  <div class="erp_Mark7 slds-media__body ShiftPlanner-class10" >
+                      <h1 class="slds-page-header__title slds-p-right--x-small">
+                          <div class="slds-grid ShiftPlanner-class11" >
+                              <div class="slds-col card shadow-custom card-available mr-3"><p class="ShiftPlanner-class12">{!$Label.c.Available_UsersShiftMatch} </p></div>    
+                              <div class="slds-col card shadow-custom card-not-available mr-3"><p class="ShiftPlanner-class12">{!$Label.c.Not_available_UsersShiftMatch} </p></div>    
+                              <div class="slds-col card shadow-custom card-timeoff mr-3"><p class="ShiftPlanner-class12">{!$Label.c.Time_off_UsersShiftMatch}</p> </div> 
+                              <div class="slds-col card shadow-custom card-holiday mr-3"><p class="ShiftPlanner-class12">{!$Label.c.Holiday_UsersShiftMatch}</p></div>
+                              <div class="slds-col card shadow-custom card-Filled mr-3"><p class="ShiftPlanner-class12">{!$Label.c.Reserved_UsersShiftMatch}</p></div> <!-- Filled -->
+                          </div>
+                      </h1>
+                      <div class="card-body p-0"> 
+                          <div class="erp_Mark7"> 
+                              <div class="row p-1">
+                                  <div class="col-md-4">
+                                      <div class="erp_Mark7 slds-media__body pl-4 ShiftPlanner-class16" data-aura-rendered-by="25:0">
+                                          <h1 class="slds-page-header__title slds-p-right--x-small"  data-aura-rendered-by="26:0">
+                                              <div class="slds-truncate3" data-aura-rendered-by="27:0">
+                                                  <div class="slds-grid ShiftPlanner-class17" data-aura-rendered-by="28:0">                                           
+                                                      <div class="slds-col mr-1 ShiftPlanner-class18">{!$Label.c.Break_Time_UsersShiftMatch} = <i class="fa fa-coffee" aria-hidden="true" data-aura-rendered-by="30:0"></i> &nbsp;</div>
+                                                      <div class="slds-col mr-1 ShiftPlanner-class18">{!$Label.c.Available_Time_UsersShiftMatch} = <i class="fa fa-clock-o" aria-hidden="true" data-aura-rendered-by="32:0"></i></div>
+                                                  </div>
+                                              </div>
+                                          </h1>
+                                      </div>
+                                  </div>
+                                  <div class="col-md-4 pr-0 pl-0">                                   
+                                      <div class="slds-grid ShiftPlanner-class19 " >
+                                          <div class="{!v.showPrevious?'ShiftPlanner-class20 page-link1 nextshow-eventrok':'ShiftPlanner-class20 nexthide-eventrok page-link1'}"  onclick="{!c.previous}">
+                                              <div class="slds-p-top--x-small">
+                                              <i class="fa fa-chevron-left slds-p-right--small"></i>
+                                              </div>
+                                              </div>
+                                          &nbsp;
+                                          
+                                          <lightning:input type="date" variant="label-hidden" class="display-lable "  value="{!v.WeekSelectedDate}" onchange="{!c.changeDate}" /> 
+                                          <div class="slds-p-top--x-small">
+                                              <!--class="DatePicker"-->
+                                              &nbsp;<lightning:formattedDateTime value="{!v.DayDetails[0]}"  weekday="short" day="2-digit" month="short" year="numeric" timeZone="{!$Locale.timezone}"/> 
+                                              &nbsp;-&nbsp; 
+                                              <lightning:formattedDateTime value="{!v.DayDetails[6]}" weekday="short" day="2-digit" month="short" year="numeric" timeZone="{!$Locale.timezone}"/> 
+                                              &nbsp;&nbsp;
+                                              
+                                              <b><a class="page-link1 ShiftPlanner-class20" onclick="{!c.next}"><i class="fa fa-chevron-right"></i></a></b> 
+                                          </div>
+                                          &nbsp;
+                                      </div>
+                                  </div> 
+                                  
+                                  <div class="col-md-4 ShiftPlanner-class10" >
+                                      <!-- text-align:center;  --> 
+                                      <div class="slds-grid">
+                                          <div class="slds-col mr-1 ShiftPlanner-class21"><strong>{!$Label.c.Capacity_UsersShiftMatch} =</strong>&nbsp; <i class="ShiftPlanner-class22">C</i></div>
+                                          <div class="slds-col mr-1 ShiftPlanner-class21"><strong>{!$Label.c.Demand_UsersShiftMatch} =</strong>&nbsp; <i  class="ShiftPlanner-class23">D</i></div>
+                                          <div class="slds-col mr-1 ShiftPlanner-class21"><strong>{!$Label.c.Available_Capacity_UsersShiftMatch} =</strong>&nbsp; <i  class="ShiftPlanner-class24">AC</i></div>
+                                      </div>    
+                                      
+                                  </div>
+                                  
+                              </div>
+                              
+                          </div>
+                      </div>
+                  </div>
+                  <div class="maqsood ShiftPlanner-class25" >
+                      <div class="card shadow-custom ShiftPlanner-class26" >
+                          <div class="card-body p-0">    
+                              <div class="event_rok"> 
+                                  <article class="slds-card ShiftPlanner-class27"> 
+                                      <!--  <aura:if isTrue="{!v.UserWrapperList.length>0}"> -->   
+                                      <div class="slds-card__body slds-card__body_inner ShiftPlanner-class28">
+                                          <div > 
+                                              <div > 
+                                                  <div class="container-fluid p-0">
+                                                      <div class="slds-grid slds-wrap ShiftPlanner-class29" >
+                                                          <div class="slds-col slds-p-horizontal--medium slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12 pt-1" >
+                                                              
+                                                              <p class="ShiftPlanner-class30">{!$Label.c.Resource_UsersShiftMatch} <!-- Resource --></p>
+                                                              
+                                                          </div> 
+                                                          <div class="slds-col slds-p-horizontal--medium slds-medium-size_10-of-12 slds-large-size_10-of-12 ShiftPlanner-class31" ><!--slds-size_1-of-1--> 
+                                                              <table width="100%" cellpadding="0" cellspacing="0">
+                                                                  <tr>
+                                                                      <aura:iteration items="{!v.DayDetails}" var="d" indexVar="DayIndex">
+                                                                          <td width="14.4%" class="{!or(equals(DayIndex, 5), equals(DayIndex, 6))?'ShiftPlanner-class32':'ShiftPlanner-class33'}">
+                                                                              <lightning:formattedDateTime value="{!d}" weekday="long"/>
+                                                                          </td>
+                                                                      </aura:iteration>
+                                                                  </tr>
+                                                              </table>
+                                                          </div>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </article>
+                              </div>  
+                          </div>
+                          <div>
+                              <div class="scroll-bar-wrap ShiftPlanner-class34"> 
+                                  <div class="scroll-box ShiftPlanner-class35" >
+                                      <div class="container-fluid p-0 ShiftPlanner-class36"> <!--padding-top: 135px; padding-bottom: 100px;-->
+                                          <aura:if isTrue="{!v.UserRecordspage.length>0}"> 
+                                              <aura:iteration items="{!v.UserRecordspage}" var="u" indexVar="UserIndex"> 
+                                                  <aura:If isTrue="{!u.User.Name!=undefined}">
+                                                      <div class="slds-grid slds-wrap " > <!-- onclick="{!c.UserAvailabilities}" data-record="{!u.User.Id}"  -->
+                                                          <div class="slds-col slds-p-horizontal--medium slds-medium-size_12-of-12 slds-large-size_12-of-12 ShiftPlanner-class37"  ><!--slds-size_1-of-1--> 
+                                                              <div class="profile-pic" title="{!u.User.Name}">
+                                                                  <h2 class="listing-row Heading3">    
+                                                                      <span class="slds-avatar slds-avatar--circle slds-avatar--medium ShiftPlanner-class38" >
+                                                                          <img src="{!u.User.FullPhotoUrl}"  alt="" class="ShiftPlanner-class39"/> 
+                                                                      </span>&nbsp;
+                                                                      <aura:if isTrue="{!v.UserType=='superUser' || v.UserType=='supervisor'}">
+                                                                          <a href="{!'/'+u.User.Id}" target="_blank" class="ShiftPlanner-class40">{!u.User.Name}</a> 
+                                                                          <aura:set Attribute="else">{!u.User.Name}</aura:set>    
+                                                                      </aura:if>  
+                                                                  </h2>	
+                                                              </div>
+                                                          </div>
+                                                          
+                                                          <aura:iteration items="{!u.ResourceAvailabilityList}" var="r" indexVar="ResourceIndex">    
+                                                              <div class="slds-col slds-p-horizontal--medium  slds-medium-size_12-of-12 slds-large-size_12-of-12"><!--slds-size_1-of-1--> 
+                                                                  <div class="slds-grid">
+                                                                      <div data-record="{!r.Id}" class="slds-col slds-p-horizontal--medium slds-medium-size_2-of-12 slds-large-size_2-of-12 ShiftPlanner-class54" title="{!r.GroupName}"><!--slds-size_1-of-1--> 
+                                                                          <aura:if isTrue="{!v.UserType=='superUser' || v.UserType=='supervisor'}"> <!-- light-blue;  -->
+                                                                              <a href="{!'/'+r.GroupId}" target="_blank">{!r.GroupName}</a> 
+                                                                              <aura:set Attribute="else">{!r.GroupName}</aura:set>    
+                                                                          </aura:if>     
+                                                                      </div>
+                                                                      <div class="slds-col slds-p-horizontal--medium slds-size_1-of-1 slds-medium-size_10-of-12 slds-large-size_10-of-12 ShiftPlanner-class55">
+                                                                          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                                                              <tr>
+                                                                                  <aura:iteration items="{!r.TimeOffList}" var="t" indexVar="TimeIndex">
+                                                                                      <!-- @{!t.isAvailable}#  @{!t.RemainingCapacity}#{!t.isAvailable}* &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null -->
+                                                                                      <td width="14.4%" class="{!(t.isAvailable &amp;&amp; t.isHoliday==false &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0)?'maqetext':(t.isHoliday &amp;&amp; t.isTimeOff==false &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'maqetextHoliday':(t.isHoliday==false &amp;&amp; t.isTimeOff &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'maqetextTimeOff':(t.isAvailable &amp;&amp; t.RemainingCapacity==0 &amp;&amp; t.Capacity>0)?'GrayColor':and(or(equals(TimeIndex, 5), equals(TimeIndex, 6)), and(equals(t.Start_Time, null), equals(t.End_Time, null)))?'maqetextWeekEnd':'maqetextGray'}">
+                                                                                          <div class="maqsood">
+                                                                                              <div class="dropdown searchBoxSL" >
+                                                                                                  <aura:If isTrue="{!and(t.Start_Time!=null,t.End_Time!=null) }">  <!-- maqetextGray -->
+                                                                                                      <div class="slds-grid">  
+                                                                                                          <i class="fa fa-clock-o ShiftPlanner-class56"></i>&nbsp;
+                                                                                                          <lightning:formattedTime value="{!t.Start_Time}"/>
+                                                                                                          &nbsp;-&nbsp;
+                                                                                                          <lightning:formattedTime value="{!t.End_Time}"/>
+                                                                                                      </div>
+                                                                                                      <div class="slds-grid">
+                                                                                                          <div class="slds-col slds-truncate ShiftPlanner-class57">
+                                                                                                              <aura:If isTrue="{!and(t.Capacity!=null,t.Capacity!=undefined)}">
+                                                                                                                  <i class="ShiftPlanner-class53">C</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.Capacity}"/>
+                                                                                                              </aura:If> 
+                                                                                                          </div>
+                                                                                                          <div class="slds-col slds-truncate ShiftPlanner-class57">
+                                                                                                              <aura:If isTrue="{!and(t.Capacity!=null,t.Capacity!=undefined)}">
+                                                                                                                  <i class="ShiftPlanner-class52">D</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.Demand}"/>
+                                                                                                              </aura:If> 
+                                                                                                          </div>
+                                                                                                          <div class="slds-col slds-truncate ShiftPlanner-class57">
+                                                                                                              <aura:If isTrue="{!and(t.RemainingCapacity!=null,t.RemainingCapacity!=undefined)}">
+                                                                                                                  <i  class="ShiftPlanner-class51">AC</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.RemainingCapacity}"/>
+                                                                                                              </aura:If>
+                                                                                                          </div>
+                                                                                                      </div>
+                                                                                                  </aura:If>
+                                                                                                  <div onmouseenter="{!c.getDayTimeOff}" data-index="{!UserIndex}" data-record="{!ResourceIndex}" data-record-id="{!TimeIndex}" class="{!(t.isAvailable &amp;&amp; t.isHoliday==false &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0)?'dropdown-content ShiftPlanner-class59' : (t.isHoliday &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'dropdown-content ShiftPlanner-class60' : (t.isHoliday==false &amp;&amp; t.isTimeOff &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'dropdown-content ShiftPlanner-class61' : (t.isAvailable &amp;&amp; t.RemainingCapacity==0 &amp;&amp; t.Capacity>0)?'dropdown-content ShiftPlanner-class62' : 'dropdown-content ShiftPlanner-class63'}">
+                                                                                                      <div class="sdls-grid ShiftPlanner-class64">
+                                                                                                          <div class="slds-col" title="{!$Label.c.Date_UsersShiftMatch}">
+                                                                                                              <aura:iteration items="{!v.DayDetails}" var="d" start="{!TimeIndex}" end="{!TimeIndex+1}">
+                                                                                                                  <i class="fa fa-calendar ShiftPlanner-class58"/>&nbsp;
+                                                                                                                  <lightning:formattedDateTime value="{!d}" day="2-digit" month="short" year="numeric"/>
+                                                                                                              </aura:iteration>
+                                                                                                              <a title="{!v.currentTO_reason}" class="{!(t.isAvailable &amp;&amp; t.isHoliday==false &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0)?'availableBubble' : (t.isHoliday &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'holidayBubble' : (t.isHoliday==false &amp;&amp; t.isTimeOff &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'timeoffBubble' : (t.isAvailable &amp;&amp; t.RemainingCapacity==0 &amp;&amp; t.Capacity>0)?'reservedBubble' : 'notAvailableBubble'}">
+                                                                                                                  <lightning:formattedText value="{!(t.isAvailable &amp;&amp; t.isHoliday==false &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0)?'Available':(t.isHoliday &amp;&amp; t.isTimeOff==false &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'Stat Holiday':(t.isHoliday==false &amp;&amp; t.isTimeOff &amp;&amp; t.RemainingCapacity!=0 &amp;&amp; t.Start_Time!=null &amp;&amp; t.End_Time!=null)?'Time off':(t.isAvailable &amp;&amp; t.RemainingCapacity==0 &amp;&amp; t.Capacity>0)?'Reserved':'Not available'}"/>
+                                                                                                              </a>
+                                                                                                          </div>
+                                                                                                      </div>
+                                                                                                      <div class="sdls-grid ShiftPlanner-class65">
+                                                                                                          <div class="slds-col" title="{!$Label.c.Time_UsersShiftMatch}">
+                                                                                                              <i class="fa fa-clock-o ShiftPlanner-class58"/>&nbsp;
+                                                                                                              <lightning:formattedTime value="{!t.Start_Time}"/>
+                                                                                                              &nbsp;<i class="fa fa-long-arrow-right ShiftPlanner-class66"/>&nbsp;
+                                                                                                              <lightning:formattedTime value="{!t.End_Time}"/>
+                                                                                                              &nbsp;&nbsp;
+                                                                                                              <aura:if isTrue="{!and(t.BST!=null,t.BET!=null)}">
+                                                                                                                  <i class="fa fa-coffee ShiftPlanner-class58"/>&nbsp;
+                                                                                                                  <lightning:formattedTime value="{!t.BST}"/>
+                                                                                                                  &nbsp;<i class="fa fa-long-arrow-right ShiftPlanner-class66"/>&nbsp;
+                                                                                                                  <lightning:formattedTime value="{!t.BET}"/>
+                                                                                                              </aura:if>
+                                                                                                          </div>
+                                                                                                      </div>
+                                                                                                      <div class="slds-grid ShiftPlanner-class65">
+                                                                                                          <div class="slds-col" title="{!$Label.c.Capacity_UsersShiftMatch}">
+                                                                                                              <aura:If isTrue="{!and(t.Capacity!=null,t.Capacity!=undefined)}">
+                                                                                                                  <i class="ShiftPlanner-class53">C</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.Capacity}"/>
+                                                                                                              </aura:If> 
+                                                                                                          </div>
+                                                                                                          <div class="slds-col" title="{!$Label.c.Demand_UsersShiftMatch}">
+                                                                                                              <aura:If isTrue="{!and(t.Capacity!=null,t.Capacity!=undefined)}">
+                                                                                                                  <i class="ShiftPlanner-class52">D</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.Demand}"/>
+                                                                                                              </aura:If> 
+                                                                                                          </div>
+                                                                                                          <div class="slds-col" title="{!$Label.c.Available_Capacity_UsersShiftMatch}">
+                                                                                                              <aura:If isTrue="{!and(t.RemainingCapacity!=null,t.RemainingCapacity!=undefined)}">
+                                                                                                                  <i  class="ShiftPlanner-class51">AC</i>&nbsp;&nbsp;
+                                                                                                                  <lightning:formattedNumber value="{!t.RemainingCapacity}"/>
+                                                                                                              </aura:If>
+                                                                                                          </div>
+                                                                                                      </div>
+                                                                                                      <div class="event_rok ">
+                                                                                                          <div class="slds-grid pt-2 ShiftPlanner-class50">
+                                                                                                              <div onclick="{!c.SingleUserAvailabilities}" data-UserId="{!u.User.Id}" class="{!(and(t.isAvailable, not(equals(t.RemainingCapacity, 0))))?'col-4 bgr-manage':'col-6 bgr-manage'}">
+                                                                                                                  <a class="ShiftPlanner-class49">
+                                                                                                                      <i class="fas fa-users-cog"/>&nbsp;<lightning:formattedText value="Manage"/>
+                                                                                                                  </a>
+                                                                                                              </div>
+                                                                                                              <div onclick="{!c.SingleUserTimeOff}" data-UserId="{!u.User.Id}" data-index="{!UserIndex}" class="{!(and(t.isAvailable, not(equals(t.RemainingCapacity, 0))))?'col-3 bgr-timeoff':'ShiftPlanner-class48 col-6 bgr-timeoff'}" >
+                                                                                                                  <a class="ShiftPlanner-class49">
+                                                                                                                      <i class="fas fa-umbrella-beach"/>&nbsp;<lightning:formattedText value="Time Off"/>
+                                                                                                                  </a>
+                                                                                                              </div>
+                                                                                                              <!--<aura:if isTrue="{!and(t.isAvailable, not(equals(t.RemainingCapacity, 0)))}">
+                                                                                                <div class="col-5 bgr-appointment" onclick="{!c.openAvailableServices}" data-record="{!r.GroupId}" data-record-id="{!u.User.Id}" data-index="{!TimeIndex}">
+                                                                                                    <a class="" >
+                                                                                                        <i class="fas fa-calendar-plus"/>&nbsp;<lightning:formattedText value="Book Appointment"/>
+                                                                                                    </a>
+                                                                                                </div>
+                                                                                            </aura:if>-->
+                                                                                                          </div>
+                                                                                                      </div>
+                                                                                                  </div>
+                                                                                              </div>
+                                                                                          </div>
+                                                                                      </td>
+                                                                                  </aura:iteration>
+                                                                              </tr>
+                                                                          </table>
+                                                                      </div></div></div>
+                                                              
+                                                          </aura:iteration>  
+                                                          <div class="mt-2"></div>
+                                                      </div>
+                                                  </aura:If>     
+                                              </aura:iteration>
+                                              
+                                              <aura:set Attribute="else"> 
+                                                  <aura:if isTrue="{!and(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')}">
+                                                      <div class="slds-notify_container slds-is-relative" aura:id="criteriaMsgId">
+                                                          <div class="slds-notify slds-notify_toast slds-theme_warning ShiftPlanner-class45" role="alert">
+                                                              <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                              <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                              <div class="slds-notify__content ShiftPlanner-class46" >
+                                                                  <h2 class="slds-text-heading_small ShiftPlanner-class47" >
+                                                                      {!v.NoSlotsMessage}
+                                                                  </h2>
+                                                              </div>
+                                                          </div>
+                                                      </div>     
+                                                  </aura:if>
+                                              </aura:set>
+                                          </aura:if>
+                                      </div>
+                                      <div class="cover-bar"></div>
+                                  </div>
+                                  <!--<div class="cover-bar"></div>-->
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+   
+          <div class="col-md-10">
+              <aura:if isTrue="{!v.PaginationSearch}">
+                  <ul >
+                      <div class="ShiftPlanner-class44">
+                          <aura:iteration items="{!v.paginationPageNumb1}" var="num" indexVar="index"> 
+                              
+                              <aura:if isTrue="{!index==0}">
+                                  <li class=" ShiftPlanner-class43"> 
+                                      <lightning:button disabled="{!v.start1== 0}"  iconName="utility:chevronleft" iconPosition="left" variant="brand" label="{!$Label.c.Prev_UsersShiftMatch}"  onclick="{!c.previousEventl}" />&nbsp;&nbsp;&nbsp;&nbsp;
+                                  </li> 
+                              </aura:if>
+                              <li class=" ShiftPlanner-class43">
+                                  <lightning:button disabled="{!num=='...'}" class="{!if(((v.end1+1)/v.pageSize1)==num,'pageNumberClassActive','pageNumberClass')}" name="{!num}"  value="{!num}" label="{!num}" onclick="{!c.currentPageEventl}"   />&nbsp;&nbsp;&nbsp;&nbsp;
+                              </li>
+                              <aura:if isTrue="{!index==v.paginationPageNumb1.length-1}">
+                                  <li class=" ShiftPlanner-class43">
+                                      <lightning:button disabled="{!v.end1 >= v.totalSize1-1}"  iconName="utility:chevronright" iconPosition="right" variant="brand" label="{!$Label.c.Next_UsersShiftMatch}"  onclick="{!c.nextEventl}"  />&nbsp;&nbsp;&nbsp;&nbsp;
+                                  </li>
+                              </aura:if>
+                          </aura:iteration>
+                      </div>
+                  </ul>
+              </aura:if>
+          </div>
+          
+           </div> 
+</aura:component>
