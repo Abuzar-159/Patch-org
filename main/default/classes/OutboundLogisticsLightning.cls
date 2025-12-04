@@ -4710,7 +4710,13 @@ private static String detectAddressType(String addressId) {
         System.debug('childField: '+childField);
         Map<String,List<String>> pickListMap = new Map<String,List<String>>();
         PicklistWrapper pw = new PicklistWrapper();
-        pw.pickListMap = pickListMap;
+        pw.pickListMap = pickListMap;    
+
+
+
+
+        
+        
         
         if (Schema.getGlobalDescribe().get(ObjectName) ==null || String.isBlank(parentField) || String.isBlank(ChildField)){
             return pw;
