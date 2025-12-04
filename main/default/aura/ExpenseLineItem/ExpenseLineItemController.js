@@ -1,5 +1,34 @@
 ({
     doInit: function(component, event, helper) {
+          /*component.set("v.expli", []);
+    component.set("v.expline", []);
+    component.set("v.splittedExpLine", []);
+    component.set("v.listControllingValues", []);
+    component.set("v.listDependingValues", ['--- None ---']);
+
+    // Maps / objects
+    component.set("v.depnedentFieldMap", {});
+    component.set("v.Org", {});
+    component.set("v.AddExpenseFLSCheck", { sObjectType: 'AddExpenseFLSCheck' });
+
+    // aItem default map
+    component.set("v.aItem", {
+        Name: '',
+        ERP7__Expense_Date__c: '',
+        ERP7__Expensed_Submitted__c: '0.00',
+        ERP7__VAT_Amount__c: '0',
+        ERP7__Claimed_Amount__c: '0.00',
+        ERP7__Description__c: ''
+    });
+
+    // Expense default if you still need it:
+    var exp = {
+        sobjectType: 'Expense__c',
+        ERP7__Employees__c: '',
+        ERP7__Status__c: '',
+        ERP7__Approver__c: ''
+    };
+    component.set("v.Expense", exp);*/
         $A.util.removeClass(component.find('mainSpin'), "slds-hide");
         helper.setExpenseCategory(component, event);
         if(component.get("v.isSetCategory"))
@@ -73,9 +102,12 @@
     deleteExpliWp : function(component, event, helper){
         var ind = component.get("v.index");
         var expWrp = component.get("v.expenseWrap1");
-       
+        var result = confirm("Are you sure you want to delete this expense item?");
+        if (!result) {
+            return; 
+        }
         try{
-            if(expWrp[ind].ExpLI == undefined || expWrp[ind].ExpLI.Id == 'undefined') {
+            if(expWrp[ind].ExpLI == undefined || expWrp[ind].ExpLI.Id == 'undefined' || expWrp[ind].ExpLI.Id==null) {
                 var e = $A.get("e.c:IndexingEvent");
                 e.setParams({
                     "Index" : component.get("v.index")
@@ -89,9 +121,150 @@
         } catch (ex) {}
     },
     
+    deleteExpliWpmulti : function(component, event, helper) {
+        var lineIndex  = component.get("v.index");
+        var wrapIndex  = component.get("v.parentIndex");
+        var expWrap    = component.get("v.expenseWrap1");
+        
+        var result = confirm("Are you sure you want to delete this expense item?");
+        if (!result) {
+            return;
+        }
+        
+        try {
+            var lineWrapper = expWrap[wrapIndex].expline[lineIndex];
+            var expLI = lineWrapper.ExpLI ? lineWrapper.ExpLI : lineWrapper;
+            
+            if (!expLI || !expLI.Id) {
+                // 🔹 Unsaved row → just tell parent to drop it
+                var e = $A.get("e.c:IndexingEvent");
+                e.setParams({
+                    "Index"       : lineIndex,
+                    "ParentIndex" : wrapIndex
+                });
+                e.fire();
+            } else {
+                // 🔹 Saved row → server delete then splice
+                helper.deleteCurExpliMulti(component, expLI, wrapIndex, lineIndex);
+            }
+        } catch (ex) {
+            console.error('[deleteExpliWpmulti] ex:', ex);
+        }
+    },
+
+
     
     closeError : function (cmp, event) {
         cmp.set("v.exceptionError",'');
+    },
+     onFileUploadedAK : function(cmp, event, helper) {
+        var files = cmp.get("v.FileList");
+        console.log('[onFileUploadedAK] FileList:', files);
+       	var file = files[0][0];
+       	console.log('[onFileUploadedAK] Selected file:', file);
+        var maxSizeBytes = 2 * 1024 * 1024; // 4.5 MB
+         if (file.size > maxSizeBytes) {
+             console.warn('[onFileUploadedAK] File too large. Size = ' + file.size);
+             //alert('File size cannot exceed 4.5 MB.');
+            var toastEvent = $A.get("e.force:showToast");
+             toastEvent.setParams({
+                 title: "Error",
+                 message: "File size cannot exceed 2 MB.",
+                 type: "error"
+             });
+             toastEvent.fire();
+             
+             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+             
+             //cmp.set("v.FileList", null);
+             
+             
+             return; // 🚫 do NOT continue to upload
+         }
+        var filek = JSON.stringify(file);
+        var parentId = event.getSource().get("v.name");
+        console.log('[onFileUploadedAK] parentId (should be ExpLI.Id):', parentId);
+        if (files && files.length > 0) {
+            var reader = new FileReader();
+            reader.onloadend = $A.getCallback(function() {
+                $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+                var contents = reader.result;
+                console.log('[onFileUploadedAK] FileReader result:', contents ? contents.substring(0, 100) + '...' : contents);
+                var base64Mark = 'base64,';
+                var dataStart = contents.indexOf(base64Mark) + base64Mark.length;
+                var fileContents = contents.substring(dataStart);
+                console.log('[onFileUploadedAK] Extracted base64 data length:', fileContents.length);
+
+                var action = cmp.get("c.uploadFileAK");
+                console.log('[onFileUploadedAK] Calling Apex uploadFileAK with params:', {
+                    parent: parentId,
+                    fileName: file.name,
+                    base64Data: '[base64 omitted]',
+                    contentType: file.type
+                });
+
+                action.setParams({
+                    parent: parentId,
+                    fileName: file.name,
+                    base64Data: encodeURIComponent(fileContents),
+                    contentType: file.type
+                });
+                action.setCallback(this, $A.getCallback(function(response) {
+                    var state = response.getState();
+                    console.log('[onFileUploadedAK] Apex response state:', state);
+                    if (state === "SUCCESS") {
+                        var retVal = response.getReturnValue();
+                        console.log('[onFileUploadedAK] Apex return value:', retVal);
+                        if(retVal.exceptionError == '') {
+                            var obj = cmp.get("v.expenseWrap1");
+                            console.log('[onFileUploadedAK] expenseWrap1 before update:', JSON.stringify(obj));
+                            var found = false;
+                            for(var x in obj){
+                                console.log('s1');
+                                if(obj[x].ExpLI.Id == parentId){
+                                    console.log('s2');
+                                    if (!obj[x].Attachments) {
+                                        obj[x].Attachments = [];
+                                    }
+                                    // Add the new attachment to the list
+                                    for(let i=0;i<retVal.Attachments.length;i++){
+                                        console.log('push attachments here');
+                                        let newAtt = retVal.Attachments[i];
+    									console.log('Checking attachment:', newAtt);
+                                        let alreadyExists =false;
+                                        if(obj[x].Attachments.length>0){
+                                            alreadyExists = obj[x].Attachments.some(att => att.Id === newAtt.Id);
+                                        }
+                                        if (!alreadyExists) {
+                                            obj[x].Attachments.push(newAtt);
+                                        }
+                                    }
+                                   // obj[x].Attachments.push(retVal.Attachments);
+                                    found = true;
+                                    console.log('Added new attachment to list:', JSON.stringify(obj[x].Attachments));
+                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                console.warn('[onFileUploadedAK] No matching line item found for parentId:', parentId);
+                            }
+                            cmp.set("v.expenseWrap1",obj);
+                            console.log('[onFileUploadedAK] expenseWrap1 after update:', obj);
+                        }
+                        cmp.set("v.exceptionError",response.getReturnValue().exceptionError);
+                        //var uscroll = document.getElementById(parentId);
+                        //uscroll.scrollIntoView();
+                    }
+                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                }));
+                $A.enqueueAction(action);
+            });
+            reader.readAsDataURL(file);
+        } else {
+            console.warn('[onFileUploadedAK] No files found in FileList.');
+        }
+        $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
     },
     
     /*onFileUploadedAK : function(cmp, event, helper) {
@@ -159,7 +332,7 @@
         }
         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
     },*/
-      onFileUploadedAK : function(cmp, event, helper) {
+     /* onFileUploadedAK : function(cmp, event, helper) {
         //$A.util.removeClass(cmp.find('mainSpin'), "slds-hide");//7
         cmp.set("v.showSpinner",true);
         try{
@@ -195,20 +368,6 @@ console.log('FileList : ', JSON.stringify(FileList));
                          var totalRequestSize = 0;
 
        /* for ( i = 0; i < files.length; i++) {
-            var fileSize = files[i][0].size;
-
-            if (fileSize > 2000000) {
-                helper.showToast('Error', 'error', 'File ' + files[i][0].name + ' exceeds the 2 MB limit.');
-                return;
-            }
-
-            totalRequestSize += fileSize;
-
-            if (totalRequestSize > 6000000) {
-                helper.showToast('Error', 'error', 'Total request size exceeds the 6 MB limit. Please upload fewer or smaller files.');
-                return;
-            }
-        }*/
                         console.log('i~>'+i);
                         let file = files[0][i];
                         let reader = new FileReader();
@@ -250,7 +409,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.showSpinner",false);
         }
         
-    },
+    },*/
     /*onFileUploadedAKMulti : function(cmp, event, helper) {
         var files = cmp.get("v.FileList");  
         var file = files[0][0];
@@ -341,7 +500,7 @@ console.log('FileList : ', JSON.stringify(FileList));
         }
         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
     },*/
-      onFileUploadedAKMulti : function(cmp, event, helper) {
+     /* onFileUploadedAKMulti : function(cmp, event, helper) {
         //$A.util.removeClass(cmp.find('mainSpin'), "slds-hide");//7
         cmp.set("v.showSpinner",true);
         try{
@@ -376,21 +535,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     for (let i = 0; i < files[0].length; i++) {
                          var totalRequestSize = 0;
 
-       /* for ( i = 0; i < files.length; i++) {
-            var fileSize = files[i][0].size;
-
-            if (fileSize > 2000000) {
-                helper.showToast('Error', 'error', 'File ' + files[i][0].name + ' exceeds the 2 MB limit.');
-                return;
-            }
-
-            totalRequestSize += fileSize;
-
-            if (totalRequestSize > 6000000) {
-                helper.showToast('Error', 'error', 'Total request size exceeds the 6 MB limit. Please upload fewer or smaller files.');
-                return;
-            }
-        }*/
+      
                         console.log('i~>'+i);
                         let file = files[0][i];
                         let reader = new FileReader();
@@ -432,9 +577,133 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.showSpinner",false);
         }
         
+    },*/
+    onFileUploadedAKMulti : function(cmp, event, helper) {
+        var files = cmp.get("v.FileList");
+        console.log('[onFileUploadedAKMulti] FileList:', files);
+        
+        if (!files || !files[0] || !files[0][0]) {
+            console.warn('[onFileUploadedAKMulti] No files found in FileList.');
+            return;
+        }
+        
+        var file = files[0][0];
+        console.log('[onFileUploadedAKMulti] Selected file:', file);
+        
+        var maxSizeBytes = 2 * 1024 * 1024; // 4.5 MB
+        if (file.size > maxSizeBytes) {
+            console.warn('[onFileUploadedAK] File too large. Size = ' + file.size);
+            // alert('File size cannot exceed 4.5 MB.');
+            var toastEvent = $A.get("e.force:showToast");
+            toastEvent.setParams({
+                title: "Error",
+                message: "File size cannot exceed 2 MB.",
+                type: "error"
+            });
+            toastEvent.fire();
+            
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+            
+            //cmp.set("v.FileList", null);
+            
+            
+            return; // 🚫 do NOT continue to upload
+        }
+        var parentId = event.getSource().get("v.name"); // ExpLI.Id
+        console.log('[onFileUploadedAKMulti] parentId (line Id):', parentId);
+        
+        if (!parentId) {
+            console.warn('[onFileUploadedAKMulti] No parentId on lightning:input name attribute.');
+            return;
+        }
+        
+        var reader = new FileReader();
+        reader.onloadend = $A.getCallback(function() {
+            $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+            
+            var contents = reader.result;
+            console.log('[onFileUploadedAKMulti] FileReader result:',
+                        contents ? contents.substring(0, 100) + '...' : contents);
+            
+            var base64Mark = 'base64,';
+            var dataStart = contents.indexOf(base64Mark) + base64Mark.length;
+            var fileContents = contents.substring(dataStart);
+            console.log('[onFileUploadedAKMulti] Extracted base64 data length:', fileContents.length);
+            
+            // 🔴 REUSE existing Apex method
+            var action = cmp.get("c.uploadFileAK");
+            
+            console.log('[onFileUploadedAKMulti] Calling Apex uploadFileAK with params:', {
+                parent: parentId,
+                fileName: file.name,
+                base64Data: '[base64 omitted]',
+                contentType: file.type
+            });
+            
+            action.setParams({
+                parent: parentId,
+                fileName: file.name,
+                base64Data: encodeURIComponent(fileContents),
+                contentType: file.type
+            });
+            
+            action.setCallback(this, $A.getCallback(function(response) {
+                var state = response.getState();
+                console.log('[onFileUploadedAKMulti] Apex response state:', state);
+                
+                if (state === "SUCCESS") {
+                    var retVal = response.getReturnValue();
+                    console.log('[onFileUploadedAKMulti] Apex return value:', retVal);
+                    
+                    if (retVal.exceptionError === '') {
+                        // 🔴 Update accList instead of expenseWrap1
+                        var accList = cmp.get("v.accList") || [];
+                        console.log('[onFileUploadedAKMulti] accList before:', JSON.stringify(accList));
+                        
+                        if (retVal.Attachments && retVal.Attachments.length > 0) {
+                            retVal.Attachments.forEach(function(newAtt) {
+                                // Ensure ParentId is set (in case Apex doesn’t SELECT it)
+                                if (!newAtt.ParentId) {
+                                    newAtt.ParentId = parentId;
+                                }
+                                
+                                var exists = accList.some(function(att) {
+                                    return att.Id === newAtt.Id;
+                                });
+                                if (!exists) {
+                                    accList.push(newAtt);
+                                    console.log('[onFileUploadedAKMulti] Added attachment Id:', newAtt.Id);
+                                }
+                            });
+                        }
+                        
+                        cmp.set("v.accList", accList);
+                        console.log('[onFileUploadedAKMulti] accList after:', JSON.stringify(accList));
+                    }
+                    
+                    cmp.set("v.exceptionError", retVal.exceptionError);
+                } else {
+                    var errors = response.getError();
+                    if (errors && errors[0] && errors[0].message) {
+                        console.error('[onFileUploadedAKMulti] Error:', errors[0].message);
+                        cmp.set("v.exceptionError", errors[0].message);
+                    } else {
+                        console.error('[onFileUploadedAKMulti] Unknown error');
+                        cmp.set("v.exceptionError", "Unknown error occurred.");
+                    }
+                }
+                
+                $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+            }));
+            
+            $A.enqueueAction(action);
+        });
+        
+        reader.readAsDataURL(file);
     },
+
     
-    DeleteRecordAT: function(cmp, event) {
+   /* DeleteRecordAT: function(cmp, event) {
         var result = confirm("Are you sure?");
         var RecordId = event.getSource().get("v.name");
         var ObjName = event.getSource().get("v.title");
@@ -485,8 +754,162 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError : ",err.message);
             }
         } 
-    },
-    
+    },*/
+    DeleteRecordAT: function(cmp, event) {
+        // Get the ID and object name from the button
+        console.log('in DELETE RECORD AT Line item');
+        var RecordId = event.getSource().get("v.name");
+        console.log('RECORF id: '+RecordId);
+        var ObjName = event.getSource().get("v.title");
+        console.log('Objname: '+ObjName);
+        // Exit early if the RecordId is invalid
+        if (RecordId == null || RecordId == undefined) {
+            return;
+        }
+        
+        // Use a confirmation dialog for user experience
+        var result = confirm("Are you sure?");
+        if (!result) {
+            return; // Exit if the user cancels
+        }
+        
+        // Show the spinner while the action is in progress
+        $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+        
+        // Call the Apex controller to delete the attachment
+        var action = cmp.get("c.DeleteAT");
+        action.setParams({
+            RAId: RecordId,
+            ObjName: ObjName
+        });
+        
+        // Set the callback function to handle the response
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var retVal = response.getReturnValue();
+                console.log('retVal: ',JSON.stringify(retVal));
+                if (retVal.exceptionError == '') {
+                    // Get the main data object from the component
+                    var obj = cmp.get("v.expenseWrap1");
+                    console.log('obj: ',JSON.stringify(obj));
+                    
+                    // Find the specific expense line item to update
+                    for (var x in obj) {
+                        // Check if the current line item has the deleted attachment's parentId
+                        if (obj[x].ExpLI.Id === retVal.expLineId) {
+                            // The Apex method now returns a list of *remaining* attachments.
+                            // We directly set this list on the component's attribute.
+                            obj[x].Attachments = retVal.Attachments;
+                            break;
+                        }
+                    }
+                    
+                    // Set the updated object back to the component to trigger a UI re-render
+                    cmp.set("v.expenseWrap1", obj);
+                }
+                // Display any exceptions from Apex
+                cmp.set("v.exceptionError", retVal.exceptionError);
+            } else {
+                // Handle any Apex call failures
+                var errors = response.getError();
+                if (errors) {
+                    cmp.set("v.exceptionError", errors[0].message);
+                } else {
+                    cmp.set("v.exceptionError", "Unknown error occurred.");
+                }
+            }
+            // Hide the spinner regardless of success or failure
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+        });
+        
+        // Enqueue the action to send it to the server
+        $A.enqueueAction(action);
+    },    
+    DeleteRecordATMulti: function(cmp, event) {
+    console.log('in DELETE RECORD AT Line item');
+
+    var RecordId = event.getSource().get("v.name");
+    console.log('RECORD id: ' + RecordId);
+    var ObjName = event.getSource().get("v.title");
+    console.log('Objname: ' + ObjName);
+
+    // Exit early if the RecordId is invalid
+    if (!RecordId) {
+        return;
+    }
+
+    // Confirmation
+    var result = confirm("Are you sure?");
+    if (!result) {
+        return;
+    }
+
+    // Show spinner
+    $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+
+    // Call Apex
+    var action = cmp.get("c.DeleteAT");
+    action.setParams({
+        RAId: RecordId,
+        ObjName: ObjName
+    });
+
+    action.setCallback(this, function(response) {
+        var state = response.getState();
+        console.log('DeleteRecordAT state:', state);
+
+        if (state === "SUCCESS") {
+            var retVal = response.getReturnValue();
+            console.log('retVal: ', JSON.stringify(retVal));
+
+            if (retVal.exceptionError === '') {
+                var expLineId         = retVal.expLineId;
+                var serverAttachments = retVal.Attachments || [];
+
+                // Just in case ParentId is missing, enforce it
+                serverAttachments.forEach(function(a) {
+                    if (!a.ParentId) {
+                        a.ParentId = expLineId;
+                    }
+                });
+
+                // Current global accList
+                var accList = cmp.get("v.accList") || [];
+                console.log('accList before: ', JSON.stringify(accList));
+
+                // 1) Remove all attachments for this line from accList
+                var newAccList = accList.filter(function(att) {
+                    return att.ParentId !== expLineId;
+                });
+
+                // 2) Add the fresh server list for this line
+                Array.prototype.push.apply(newAccList, serverAttachments);
+
+                cmp.set("v.accList", newAccList);
+                console.log('accList after: ', JSON.stringify(newAccList));
+            }
+
+            // Display any exceptions from Apex
+            cmp.set("v.exceptionError", retVal.exceptionError);
+
+        } else {
+            // Handle errors
+            var errors = response.getError();
+            if (errors && errors[0] && errors[0].message) {
+                cmp.set("v.exceptionError", errors[0].message);
+            } else {
+                cmp.set("v.exceptionError", 'Unknown error occurred.');
+            }
+        }
+
+        // Hide spinner
+        $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+    });
+
+    $A.enqueueAction(action);
+},
+
     reRender : function(cmp, event, helper) { },
     
     updateTotalAmount : function(cmp, event, helper) {

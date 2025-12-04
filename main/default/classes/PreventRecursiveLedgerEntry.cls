@@ -70,4 +70,7 @@ global Class PreventRecursiveLedgerEntry{
     public static Boolean potrigger = true;
     public static Boolean billtriggerduringpayment = true;
     public static Boolean polisUpdateFromAwaitingStocksPO = true;
+    //new 
+    public static Map<Id, List<Sales_Order_Line_Item__c>> kitSoliBySO;
+    public static Boolean loaded = false;
 }

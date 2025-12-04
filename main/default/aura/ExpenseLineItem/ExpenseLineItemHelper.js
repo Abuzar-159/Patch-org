@@ -73,6 +73,41 @@
         $A.enqueueAction(delAction);
     },
     
+    deleteCurExpliMulti : function(component, xpensLI, wrapIndex, lineIndex) {
+        $A.util.removeClass(component.find('mainSpin'), "slds-hide");
+        
+        var delAction = component.get("c.delCurExpli"); // same Apex as before
+        var curExpLI  = JSON.stringify(xpensLI);
+        
+        delAction.setParams({
+            delExpli : curExpLI
+        });
+        
+        delAction.setCallback(this, function(response) {
+            var state = response.getState();
+            console.log('[deleteCurExpliMulti] state:', state);
+            
+            if (state === "SUCCESS") {
+                // Remove from client list
+                var expWrap = component.get("v.expenseWrap1");
+                if (expWrap[wrapIndex]
+                    && expWrap[wrapIndex].expline
+                    && expWrap[wrapIndex].expline.length > lineIndex) {
+                    
+                    expWrap[wrapIndex].expline.splice(lineIndex, 1);
+                    component.set("v.expenseWrap1", expWrap);
+                }
+            } else {
+                var errors = response.getError();
+                console.error('[deleteCurExpliMulti] errors:', errors);
+            }
+            
+            $A.util.addClass(component.find('mainSpin'), "slds-hide");
+        });
+        
+        $A.enqueueAction(delAction);
+    },
+
     
     deleteSplitExpli : function(component, event, xpensLI) {
         var delAction = component.get("c.delCurExpli");

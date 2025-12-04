@@ -3533,15 +3533,31 @@ console.log("UI updated. New uploadedFile list:", JSON.stringify(updated));
         let current = component.get("v.isActive");
         component.set("v.isActive", !current);
         if (!current){
-        helper.showToast($A.get('$Label.c.Success'),'success', 'Make sure to uploaded file should have a PO number in it and related line items.');
+        helper.showToast($A.get('$Label.c.Success'),'success', 'OCR is now ' + (!current ? 'enabled' : 'disabled') + ', Make sure to uploaded file should have a PO number in it and related line items.');
 
         }
 
-        helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
+        // helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
 
+    },
+
+      toggleOCRForExpense : function(component, event, helper) {
+        let current = component.get("v.isActiveExp");
+        component.set("v.isActiveExp", !current);
+        // if (!current){
+        //             helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
+
+        // // helper.showToast($A.get('$Label.c.Success'),'success', 'Make sure to uploaded file should have a PO number in it and related line items.');
+
+        // }
+
+        // helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
+                      helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
 
 
     },
+
+
     
 handleFilesChange: function (component, event, helper) {
 
@@ -3556,6 +3572,8 @@ handleFilesChange: function (component, event, helper) {
     const isReadBillChecked = component.get("v.isReadBillChecked");
     const setRT = component.get("v.setRT");
     const isactive = component.get("v.isActive");
+    const isactiveExp = component.get("v.isActiveExp");
+
     if (isReadBillChecked && setRT == 'PO Bill' && isactive) {
         const fileInput = event.getSource().get("v.files")[0];
         if (fileInput) {
@@ -3566,7 +3584,20 @@ handleFilesChange: function (component, event, helper) {
         } else {
             alert("Please select a valid file.");
         }
-    } else {
+    }
+    else if (isReadBillChecked && setRT == 'Expense Bill' && isactiveExp) {
+        const fileInput = event.getSource().get("v.files")[0];
+        if (fileInput) {
+            component.set("v.recentFileData", fileInput);
+            component.set("v.selectedFile", fileInput);
+        $A.enqueueAction(component.get("c.createNewExpBill"));
+
+        }
+        else {
+            alert("Please select a valid file.");   
+        }
+    }
+    else {
         component.set("v.showDelete", true);
         let fileName = 'No File Selected..';
         const files = event.getSource().get("v.files");
@@ -3640,6 +3671,26 @@ createNewBill: function (component, event, helper) {
         component.set("v.showModal", false);
     } catch (error) {
         console.error("Error in createNewBill:", error);
+    }
+},
+
+
+createNewExpBill: function (component, event, helper) {
+    try {
+        const fileInput = component.get("v.selectedFile");  
+        if (fileInput) {
+            // Clear existing bill items
+            let billItems = component.get("v.billItems");
+            billItems.splice(0, billItems.length); // Removes all items from billItems
+            component.set("v.billItems", billItems);
+
+            // Process the new file
+            component.set("v.showDelete", true);
+            helper.processFile(fileInput, component, helper);
+        }
+    }
+    catch (error) {
+        console.error("Error in createNewExpBill:", error);
     }
 },
 

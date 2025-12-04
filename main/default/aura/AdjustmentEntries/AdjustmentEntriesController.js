@@ -632,7 +632,8 @@
             componentAttributes: {
                 Bank_Reconciliation_Id : component.get("v.BRId"),
                 showTabs : 'inv',
-                FromSP : true
+                FromSP : true,
+                OrganisationId:component.get("v.orgFromBrec")
             }
         });
         evt.fire();

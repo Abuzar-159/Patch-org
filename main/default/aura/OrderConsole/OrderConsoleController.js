@@ -2722,6 +2722,7 @@
     },
     //Moin commented added below function so that user can update the tax amount manually on 1st march 2024
     updateonTaxChange : function(component, event, helper){
+        console.log('updateonTaxChange called');
         var obj = component.get("v.itemWrapperListt");
         var SalesOrder2Create = component.get("v.SalesOrder");
         var subTotal = 0;
@@ -2737,6 +2738,9 @@
             subTotal = subTotal + parseFloat(allItems[z].price);
             taxes = taxes + parseFloat(allItems[z].vat) + parseFloat(allItems[z].tax);
             discounts = discounts + parseFloat(allItems[z].discount);
+            if (!allItems[z].vat || isNaN(allItems[z].vat)) {
+            allItems[z].vat = 0;
+        }
             allItems[z].priceWithVat = parseFloat(allItems[z].price) - parseFloat(allItems[z].discount) + parseFloat(allItems[z].vat);
         }
         totalDue = subTotal + taxes - discounts;
@@ -2746,6 +2750,7 @@
         if(SalesOrder2Create.ERP7__Total_Shipping_Amount__c != undefined) finalDue = finalDue + parseFloat(SalesOrder2Create.ERP7__Total_Shipping_Amount__c);
         finalDue = finalDue.toFixed(2);
         //alert('3');
+        console.log('subTotal==='+subTotal);
         component.set("v.subTotal",subTotal);
         component.set("v.taxes",taxes);
         component.set("v.discounts",discounts);
@@ -3822,6 +3827,7 @@
             component.set("v.exceptionError",'');
             SO.ERP7__Employees__c = currentEmployee.Id;
             var SalesOrder2Creates = JSON.stringify(SO);
+            console.log('SalesOrder2Creates -->',SalesOrder2Creates);
             var loyaltyPoints = component.get("v.loyaltyPoints");
             var loyaltyAmount = component.get("v.loyaltyAmount");
             var Customers = new Array(component.get("v.Customer"));
@@ -3853,6 +3859,26 @@
                 $A.util.addClass(component.find('mainSpin'), "slds-hide");
                 return;
             }
+            //new validation added for special instructions
+            if (SO.ERP7__Special_Instructions__c) {
+
+                let specialText = SO.ERP7__Special_Instructions__c;
+            
+                // Check if not null/undefined and longer than 500
+                if (specialText && specialText.length > 255) {
+                    
+                    var toastEvent = $A.get("e.force:showToast");
+                    toastEvent.setParams({
+                        "title": "Error!",
+                        "type": "error",
+                        "message": "Special Instructions cannot exceed 254 characters."
+                    });
+                    toastEvent.fire();
+            
+                    $A.util.addClass(component.find('mainSpin'), "slds-hide");
+                    return;  // Stop further processing
+                }
+            }//special instructions validation end
             
             if(coms.length > 0 || SO.Name != undefined){
                 var action = component.get("c.saveDrafts");

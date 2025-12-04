@@ -2,6 +2,13 @@
     
     newRecord : function(cmp, event, helper) {
         cmp.set("v.NoSlotsMessage",'');
+        cmp.set("v.BankRecon_obj2.Name",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Start_Date__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__End_Date__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Organisation__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Bank_Account__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Beginning_Balance__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Ending_Balance__c",'');
         cmp.set("v.showNewPopup",true);
         var ReconciliationStatus2 = cmp.get("c.getBankReconciliationStatus");
         ReconciliationStatus2.setCallback(this,function(response){
@@ -123,7 +130,14 @@
     CancelDelete2 :function(cmp, event, helper) {
         cmp.set("v.ItemTOdelete",'');
         cmp.set("v.showNewPopup",false);
-        cmp.set("v.BankRecon_obj2",null);
+        //cmp.set("v.BankRecon_obj2",null);
+        cmp.set("v.BankRecon_obj2.Name",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Start_Date__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__End_Date__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Organisation__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Bank_Account__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Beginning_Balance__c",'');
+        cmp.set("v.BankRecon_obj2.ERP7__Ending_Balance__c",'');
     },
     
     removeItem : function(cmp, event) {
@@ -144,7 +158,8 @@
                     cmp.set("v.showPOPUp", false);
                     //this.showToast('Success!','success','Bank Reconciliation was deleted Successfully');
                     cmp.set("v.SaveErrorMsg",'Successfully Deleted Record');
-                    cmp.doInit();
+                   // cmp.doInit();
+                   helper.fetchReconciliation(cmp, event);//added by asra
                 }
             }
         });
@@ -176,7 +191,8 @@
                                     cmp.set("v.showMmainSpin",false);
                                     //cmp.set("v.exceptionError",'Updated Successfully');
                                     cmp.set("v.SaveErrorMsg2",'Successfully Updated Record');
-                                    cmp.doInit();
+                                    //cmp.doInit();
+                                    helper.fetchReconciliation(cmp, event);//added by asra
                                     
                                 }
                             }
@@ -215,7 +231,8 @@
                                     helper.showToast('Success!','success','Record Created Successfully');
                                     //cmp.set("v.BankRecon_obj2",null);
                                     //cmp.set("v.SaveErrorMsg2",'Successfully Created Record');
-                                    cmp.doInit();
+                                    //cmp.doInit();
+                                    helper.fetchReconciliation(cmp, event);//added by asra
                                 }
                             }
                         });

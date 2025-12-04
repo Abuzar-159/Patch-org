@@ -10,7 +10,7 @@
 public with sharing class ExpenseSheetLC { 
     //@AuraEnabled
     //public Attachment Attach                                { get; set; }
-    @AuraEnabled public Decimal numAmountRej                            { get; set; }
+    @AuraEnabled public Decimal numAmountRej                            { get; set; }  @AuraEnabled public Decimal numAmountTax                            { get; set; }
     @AuraEnabled public Decimal numAmountSub                             { get; set; } @AuraEnabled public Decimal numAmountApp                             { get; set; }
     @AuraEnabled public Decimal numAmountPaid                            { get; set; } @AuraEnabled public list < Expense_Line_Item__c > expenseLine        { get; set; }
     @AuraEnabled public Expense__c expense                               { get; set; } @AuraEnabled public ERP7__Expense__c Expense1                        { get; set; }
@@ -33,7 +33,7 @@ public with sharing class ExpenseSheetLC {
             String usrId = '';
             if(UserId == '' || UserId == null) usrId = userinfo.getUserId();
             else usrId = UserId;
-            String exQry = 'SELECT id, Name, ERP7__Project__c, Project__r.Name, Paid__c,'+
+            String exQry = 'SELECT Id, Name, ERP7__Project__c, Project__r.Name, Paid__c,'+
                 ' Amount__c, ERP7__Approver__c, Approver__r.Name, Status__c, VAT_Amount__c, ERP7__Amount_Submitted__c, Date__c'+
                 ' FROM Expense__c where Employees__r.Employee_User__c = \''+String.escapeSingleQuotes(usrId)+'\'and ERP7__Date__c '+String.escapeSingleQuotes(selectedFY)+
                 ' and ERP7__Status__c != \'Approved\' and ERP7__Status__c != \'Rejected\' order by ERP7__Date__c desc';
@@ -270,6 +270,7 @@ public with sharing class ExpenseSheetLC {
         String SQueryA;
         String SQueryP;
         String SQueryRej;
+        String SQueryT;
         if(strDate == '' || strDate == null) strDate = '<= :System.today()';
         else strDate = '=' +strDate;
         String usrId = '';
@@ -373,7 +374,12 @@ result.approvalProcess=RunModule.get('Finance').ERP7__Foreign_Sales__c;*/
                                                                       result.numAmountPaid = 0.00;} else {result.numAmountPaid = double.valueOf(temp3.get('num1'))+double.valueOf(temp3.get('num2'));
                                                                                                          }
                                                                   
-                                                                  
+                                                                   SQueryT = 'select SUM(ERP7__VAT_Amount__c) num4' +
+                                                                      ' from Expense__c '+'where Employees__r.Employee_User__c = \''+String.escapeSingleQuotes(usrId)+'\'and ERP7__Date__c '+String.escapeSingleQuotes(selectedFY);
+                                                                  aggregateResult temp4 = Database.query(SQueryT);
+                                                                  if (temp4.get('num4') == null) {
+                                                                      result.numAmountTax = 0.00;} else {result.numAmountTax = double.valueOf(temp4.get('num4'));
+                                                                                                        }
                                                                   return result;
                                                                   
                                                               }
@@ -891,7 +897,7 @@ expense1.ERP7__Status__c = 'Draft';
         return currencyIso;
     }
     
-    @AuraEnabled
+   /* @AuraEnabled
     public static ExpenseWrapper uploadFileAK(String parent, String fileName, String base64Data, String contentType) { 
         
         ExpenseWrapper ExpW = new ExpenseWrapper();
@@ -906,9 +912,48 @@ expense1.ERP7__Status__c = 'Draft';
             ExpW.Attach = a;
         } catch(Exception e){ ExpW.exceptionError = e.getMessage() +' Line Number @ : '+ e.getLineNumber(); }
         return ExpW;        
-    }
-    
+    }*/
     @AuraEnabled
+    public static ExpenseWrapper uploadFileAK(String parent, String fileName, String base64Data, String contentType) {
+        system.debug('uploadFileAK: Starting file upload for parentId: ' + parent);
+        ExpenseWrapper ExpW = new ExpenseWrapper();
+        try {
+            system.debug('uploadFileAK: Decoding Base64 data.');
+            base64Data = EncodingUtil.urlDecode(base64Data, 'UTF-8');
+            Attachment a = new Attachment();
+            system.debug('uploadFileAK: Checking Field Level Security before DML.');
+            if (Schema.sObjectType.Attachment.fields.parentId.isCreateable()) a.parentId = parent;
+            if (Schema.sObjectType.Attachment.fields.Body.isCreateable()) a.Body = EncodingUtil.base64Decode(base64Data);
+            if (Schema.sObjectType.Attachment.fields.Name.isCreateable()) a.Name = fileName;
+            if (Schema.sObjectType.Attachment.fields.ContentType.isCreateable()) a.ContentType = contentType;
+
+            system.debug('uploadFileAK: Attempting to insert new Attachment.');
+            if (Schema.sObjectType.Attachment.isCreateable()) {
+                insert a;
+                system.debug('uploadFileAK: Attachment inserted successfully with Id: ' + a.Id);
+            } else {
+                system.debug('uploadFileAK: FLS check failed. User cannot create Attachment records.');
+                ExpW.exceptionError = 'User does not have permission to create attachments.';
+                return ExpW; // Return early on FLS failure
+            }
+
+            // Query all attachments for the parent record
+            system.debug('uploadFileAK: Querying all attachments for parentId: ' + parent);
+            List<Attachment> attachments = [SELECT Id, Name FROM Attachment WHERE ParentId = :parent];
+            system.debug('uploadFileAK: Found ' + attachments.size() + ' attachments.');
+
+            // Assign the list to the wrapper
+            ExpW.Attachments = attachments;
+            system.debug('uploadFileAK: Wrapper populated with ' + attachments.size() + ' attachments.');
+        } catch(Exception e) {
+            system.debug('uploadFileAK: Caught Exception: ' + e.getMessage() + ' at line ' + e.getLineNumber());
+            ExpW.exceptionError = e.getMessage() + ' Line Number @ : ' + e.getLineNumber();
+        }
+        system.debug('uploadFileAK: Method finished, returning wrapper.');
+        return ExpW;
+    }
+
+  /*  @AuraEnabled
 public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {          
     ExpenseWrapper ExpW = new ExpenseWrapper();        
     try {
@@ -937,7 +982,47 @@ public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {
     }
 
     return ExpW;
-}
+}*/
+    @AuraEnabled
+    public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {
+        system.debug('DeleteAT: Starting deletion process for RAId: ' + RAId + ', ObjName: ' + ObjName);
+        ExpenseWrapper ExpW = new ExpenseWrapper();
+        try {
+            if (ObjName!=''|| ObjName!=null ) {
+                system.debug('DeleteAT: Object is an Attachment. Checking FLS.');
+                if (Attachment.sObjectType.getDescribe().isDeletable()) {
+                    system.debug('DeleteAT: User has delete permission. Querying attachment to delete.');
+                    Attachment attachmentToDelete = [SELECT Id, ParentId FROM Attachment WHERE Id = :RAId LIMIT 1];
+                    if (attachmentToDelete != null) {
+                        Id parentId = attachmentToDelete.ParentId;
+                        ExpW.expLineId = parentId;
+                        system.debug('DeleteAT: Found attachment with Id: ' + attachmentToDelete.Id + ' and ParentId: ' + parentId);
+                        delete attachmentToDelete;
+                        system.debug('DeleteAT: Attachment deleted successfully.');
+                        
+                        // Query all remaining attachments for the parent record
+                        system.debug('DeleteAT: Querying all remaining attachments for ParentId: ' + parentId);
+                        List<Attachment> remainingAttachments = [SELECT Id, Name, ParentId FROM Attachment WHERE ParentId = :parentId];
+                        system.debug('DeleteAT: Found ' + remainingAttachments.size() + ' remaining attachments.');
+                        ExpW.Attachments = remainingAttachments;
+                    } else {
+                        system.debug('DeleteAT: Attachment not found for Id: ' + RAId);
+                    }
+                } else {
+                    system.debug('DeleteAT: FLS check failed. User does not have permission to delete attachments.');
+                    ExpW.exceptionError = 'You do not have permission to delete attachments.';
+                }
+            } else {
+                system.debug('DeleteAT: Invalid object name provided: ' + ObjName);
+                ExpW.exceptionError = 'Invalid object name provided.';
+            }
+        } catch (Exception e) {
+            system.debug('DeleteAT: Caught Exception: ' + e.getMessage() + ' Line Number @ : ' + e.getLineNumber());
+            ExpW.exceptionError = e.getMessage() + ' Line Number @ : ' + e.getLineNumber();
+        }
+        system.debug('DeleteAT: Method finished, returning wrapper.');
+        return ExpW;
+    }
     
     @AuraEnabled
     public static String delCurExpli(String delExpli){
@@ -996,7 +1081,7 @@ public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {
         return null;    
     }
     
-    public class ExpenseWrapper{
+    /*public class ExpenseWrapper{
         @AuraEnabled public Expense_Line_Item__c ExpLI          { get; set; }
         @AuraEnabled public Attachment Attach             { get; set; }
         @AuraEnabled public String exceptionError            { get; set; }
@@ -1006,6 +1091,21 @@ public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {
             Attach = new Attachment();
             exceptionError = '';
         }        
+    }*/
+    public class ExpenseWrapper{
+        @AuraEnabled public Expense_Line_Item__c ExpLI          { get; set; }
+        //@AuraEnabled public Attachment Attach             { get; set; }
+        @AuraEnabled public List<Attachment> Attachments { get; set; } // <--- Updated to a List by adnan to show multiple recept attachments
+        @AuraEnabled public String expLineId { get; set; }
+        @AuraEnabled public String exceptionError            { get; set; }
+        
+        public ExpenseWrapper() {
+            ExpLI = new Expense_Line_Item__c();
+            //Attach = new Attachment();
+            Attachments = new List<Attachment>(); // Initialize the list
+            exceptionError = '';
+            expLineId='';
+        }
     }
     
     

@@ -197,6 +197,7 @@
     
     CSV2JSON: function (component,csv) {
         //component.set("v.showMmainSpin",false);
+        console.log("in CSV2JSON");
         var action=component.get("c.importCSVFile");
         action.setParams({
             BankRecon_obj1:JSON.stringify(component.get("v.BankRecon_obj")),
@@ -206,13 +207,18 @@
         action.setCallback(this, function(response) {
             var state = response.getState();
             if(state === "SUCCESS"){
+                console.log("in CSV2JSON success");
                 if(response.getReturnValue()==null) component.set("v.SaveErrorMsg",$A.get('$Label.c.Invalid_File_Data'));
                 component.set("v.showMmainSpin",false);
-                component.doInit();
+                //component.doInit();// commented by asra
+                this.getDetails(component, event);
+                this.getDocument(component, event);
                 
                }
             else{
+                console.log("in CSV2JSON error");
                 component.set("v.NoSlotsMessage",$A.get('$Label.c.Please_Enter_the_valid_data'));
+                component.set("v.showMmainSpin",false);//added extra by asra
             }
         });
         $A.enqueueAction(action); 

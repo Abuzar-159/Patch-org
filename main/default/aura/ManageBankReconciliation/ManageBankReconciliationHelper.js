@@ -14,6 +14,7 @@
     },
     
     fetchReconciliation:function(cmp,event){
+        console.log('in helper fetchReconciliation');
         cmp.set("v.NoSlotsMessage",'');
         var orgId=cmp.get("v.OrganisationId");
         var action=cmp.get("c.retrieveReconciliations");
@@ -27,6 +28,7 @@
                 try{
                     cmp.set("v.BRList",res.getReturnValue().FilteredBRList);
                     cmp.set("v.BRListDum",res.getReturnValue().FilteredBRList);
+                    console.log('BRList:',res.getReturnValue().FilteredBRList);
                     var BankReconciliationlist=[];
                     BankReconciliationlist=cmp.get("v.BRList");
                     if(BankReconciliationlist.length<=0) cmp.set("v.NoSlotsMessage",'No Data Available');

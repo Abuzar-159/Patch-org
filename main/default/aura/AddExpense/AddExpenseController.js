@@ -1,47 +1,55 @@
 ({//AddExpensecontroller
     doInit: function(component, event, helper) {
-       	var action = component.get("c.getDefaultOrganisation");	
-        action.setCallback(this,function(response){
-            if(response.getState()==='SUCCESS'){
-                component.set("v.Organisation",response.getReturnValue());
-            }  
-        });
-        $A.enqueueAction(action); 
-        
-        if(component.get("v.AccId")!='') component.set("v.Expense.ERP7__Vendor_Account__c",component.get("v.AccId"));
-        
-        $A.util.removeClass(component.find('mainSpin'), "slds-hide");
-        if(component.get("v.isDraftEdit"))
-            helper.expli2expliWP(component, event);
-        var action = component.get("c.getEmployees");
-        action.setCallback(this, function(a) {
-            component.set("v.emp", a.getReturnValue());
-            if(!component.get("v.EditRecord"))component.set("v.Expense.ERP7__Employees__c", component.get("v.emp.Id"));
-            /*if(!component.get("v.isDraftEdit"))*/
-                component.set("v.Expense.ERP7__Approver__c",component.get("v.emp.ERP7__Employee_User__r.ManagerId"));
+        try{
+            var action = component.get("c.getDefaultOrganisation");	
+            action.setCallback(this,function(response){
+                if(response.getState()==='SUCCESS'){
+                    console.log("getDefaultOrganisation",response.getReturnValue());
+                    component.set("v.Organisation",response.getReturnValue());
+                }  
+            });
+            $A.enqueueAction(action); 
             
-            $A.util.addClass(component.find('mainSpin'), "slds-hide");
-        });
-        $A.enqueueAction(action);
-        helper.FieldAccess(component, event);
-        
-          var expps=component.get("v.expWrapList");
-        var newexpps=[];
-        var neww=[];
-        var n=[];
-        console.log("Working??", expps);
-        for(var i=0;i<expps.length;i++){ 
-            newexpps.push(expps[i].expline); 
-        }
-             
-		neww = newexpps.flat();
-         for(var i=0;i<neww.length;i++){ 
-            n.push(neww[i].Id); 
-        }
-                component.set("v.explilist",n);
-        console.log("neww Ids explilist",component.get("v.explilist"));
-
-       // console.log("newexpps", newexpps);
+            if(component.get("v.AccId")!='') component.set("v.Expense.ERP7__Vendor_Account__c",component.get("v.AccId"));
+            
+            $A.util.removeClass(component.find('mainSpin'), "slds-hide");
+            if(component.get("v.isDraftEdit"))helper.expli2expliWP(component, event);
+            var action = component.get("c.getEmployees");
+            action.setCallback(this, function(a) {
+                console.log('in here');
+                if(a.getState()==='SUCCESS'){
+                    console.log("getReturnValue",a.getReturnValue());
+                    component.set("v.emp", a.getReturnValue());
+                    if(!component.get("v.EditRecord"))component.set("v.Expense.ERP7__Employees__c", component.get("v.emp.Id"));
+                    /*if(!component.get("v.isDraftEdit"))*/
+                    component.set("v.Expense.ERP7__Approver__c",component.get("v.emp.ERP7__Employee_User__r.ManagerId"));
+                    
+                    $A.util.addClass(component.find('mainSpin'), "slds-hide");
+                }else{
+                    console.log("exceptionError",a.getReturnValue().exceptionError);   
+                }
+            });
+            $A.enqueueAction(action);
+            helper.FieldAccess(component, event);
+            
+            var expps=component.get("v.expWrapList");
+            var newexpps=[];
+            var neww=[];
+            var n=[];
+            console.log("Working??", expps);
+            for(var i=0;i<expps.length;i++){ 
+                newexpps.push(expps[i].expline); 
+            }
+            
+            neww = newexpps.flat();
+            for(var i=0;i<neww.length;i++){ 
+                n.push(neww[i].Id); 
+            }
+            component.set("v.explilist",n);
+            console.log("neww Ids explilist",component.get("v.explilist"));
+            
+            // console.log("newexpps", newexpps);
+        }catch(e){console.log('Error in doInit:',e);}
     },
     
     /*updateExpli : function(component, event, helper){
@@ -56,6 +64,11 @@
         var expList = component.get("v.expenseWrap");
         expList.unshift({sObjectType :'ExpenseWrapper'});
         component.set("v.expenseWrap", expList);
+        console.log(
+            'AddExpenseFLSCheck:',
+            JSON.stringify(component.get('v.AddExpenseFLSCheck'), null, 2)
+        );
+
         
     },
     
@@ -71,7 +84,7 @@
         
     },
     
-    deleteExxliWP : function(component, event, helper) {
+   /* deleteExxliWP : function(component, event, helper) {
         
         var exliList = component.get("v.expenseWrap");
         var index = event.getParam("Index");
@@ -80,7 +93,29 @@
         
         component.set("v.expenseWrap", exliList);
         
+    },*/
+    deleteExxliWP : function(component, event, helper) {
+        var parentIndex = event.getParam("ParentIndex");
+        var index       = event.getParam("Index");
+        
+        if (parentIndex === null || parentIndex === undefined) {
+            // 🔹 Old behavior → flat expenseWrap
+            var exliList = component.get("v.expenseWrap");
+            exliList.splice(index, 1);
+            component.set("v.expenseWrap", exliList);
+        } else {
+            // 🔹 New behavior → nested expWrapList[parentIndex].expline[index]
+            var expWrapList = component.get("v.expWrapList");
+            if (expWrapList[parentIndex] &&
+                expWrapList[parentIndex].expline &&
+                expWrapList[parentIndex].expline.length > index) {
+                
+                expWrapList[parentIndex].expline.splice(index, 1);
+                component.set("v.expWrapList", expWrapList);
+            }
+        }
     },
+
    
     
     cancelClick: function(component, event, helper) {

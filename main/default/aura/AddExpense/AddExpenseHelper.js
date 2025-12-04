@@ -13,7 +13,7 @@
         }
     },
     
-    expli2expliWP : function(component, event) {
+   /* expli2expliWP : function(component, event) {
         
         var expli1 = component.get("v.expli");
         var accList1 = component.get("v.accList");
@@ -34,7 +34,44 @@
         component.set("v.expenseWrap", expList);
         console.log("expenseWrapXXXXXXX", component.get("v.expenseWrap"));
         
-    },
+    },*/
+    expli2expliWP: function(component, event, helper) {
+    var expli1 = component.get("v.expli"); // List of Expense Line Items
+    var accList1 = component.get("v.accList"); // List of Attachments from Apex
+    var expList = component.get("v.expenseWrap");
+
+    // Create a map to group attachments by their parent ID
+    var attachmentMap = {};
+    if (accList1) {
+        for (var j = 0; j < accList1.length; j++) {
+            var attachment = accList1[j];
+            var parentId = attachment.ParentId;
+
+            // If the parentId doesn't exist in the map, create a new empty array for it
+            if (!attachmentMap[parentId]) {
+                attachmentMap[parentId] = [];
+            }
+            // Push the current attachment to the corresponding parentId array
+            attachmentMap[parentId].push(attachment);
+        }
+    }
+
+    // Now, iterate through the expense line items and assign the list of attachments from the map
+    for (var i = 0; i < expli1.length; i++) {
+        var expenseLineItem = expli1[i];
+
+        // Push a new wrapper object for the current line item
+        expList.push({sObjectType: 'ExpenseWrapper'});
+        expList[i].ExpLI = expenseLineItem;
+        expList[i].isSelected = true;
+
+        // Assign the list of attachments from the map to the wrapper
+        // Use the logical OR operator to handle cases where a line item has no attachments
+        expList[i].Attachments = attachmentMap[expenseLineItem.Id] || [];
+    }
+
+    component.set("v.expenseWrap", expList);
+},
     
     validationCheckName : function (component, event) {
         var NOerrors = true;
@@ -116,6 +153,7 @@
         var action=component.get("c.AddExpenseCheckFLS");
         action.setCallback(this,function(response){
             if(response.getState() === "SUCCESS"){
+                console.log('AddExpenseCheckFLS:',response.getReturnValue());
                 component.set('v.AddExpenseFLSCheck',response.getReturnValue());
             }
             else{

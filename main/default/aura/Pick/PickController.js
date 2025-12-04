@@ -12,7 +12,9 @@
             if (response.getState() === "SUCCESS") {
                 
                 if(response.getReturnValue().soliWrapperList.length == 0 && cmp.get("v.navToPack")) {
+                    console.log('packs 1');
                     cmp.createPacks();
+                    console.log('packs 2');
                 }
                 
                 console.log('success getAllDetails Pick : ',response.getReturnValue());
@@ -537,6 +539,7 @@
             obj[x].soliSelected = val;
         }
         cmp.set("v.soliWrapperList",obj);
+        console.log('soli wrpaer checl --'+JSON.stringify(cmp.get("v.soliWrapperList")));
     },
     
     fetchBatchStock : function(cmp, event, helper) {

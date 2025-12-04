@@ -305,7 +305,7 @@ public class PostingPreventingHandler {
 
             coaMap = [SELECT Id, Name FROM ERP7__COA_Mapping__c WHERE Name = 'Expense'];
             System.debug('COA Mappings (Expense): ' + coaMap.size());
-            if(coaMap.size() < 2){			Trigger.newMap.get(BillIds[0]).addError('Please set up the Coa Mapping of Type Expense');
+            if(coaMap.size() < 2){			Trigger.newMap.get(BillIds[0]).addError('Please set up the Coa Mapping of Type Expense in 1');
             }
 
             List<ERP7__Bill_Line_Item__c> billItems = [
@@ -642,7 +642,7 @@ public class PostingPreventingHandler {
                 }
             }
 
-            if(ExpIds.size()>0){		List<ERP7__COA_Mapping__c> coaMap = new List<ERP7__COA_Mapping__c>();			coaMap  = [select Id, Name from ERP7__COA_Mapping__c where Name = 'Expenses'];			if(coaMap.size()<1){	newExpenseMap.get(ExpIds[0]).addError('Please set up the Coa Mapping of Type Expenses');
+            if(ExpIds.size()>0){		List<ERP7__COA_Mapping__c> coaMap = new List<ERP7__COA_Mapping__c>();			coaMap  = [select Id, Name from ERP7__COA_Mapping__c where Name = 'Expenses'];			if(coaMap.size()<1){	newExpenseMap.get(ExpIds[0]).addError('Please set up the Coa Mapping of Type Expenses in2');
                 }
 
 

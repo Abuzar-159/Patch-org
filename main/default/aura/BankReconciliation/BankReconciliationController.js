@@ -78,6 +78,7 @@
     searchUser : function(component,event,helper){
         try{  
             var searchString = event.getParam("searchString").toString();
+            console.log('searchString: ',searchString);
             if(searchString!='' && searchString.length>0){                     
                 var UserList =[];
                 UserList=component.get("v.bankStmtlistDum");
@@ -87,6 +88,7 @@
                 component.set("v.bankStmtlist",UserList);            
             }    
             else component.set("v.bankStmtlist",component.get("v.bankStmtlistDum"));
+            console.log('bankStmtlist: ',component.get("v.bankStmtlist"));
         }catch(ex){console.log('searchUser exception=>'+ex);}      
     },
     
@@ -144,7 +146,8 @@
                  componentDef : "c:AdjustmentEntries",
                  componentAttributes: {
                      BRId : cmp.get("v.Bank_Reconciliation_Id"),
-                     FromBR : true
+                     FromBR : true,
+                     orgFromBrec :cmp.get("v.OrganisationId"),
                  }
              });
              evt.fire();
@@ -215,10 +218,13 @@
     
     
     selectedTransaction2: function(cmp, event, helper){
+        console.log('in here 1');
         //cmp.set("v.selectedTransaction2",null);
         var invli=cmp.get("v.TransactionWrapperList2");
+        console.log('in here 2');
         //var transaction=cmp.get("v.selectedTransaction2");
         var transaction=[];
+        console.log('in here 3');
         if(event.getSource().get("v.checked")){
             
             for(var ind in invli ) {
@@ -238,7 +244,22 @@
                 }
             }
         }
+        console.log('in here 4');
         var selectTransaction=cmp.get("v.selectedTransaction2");
+        console.log('in here 5');
+        console.log('selectTransaction',selectTransaction);
+        if (!selectTransaction) {
+            // Show warning toast
+            var toast = $A.get("e.force:showToast");
+            toast.setParams({
+                title: "Warning",
+                message: "Please select a transaction before proceeding.",
+                type: "warning"
+            });
+            toast.fire();
+            
+            return; // ⛔ exit the method here
+        }
         var sum=0;
         for(var j in selectTransaction){
             sum = sum + parseFloat(selectTransaction[j].ERP7__Amount__c);
@@ -319,6 +340,7 @@
     },
     
     selectedTransaction: function(cmp, event, helper){
+        console.log('In here 1');
         var invli=cmp.get("v.TransactionWrapperList");
         var transaction=[];
         //Moin added this
@@ -326,7 +348,8 @@
             transaction = cmp.get("v.selectedTransaction");
         }
         if(event.getSource().get("v.checked")){
-            
+             console.log('In here 2 if');
+            console.log('selectedTransaction: ',cmp.get("v.selectedTransaction"));
             for(var ind in invli ) {
                 if(ind==event.getSource().get("v.name")){
                     transaction.push(invli[ind]); 
@@ -335,6 +358,7 @@
             }
         }
         else{
+             console.log('In here 2 else');
             var INVLIList=cmp.get("v.TransactionWrapperList");
             var index=event.getSource().get("v.name");
             for(var j in INVLIList){
@@ -344,10 +368,12 @@
                 }
             }
         }
+         console.log('In here 3');
         var selectTransaction=cmp.get("v.selectedTransaction");
         var sum=0;
         var Debitsum=0;
         var Creditsum=0;
+         console.log('In here 4');
         for(var j in selectTransaction){
             if(selectTransaction[j].ERP7__Finance_Category_Type__c == 'Debit'){
                 Debitsum = parseFloat(Debitsum) + parseFloat(selectTransaction[j].ERP7__Amount__c);
@@ -356,6 +382,7 @@
                 Creditsum = parseFloat(Creditsum) + parseFloat(selectTransaction[j].ERP7__Amount__c);
             }
         }
+         console.log('In here 5');
         if(Debitsum>0 && Creditsum == 0){
             sum = Debitsum;
         }
@@ -380,16 +407,31 @@
             else if(selectTransaction[j].ERP7__is_Adjustment__c && selectTransaction[j].ERP7__Finance_Category_Type__c == 'Credit' && !onlyAdjustment) sum-=selectTransaction[j].ERP7__Amount__c;
             else if(selectTransaction[j].ERP7__is_Adjustment__c && selectTransaction[j].ERP7__Finance_Category_Type__c == 'Credit' && onlyAdjustment) sum+=selectTransaction[j].ERP7__Amount__c;
         }*/
+         console.log('In here 6');
+         console.log('BankStatement: ',cmp.get("v.BankStatement"));
         cmp.set("v.Total",sum.toFixed(2));
         var selectedStatement;
-        if(cmp.get("v.BankStatement.ERP7__Withdrawals__c")>0)  selectedStatement=cmp.get("v.BankStatement.ERP7__Withdrawals__c");
-        else selectedStatement=cmp.get("v.BankStatement.ERP7__Deposits__c");
-        if(sum.toFixed(2)==selectedStatement.toFixed(2)){
-            cmp.set("v.display",true);
+        if(cmp.get("v.BankStatement")!=null && cmp.get("v.BankStatement")!= ''){
+            if(cmp.get("v.BankStatement.ERP7__Withdrawals__c")>0)  selectedStatement=cmp.get("v.BankStatement.ERP7__Withdrawals__c");
+            else selectedStatement=cmp.get("v.BankStatement.ERP7__Deposits__c");
+            if(sum.toFixed(2)==selectedStatement.toFixed(2)){
+                cmp.set("v.display",true);
+            }else{
+                cmp.set("v.display",false);
+            }
         }else{
-            cmp.set("v.display",false);
+            console.log('In here 7 else');
+            var toast = $A.get("e.force:showToast");
+            toast.setParams({
+                title: "Warning",
+                message: "Please select a Bank Statement to Reconcile.",
+                type: "warning"
+            });
+            toast.fire();
+            return; 
         }
         
+         console.log('In here 8');
     },
     
     
@@ -465,7 +507,7 @@
     },
     
      
- CreateRecord: function (component, event, helper) {
+ /*CreateRecord: function (component, event, helper) {
     component.set("v.showMmainSpin", true);
     var fileInput = component.find("file").get("v.files");
     var file = fileInput ? fileInput[0] : null;
@@ -504,7 +546,35 @@
         component.set("v.showMmainSpin", false);
         helper.showToast('Error', 'error', 'No file selected. Please choose a file to upload.');
     }
-},
+},*///Commented above above to include below for adding getCallback
+    CreateRecord: function (component, event, helper) {
+        component.set("v.showMmainSpin", true);
+        console.log("in CreateRecord");
+        
+        var fileInput = component.find("file").get("v.files");
+        var file = fileInput && fileInput[0];
+        
+        if (file) {
+            console.log("in if of CreateRecord");
+            var reader = new FileReader();
+            
+            reader.onload = $A.getCallback(function (evt) {
+                console.log("in onload CreateRecord");
+                var csv = evt.target.result;
+                helper.CSV2JSON(component, csv);
+            });
+            
+            reader.onerror = $A.getCallback(function (evt) {
+                console.log("in onerror CreateRecord");
+                component.set("v.showMmainSpin", false);
+            });
+            
+            reader.readAsText(file, "UTF-8");
+        } else {
+            component.set("v.showMmainSpin", false);
+        }
+    },
+
    /*  CreateRecord: function (component, event, helper) {
         component.set("v.showMmainSpin",true);
          console.log("in CreateRecord");

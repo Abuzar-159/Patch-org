@@ -77,7 +77,11 @@ public with sharing class SalesOrderTrigger {
     
     //public static void ManageSalesOrderLogistics(Boolean Trigger_IsInsert, Boolean Trigger_IsUpdate, Boolean Trigger_IsAfter, List < Sales_Order__c > Trigger_New, List < Sales_Order__c > Trigger_Old) {
     public static void ManageSalesOrderLogistics(Boolean Trigger_IsInsert, Boolean Trigger_IsUpdate, Boolean Trigger_IsAfter, String Trigger_New1, String Trigger_Old1) {
-        List<Sales_Order__c> Trigger_New = (List<Sales_Order__c>)JSON.deserialize(Trigger_New1, List<Sales_Order__c>.class);
+    System.debug('PreventRecursiveLedgerEntry.loaded -->'+PreventRecursiveLedgerEntry.loaded);     
+    if (PreventRecursiveLedgerEntry.loaded) return;
+                PreventRecursiveLedgerEntry.loaded = true;   
+                System.debug('Set to true'); 
+    List<Sales_Order__c> Trigger_New = (List<Sales_Order__c>)JSON.deserialize(Trigger_New1, List<Sales_Order__c>.class);
         List<Sales_Order__c> Trigger_Old = (List<Sales_Order__c>)JSON.deserialize(Trigger_Old1, List<Sales_Order__c>.class);
         List < Id > POIds = new List < Id > ();
         List < Id > soliIds = new List < Id > ();
@@ -120,7 +124,12 @@ public with sharing class SalesOrderTrigger {
                 allTrgSOIds.add(trigger_New[i].Id);
             }
             List<ERP7__Sales_Order_Line_Item__c> kitSOLIS = new List<ERP7__Sales_Order_Line_Item__c>();
-            kitSOLIS = Database.query('select Id, ERP7__Sales_Order__c, ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c from Sales_Order_Line_Item__c where (Sales_Order__c In : allTrgSOIds And ERP7__Product__r.ERP7__Is_Kit__c=true)');
+            //kitSOLIS = Database.query('select Id, ERP7__Sales_Order__c, ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c from Sales_Order_Line_Item__c where (Sales_Order__c In : allTrgSOIds And ERP7__Product__r.ERP7__Is_Kit__c=true)');
+              kitSOLIS = [SELECT Id, ERP7__Sales_Order__c
+                        FROM Sales_Order_Line_Item__c 
+                        WHERE Sales_Order__c IN :allTrgSOIds 
+                        AND ERP7__Product__r.ERP7__Is_Kit__c = true];
+
             for(Integer i=0; i<kitSOLIS.size(); i++){
                 if (kitSOLIS[i].ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c && !PreventRecursiveLedgerEntry.Loged) {
                    POIds.add(kitSOLIS[i].ERP7__Sales_Order__c);

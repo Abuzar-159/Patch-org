@@ -120,10 +120,17 @@
         var self = this; // safe reference
         var result = confirm("Are You Sure");
         if (result) {
+            var ds       = event.currentTarget.dataset;
+            var recordId = ds.id;      // from data-id
+            var index    = ds.index;   // from data-index
+            
+            console.log('recordId', recordId);
+            console.log('index', index);
+            //console.log(' deleteExpense recordId', event.target.dataset.recordId);
             $A.util.removeClass(component.find('mainSpin'), "slds-hide");
             var deleteAction = component.get("c.deleteExpense");
             deleteAction.setParams({
-                "recordId": event.target.dataset.recordId
+                "recordId": recordId//event.target.dataset.recordId
             });
             deleteAction.setCallback(self, function(a) {
                 var recordId = a.getReturnValue();
@@ -131,9 +138,10 @@
                 } else {
                     var deleteEvent = component.getEvent("delete");
                     deleteEvent.setParams({
-                        "listIndex": event.target.dataset.index,
-                        "oldRecord": component.get("v.table")[event.target.dataset.index]
+                        "listIndex": index,//event.target.dataset.index,
+                        "oldRecord": component.get("v.table")[index]//event.target.dataset.index
                     }).fire();
+                      $A.enqueueAction(component.get("c.display"));
                 }
                 $A.util.addClass(component.find('mainSpin'), "slds-hide");
             });
@@ -227,6 +235,7 @@
                         var state = a.getState();
             			if (state === "SUCCESS") {
                             console.log("inside success");
+                             $A.enqueueAction(component.get("c.display"));
                         //var recordId = a.getReturnValue();
                        // if (recordId == null) {
                        // } else {
@@ -303,6 +312,7 @@
     EditClick: function(component, event, helper) {
        // $A.util.removeClass(component.find('mainSpin'), "slds-hide");
         var ExpenseId = event.currentTarget.dataset.record;
+        console.log('ExpenseId: ' ,event.currentTarget.dataset.record);
         helper.Navigate(component, event, ExpenseId);
        // $A.util.addClass(component.find('mainSpin'), "slds-hide");
     },
@@ -315,7 +325,7 @@
         helper.doInit(component, event);
     },
     
-    CreateExpense: function(component, event, helper) {
+    /*CreateExpense: function(component, event, helper) {
         //$A.util.removeClass(component.find('mainSpin'), "slds-hide");
         var userid= component.get("v.UserId");
         var evt = $A.get("e.force:navigateToComponent");
@@ -327,7 +337,23 @@
         });
         evt.fire();
         //$A.util.addClass(component.find('mainSpin'), "slds-hide");
-    },
+    },*/
+    CreateExpense : function(component, event, helper) {
+        $A.createComponent(
+            "c:AddExpense",
+            {
+                "uId": component.get("v.UserId")
+            },
+            function(newCmp, status, errorMessage) {
+                if (status === "SUCCESS") {
+                    var body = component.find("body");
+                    body.set("v.body", newCmp);
+                } else {
+                    console.error('Error creating AddExpense: ', status, errorMessage);
+                }
+            }
+        );
+    },  
     
     handleExpenseDelete: function(component, event, helper) {
         var items = component.get("v.table");
@@ -611,6 +637,7 @@
                             mode: 'pester'
                         });
                         toastEvent.fire();
+                         $A.enqueueAction(component.get("c.display"));
                     }
                     
                 }

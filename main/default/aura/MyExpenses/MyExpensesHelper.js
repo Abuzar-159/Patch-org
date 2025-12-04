@@ -12,6 +12,7 @@
         action.setCallback(this, function(response) {
             var state = response.getState();
             if (state === "SUCCESS") {
+                console.log('GetRecordCounts Response:', response.getReturnValue());
                 cmp.set('v.counts', response.getReturnValue());
                 cmp.set("v.approvalProcess",response.getReturnValue().approvalProcess);
                 //alert(response.getReturnValue().CustomSetting);
@@ -109,6 +110,7 @@
             var state = response.getState();
             if (state === "SUCCESS") {
                 component.set('v.TimeSheetObjMul', response.getReturnValue());
+                console.log("getReturnValue EditMultiExpense", response.getReturnValue());
                 console.log("ExpenseexpenseLine", response.getReturnValue()[0].expenses);
                 console.log("expwraplist -> ", response.getReturnValue()[0].expwraplist);
                  console.log("expenseLine -> ",  response.getReturnValue()[0].expenseLine);

@@ -6,7 +6,12 @@
  * Code Change : added the line item(612-617) to display all the order profile apart from the customer profile assigned 
  *               to the customer
 */
-global With Sharing Class POSLightning {   
+
+/*  Removed the with sharing part from here because the payment gatway was not showing to non admin user, Suggested by Imran*/
+/* global With Sharing Class POSLightning {  */ 
+    
+global Without Sharing Class POSLightning {   
+
     
     // For DHL
     @AuraEnabled public static String DhlAccountNumber              { get; set; } 
@@ -215,14 +220,16 @@ global With Sharing Class POSLightning {
                 comW.ExpiryYear.add(new SelectOptions(curMonth + '',curMonth++ + ''));
             }
             
-            if(Schema.sObjectType.Credentials__c.isAccessible()) {  
+           //if(Schema.sObjectType.Credentials__c.isAccessible()) {  
                 for(ERP7__Credentials__c crd:[Select Id, Name, ERP7__Active__c, ERP7__Password_Transkey__c, ERP7__Signature__c, ERP7__URL__c, ERP7__Username_Login__c, ERP7__Encrypted_Key__c,ERP7__Channel_Id__c,ERP7__Bank_COA_ID__c
                                               From ERP7__Credentials__c
                                               Where ERP7__Active__c =: true And
                                               (Name = 'Authorize.Net' or Name = 'Paypal' or Name = 'Authorize' or Name = 'Stripe') ]){
                                                   comW.payType.add(new SelectOptions(crd.Name, crd.Name));
                                               }
-            }
+         //   }             
+            
+            
             /*comW.payType.add(new SelectOptions('Authorize.net', 'Authorize.net'));
 comW.payType.add(new SelectOptions('Paypal', 'Paypal'));
 comW.payType.add(new SelectOptions('Stripe', 'Stripe'));*/

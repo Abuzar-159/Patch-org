@@ -99,6 +99,8 @@
             console.log('SWLI : ' + SWLI);
             var SMI = JSON.stringify(SMR);
             var action = cmp.get("c.fetchBinStocks");
+            console.log("swli:+ " + SWLI);
+            console.log("smi:+ " + SMI);
             action.setParams({ SWL: SWLI, SM: SMI });
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -110,6 +112,7 @@
                         console.log('Response : ' + JSON.stringify(SWLR[count]));
                         SWLR[count].requiredQty = 1;
                         cmp.set("v.soliWrapperList", SWLR);
+                        console.log('soliwrapperlist bin - '+JSON.stringify(cmp.get("v.soliWrapperList")));
                         cmp.set("v.stockMap", response.getReturnValue().stockMap);
                         cmp.set("v.initialSTOLISerial", "");
                     }

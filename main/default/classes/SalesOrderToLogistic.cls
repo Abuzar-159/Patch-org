@@ -972,6 +972,344 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
             throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
         } 
     }*/
+    
+    
+    
+    @AuraEnabled
+public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
+    try {
+
+        System.debug('=== START getupdatedstocksDC ===');
+        System.debug('Input orditms: ' + orditms);
+        System.debug('Input chnId: ' + chnId);
+        System.debug('Input DCId: ' + DCId);
+        System.debug('Input OrdId: ' + OrdId);
+        System.debug('Input LogItems: ' + LogItems);
+
+        stockwrapper stockwrap = new stockwrapper();
+        List<OrderItem> Ordlist = new List<OrderItem>();
+        
+        // Handle Logistic Line Items
+        System.debug('Checking Logistic Items Condition...');
+        if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(LogItems) && LogItems != null && LogItems != '[]') {
+
+            System.debug('--- LOGISTIC ITEMS BRANCH ---');
+            System.debug('Deserializing Logistic Items...');
+
+            List<ERP7__Logistic_Line_Item__c> logItemslist = 
+                (List<ERP7__Logistic_Line_Item__c>) JSON.deserialize(LogItems, List<ERP7__Logistic_Line_Item__c>.class);
+
+            System.debug('Logistic Items count: ' + logItemslist.size());
+
+            Set<Id> productIds = new Set<Id>();
+            for (ERP7__Logistic_Line_Item__c loli : logItemslist) {
+                if (loli.ERP7__Product__c != null) {
+                    productIds.add(loli.ERP7__Product__c);
+                }
+            }
+            System.debug('Logistic productIds: ' + productIds);
+
+            ERP7__Distribution_Channel__c dc = [
+                SELECT Id, Name, ERP7__Site__c 
+                FROM ERP7__Distribution_Channel__c 
+                WHERE Id =: DCId 
+                AND ERP7__Channel__c =: chnId 
+                AND ERP7__Site__c != null 
+                LIMIT 1
+            ];
+            System.debug('DC Found Logistic Site: ' + dc.ERP7__Site__c);
+
+            if (dc.Id != null) {
+                System.debug('Running Inventory Aggregate for logistic items...');
+
+                Map<Id, Decimal> stockMap = new Map<Id, Decimal>();
+                
+                for (AggregateResult result : [
+                    SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                    FROM ERP7__Inventory_Stock__c 
+                    WHERE ERP7__product__c IN: productIds 
+                    AND ERP7__Active__c = true 
+                    AND ERP7__Warehouse__c =: dc.ERP7__Site__c 
+                    GROUP BY ERP7__Product__c
+                ]) {
+                    Id ProdId = (Id)result.get('ERP7__Product__c');
+                    Decimal totalStock = (Decimal)result.get('totalStock');
+                    stockMap.put(ProdId, totalStock);
+
+                    System.debug('Stock for ' + ProdId + ' = ' + totalStock);
+                }
+
+                for (ERP7__Logistic_Line_Item__c loli : logItemslist) {
+                    Decimal proStockCount = stockMap.containsKey(loli.ERP7__Product__c) 
+                                            ? stockMap.get(loli.ERP7__Product__c) 
+                                            : 0;
+
+                    System.debug('Setting Fulfilled Qty for ' + loli.ERP7__Product__c + ' = ' + proStockCount);
+
+                    loli.ERP7__Fulfilled_Quantity__c = proStockCount;
+                    stockwrap.UpdatedlogList.add(loli);
+                }
+            }
+        }
+
+        // Handle Order Items
+        else if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(orditms)) {
+
+            System.debug('--- ORDER ITEMS BRANCH ---');
+            System.debug('Deserializing Order Items...');
+
+            Ordlist = (List<OrderItem>) JSON.deserialize(orditms, List<OrderItem>.class);
+
+            System.debug('Order Items count: ' + Ordlist.size());
+
+            List<String> productIds = new List<String>();
+            for (OrderItem soli : Ordlist) {
+                if (soli.Product2Id != null && !productIds.contains(soli.Product2Id)) {
+                    productIds.add(soli.Product2Id);
+                }
+            }
+            System.debug('Order ProductIds: ' + productIds);
+
+            ERP7__Distribution_Channel__c dc = [
+                SELECT Id, Name, ERP7__Site__c 
+                FROM ERP7__Distribution_Channel__c 
+                WHERE Id =: DCId 
+                AND ERP7__Channel__c =: chnId 
+                AND ERP7__Site__c != null 
+                LIMIT 1
+            ];
+
+            System.debug('DC Found Order Site: ' + dc.ERP7__Site__c);
+
+            if (dc.Id != null) {
+                System.debug('Fetching Inventory Stock for Order Products...');
+
+                Map<Id, List<ERP7__Inventory_Stock__c>> ProductMap2Stock = new Map<Id, List<ERP7__Inventory_Stock__c>>();
+
+                for (ERP7__Inventory_Stock__c st : [
+                    SELECT Id, ERP7__product__c, ERP7__Number_of_Item_In_Stock__c 
+                    FROM ERP7__Inventory_Stock__c 
+                    WHERE ERP7__product__c IN: productIds 
+                    AND ERP7__Active__c = true 
+                    AND ERP7__Warehouse__c =: dc.ERP7__Site__c
+                ]) {
+                    if (!ProductMap2Stock.containsKey(st.ERP7__product__c)) {
+                        ProductMap2Stock.put(st.ERP7__product__c, new List<ERP7__Inventory_Stock__c>());
+                    }
+                    ProductMap2Stock.get(st.ERP7__product__c).add(st);
+
+                    System.debug('StockRow => ' + st.ERP7__product__c + ', qty=' + st.ERP7__Number_of_Item_In_Stock__c);
+                }
+
+                for (OrderItem soli : Ordlist) {
+                    Decimal proStockCount = 0;
+
+                    if (soli.Product2Id != null && ProductMap2Stock.containsKey(soli.Product2Id)) {
+                        for (ERP7__Inventory_Stock__c IS : ProductMap2Stock.get(soli.Product2Id)) {
+                            proStockCount += IS.ERP7__Number_of_Item_In_Stock__c;
+                        }
+                    }
+
+                    System.debug('Order product ' + soli.Product2Id + ' total stock=' + proStockCount);
+
+                    soli.ERP7__Reserved_Quantity__c = proStockCount;
+                    soli.ERP7__Remaining_Quantity__c = soli.Quantity - soli.ERP7__Logistic_Quantity__c;
+                    stockwrap.UpdatedOrdList.add(soli);
+                }
+            }
+
+            // Exploded Items
+            System.debug('Checking Exploded/StockOutward/MRP status...');
+
+            Set<Id> orderItemIds = new Set<Id>();
+            for (OrderItem oi : Ordlist) orderItemIds.add(oi.Id);
+
+            Map<Id, OrderItem> orderItemMap = new Map<Id, OrderItem>([
+                SELECT Id, ERP7__Explode__c 
+                FROM OrderItem 
+                WHERE Id IN :orderItemIds 
+                AND ERP7__Explode__c = true
+            ]);
+            System.debug('Explode__c Ids: ' + orderItemMap.keySet());
+
+            List<ERP7__Stock_Outward_Line_Item__c> stockOutwardItems = [
+                SELECT ERP7__Order_Product__c 
+                FROM ERP7__Stock_Outward_Line_Item__c 
+                WHERE ERP7__Order_Product__c IN :orderItemIds
+            ];
+            System.debug('StockOutward count: ' + stockOutwardItems.size());
+
+            List<ERP7__MRP__c> mrpRecords = [
+                SELECT ERP7__Order_Product__c 
+                FROM ERP7__MRP__c 
+                WHERE ERP7__Order_Product__c IN :orderItemIds 
+                AND RecordType.Name = 'MRP Kit'
+            ];
+            System.debug('MRP records count: ' + mrpRecords.size());
+
+            Map<Id, Boolean> explodedOrderItems = new Map<Id, Boolean>();
+
+            for (Id oiId : orderItemIds) {
+                Boolean isExploded = orderItemMap.containsKey(oiId);
+                Boolean hasSO = false;
+                Boolean hasMRP = false;
+
+                for (ERP7__Stock_Outward_Line_Item__c so : stockOutwardItems)
+                    if (so.ERP7__Order_Product__c == oiId) hasSO = true;
+
+                for (ERP7__MRP__c mrp : mrpRecords)
+                    if (mrp.ERP7__Order_Product__c == oiId) hasMRP = true;
+
+                Boolean finalValue = (isExploded && hasSO && hasMRP);
+
+                explodedOrderItems.put(oiId, finalValue);
+
+                System.debug('Exploded[' + oiId + '] = ' + finalValue);
+            }
+
+            stockwrap.ExplodedOrderItems = explodedOrderItems;
+
+            // ===============================
+            // BOM Section (With Simple Debugs)
+            // ===============================
+
+            System.debug('--- BOM SECTION START ---');
+
+            if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId)) {
+
+                Set<Id> BomproductIds = new Set<Id>(); 
+                List<Id> proIds = new List<Id>(); 
+                List<Id> soliBOMVersion = new List<Id>(); 
+                Map<Id, Id> prodMap = new Map<Id, Id>();
+
+                for (OrderItem Foli : Ordlist) {
+                    if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) {
+                        proIds.add(Foli.Product2Id);
+                        if (Foli.ERP7__Version__c != null) soliBOMVersion.add(Foli.ERP7__Version__c);
+                        prodMap.put(Foli.Product2Id, Foli.Id);
+                    }
+                }
+
+                System.debug('proIds (Kits): ' + proIds);
+                System.debug('soliBOMVersion: ' + soliBOMVersion);
+
+                List<ERP7__BOM__c> BOMList = new List<ERP7__BOM__c>();
+
+                if (!soliBOMVersion.isEmpty()) {
+
+                    System.debug('Fetching BOM List...');
+
+                    BOMList = [
+                        SELECT Id, ERP7__BOM_Product__c, ERP7__BOM_Component__c,
+                               ERP7__Quantity__c, BOM_Version__c
+                        FROM ERP7__BOM__c
+                        WHERE BOM_Version__c IN :soliBOMVersion
+                        AND BOM_Version__r.Status__c = 'Certified'
+                    ];
+                }
+
+                System.debug('BOMList size: ' + BOMList.size());
+
+                for (ERP7__BOM__c bom : BOMList)
+                    BomproductIds.add(bom.ERP7__BOM_Component__c);
+
+                System.debug('BOM product Ids: ' + BomproductIds);
+
+                ERP7__Distribution_Channel__c dchannel = [
+                    SELECT Id, ERP7__Site__c 
+                    FROM ERP7__Distribution_Channel__c 
+                    WHERE Id =: DCId 
+                    AND ERP7__Channel__c =: chnId 
+                    LIMIT 1
+                ];
+
+                System.debug('DC Site(BOM): ' + dchannel.ERP7__Site__c);
+
+                if (dchannel.Id != null) {
+
+                    Map<Id, List<ERP7__Inventory_Stock__c>> BOMProductMap2Stock =
+                        new Map<Id, List<ERP7__Inventory_Stock__c>>();
+
+                    for (ERP7__Inventory_Stock__c st : [
+                        SELECT ERP7__product__c, ERP7__Number_of_Item_In_Stock__c
+                        FROM ERP7__Inventory_Stock__c
+                        WHERE ERP7__product__c IN :BomproductIds
+                        AND ERP7__Warehouse__c =: dchannel.ERP7__Site__c
+                    ]) {
+                        if (!BOMProductMap2Stock.containsKey(st.ERP7__product__c)) {
+                            BOMProductMap2Stock.put(st.ERP7__product__c, new List<ERP7__Inventory_Stock__c>());
+                        }
+                        BOMProductMap2Stock.get(st.ERP7__product__c).add(st);
+
+                        System.debug('BOM StockRow => ' + st.ERP7__product__c + ', qty=' + st.ERP7__Number_of_Item_In_Stock__c);
+                    }
+
+                    List<Id> bomprodIds = new List<Id>();
+                    for (ERP7__BOM__c b : BOMList) bomprodIds.add(b.ERP7__BOM_Component__c);
+
+                    Order orderdetail = [
+                        SELECT Pricebook2Id
+                        FROM Order 
+                        WHERE Id =: OrdId LIMIT 1
+                    ];
+
+                    List<PricebookEntry> pbe = [
+                        SELECT Product2Id, UnitPrice 
+                        FROM PricebookEntry
+                        WHERE Pricebook2Id =: orderdetail.Pricebook2Id
+                        AND Product2Id IN: bomprodIds
+                        AND IsActive = true
+                    ];
+
+                    Map<Id, PricebookEntry> pbeMap = new Map<Id, PricebookEntry>();
+                    for (PricebookEntry pb : pbe) pbeMap.put(pb.Product2Id, pb);
+
+                    for (ERP7__BOM__c Boli : BOMList) {
+
+                        bomwrapper bomwrap = new bomwrapper();
+                        Decimal proStockCount = 0;
+
+                        if (Boli.ERP7__BOM_Component__c != null) {
+
+                            if (BOMProductMap2Stock.containsKey(Boli.ERP7__BOM_Component__c)) {
+                                for (ERP7__Inventory_Stock__c IS : BOMProductMap2Stock.get(Boli.ERP7__BOM_Component__c)) {
+                                    proStockCount += IS.ERP7__Number_of_Item_In_Stock__c;
+                                }
+                            }
+
+                            System.debug('BOM component ' + Boli.ERP7__BOM_Component__c + ' stock=' + proStockCount);
+
+                            bomwrap.stock = proStockCount;
+                            bomwrap.Bom = Boli;
+
+                            if (prodMap.containsKey(Boli.ERP7__BOM_Product__c))
+                                bomwrap.OrderProdId = prodMap.get(Boli.ERP7__BOM_Product__c);
+
+                            if (pbeMap.containsKey(Boli.ERP7__BOM_Component__c))
+                                bomwrap.pbe = pbeMap.get(Boli.ERP7__BOM_Component__c);
+
+                            stockwrap.UpdatedBomList.add(bomwrap);
+                        }
+                    }
+                }
+            }
+        }
+
+        System.debug('=== END getupdatedstocksDC ===');
+        return stockwrap;
+
+    } catch (Exception e) {
+        System.debug('Exception: ' + e.getMessage());
+        System.debug('Stack: ' + e.getStackTraceString());
+        throw new AuraHandledException(e.getMessage());
+    } 
+}
+
+    
+    
+    
+    
+    /* commented by saqlain to check the issue 
  @AuraEnabled
 public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
     try {
@@ -1215,7 +1553,7 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
         System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
         throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
     } 
-}
+}*/
     
     public class bomwrapper{
         

@@ -17,7 +17,7 @@ public With Sharing class RecordPayment {
     @AuraEnabled
     public static ERP7__Invoice__c getInvoiceDetails(String recordId){
         
-        return [SELECT Id, Name, ERP7__Invoice_Date__c, ERP7__Organisation__c, ERP7__Payment_Terms__c, ERP7__Order__c, ERP7__Paid_Amount__c, ERP7__Invoice_Amount__c, ERP7__Total_Due__c,ERP7__Account__c,ERP7__Account__r.ERP7__Organisation__c,RecordType.DeveloperName, ERP7__Down_Payment__c, ERP7__Total_Down_Payment_Amount__c,ERP7__Credit_Note__c
+        return [SELECT Id, Name, ERP7__Invoice_Date__c, ERP7__Organisation__c, ERP7__Payment_Terms__c, ERP7__Order__c, ERP7__Order_S__c, ERP7__Paid_Amount__c, ERP7__Invoice_Amount__c, ERP7__Total_Due__c,ERP7__Account__c,ERP7__Account__r.ERP7__Organisation__c,RecordType.DeveloperName, ERP7__Down_Payment__c, ERP7__Total_Down_Payment_Amount__c,ERP7__Credit_Note__c
                 FROM ERP7__Invoice__c WHERE Id =:recordId 
                 AND ERP7__Paid__c= false  AND ERP7__Total_Due__c != 0.00 AND ERP7__Account__c !=null];//AND ERP7__Posted__c=true
         
