@@ -547,33 +547,95 @@
         helper.showToast('Error', 'error', 'No file selected. Please choose a file to upload.');
     }
 },*///Commented above above to include below for adding getCallback
+    
     CreateRecord: function (component, event, helper) {
-        component.set("v.showMmainSpin", true);
-        console.log("in CreateRecord");
-        
-        var fileInput = component.find("file").get("v.files");
-        var file = fileInput && fileInput[0];
-        
-        if (file) {
+        try {
+            component.set("v.showMmainSpin", true);
+            console.log("in CreateRecord");
+            
+            let fileInput = component.find("file").get("v.files");
+            let file = fileInput && fileInput[0];
+            
+            if (!file) {
+                component.set("v.showMmainSpin", false);
+                return;
+            }
+            
             console.log("in if of CreateRecord");
-            var reader = new FileReader();
+            let reader = new FileReader();
             
             reader.onload = $A.getCallback(function (evt) {
                 console.log("in onload CreateRecord");
-                var csv = evt.target.result;
-                helper.CSV2JSON(component, csv);
+                
+                try {
+                    //let csv = evt.target.result;
+                    let csv = reader.result;
+                    
+                    // 🔹 Inline previous CSV2JSON logic here
+                    let action = component.get("c.importCSVFile");
+                    action.setParams({
+                        BankRecon_obj1: JSON.stringify(component.get("v.BankRecon_obj")),
+                        selectedBankAccount: component.get("v.BankRecon_obj.ERP7__Bank_Account__c"),
+                        csvAsString: csv
+                    });
+                    
+                    action.setCallback(this, function (response) {
+                        try {
+                            let state = response.getState();
+                            console.log('importCSVFile state:', state);
+                            
+                            if (state === "SUCCESS") {
+                                console.log("in CSV2JSON success (inline)");
+                                
+                                if (response.getReturnValue() == null) {
+                                    component.set("v.SaveErrorMsg", $A.get('$Label.c.Invalid_File_Data'));
+                                }
+                                
+                                component.set("v.showMmainSpin", false);
+                                
+                                // ✅ call other helper methods from controller
+                                helper.getDetails(component, event);
+                                helper.getDocument(component, event);
+                                
+                            } else {
+                                console.log("in CSV2JSON error (inline)");
+                                console.log(response.getError && response.getError());
+                                component.set(
+                                    "v.NoSlotsMessage",
+                                    $A.get('$Label.c.Please_Enter_the_valid_data')
+                                );
+                                component.set("v.showMmainSpin", false);
+                            }
+                        } catch (e2) {
+                            console.error('Error in importCSVFile callback:', e2);
+                            component.set("v.showMmainSpin", false);
+                        }
+                        helper.getDetails(component, event);
+                        helper.getDocument(component, event);
+                        console.log('in last');
+                    });
+                    
+                    $A.enqueueAction(action);
+                    
+                } catch (e1) {
+                    console.error('Error in FileReader onload handler:', e1);
+                    component.set("v.showMmainSpin", false);
+                }
             });
             
-            reader.onerror = $A.getCallback(function (evt) {
+            reader.onerror = $A.getCallback(function () {
                 console.log("in onerror CreateRecord");
                 component.set("v.showMmainSpin", false);
             });
             
             reader.readAsText(file, "UTF-8");
-        } else {
+            
+        } catch (e) {
+            console.error('Error inside CreateRecord:', e);
             component.set("v.showMmainSpin", false);
         }
     },
+
 
    /*  CreateRecord: function (component, event, helper) {
         component.set("v.showMmainSpin",true);

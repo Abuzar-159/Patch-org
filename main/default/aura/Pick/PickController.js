@@ -45,6 +45,8 @@
                 console.log('ShowLangOptionForPickSlip:',cmp.get('v.ShowLangOptionForPickSlip'));
                 cmp.set('v.ReplacePickSlipOrgURL',response.getReturnValue().ReplacePickSlipOrgURL);
                 
+                
+                
                 //New code added by Arshad 18 Sep 2023 - to avoid heap size
                 try{
                     console.log('commitedSOLIIdsList ~>',response.getReturnValue().commitedSOLIIdsList);
@@ -67,6 +69,7 @@
                                 console.log("doInit getcommitedSOLIs length: ",resp.getReturnValue().length);
                                 cmp.set('v.soliExistingList',resp.getReturnValue());
                                 console.log('inhere after setting soliExistingList');
+                                helper.fetchStocks(cmp, event, helper);
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             }else{
                                 var errors = resp.getError();
@@ -77,6 +80,7 @@
                         $A.enqueueAction(myaction);
                     }else{
                         console.log('inelse commitedSOLIIdsList');
+                        helper.fetchStocks(cmp, event, helper);
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
                 }catch(e){

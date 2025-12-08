@@ -195,33 +195,38 @@
         $A.util.addClass(cmp.find(val+'Id'),'slds-is-active');  
     },
     
-    CSV2JSON: function (component,csv) {
+    CSV2JSON: function (component,event,csv) {
         //component.set("v.showMmainSpin",false);
-        console.log("in CSV2JSON");
-        var action=component.get("c.importCSVFile");
-        action.setParams({
-            BankRecon_obj1:JSON.stringify(component.get("v.BankRecon_obj")),
-            selectedBankAccount:component.get("v.BankRecon_obj.ERP7__Bank_Account__c"),
-            csvAsString:csv
+        try{
+            console.log("in CSV2JSON");
+            let action=component.get("c.importCSVFile");
+            action.setParams({
+                BankRecon_obj1:JSON.stringify(component.get("v.BankRecon_obj")),
+                selectedBankAccount:component.get("v.BankRecon_obj.ERP7__Bank_Account__c"),
+                csvAsString:csv
             });
-        action.setCallback(this, function(response) {
-            var state = response.getState();
-            if(state === "SUCCESS"){
-                console.log("in CSV2JSON success");
-                if(response.getReturnValue()==null) component.set("v.SaveErrorMsg",$A.get('$Label.c.Invalid_File_Data'));
-                component.set("v.showMmainSpin",false);
-                //component.doInit();// commented by asra
-                this.getDetails(component, event);
-                this.getDocument(component, event);
-                
-               }
-            else{
-                console.log("in CSV2JSON error");
-                component.set("v.NoSlotsMessage",$A.get('$Label.c.Please_Enter_the_valid_data'));
-                component.set("v.showMmainSpin",false);//added extra by asra
-            }
-        });
-        $A.enqueueAction(action); 
+            action.setCallback(this, function(response) {
+                let state = response.getState();
+                if(state === "SUCCESS"){
+                    console.log("in CSV2JSON success");
+                    if(response.getReturnValue()==null) component.set("v.SaveErrorMsg",$A.get('$Label.c.Invalid_File_Data'));
+                    component.set("v.showMmainSpin",false);
+                    //component.doInit();// commented by asra
+                    this.getDetails(component, event);
+                    this.getDocument(component, event);
+                    
+                }
+                else{
+                    console.log("in CSV2JSON error");
+                    console.log(response.getError && response.getError());
+                    component.set("v.NoSlotsMessage",$A.get('$Label.c.Please_Enter_the_valid_data'));
+                    component.set("v.showMmainSpin",false);//added extra by asra
+                }
+            });
+            $A.enqueueAction(action); 
+        } catch (e) {
+            console.error('Error inside CSV2JSON:', e);
+        }
     },
     
 })

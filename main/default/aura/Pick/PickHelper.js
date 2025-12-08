@@ -91,6 +91,7 @@
             count = passedCount;
         } else {
             count = event.getSource().get("v.name");
+            
         }
         console.log('count', count);
         if (count >= 0) {
