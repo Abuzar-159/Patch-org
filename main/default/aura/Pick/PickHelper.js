@@ -86,6 +86,7 @@
         var SMR = cmp.get("v.stockMap");
         console.log('count0');
         var count;
+        console.log('passedCount--'+passedCount);
     
         if (typeof passedCount !== "undefined") {
             count = passedCount;

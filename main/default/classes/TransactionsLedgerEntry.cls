@@ -136,7 +136,7 @@ public with sharing class TransactionsLedgerEntry {
                     coa_Mapping = new Map<String, Set<ERP7__COA_Mapping__c>>(MAINcoa_Mapping);  
                 }
                 if(coa_Mapping.containsKey('Invoice Sales')){ system.debug('arshad init size of invoice sales from coa_Mapping~>'+coa_Mapping.get('Invoice Sales').size()); }
-                if(coa_Mapping.containsKey('BillPayment')){ system.debug('arshad init size of BillPayment from coa_Mapping~>'+coa_Mapping.get('Invoice Sales').size()); }
+                if(coa_Mapping.containsKey('BillPayment')){ system.debug('arshad init size of BillPayment from coa_Mapping~>'+coa_Mapping.get('BillPayment').size()); }//BillPayment is changed from Invoice Sales by Asra 08/12-- how was this never noticed!??????????????
                 
                 for (Finance_General_Ledger__c FGL: FinanceGeneralLedgers) {
                     for (Transaction__c trans: Trigger_New) {

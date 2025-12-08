@@ -69,7 +69,7 @@
                                 console.log("doInit getcommitedSOLIs length: ",resp.getReturnValue().length);
                                 cmp.set('v.soliExistingList',resp.getReturnValue());
                                 console.log('inhere after setting soliExistingList');
-                                helper.fetchStocks(cmp, event, helper);
+                                
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             }else{
                                 var errors = resp.getError();
@@ -80,7 +80,8 @@
                         $A.enqueueAction(myaction);
                     }else{
                         console.log('inelse commitedSOLIIdsList');
-                        helper.fetchStocks(cmp, event, helper);
+                       console.log('event --'+JSON.stringify(event.getSource()));
+                        //helper.fetchStocks(cmp, event, helper, -1);
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
                 }catch(e){
@@ -622,6 +623,8 @@
         }
     },
     fetchStocks : function(cmp, event, helper) {
+         var index = event.getSource().get("v.name");
+        console.log('ind ----'+index);
         helper.fetchStocks(cmp, event, helper);
     },
     

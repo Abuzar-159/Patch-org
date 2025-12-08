@@ -2279,7 +2279,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                 system.debug('swrap.addressName : '+swrap.addressName);
                 system.debug('swrap.batchLotCode : '+swrap.batchLotCode);
                 if(!swrap.LOLI.ERP7__Product__r.ERP7__Serialise__c && swrap.batchLotCode != null && swrap.batchLotCode != '' && swrap.batchLotCode != '--None--'){
-                    string query = 'Select Id,Name,Product__c,Number_of_Item_In_Stock__c from Inventory_Stock__c where Active__c = true And (Number_of_Item_In_Stock__c > 0 or ERP7__No_of_Items_Reserved__c > 0) and ERP7__Batch_Lot__c =\''+swrap.BatchLotCode+'\' ';
+                    string query = 'Select Id,Name,Product__c,Number_of_Item_In_Stock__c,ERP7__Location__c from Inventory_Stock__c where Active__c = true And (Number_of_Item_In_Stock__c > 0 or ERP7__No_of_Items_Reserved__c > 0) and ERP7__Batch_Lot__c =\''+swrap.BatchLotCode+'\' ';
                     //if(swrap.addressName != null && swrap.addressName != '') query += ' AND (ERP7__Warehouse__c =\'' + String.escapeSingleQuotes(swrap.addressName) + '\' or ERP7__Location__c = \'' + String.escapeSingleQuotes(swrap.addressName) + '\' or ERP7__StorageContainer__c =\'' + String.escapeSingleQuotes(swrap.addressName) + '\' )';
                      if (!String.isBlank(swrap.addressName)) {
                         String addrType = detectAddressType(swrap.addressName);
@@ -2298,10 +2298,19 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                         }
                     }
                     query +=' Order By ERP7__Expiry_Date__c ASC';
-                    WIISList = Database.query(query);                    Decimal myStock = 0; system.debug('batch wiis --'+WIISList);                   for(Inventory_Stock__c WIIS : WIISList) {                         if(swrap.Product.Id == WIIS.Product__c ) myStock += WIIS.Number_of_Item_In_Stock__c;                      }                     system.debug('batch myStock : '+myStock);                    List<ERP7__Stock_Outward_Line_Item__c> reservedSTOLI = new List<ERP7__Stock_Outward_Line_Item__c>();                    if(swrap.addressName != null && swrap.addressName != '') {                        for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c, ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 AND ERP7__Material_Batch_Lot__c =:swrap.BatchLotCode                                                                   and (ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__StorageContainer__c = :swrap.addressName) LIMIT 1]) 
+                    WIISList = Database.query(query);                    Decimal myStock = 0; system.debug('batch wiis --'+WIISList);                   
+                    for(Inventory_Stock__c WIIS : WIISList) {
+                        if(swrap.Product.Id == WIIS.Product__c ) {
+                            if(WIIS.ERP7__Location__c != null){
+                                myStock += WIIS.Number_of_Item_In_Stock__c;
+                            }else{
+                                myStock += WIIS.Number_of_Item_In_Stock__c;
+                            }
+                            }                      
+                    }                     system.debug('batch myStock : '+myStock);                    List<ERP7__Stock_Outward_Line_Item__c> reservedSTOLI = new List<ERP7__Stock_Outward_Line_Item__c>();                    if(swrap.addressName != null && swrap.addressName != '') {                        for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__No_of_Items_Reserved__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c, ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 AND ERP7__Material_Batch_Lot__c =:swrap.BatchLotCode                                                                   and (ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__StorageContainer__c = :swrap.addressName) LIMIT 1]) 
                             reservedSTOLI.add(SOW);
                     }
-                    else{ for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c, ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 AND ERP7__Material_Batch_Lot__c =:swrap.BatchLotCode  LIMIT 1])  reservedSTOLI.add(SOW); }  Map<Id,Decimal> batchAvailStocks = new Map<Id,Decimal>();                    
+                    else{ for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__No_of_Items_Reserved__c, ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 AND ERP7__Material_Batch_Lot__c =:swrap.BatchLotCode  LIMIT 1])  reservedSTOLI.add(SOW); }  Map<Id,Decimal> batchAvailStocks = new Map<Id,Decimal>();                    
                     for(ERP7__Stock_Outward_Line_Item__c outward : reservedSTOLI){                        
                         if(batchAvailStocks.containsKey(outward.ERP7__Material_Batch_Lot__c)){
                             system.debug('in frst ifff bathc');
@@ -2310,18 +2319,33 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                                if(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c != null 
                                   && outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c == swrap.addressName){
                                       system.debug('in iff bathc');
-                                   batchAvailStocks.put(outward.Material_Batch_Lot__c,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
+                                   //batchAvailStocks.put(outward.Material_Batch_Lot__c,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
+                                   batchAvailStocks.put(swrap.BatchLotCode,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
                                   }else{
                                       system.debug('in else bathc');
-                                      //batchAvailStocks.put(outward.Material_Batch_Lot__c,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c));
+               
+                                      //batchAvailStocks.put(outward.Material_Batch_Lot__c,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
+                                      //system.debug('in reserve'); swrap.inventoryStock = + outward.ERP7__Quantity__c;
+                                      if(outward.ERP7__Quantity__c > 0 && outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c == null){
+                                          batchAvailStocks.put(swrap.BatchLotCode,(myStock+outward.ERP7__Quantity__c));
+                                            system.debug('xp11 --'+batchAvailStocks.get(swrap.BatchLotCode));
+                                          
+                                      }else{
+                                      batchAvailStocks.put(outward.Material_Batch_Lot__c,(myStock));
+                                      system.debug('xp 22--'+batchAvailStocks.get(outward.Material_Batch_Lot__c));
+                                      }
                                   }
                                
                            			}//batchAvailStocks.put(outward.ERP7__Material_Batch_Lot__c,(outward.ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c + outward.ERP7__Quantity__c));}
                     
 					}
                     if(swrap.BatchLotCode != '' && swrap.BatchLotCode != Null && batchAvailStocks.containsKey(swrap.BatchLotCode)) {
-                        if(reservedSTOLI.size() > 0) { if(swrap.BatchLotCode == reservedSTOLI[0].ERP7__Material_Batch_Lot__c) swrap.inventoryStock = batchAvailStocks.get(swrap.BatchLotCode); }                        else swrap.inventoryStock = batchAvailStocks.get(swrap.BatchLotCode);
-                    }else swrap.inventoryStock = myStock;                    if(swrap.requiredQty >= swrap.inventoryStock) swrap.requiredQty = double.valueof(swrap.inventoryStock);                      else swrap.requiredQty = double.valueof(swrap.remainingQty);                    if(swrap.requiredQty > 1) swrap.requiredQty = 1;
+                        system.debug('in  1');
+                        if(reservedSTOLI.size() > 0) {
+                            if(swrap.BatchLotCode == reservedSTOLI[0].ERP7__Material_Batch_Lot__c) swrap.inventoryStock = batchAvailStocks.get(swrap.BatchLotCode);  system.debug('in swrap.inventoryStock-'+swrap.inventoryStock);
+                            } else { swrap.inventoryStock = batchAvailStocks.get(swrap.BatchLotCode); system.debug('else swrap.inventoryStock-'+swrap.inventoryStock);}
+                    }else  {system.debug('in  2'+ myStock); swrap.inventoryStock = myStock; }                   
+                    if(swrap.requiredQty >= swrap.inventoryStock) {swrap.requiredQty = double.valueof(swrap.inventoryStock);}else {swrap.requiredQty = double.valueof(swrap.remainingQty);}                    if(swrap.requiredQty > 1) { swrap.requiredQty = 1; }
                 }
                else if(swrap.LOLI.ERP7__Product__r.ERP7__Serialise__c){ 
                    String SerialID = swrap.SerialNumbers.ERP7__Serial__c;                    
@@ -2400,7 +2424,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                    }else{
                        for(ERP7__Inventory_Stock__c WIIS : WIISList) { 
                            system.debug('WIIS--'+WIIS);
-                           system.debug('swrap.Product.Id -'+swrap.Product.Id +' & WIIS.Product__c - '+WIIS.ERP7__Product__c);
+                           system.debug('swrap.Product.Id -'+swrap.Product.Id +' & WIIS.Product__c - '+WIIS.ERP7__Product__c+'WIIS.ERP7__Warehouse__c--'+WIIS.ERP7__Warehouse__c);
                            if(swrap.Product.Id == WIIS.Product__c ) {
                                if(WIIS.ERP7__Warehouse__c == null ){
                                    system.debug('in if--');
@@ -2429,7 +2453,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                                                system.debug('in location--11');
                                                myStock += (WIIS.ERP7__Number_of_Item_In_Stock__c == 1 ? 1 : 0);
                                            }else{
-                                               myStock += (WIIS.ERP7__No_of_Items_Reserved__c == 0 ? 0 : 1);
+                                               myStock += (WIIS.ERP7__No_of_Items_Reserved__c == 1 ? 1 : 0);
                                            }
                                        }
                                    }else if(addrType == 'WAREHOUSE'){
@@ -2438,7 +2462,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                                            if(WIIS.ERP7__Serial__r.ERP7__Available__c == true ){
                                                myStock += (WIIS.ERP7__Number_of_Item_In_Stock__c == 1 ? 1 : 0);
                                            }else{
-                                               myStock += (WIIS.ERP7__No_of_Items_Reserved__c == 0 ? 1 : 0);
+                                               myStock += (WIIS.ERP7__No_of_Items_Reserved__c == 1 ? 1 : 0);
                                            }
                                        }
                                    }
@@ -2450,7 +2474,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                     swrap.inventoryStock = myStock;                    if(swrap.requiredQty >= swrap.inventoryStock) swrap.requiredQty = double.valueof(swrap.inventoryStock);                      else swrap.requiredQty = double.valueof(swrap.remainingQty);                    if(swrap.requiredQty > 1) swrap.requiredQty = 1;
                 }
                 else if(!swrap.LOLI.ERP7__Product__r.ERP7__Serialise__c && !swrap.LOLI.ERP7__Product__r.ERP7__Lot_Tracked__c){
-                    string query = 'Select Id,Name,Product__c,Number_of_Item_In_Stock__c from Inventory_Stock__c where Active__c = true And (Number_of_Item_In_Stock__c > 0 or ERP7__No_of_Items_Reserved__c > 0) ';
+                    string query = 'Select Id,Name,Product__c,Number_of_Item_In_Stock__c,ERP7__Location__c from Inventory_Stock__c where Active__c = true And (Number_of_Item_In_Stock__c > 0 or ERP7__No_of_Items_Reserved__c > 0) ';
                     //if(swrap.addressName != null && swrap.addressName != '') query += ' AND (ERP7__Warehouse__c =\'' + String.escapeSingleQuotes(swrap.addressName) + '\' or ERP7__Location__c = \'' + String.escapeSingleQuotes(swrap.addressName) + '\' or ERP7__StorageContainer__c =\'' + String.escapeSingleQuotes(swrap.addressName) + '\' )';
                      if (!String.isBlank(swrap.addressName)) {                        String addrType = detectAddressType(swrap.addressName);                        if (addrType == 'BIN') {
                             // bin-level: only this bin
@@ -2463,16 +2487,24 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                     }
                     query +=' Order By ERP7__Expiry_Date__c ASC';
                     system.debug('normal query : '+query);
-                    WIISList = Database.query(query);                    Decimal myStock = 0;                    for(Inventory_Stock__c WIIS : WIISList) {                         if(swrap.Product.Id == WIIS.Product__c ) myStock += WIIS.Number_of_Item_In_Stock__c;  
+                    WIISList = Database.query(query);                    Decimal myStock = 0;                    
+                    for(Inventory_Stock__c WIIS : WIISList) {
+                        if(swrap.Product.Id == WIIS.Product__c ){ 
+                            if(WIIS.ERP7__Location__c != null){
+                                myStock += WIIS.Number_of_Item_In_Stock__c;
+                            }else{
+                                myStock += WIIS.Number_of_Item_In_Stock__c;
+                            }
+                            }  
                     }
                     system.debug('normal stock : '+myStock);
                     List<ERP7__Stock_Outward_Line_Item__c> reservedSTOLI = new List<ERP7__Stock_Outward_Line_Item__c>();
                     if(swrap.addressName != null && swrap.addressName != '') {
-                        for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c, ERP7__Product__c,ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 
+                        for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c, ERP7__Product__c,ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c > 0 
                                                                   and (ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c = :swrap.addressName or ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__StorageContainer__c = :swrap.addressName)]) 
                             reservedSTOLI.add(SOW);
                     }
-                    else{ for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c, Product__c,ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c >0 ])  reservedSTOLI.add(SOW); }
+                    else{ for(ERP7__Stock_Outward_Line_Item__c SOW:[SELECT Id,ERP7__Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c, Product__c,ERP7__Material_Batch_Lot__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Logistic_Line_Item__c =: swrap.LOLI.Id AND ERP7__Status__c = 'Reserved' AND ERP7__Quantity__c >0 ])  reservedSTOLI.add(SOW); }
                 	Map<Id,Decimal> batchAvailStocks = new Map<Id,Decimal>();                    
                     for(ERP7__Stock_Outward_Line_Item__c outward : reservedSTOLI){
                         if(batchAvailStocks.containsKey(outward.Product__c)){ 
@@ -2482,15 +2514,25 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                               system.debug('in else normal-');
                              if(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c != null 
                                   && outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c == swrap.addressName){
-                                 batchAvailStocks.put(outward.Product__c,outward.ERP7__Quantity__c);
+                                 batchAvailStocks.put(swrap.Product.Id,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
+                                      system.debug('in n1 -'+batchAvailStocks.get(outward.Product__c));
                                   }else{
                                       system.debug('in else normal22-');
-                                      batchAvailStocks.put(outward.Product__c,outward.ERP7__Quantity__c - outward.ERP7__Quantity__c);
+                                      //batchAvailStocks.put(outward.Product__c,outward.ERP7__Quantity__c - outward.ERP7__Quantity__c);
+                                      if(outward.ERP7__Quantity__c > 0 && outward.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c == null){
+                                          system.debug('in n1 --- 1 -');
+                                          batchAvailStocks.put(swrap.Product.Id, (myStock + outward.ERP7__Quantity__c));
+                                          system.debug('in n1 --- 1-'+batchAvailStocks.get(swrap.Product.Id));
+                                                               }else{
+                                                                   system.debug('in n1 --- 2 -');
+                                                                   batchAvailStocks.put(swrap.Product.Id,(myStock));
+                                                                   system.debug('in n1 --- 2-'+batchAvailStocks.get(swrap.Product.Id));
+                                                               }
                                   }
                              
                          }
                     }
-                    if(reservedSTOLI.size() > 0) { if(swrap.Product.Id  == reservedSTOLI[0].Product__c) swrap.inventoryStock = batchAvailStocks.get(swrap.Product.Id) + myStock; }                    else swrap.inventoryStock = myStock;                    if(swrap.requiredQty >= swrap.inventoryStock) swrap.requiredQty = double.valueof(swrap.inventoryStock);                      else swrap.requiredQty = double.valueof(swrap.remainingQty);                   if(swrap.requiredQty > 1) swrap.requiredQty = 1;
+                    if(reservedSTOLI.size() > 0) { if(swrap.Product.Id  == reservedSTOLI[0].Product__c) {swrap.inventoryStock = batchAvailStocks.get(swrap.Product.Id); system.debug('swrap.inventoryStock-n1--'+swrap.inventoryStock);} } else{ swrap.inventoryStock = myStock;system.debug('else swrap.inventoryStock-n1--'+swrap.inventoryStock);}                   if(swrap.requiredQty >= swrap.inventoryStock) swrap.requiredQty = double.valueof(swrap.inventoryStock);                      else swrap.requiredQty = double.valueof(swrap.remainingQty);                   if(swrap.requiredQty > 1) swrap.requiredQty = 1;
                 }
                 comW.soliWrapperList.add(swrap);
             }
