@@ -726,6 +726,7 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
             throw new AuraHandledException(e.getMessage()+'; at line ~> '+e.getStackTraceString());
         } 
     }*/
+    
  /*  @AuraEnabled
     public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
     try {
@@ -975,7 +976,7 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
     
     
     
-    @AuraEnabled
+   /* @AuraEnabled
 public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
     try {
 
@@ -1303,13 +1304,13 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
         System.debug('Stack: ' + e.getStackTraceString());
         throw new AuraHandledException(e.getMessage());
     } 
-}
+}*/
 
     
     
     
     
-    /* commented by saqlain to check the issue 
+    // commented by saqlain to check the issue 
  @AuraEnabled
 public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
     try {
@@ -1502,6 +1503,7 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
                                        ERP7__Shipment_Type__c, ERP7__Shipment_Preference_Speed__c, BillToContactId, ERP7__Bill_To_Address__c, ERP7__Bill_To_Return__c, ERP7__Billing_Account_Number_Return__c, ERP7__Billing_Address_Return__c, ERP7__Billing_Contact_Return__c 
                                        FROM Order WHERE Id =: OrdId LIMIT 1];
                     
+                    
                     List<PricebookEntry> pbe = [SELECT UnitPrice, ERP7__Purchase_Price__c, Product2.Id, Product2.Name, Product2.ProductCode, Product2.Description, Product2.ERP7__Version__c, Product2.ERP7__Configure__c, Product2.ERP7__Allow_Back_Orders__c, Product2.ERP7__Is_Kit__c, Product2.ERP7__Picture__c, Product2.ERP7__Serialise__c, Product2.QuantityUnitOfMeasure 
                                                FROM PricebookEntry 
                                                WHERE Pricebook2Id =: orderdetail.Pricebook2Id 
@@ -1553,7 +1555,7 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
         System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
         throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
     } 
-}*/
+}
     
     public class bomwrapper{
         
