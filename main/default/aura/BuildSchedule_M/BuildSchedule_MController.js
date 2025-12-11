@@ -1,10 +1,10 @@
 ({
         focusTOscan : function (component, event,helper) {
             component.set("v.scanValue",'');
-            helper.focusTOscan(component, event);  
-            
+            helper.focusTOscan(component, event);
+
         },
-        
+
         verifyScanCode : function (component, event, helper) {
             var scan_Code = component.get("v.scanValue");
             if(!$A.util.isEmpty(scan_Code)){
@@ -20,7 +20,7 @@
                     $A.util.removeClass(component.find('mainSpin'), "slds-hide");
                     var objsel = Tasks[count];
                     var t = JSON.stringify(objsel);
-                    var action = component.get("c.SelectTasks"); 
+                    var action = component.get("c.SelectTasks");
                     action.setParams({task:t});
                     action.setCallback(this, function(response) {
                         var state = response.getState();
@@ -37,22 +37,22 @@
                                             var countDownDate = new Date(component.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
                                             var now = new Date().getTime();
                                             var distance = now - countDownDate;
-                                            
+
                                             // Time calculations for days, hours, minutes and seconds
                                             var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                                             var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                                             var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                                             var seconds = Math.floor((distance % (1000 * 60)) / 1000);
                                             component.set("v.Timer",days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
-                                            
+
                                             if (distance < 0 || component.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                                 clearInterval(x);
                                                 component.set("v.Timer","");
-                                            } 
+                                            }
                                         }), 1000);
-                                        
+
                                     } else component.set("v.Timer","");
-                                    
+
                                     component.set("v.signatureExist", false);
                                     var selAttachs = component.get("v.SelectedAttachments");
                                     for(var x in selAttachs){
@@ -111,20 +111,20 @@
                                             component.set("v.NewSOLI",NewSOLI);
                                         }
                                 var kNewSOLI = JSON.stringify(component.get("v.NewSOLI"));
-                            } 
+                            }
                         }
                     });
                     $A.enqueueAction(BarcodeAction);
                 }
-            } 
+            }
         },
-        
+
         handleSignatureEvent: function(cmp, event) {
             var Attachments = event.getParam("Attachments");
             if(!cmp.get("v.IsSignatureTab")){
                 var SelectedTask = cmp.get("v.SelectedTask");
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-                var action = cmp.get("c.GetAttachments"); 
+                var action = cmp.get("c.GetAttachments");
                 action.setParams({TaskId:SelectedTask.Id});
                 action.setCallback(this, function(response) {
                     var state = response.getState();
@@ -147,7 +147,7 @@
             } else{
                 var WorkOrder = cmp.get("v.WorkOrder");
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-                var action = cmp.get("c.GetWOAttachments"); 
+                var action = cmp.get("c.GetWOAttachments");
                 action.setParams({WOId:WorkOrder.Id});
                 action.setCallback(this, function(response) {
                     var state = response.getState();
@@ -165,11 +165,11 @@
                 $A.enqueueAction(action);
             }
         },
-        
+
         myAction : function(component, event, helper) {
             $(document).ready(function() {
-                $("#pause").click(function() { 
-                    $(this).hide(); 
+                $("#pause").click(function() {
+                    $(this).hide();
                     $("#play").show();
                     $("#aa").stop(true, false);
                     //audioTag1.pause();
@@ -181,7 +181,7 @@
                 });
             });
         },
-        
+
         taskOperation : function(cmp, event, helper){
             var operation = event.getParam("value");
              var taskId = event.getSource().get("v.name");
@@ -204,7 +204,7 @@
                 $A.enqueueAction(action);
             }
         },
-        
+
         changeCurrentWO : function(cmp, event, helper){
             var op = event.currentTarget.dataset.record;
             //var ind = event.currentTarget.dataset.index;
@@ -227,16 +227,30 @@
                 }
             }
             else{
-                cmp.popInit();  
+                cmp.popInit();
             }
-            
+
         },
-        
+
         getAllDetails : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-             helper.getpicklistValues(cmp, event);
+            helper.getpicklistValues(cmp, event);
+            var toBuild = cmp.get("v.agentToBuild");
+            console.log('toBuild : ',toBuild);
             var woId = cmp.get("v.WO");
             var vrd = cmp.get("v.RD");
+            var checkWOId = cmp.get("v.agentWOId");
+            console.log('checkWOId : ',checkWOId);
+            // Only override WO if passed via param
+            if (checkWOId) {
+                woId = checkWOId;
+
+                // If toBuild is explicitly passed and true, trigger build logic
+                if (toBuild === true) {
+                    console.log('Triggering build logic for WO: ', woId);
+                    helper.agentGetMOData(cmp, event, helper);
+                }
+            }
             cmp.set("v.selectAllCheckbox", false);
             var action = cmp.get("c.getAll");
             var countDownDate;
@@ -274,18 +288,18 @@
                         var obj = response.getReturnValue().MRPSSBW;
                         var showSAButton = false;
                         var ConsumedMRPCount = 0;
-                        for(var x in obj){ 
+                        for(var x in obj){
                             if(Number(obj[x].MRP.ERP7__Consumed_Quantity__c) > 0 || Number(obj[x].MRP.ERP7__Scrapped_Quantity__c) > 0){
                                 ConsumedMRPCount += 1;
                             }
-                            
+
                             var stk = obj[x].Stock;
                             if(obj[x].MRP.ERP7__Total_Amount_Required__c != obj[x].MRP.ERP7__Fulfilled_Amount__c){
                                 showSAButton = true;
                             }
                             cmp.set("v.WeightCapture", true);
-                            
-                            var newUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure; 
+
+                            var newUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure;
                             var oldUOM = obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c;
                             obj[x].WeightMultiplier = 1;
                             if(newUOM != '' && newUOM != undefined && oldUOM != '' && oldUOM != undefined && newUOM != oldUOM){
@@ -334,9 +348,9 @@
                         cmp.set("v.Employee", response.getReturnValue().Employee);
                         cmp.set("v.Attachment", response.getReturnValue().SelectedAttachment);
                         //if(cmp.get('v.SelectedTask') != null && cmp.get('v.SelectedTask') != '' && cmp.get('v.SelectedTask') != undefined)
-                        // if(cmp.get("v.SelectedTask.Id") == response.getReturnValue().SelectedTask.Id)   
+                        // if(cmp.get("v.SelectedTask.Id") == response.getReturnValue().SelectedTask.Id)
                         cmp.set("v.SelectedTask", response.getReturnValue().SelectedTask);
-                        
+
                         cmp.set("v.NewTask", response.getReturnValue().NewTask);
                         cmp.set("v.NewNote", response.getReturnValue().NewNote);
                         cmp.set("v.NewNoteTemp", response.getReturnValue().NewNote);
@@ -385,7 +399,7 @@
                         /* commented SM 14/09/23 if(response.getReturnValue().WIPFlows.length > 0 && response.getReturnValue().manuOrders.ERP7__Product__r.ERP7__Serialise__c == true){
                             var customFlows = [];
                             for(var i in flows){
-                                flows[i].StockAllocated = false;                            
+                                flows[i].StockAllocated = false;
                                 if(flows[i].wipFlow.ERP7__WIP__r.ERP7__Serial_Number__c != undefined && flows[i].wipFlow.ERP7__WIP__r.ERP7__Serial_Number__c != null && ((flows[i].wipFlow.ERP7__Quantity__c + flows[i].wipFlow.ERP7__Quantity_Scrapped__c) != flows[i].wipFlow.ERP7__Quantity_Ordered__c)){
                                     var SN = flows[i].wipFlow.ERP7__WIP__r.ERP7__Serial_Number__c;
                                     console.log('SN : ',SN);
@@ -410,13 +424,13 @@
                                             }
                                         }
                                         countFulfilled = parseFloat(countFulfilled).toFixed(4);
-                                        bomQuantity = parseFloat(bomQuantity).toFixed(4);                                    
+                                        bomQuantity = parseFloat(bomQuantity).toFixed(4);
                                        console.log('countFulfilled : ',countFulfilled);
                                         console.log('bomQuantity : ',bomQuantity);
                                         if(countFulfilled > 0 && countFulfilled >= bomQuantity) mrpCount++; //changed from == to >= by shaguftha
                                         console.log('mrpCount : ',mrpCount);
                                     }
-                                    
+
                                     if(mrpCount == obj.length){
                                         flows[i].StockAllocated = true;
                                         customFlows.push(flows[i]);
@@ -428,7 +442,7 @@
                             console.log('flows : ',JSON.stringify(customFlows));
                         } */
                         // End --> Restrict display of unfulfilled WIPFlows - Imran Khan - 6/7/23
-                        
+
                         var qtyBuild =0;
                         var onlyProducedWIPs = [];
                         if(response.getReturnValue().WIPFlows.length > 0){
@@ -440,9 +454,9 @@
                                     onlyProducedWIPs.push(flows[i].wipFlow);
                                 }
                             }
-                        }    
+                        }
                         console.log('2: ');
-                       
+
                         if(qtyBuild > 0) cmp.set('v.showCompleteWO',true);
                         else cmp.set('v.showCompleteWO',false);
                         if(cmp.get('v.hideToProduceforMRP') && ConsumedMRPCount > 0) cmp.set('v.showCompleteWO',true);
@@ -459,15 +473,15 @@
                         }
                         console.log('SelectedWIPflow init : ',JSON.stringify(cmp.get("v.SelectedWIPflow")));
                         cmp.set("v.RAS", response.getReturnValue().RAS);
-                        cmp.set("v.WorkPlanners", response.getReturnValue().WorkPlanners); 
-                        if(response.getReturnValue().WorkOrder.ERP7__Start_Date__c != undefined) cmp.set("v.StartTime",response.getReturnValue().WorkOrder.ERP7__Start_Date__c); 
-                        if(response.getReturnValue().WorkOrder.ERP7__Expected_Date__c != undefined) cmp.set("v.EndTime",response.getReturnValue().WorkOrder.ERP7__Expected_Date__c); 
+                        cmp.set("v.WorkPlanners", response.getReturnValue().WorkPlanners);
+                        if(response.getReturnValue().WorkOrder.ERP7__Start_Date__c != undefined) cmp.set("v.StartTime",response.getReturnValue().WorkOrder.ERP7__Start_Date__c);
+                        if(response.getReturnValue().WorkOrder.ERP7__Expected_Date__c != undefined) cmp.set("v.EndTime",response.getReturnValue().WorkOrder.ERP7__Expected_Date__c);
                         cmp.set("v.CapacityPlanner", response.getReturnValue().CapacityPlanner);
                         cmp.set("v.AvailableResources",response.getReturnValue().AvailableResources);
                         console.log('inhere before');
                          try{
                              cmp.set("v.WPoptions", response.getReturnValue().wpList);
-                             
+
                            //cmp.find("wpList").set("v.options", response.getReturnValue().wpList)
                         }catch(e){
                             console.log('err~>'+e);
@@ -487,7 +501,7 @@
                                 var countDownDate = new Date(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
                                 var now = new Date().getTime();
                                 var distance = now - countDownDate;
-                                
+
                                 // Time calculations for days, hours, minutes and seconds
                                 var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                                 var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -497,15 +511,15 @@
                                 if (distance < 0 || cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                     clearInterval(x);
                                     cmp.set("v.Timer","");
-                                } 
+                                }
                             }), 1000);
-                        } 
+                        }
                         // ExpectedDuration And RealDuration
                         if(cmp.get("v.WorkOrder.ERP7__Planned_Date_From__c") != undefined && cmp.get("v.WorkOrder.ERP7__Planned_Date_To__c") != undefined){
                             var countDownDate = new Date(cmp.get("v.WorkOrder.ERP7__Planned_Date_From__c")).getTime();
                             var now = new Date(cmp.get("v.WorkOrder.ERP7__Planned_Date_To__c")).getTime();
                             var distance = now - countDownDate;
-                            
+
                             // Time calculations for days, hours, minutes and seconds
                             var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                             var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -517,7 +531,7 @@
                             var countDownDate = new Date(cmp.get("v.WorkOrder.ERP7__Start_Date__c")).getTime();
                             var now = new Date(cmp.get("v.WorkOrder.ERP7__End_Date__c")).getTime();
                             var distance = now - countDownDate;
-                            
+
                             // Time calculations for days, hours, minutes and seconds
                             var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                             var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -525,7 +539,7 @@
                             var seconds = Math.floor((distance % (1000 * 60)) / 1000);
                             cmp.set("v.RealDuration", days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
                         }
-                        
+
                         /*var checklist = response.getReturnValue().checklist;
                         helper.getpicklistValues(cmp, event,checklist);
                         cmp.set('v.guidelinechecklist',response.getReturnValue().guidelines);
@@ -555,9 +569,9 @@
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             });
             $A.enqueueAction(action);
-            
+
         },
-        
+
         ReloadAll : function(cmp, event, helper) {
             cmp.set("v.IsSignatureTab",false);
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -595,7 +609,7 @@
                             var countDownDate = new Date(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
                             var now = new Date().getTime();
                             var distance = now - countDownDate;
-                            
+
                             // Time calculations for days, hours, minutes and seconds
                             var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                             var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -605,15 +619,15 @@
                             if (distance < 0 || cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                 clearInterval(x);
                                 cmp.set("v.Timer","");
-                            } 
+                            }
                         }), 1000);
-                    } 
+                    }
                     // ExpectedDuration And RealDuration
                     if(cmp.get("v.WorkOrder.ERP7__Planned_Date_From__c") != undefined && cmp.get("v.WorkOrder.ERP7__Planned_Date_To__c") != undefined){
                         var countDownDate = new Date(cmp.get("v.WorkOrder.ERP7__Planned_Date_From__c")).getTime();
                         var now = new Date(cmp.get("v.WorkOrder.ERP7__Planned_Date_To__c")).getTime();
                         var distance = now - countDownDate;
-                        
+
                         // Time calculations for days, hours, minutes and seconds
                         var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                         var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -625,7 +639,7 @@
                         var countDownDate = new Date(cmp.get("v.WorkOrder.ERP7__Start_Date__c")).getTime();
                         var now = new Date(cmp.get("v.WorkOrder.ERP7__End_Date__c")).getTime();
                         var distance = now - countDownDate;
-                        
+
                         // Time calculations for days, hours, minutes and seconds
                         var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                         var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -641,12 +655,12 @@
             });
             $A.enqueueAction(action);
         },
-        
+
         Reload1 : function (cmp, event) {
             document.getElementById("rot1").classList.add("erp-rotation");
             cmp.popInit();
         },
-        
+
         DeleteRecordRA: function(cmp, event) {
             var result = confirm("Are you sure?");
             var RecordId = event.getSource().get("v.name");
@@ -664,11 +678,11 @@
                                 cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                                 ////setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                             }
-                            else { 
+                            else {
                                 cmp.popInit();
                             }
-                        } else { 
-                            cmp.set("v.exceptionError",response.getReturnValue().errorMsg); 
+                        } else {
+                            cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                         }
                     });
                     $A.enqueueAction(action);
@@ -676,9 +690,9 @@
                 catch(err) {
                     //alert("Exception : "+err.message);
                 }
-            } 
+            }
         },
-        
+
         DeleteRecordAT: function(cmp, event) {
             var result = confirm("Are you sure?");
             var RecordId = event.getSource().get("v.name");
@@ -698,14 +712,14 @@
                                 cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                                 ////setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                             }
-                            else { 
+                            else {
                                 //cmp.popInit();
                                 if(ObjName == 'Attachment'){
                                     if(!cmp.get("v.IsSignatureTab")){
                                         var obj = cmp.get("v.SelectedAttachments");
                                         var count;
                                         for(var x in obj){
-                                            if(obj[x].Id == RecordId) { 
+                                            if(obj[x].Id == RecordId) {
                                                 count = x;
                                             }
                                         }
@@ -715,7 +729,7 @@
                                         var obj = cmp.get("v.Signatures");
                                         var count;
                                         for(var x in obj){
-                                            if(obj[x].Id == RecordId) { 
+                                            if(obj[x].Id == RecordId) {
                                                 count = x;
                                             }
                                         }
@@ -727,7 +741,7 @@
                                     var obj = cmp.get("v.SelectedNotes");
                                     var count;
                                     for(var x in obj){
-                                        if(obj[x].Id == RecordId) { 
+                                        if(obj[x].Id == RecordId) {
                                             count = x;
                                         }
                                     }
@@ -736,7 +750,7 @@
                                 }
                                 cmp.set("v.exceptionError","");
                             }
-                        } else { 
+                        } else {
                             cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                             // //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         }
@@ -746,37 +760,37 @@
                 catch(err) {
                     //alert("Exception : "+err.message);
                 }
-            } 
+            }
         },
-        
+
         openResourceAllocationModal: function(cmp, event) {
             cmp.set("v.raPage",true);
             //$A.util.addClass(cmp.find("myResourceAllocationModal"), 'slds-fade-in-open');
             //$A.util.addClass(cmp.find("myResourceAllocationModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         manageScreen: function(cmp, event) {
             if(cmp.get("v.saPage") || cmp.get("v.fPage") || cmp.get("v.raPage")) cmp.set("v.mainPage",false);
             else cmp.set("v.mainPage",true);
         },
-        
+
         lookupClickBatch :function(cmp,helper){
             try{
                 console.log('component.get("v.ManuOrder")~>'+JSON.stringify(cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c));
-                
+
                 var siteId = '';
                 if(cmp.get("v.ManuOrder").ERP7__Routing__c != undefined && cmp.get("v.ManuOrder").ERP7__Routing__c != null){
                     if(cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != undefined && cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != null){
                         siteId = cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c;
                     }
                 }
-                
+
                 console.log('siteId~>'+siteId);
-                
+
                 var acc = undefined;
-                var obj = cmp.get("v.MRPs"); 
+                var obj = cmp.get("v.MRPs");
                 for(var x in obj){
-                    if(obj[x].isSelect) { 
+                    if(obj[x].isSelect) {
                         acc = obj[x].MRP.ERP7__MRP_Product__c;
                     }
                 }
@@ -784,37 +798,37 @@
                 var qry;
                 if(acc == undefined) qry = ' ';
                 else qry = ' And ERP7__Product__c = \''+acc+'\'';
-                
+
                 qry += ' AND ERP7__Product__c != null AND ERP7__Active__c = true AND ERP7__Expired__c = false AND ERP7__Available_Quantity__c > 0 ';
                 if(siteId != '') qry += ' AND ERP7__Received_site__c Like \'%'+siteId+'%\' ';
-                
+
                 console.log('final batch qry~>'+qry);
-                
+
                 cmp.set("v.qry",qry);
                 //alert(qry);
-                
+
             }catch(e){
                 console.log('lookupClickBatch err~>',e);
             }
         },
-        
+
         lookupClickSerial :function(cmp,helper){
             try{
                 console.log('component.get("v.ManuOrder")~>'+JSON.stringify(cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c));
-                
+
                 var siteId = '';
                 if(cmp.get("v.ManuOrder").ERP7__Routing__c != undefined && cmp.get("v.ManuOrder").ERP7__Routing__c != null){
                     if(cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != undefined && cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != null){
                         siteId = cmp.get("v.ManuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c;
                     }
                 }
-                
+
                 console.log('siteId~>'+siteId);
-                
+
                 var acc = undefined;
-                var obj = cmp.get("v.MRPs"); 
+                var obj = cmp.get("v.MRPs");
                 for(var x in obj){
-                    if(obj[x].isSelect) { 
+                    if(obj[x].isSelect) {
                         acc = obj[x].MRP.ERP7__MRP_Product__c;
                     }
                 }
@@ -822,46 +836,46 @@
                 var qry;
                 if(acc == undefined) qry = ' ';
                 else qry = ' And ERP7__Product__c = \''+acc+'\'';
-                
+
                 qry += ' And ERP7__Available__c = true AND ERP7__Expired__c = false AND ERP7__Scrap__c = false ';
                 if(siteId != '') qry += ' AND ERP7__Warehouse__c = \''+siteId+'\' ';
-                
+
                 console.log('final serial qry~>'+qry);
-                
+
                 cmp.set("v.qry",qry);
                 //alert(qry);
             }catch(e){
                 console.log('lookupClickBatch err~>',e);
             }
         },
-        
+
         lookupClickBatchFor :function(cmp,helper){
             var acc = undefined;
             var MO = cmp.get("v.ManuOrder");
             if(MO.ERP7__Product__c != undefined) acc = MO.ERP7__Product__c;
-            
+
             //alert(acc);
             var qry;
-            if(acc == undefined) qry = ' '; 
+            if(acc == undefined) qry = ' ';
             else qry = ' And ERP7__Product__c = \''+acc+'\' And ERP7__Manufacturing_Order__c = \''+MO.Id+'\'';
             cmp.set("v.qry",qry);
             //alert(qry);
         },
-        
+
         lookupClickSerialFor :function(cmp,helper){
-            
+
             var acc = undefined;
             var MO = cmp.get("v.ManuOrder");
             if(MO.ERP7__Product__c != undefined) acc = MO.ERP7__Product__c;
-            
+
             //alert(acc);
             var qry;
-            if(acc == undefined) qry = ' '; 
+            if(acc == undefined) qry = ' ';
             else qry = ' And ERP7__Product__c = \''+acc+'\' And ERP7__Manufacturing_Order__c = \''+MO.Id+'\'';
             cmp.set("v.qry",qry);
             //alert(qry);
         },
-        
+
         NewTask : function(cmp, event, helper) {
             cmp.set("v.exceptionError", "");
             cmp.set("v.Task",cmp.get("v.NewTask"));
@@ -869,7 +883,7 @@
             $A.util.addClass(cmp.find("newTaskModal"),"slds-fade-in-open");
             $A.util.addClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         NewNote : function(cmp, event, helper) {
             cmp.set("v.exceptionError", "");
             cmp.set("v.NewNote",cmp.get("v.NewNoteTemp"));
@@ -879,20 +893,20 @@
             $A.util.addClass(cmp.find("newTaskNoteModal"),"slds-fade-in-open");
             $A.util.addClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         UpdateTask : function(cmp, event, helper) {
             cmp.set("v.exceptionError", "");
             cmp.set("v.Task",cmp.get("v.SelectedTask"));
             $A.util.addClass(cmp.find("newTaskModal"),"slds-fade-in-open");
             $A.util.addClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         ReloadNew : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find("newTaskModal"),"slds-fade-in-open");
             $A.util.removeClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
             $A.util.removeClass(cmp.find("newTaskNoteModal"),"slds-fade-in-open");
         },
-        
+
         SaveTask : function(cmp, event, helper) {
             //alert('In');
             var Task = cmp.get("v.Task");
@@ -901,7 +915,7 @@
                 cmp.set("v.exceptionError", $A.get('$Label.c.Finished_Quantity_cannot_be_greater_than_Quantity_Ordered'));
                 ////setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
             }
-            
+
             else if(Task.Name == '' || Task.Name == null || Task.Name == undefined){
                 cmp.set("v.exceptionError", $A.get('$Label.c.Enter_the_task_Name'));
             }
@@ -917,7 +931,7 @@
                             else{
                                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
                                 var t = JSON.stringify(cmp.get("v.Task"));
-                                var action = cmp.get("c.SaveAction"); 
+                                var action = cmp.get("c.SaveAction");
                                 action.setParams({task:t});
                                 action.setCallback(this, function(response) {
                                     var state = response.getState();
@@ -943,7 +957,7 @@
                                 $A.enqueueAction(action);
                             }
         },
-        
+
         SaveNote : function(cmp, event, helper) {
             //alert('In');
             var NewNote = cmp.get("v.NewNote");
@@ -978,12 +992,12 @@
                 $A.enqueueAction(action);
             }
         },
-        
+
         GetAllAttachments : function(cmp, event, helper) {
             //alert('In');
             var SelectedTask = cmp.get("v.SelectedTask");
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-            var action = cmp.get("c.GetAttachments"); 
+            var action = cmp.get("c.GetAttachments");
             action.setParams({TaskId:SelectedTask.Id});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1000,9 +1014,9 @@
                 }
             });
             $A.enqueueAction(action);
-            
+
         },
-        
+
         TaskPlus : function(cmp, event, helper) {
             //alert('In');
             //$A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -1011,7 +1025,7 @@
             taskplus.ERP7__Finished_Quantity__c += 1;
             var t = JSON.stringify(taskplus);
             //alert(t);
-            var action = cmp.get("c.SaveAction"); 
+            var action = cmp.get("c.SaveAction");
             action.setParams({task:t});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1022,7 +1036,7 @@
                         //cmp.popInit();
                         var obj = cmp.get("v.Tasks");
                         for(var x in obj){
-                            if(obj[x].Id == taskplus.Id) { 
+                            if(obj[x].Id == taskplus.Id) {
                                 obj[x].ERP7__Finished_Quantity__c = taskplus.ERP7__Finished_Quantity__c;
                                 break;
                             }
@@ -1041,7 +1055,7 @@
             });
             $A.enqueueAction(action);
         },
-        
+
         TaskMinus : function(cmp, event, helper) {
             //alert('In');
             //$A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -1049,7 +1063,7 @@
             var taskplus = cmp.get("v.Task");
             taskplus.ERP7__Finished_Quantity__c -= 1;
             var t = JSON.stringify(taskplus);
-            var action = cmp.get("c.SaveAction"); 
+            var action = cmp.get("c.SaveAction");
             action.setParams({task:t});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1060,7 +1074,7 @@
                         //cmp.popInit();
                         var obj = cmp.get("v.Tasks");
                         for(var x in obj){
-                            if(obj[x].Id == taskplus.Id) { 
+                            if(obj[x].Id == taskplus.Id) {
                                 obj[x].ERP7__Finished_Quantity__c = taskplus.ERP7__Finished_Quantity__c;
                                 break;
                             }
@@ -1079,39 +1093,39 @@
             });
             $A.enqueueAction(action);
         },
-        
+
     /*  onFileUploaded: function (cmp, event, helper) {
         try {
             console.log('onFileUploaded called');
             var files = cmp.get("v.FileList");
             var SelTask = cmp.get("v.SelectedTask");
             var totalRequestSize = 0;
-    
+
             if (files && files.length > 0) {
                 // Check total request size and individual file sizes
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i][0];
                     const fileSize = file.size;
-    
+
                     // Check individual file size (max 2 MB)
                     if (fileSize > 2000000) {
                         helper.showToast('Error', 'error', 'File ' + file.name + ' exceeds the 2 MB limit.');
                         return;
                     }
-    
+
                     // Accumulate total request size
                     totalRequestSize += fileSize;
-    
+
                     // Check total request size (max 6 MB)
                     if (totalRequestSize > 6000000) {
                         helper.showToast('Error', 'error', 'Total request size exceeds the 6 MB limit. Please upload fewer or smaller files.');
                         return;
                     }
                 }
-    
+
                 var file = files[0][0]; // Handle the first file
                 var reader = new FileReader();
-    
+
                 reader.onloadend = function () {
                     var contents = reader.result;
                     var base64Mark = 'base64,';
@@ -1119,14 +1133,14 @@
                     var fileContents = contents.substring(dataStart);
                     var action = cmp.get("c.uploadFile");
                     cmp.set("v.showLoadingSpinner", true);
-    
+
                     action.setParams({
                         parent: SelTask.Id,
                         fileName: file.name,
                         base64Data: encodeURIComponent(fileContents),
                         contentType: file.type
                     });
-    
+
                     action.setCallback(this, function (response) {
                         var state = response.getState();
                         console.log('state : ', state);
@@ -1145,12 +1159,12 @@
         } catch (e) {
             console.log('error upload : ', e);
         }
-    
-            /* var files = cmp.get("v.FileList");  
+
+            /* var files = cmp.get("v.FileList");
             var file = files[0][0];
             var filek = JSON.stringify(file);
             var SelTask = cmp.get("v.SelectedTask");
-            if (files.length > 0) { //files && 
+            if (files.length > 0) { //files &&
                $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
                 var reader = new FileReader();
                 reader.onloadend = function() {
@@ -1182,11 +1196,11 @@
         //$A.util.removeClass(cmp.find('mainSpin'), "slds-hide");//7
         cmp.set("v.showSpinner",true);
         try{
-            let files = cmp.get("v.FileList");  
+            let files = cmp.get("v.FileList");
              var totalRequestSize = 0;
             for (let i = 0; i < files[0].length; i++) {
                 let file = files[0][i];
-               
+
     // Validate individual file size (max 2 MB) before processing
     if (file.size > 2000000) {
         helper.showToast("Error", "error", "File " + file.name + " exceeds the 2 MB limit.");
@@ -1204,7 +1218,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             let fileNameList = [];
             let base64DataList = [];
             let contentTypeList = [];
-            
+
             if (files && files.length > 0) {
                 let parentId = event.getSource().get("v.name");
                 console.log('files : ',files.length);
@@ -1231,25 +1245,25 @@ console.log('FileList : ', JSON.stringify(FileList));
                         console.log('i~>'+i);
                         let file = files[0][i];
                         let reader = new FileReader();
-                        //reader.onloadend is asynchronous using let instead of var inside for loop arshad 
+                        //reader.onloadend is asynchronous using let instead of var inside for loop arshad
                         reader.onloadend = function() {
-                            
+
                             console.log('inside reader.onloadend');
                             let contents = reader.result;
                             let base64Mark = 'base64,';
                             let dataStart = contents.indexOf(base64Mark) + base64Mark.length;
                             let fileContents = contents.substring(dataStart);
-                           
-                            
+
+
                             fileNameList.push(file.name);
                             base64DataList.push(encodeURIComponent(fileContents));
                             contentTypeList.push(file.type);
 
-                            
+
                             console.log('fileNameList~>'+fileNameList.length);
                             console.log('base64DataList~>'+base64DataList.length);
                             console.log('contentTypeList~>'+contentTypeList.length);
-                            
+
                             if(fileNameList.length == files[0].length){
                             helper.finishAllFilesUpload(parentId,fileNameList,base64DataList,contentTypeList,cmp,event,helper);
                             }else console.log('notequal');
@@ -1268,15 +1282,15 @@ console.log('FileList : ', JSON.stringify(FileList));
             //$A.util.addClass(cmp.find('mainSpin'), "slds-hide");//9
             cmp.set("v.showSpinner",false);
         }
-        
+
     },
-        
+
         SelectTask : function(cmp, event, helper) {
             var count = event.currentTarget.getAttribute('data-mosoliId');
             var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                     break;
                 }
@@ -1285,7 +1299,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
                 var t = JSON.stringify(objsel);
                 //cmp.set("v.SelectedTask.Id","");
-                var action = cmp.get("c.SelectTasks"); 
+                var action = cmp.get("c.SelectTasks");
                 action.setParams({task:t});
                 action.setCallback(this, function(response) {
                     var state = response.getState();
@@ -1302,29 +1316,29 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 //cmp.set('v.guidelinexits',response.getReturnValue().recordCreated);
                                 //cmp.set('v.Checklist',response.getReturnValue().checklist);
                                 //cmp.set('v.guidelinechecklist',response.getReturnValue().guidelines);
-                                
+
                                 //if(cmp.get('v.guidelinechecklist').length > 0) cmp.set('v.guidelinexits',true);
                                 if(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") != undefined && cmp.get("v.SelectedTask.ERP7__Status__c") == 'In Progress'){
                                     var x = setInterval($A.getCallback(function() {
                                         var countDownDate = new Date(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
                                         var now = new Date().getTime();
                                         var distance = now - countDownDate;
-                                        
+
                                         // Time calculations for days, hours, minutes and seconds
                                         var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                                         var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                                         var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                                         var seconds = Math.floor((distance % (1000 * 60)) / 1000);
                                         cmp.set("v.Timer",days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
-                                        
+
                                         if (distance < 0 || cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                             clearInterval(x);
                                             cmp.set("v.Timer","");
-                                        } 
+                                        }
                                     }), 1000);
-                                    
+
                                 } else cmp.set("v.Timer","");
-                                
+
                                 cmp.set("v.signatureExist", false);
                                 var selAttachs = cmp.get("v.SelectedAttachments");
                                 for(var x in selAttachs){
@@ -1334,7 +1348,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 }
                                 //if(cmp.get("v.SelectedTask.ERP7__Status__c") == 'Completed') cmp.popInit();
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                                
+
                             } catch(err){  }
                         }
                         else{
@@ -1349,12 +1363,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.enqueueAction(action);
             }
         },
-        
+
         StartTimeCardEntry : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var task = cmp.get("v.SelectedTask");
             var t = JSON.stringify(task);
-            var action = cmp.get("c.StartTimeCardEntrys"); 
+            var action = cmp.get("c.StartTimeCardEntrys");
             action.setParams({task:t});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1370,18 +1384,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 var countDownDate = new Date(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
                                 var now = new Date().getTime();
                                 var distance = now - countDownDate;
-                                
+
                                 // Time calculations for days, hours, minutes and seconds
                                 var days = Math.floor(distance / (1000 * 60 * 60 * 24));
                                 var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                                 var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                                 var seconds = Math.floor((distance % (1000 * 60)) / 1000);
                                 cmp.set("v.Timer",days + "d " + hours + "h "+ minutes + "m " + seconds + "s ");
-                                
+
                                 if (distance < 0 || cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                     clearInterval(x);
                                     cmp.set("v.Timer","");
-                                } 
+                                }
                             }), 1000);
                         } else cmp.set("v.Timer","");
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
@@ -1397,14 +1411,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         StopTimeCardEntry : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var task = cmp.get("v.SelectedTask");
             var TCE = cmp.get("v.SelectedTask_TimeCardEntry");
             var t = JSON.stringify(task);
             var stce = JSON.stringify(TCE);
-            var action = cmp.get("c.StopTimeCardEntrys"); 
+            var action = cmp.get("c.StopTimeCardEntrys");
             action.setParams({task:t, stce:stce});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1428,7 +1442,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         StopTimeCard : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var target = event.getSource();
@@ -1437,7 +1451,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var obj = cmp.get("v.TimeCardEntries");
             var objsel;
             for(var x in obj){
-                if(obj[x].Id == count) { 
+                if(obj[x].Id == count) {
                     objsel = obj[x];
                     break;
                 }
@@ -1445,7 +1459,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var task = cmp.get("v.SelectedTask");
             var t = JSON.stringify(task);
             var stce = JSON.stringify(objsel);
-            var action = cmp.get("c.StopTimeCardEntrys"); 
+            var action = cmp.get("c.StopTimeCardEntrys");
             action.setParams({task:t, stce:stce});
             action.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1464,7 +1478,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         SelectAttachment : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             // var target = event.getSource();
@@ -1477,7 +1491,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             for(var x in obj){
                 if(x == par){
                     for(var y in obj[x].Attachments){
-                        if(y == count) { 
+                        if(y == count) {
                             objsel = obj[x].Attachments[y];
                             break;
                         }
@@ -1490,12 +1504,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.attUrl", urlAtt);
             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
         },
-        
+
         DeleteTask : function(cmp, event, helper) {
             if(confirm("Are you sure?")){
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
                 var Id = cmp.get("v.SelectedTask").Id;
-                var action = cmp.get("c.DeleteAction"); 
+                var action = cmp.get("c.DeleteAction");
                 action.setParams({tId:Id});
                 action.setCallback(this, function(response) {
                     var state = response.getState();
@@ -1517,7 +1531,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.enqueueAction(action);
             }
         },
-        
+
         StartTask : function(cmp, event, helper) {
             console.log('StartTask : ');
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -1526,7 +1540,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(obj[x].Id == count) { 
+                if(obj[x].Id == count) {
                     objsel = obj[x];
                     break;
                 }
@@ -1565,7 +1579,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         cmp.set("v.Busy", response.getReturnValue().Busy);
                         cmp.set("v.SelectedTask_TimeCardEntry", response.getReturnValue().SelectedTask_TimeCardEntry);
                         cmp.set("v.Permit", response.getReturnValue().Permit);
-                        
+
                         if(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") != undefined && cmp.get("v.SelectedTask.ERP7__Status__c") == 'In Progress'){
                             var x = setInterval($A.getCallback(function() {
                                 var countDownDate = new Date(cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c")).getTime();
@@ -1580,9 +1594,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 if (distance < 0 || cmp.get("v.SelectedTask_TimeCardEntry.ERP7__Start_Time__c") == undefined || cmp.get("v.SelectedTask.ERP7__Status__c") != 'In Progress') {
                                     clearInterval(x);
                                     cmp.set("v.Timer","");
-                                } 
+                                }
                             }), 1000);
-                            
+
                         } else cmp.set("v.Timer","");
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
@@ -1608,14 +1622,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         PauseTask : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-            var count = event.getSource().get('v.name'); 
+            var count = event.getSource().get('v.name');
             var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(obj[x].Id == count) { 
+                if(obj[x].Id == count) {
                     objsel = obj[x];
                     break;
                 }
@@ -1627,7 +1641,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var WO = cmp.get("v.WorkOrder");
             var MRPS = cmp.get("v.MRPSS");
             Task.ERP7__Status__c = "On-Hold";
-            var action = cmp.get("c.TaskUpdate"); 
+            var action = cmp.get("c.TaskUpdate");
             action.setParams({
                 Task1:JSON.stringify(Task),
                 WO1:JSON.stringify(WO),
@@ -1665,14 +1679,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         PreFinishTask : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-            //var count = event.getSource().get('v.name'); 
+            //var count = event.getSource().get('v.name');
             /*var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(obj[x].Id == count) { 
+                if(obj[x].Id == count) {
                     objsel = obj[x];
                     break;
                 }
@@ -1688,9 +1702,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 console.log('1');
                                 console.log('2 : ',tasklist[x].checklists[y].ERP7__Instructions__c);
                                 if(tasklist[x].checklists[y].ERP7__Instructions__c == undefined || tasklist[x].checklists[y].ERP7__Instructions__c == null || tasklist[x].checklists[y].ERP7__Instructions__c == '' || tasklist[x].checklists[y].ERP7__Instructions__c == '--None--' || tasklist[x].checklists[y].ERP7__Instructions__c == 'Pending'){
-                                    
+
                                     cmp.set('v.exceptionError',$A.get('$Label.c.Please_complete_the_checklists')+' : ' +tasklist[x].checklists[y].Name);
-                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide"); 
+                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                     cmp.set("v.SelectedTask.ERP7__Status__c", tasklist[x].Task.ERP7__Status__c);
                                     return;
                                 }
@@ -1702,7 +1716,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                 }
             }
-            
+
             var checklistAction = cmp.get('c.SaveTaskValues');
             checklistAction.setCallback(this, function(response) {
                 var state = response.getState();
@@ -1713,8 +1727,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                     cmp.set("v.exceptionError","");
                     cmp.set("v.exceptionError","");
                     var WO = cmp.get("v.WorkOrder");
-                    
-                    var action = cmp.get("c.PreTaskFinish"); 
+
+                    var action = cmp.get("c.PreTaskFinish");
                     action.setParams({Task1:JSON.stringify(Task)});
                     action.setCallback(this, function(response) {
                         var state = response.getState();
@@ -1728,7 +1742,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     //$A.util.addClass(cmp.find("prodQtyModal"),"slds-fade-in-open");
                                     //$A.util.addClass(cmp.find("prodQtyModalBackdrop"),"slds-backdrop_open");
                                     cmp.set("v.ToProduce", Task.ERP7__Finished_Quantity__c);
-                                    
+
                                     var MRPSS = cmp.get("v.MRPSS");
                                     var ToProduce = cmp.get("v.ToProduce");
                                     var WO = cmp.get("v.WorkOrder");
@@ -1740,7 +1754,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     }
                                     cmp.set("v.MRPSS",MRPSS);
                                     var WOtasks = cmp.get("v.Tasks");
-                                    
+
                                     if(WOtasks.length == 1) cmp.set('v.showcheck',false);
                                     for(var i in WOtasks){
                                         if(WOtasks[i].ERP7__Status__c == cmp.get("v.taskStatus")){
@@ -1753,7 +1767,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                             break;
                                         }
                                     }
-                                } 
+                                }
                                 else{
                                     var WO1 = cmp.get("v.WorkOrder");
                                     var MRPS = cmp.get("v.MRPSS");
@@ -1818,7 +1832,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(checklistAction);
         },
-        
+
         closeProdQtyModal : function(cmp, event){
             $A.util.removeClass(cmp.find("prodQtyModal"),"slds-fade-in-open");
             $A.util.removeClass(cmp.find("prodQtyModalBackdrop"),"slds-backdrop_open");
@@ -1826,8 +1840,8 @@ console.log('FileList : ', JSON.stringify(FileList));
          imageError: function(component,event,helper){
             console.log('imageError called');
             event.target.style.display = 'none';
-        },  
-        
+        },
+
         PartialFinishTask : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var Task = cmp.get("v.SelectedTask");
@@ -1841,7 +1855,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError", $A.get('$Label.c.Built_quantity_cannot_be_greater_than_ordered_quantity'));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                 error = true;
-            } 
+            }
             if(!error){
                 for(var x in MRPS){
                     if(MRPS[x].ERP7__Total_Amount_Required__c  < (MRPS[x].ERP7__Consumed_Quantity__c + MRPS[x].ERP7__Scrapped_Quantity__c)){
@@ -1852,7 +1866,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 }
             }
             if(!error) {
-                var action = cmp.get("c.TaskUpdatePartial"); 
+                var action = cmp.get("c.TaskUpdatePartial");
                 action.setParams({Task1:JSON.stringify(Task),WO1:JSON.stringify(WO),MRPS1:JSON.stringify(MRPS)});
                 action.setCallback(this, function(response) {
                     var state = response.getState();
@@ -1884,14 +1898,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             }
         },
-        
+
         FinishTask : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var count = event.currentTarget.getAttribute('data-mosoliId');
             var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                     break;
                 }
@@ -1908,7 +1922,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError",  $A.get('$Label.c.Built_quantity_cannot_be_greater_than_ordered_quantity'));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                 error = true;
-            } 
+            }
             if(!error){
                 for(var x in MRPS){
                     if(MRPS[x].ERP7__Total_Amount_Required__c  != (MRPS[x].ERP7__Consumed_Quantity__c + MRPS[x].ERP7__Scrapped_Quantity__c)){
@@ -1920,7 +1934,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             if(!error) {
                 Task.ERP7__Status__c = cmp.get("v.taskStatus"); //"Completed";
-                var action = cmp.get("c.TaskUpdate"); 
+                var action = cmp.get("c.TaskUpdate");
                 action.setParams({
                     Task1:JSON.stringify(Task),
                     WO1:JSON.stringify(WO),
@@ -1928,7 +1942,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 });
                 action.setCallback(this, function(response) {
                     var state = response.getState();
-                    
+
                     if (state === "SUCCESS") {
                         if(response.getReturnValue().errorMsg == ''){
                             cmp.set("v.SelectedTask",response.getReturnValue().SelectedTask);
@@ -1957,7 +1971,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             }
         },
-        
+
         CommitTask : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var wipStatus = '';
@@ -1978,10 +1992,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError",  $A.get('$Label.c.Built_quantity_cannot_be_greater_than_ordered_quantity'));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                 error = true;
-            } 
+            }
             if(!error){
                 for(var x in MRPSS){
-                    if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                     let mrp =MRPSS[x].MRP ;
+                    if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                         cmp.set("v.exceptionError", $A.get('$Label.c.Please_allocate_stock_to_consume'));
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         error = true;
@@ -2021,15 +2036,15 @@ console.log('FileList : ', JSON.stringify(FileList));
                         finish = false;
                     }
                     var qtytoconsume = 0; var qtytoscarp = 0;
-                    qtytoconsume = MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume; 
+                    qtytoconsume = MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume;
                     MRPSS[x].MRP.ERP7__Consumed_Quantity__c = qtytoconsume; //Math.round((qtytoconsume + Number.EPSILON) * 100) / 100;
                     qtytoscarp =  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + MRPSS[x].quantityToScrap;
                     MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = qtytoscarp; //Math.round((qtytoscarp + Number.EPSILON) * 100) / 100;
-                    
+
                 }
                 /*if((WO.ERP7__Quantity_Built__c + ToProduce) != WO.ERP7__Quantity_Ordered__c){
                     finish = false;
-                } 
+                }
                 WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c + ToProduce;*/
             }
             if(finish && !error){
@@ -2063,7 +2078,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     cmp.set("v.signatureExist", true);
                                 }
                             }
-                            
+
                             //cmp.set("v.Evaluate", false);
                             //$('#myModal3').modal('hide');
                             //$A.util.removeClass(cmp.find("prodQtyModal"),"slds-fade-in-open");
@@ -2080,7 +2095,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
-                        else { 
+                        else {
                             cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                             //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                             WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
@@ -2089,10 +2104,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 qtytoconsume = MRPSS[x].MRP.ERP7__Consumed_Quantity__c - MRPSS[x].quantityToConsume;
                                 MRPSS[x].MRP.ERP7__Consumed_Quantity__c = qtytoconsume; //Math.round((qtytoconsume + Number.EPSILON) * 100) / 100;
                                 qtytoscarp =  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c - MRPSS[x].quantityToScrap;
-                                MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = qtytoscarp; //Math.round((qtytoscarp + Number.EPSILON) * 100) / 100;                            
+                                MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = qtytoscarp; //Math.round((qtytoscarp + Number.EPSILON) * 100) / 100;
                             }
                             cmp.set("v.MRPSS", MRPSS);
-                            
+
                             cmp.set("v.signatureExist", false);
                             var selAttachs = cmp.get("v.SelectedAttachments");
                             for(var x in selAttachs){
@@ -2102,7 +2117,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
-                        
+
                     } else{
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
@@ -2112,7 +2127,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             MRPSS[x].MRP.ERP7__Consumed_Quantity__c = qtytoconsume; //Math.round((qtytoconsume + Number.EPSILON) * 100) / 100;
                             qtytoscarp = MRPSS[x].MRP.ERP7__Scrapped_Quantity__c - MRPSS[x].quantityToScrap;
                             MRPSS[x].MRP.ERP7__Scrapped_Quantity__c =  qtytoscarp; //Math.round((qtytoscarp + Number.EPSILON) * 100) / 100;
-                            
+
                         }
                         cmp.set("v.MRPSS", MRPSS);
                         cmp.set("v.signatureExist", false);
@@ -2124,9 +2139,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             }
-            
+
         },
-        
+
         CommitTaskonFinsh : function(cmp, event, helper) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var wipStatus = '';
@@ -2144,7 +2159,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError",  $A.get('$Label.c.Built_quantity_cannot_be_greater_than_ordered_quantity'));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                 error = true;
-            } 
+            }
             if(!error){
                 for(var x in MRPSS){
                     console.log('AllMRPs[x] CommitTaskonFinsh: ',MRPSS[x]);
@@ -2166,7 +2181,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                     console.log('MRPSS[x].quantityToConsume : ',MRPSS[x].quantityToConsume);
                     console.log('MRPSS[x].quantityToScrap : ',MRPSS[x].quantityToScrap);
-                  /* commented by shaguftha on 07/11/23 
+                  /* commented by shaguftha on 07/11/23
                    * if(MRPSS[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && ((MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap) > 1)){
                         cmp.set("v.exceptionError", $A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot_be_greater_than_one_for_Serialised'));
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
@@ -2176,7 +2191,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 }
             }
             if(!error){
-                
+
                 var producedQty = 0;
                 var scrapQty = 0;
                 var isCommitted = true;
@@ -2213,14 +2228,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                     // Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) +  Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4);
                     console.log('consume : ',consume);
                     MRPSS[x].MRP.ERP7__Consumed_Quantity__c  = Number.parseFloat(consume).toFixed(4);
-                    
+
                     console.log('MRPSS[x].MRP.ERP7__Consumed_Quantity__c CommitTaskonFinsh: ',MRPSS[x].MRP.ERP7__Consumed_Quantity__c);
                     scrap = (parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) + parseFloat(MRPSS[x].quantityToScrap)).toFixed(4)
                     // Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(4) + Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(4);
                     console.log('scrap : ',scrap);
                     MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(scrap).toFixed(4);
                     console.log('MRPSS[x].MRP.ERP7__Scrapped_Quantity__c CommitTaskonFinsh: ',MRPSS[x].MRP.ERP7__Scrapped_Quantity__c);
-                    
+
                 }
             }
             if(finish && !error){console.log('wo status set here??')
@@ -2250,7 +2265,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             cmp.set("v.Busy", response.getReturnValue().Busy);
                             cmp.set("v.SelectedTask_TimeCardEntry", response.getReturnValue().SelectedTask_TimeCardEntry);
                             cmp.set("v.Permit", response.getReturnValue().Permit);
-                            
+
                             cmp.set("v.signatureExist", false);
                             var selAttachs = cmp.get("v.SelectedAttachments");
                             for(var x in selAttachs){
@@ -2260,7 +2275,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
-                        else { 
+                        else {
                             cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                             //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                             WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
@@ -2272,7 +2287,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 //MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + Number.EPSILON) * 100) / 100;
                             }
                             cmp.set("v.MRPSS", MRPSS);
-                            
+
                             cmp.set("v.signatureExist", false);
                             var selAttachs = cmp.get("v.SelectedAttachments");
                             for(var x in selAttachs){
@@ -2282,12 +2297,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
-                        
+
                     } else{
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
                         //WO.ERP7__Quantity_Built__c = Math.round((WO.ERP7__Quantity_Built__c + Number.EPSILON) * 100) / 100;
-                        
+
                         for(var x in MRPSS){
                             MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) - Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4);
                             //MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + Number.EPSILON) * 100) / 100;
@@ -2305,9 +2320,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                 return error;
             }
-            
+
         },
-        
+
         ToProduceChange : function(cmp, event, helper) {
             var MRPSS = cmp.get("v.MRPSS");
             var ToProduce = cmp.get("v.ToProduce");
@@ -2318,7 +2333,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             cmp.set("v.MRPSS",MRPSS);
         },
-        
+
         StopTask : function(cmp, event, helper) {
             if(confirm("Are you sure?")){
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -2327,7 +2342,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 var MRPS = cmp.get("v.MRPSS");
                 var TimeSheet = cmp.get("v.TimeSheet");
                 Task.ERP7__Status__c = "Cancelled";
-                var action = cmp.get("c.TaskUpdate"); 
+                var action = cmp.get("c.TaskUpdate");
                 action.setParams({
                     Task1:JSON.stringify(Task),
                     WO1:JSON.stringify(WO),
@@ -2384,7 +2399,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 if(tasklist[x].checklists[y].ERP7__Instructions__c == undefined || tasklist[x].checklists[y].ERP7__Instructions__c == null || tasklist[x].checklists[y].ERP7__Instructions__c == '' || tasklist[x].checklists[y].ERP7__Instructions__c == '--None--' || tasklist[x].checklists[y].ERP7__Instructions__c == 'Pending'){
                                     error =true;
                                     cmp.set('v.exceptionError',$A.get('$Label.c.Please_complete_the_checklists')+':' +tasklist[x].checklists[y].Name);
-                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide"); 
+                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                     cmp.set("v.SelectedTask.ERP7__Status__c", tasklist[x].Task.ERP7__Status__c);
                                     return;
                                 }
@@ -2404,7 +2419,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         var WO = cmp.get("v.WorkOrder");
                         var MRPS = cmp.get("v.MRPs");
                         var TimeSheet = cmp.get("v.TimeSheet");
-                         var action = cmp.get("c.TaskUpdate"); 
+                         var action = cmp.get("c.TaskUpdate");
                         action.setParams({
                             Task1:JSON.stringify(Task),
                             WO1:JSON.stringify(WO),
@@ -2436,13 +2451,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             }
                         });
-                        $A.enqueueAction(action); 
+                        $A.enqueueAction(action);
                     }
                     else{
                         console.log('Error : '+JSON.stringify(response.getError()));
                     }
                 });
-                $A.enqueueAction(checklistAction);                             
+                $A.enqueueAction(checklistAction);
             }
         },
        /* CompleteTask : function(cmp, event, helper) {
@@ -2452,7 +2467,7 @@ console.log('FileList : ', JSON.stringify(FileList));
           //  var objsel;
            // var showSave = false;
            // for(var x in obj){
-               // if(x == count) { 
+               // if(x == count) {
                   //  objsel = obj[count];
                   //  break;
               //  }
@@ -2470,19 +2485,19 @@ console.log('FileList : ', JSON.stringify(FileList));
             if(guidelines!= null && guidelines != undefined && guidelines != '') guidelength=cmp.get('v.guidelinechecklist').length;
             if(checks != null && checks != undefined && checks != '') checklst = checks.length;
             if(checklst  > 0 && guidelength == 0 && Task.ERP7__Status__c == 'Completed'){
-                
+
                 for(var i in checks){
                     if(checks[i].ERP7__Operation__c != null && checks[i].ERP7__Operation__c != '' && checks[i].ERP7__Operation__c == Task.ERP7__Operation__c && checks[i].ERP7__Is_Mandatory__c){
                         if((checks[i].ERP7__Has_Checklist__c == true) && (checks[i].ERP7__Result__c == null || checks[i].ERP7__Result__c == '' || checks[i].ERP7__Result__c == '--None--')){
                             error =true;
                             cmp.set('v.exceptionError',$A.get('$Label.c.Please_complete_the_checklists') +checks[i].Name);
-                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide"); 
+                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             break;
                         }
                         else if((checks[i].ERP7__Has_Checklist__c == false) && (checks[i].ERP7__Action_Detail__c == '' || checks[i].ERP7__Action_Detail__c == null || checks[i].ERP7__Action_Detail__c == undefined)){
                             error =true;
                             cmp.set('v.exceptionError',$A.get('$Label.c.Please_complete_the_checklists') +checks[i].Name);
-                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide"); 
+                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             break;
                         }
                     }
@@ -2497,7 +2512,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         var MRPS = cmp.get("v.MRPs");
                         var TimeSheet = cmp.get("v.TimeSheet");
                         //Task.ERP7__Status__c = cmp.get("v.taskStatus");//"Completed";
-                        var action = cmp.get("c.TaskUpdate"); 
+                        var action = cmp.get("c.TaskUpdate");
                         action.setParams({
                             Task1:JSON.stringify(Task),
                             WO1:JSON.stringify(WO),
@@ -2529,22 +2544,22 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                             }
                         });
-                        $A.enqueueAction(action); 
+                        $A.enqueueAction(action);
                     }
                     else{
                         console.log('Error : '+JSON.stringify(response.getError()));
                     }
                 });
-                $A.enqueueAction(checklistAction);                             
+                $A.enqueueAction(checklistAction);
             }
         },
         */
-        /* CreateMO : function(cmp, event, helper) { 
+        /* CreateMO : function(cmp, event, helper) {
             var MRPId = event.currentTarget.getAttribute('data-mosoliId');
             var URL_RMA = '/apex/ERP7__ManufacturingOrderLC?mrpId='+MRPId;
             window.open(URL_RMA,'_self');
         },*/
-        
+
         ReserveMRPStocks : function (cmp, event) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             //document.getElementById("rot").classList.add("erp-rotation");
@@ -2553,7 +2568,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             action.setParams({
                 MRPs: allMRPs
             });
-            
+
             action.setCallback(this, function(response) {
                 var state = response.getState();
                 if (state === "SUCCESS") {
@@ -2561,7 +2576,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         cmp.popInit();
                     }
                     else {
-                        cmp.set("v.exceptionError",response.getReturnValue().errorMsg); 
+                        cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         //document.getElementById("rot").classList.remove("erp-rotation");
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
@@ -2573,12 +2588,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         CurrentSerialNumbers: function(cmp, event) {
             var count = event.getSource().get("v.name");
-            var obj = cmp.get("v.MRPs"); 
+            var obj = cmp.get("v.MRPs");
             for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     cmp.set("v.mySerialNos",obj[x].SerialNos);
                     cmp.set("v.myBatchNos",[]);
                     break;
@@ -2586,12 +2601,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             window.scrollTo(0, 0);
         },
-        
+
         CurrentBatchNumbers: function(cmp, event) {
             var count = event.getSource().get("v.name");
-            var obj = cmp.get("v.MRPs"); 
+            var obj = cmp.get("v.MRPs");
             for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     cmp.set("v.myBatchNos",obj[x].Batches);
                     cmp.set("v.mySerialNos",[]);
                     break;
@@ -2599,7 +2614,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             window.scrollTo(0, 0);
         },
-        
+
         NewMRP : function (cmp, event) {
             cmp.set("v.exceptionError","");
             var kk = cmp.get("v.NewMRP");
@@ -2622,26 +2637,26 @@ console.log('FileList : ', JSON.stringify(FileList));
             $A.util.addClass(cmp.find("newMRPModal"), 'slds-fade-in-open');
             $A.util.addClass(cmp.find("myMRPModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         closeNewMRPModal : function (cmp, event) {
             $A.util.removeClass(cmp.find("newMRPModal"), 'slds-fade-in-open');
             $A.util.removeClass(cmp.find("myMRPModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         EditMRPOld : function (cmp, event) {
             cmp.set("v.exceptionError","");
             var count = event.getSource().get("v.name");
             var obj = cmp.get("v.MRPs");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count].MRP;
                     var ik = JSON.stringify(objsel);
                 }
             }
             cmp.set("v.NewMRP",objsel);
         },
-        
+
         updateMRP : function (cmp, event) {
             var MRP = cmp.get("v.NewMRP");
             var ik = JSON.stringify(MRP);
@@ -2649,7 +2664,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             if(MRP.Name == undefined || MRP.Name == "" || MRP.ERP7__BOM__c == undefined || MRP.ERP7__BOM__c == "" || MRP.ERP7__Total_Amount_Required__c == undefined || MRP.ERP7__Total_Amount_Required__c == "" || MRP.ERP7__MRP_Product__c == undefined || MRP.ERP7__MRP_Product__c == "") {
                 error = true;
                 cmp.set('v.editErrorMsg',$A.get('$Label.c.Please_enter_the_required_fields'));
-            } 
+            }
             console.log('error : '+error);
             if(!error){
                 console.log('inside if');
@@ -2678,16 +2693,16 @@ console.log('FileList : ', JSON.stringify(FileList));
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
             }
         },
-        
+
         /*SelectMRP: function(cmp, event) {
             var count = event.currentTarget.getAttribute('data-mrpcount');
-            var obj = cmp.get("v.MRPs"); 
+            var obj = cmp.get("v.MRPs");
             var Fulfilled = true;
             var moSerialNos = cmp.get("v.moSerialNos");
-            
+
             cmp.set("v.WeightStr","0");
             for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     obj[x].isSelect = true;
                     if(obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c == true) cmp.set("v.WeightStr","1");
                     cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
@@ -2710,7 +2725,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.exceptionError","");
                 var count = event.currentTarget.getAttribute('data-mrpcount');
                 cmp.set("v.exceptionError","");
-                var obj = cmp.get("v.MRPs"); 
+                var obj = cmp.get("v.MRPs");
                 var MOId = cmp.get("v.ManuOrder.Id");
                 if(obj != undefined && obj.length > 0) {
                     var selectedMRP = obj[count];
@@ -2733,7 +2748,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             var Fulfilled = true;
                             cmp.set("v.WeightStr","0");
                             for(var x in obj){
-                                if(count == x) { 
+                                if(count == x) {
                                     obj[x].isSelect = true;
                                     if(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c != undefined) cmp.set("v.WeightStr", obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
                                     obj[x].SOLIs = soli;
@@ -2752,7 +2767,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             cmp.set("v.Fulfilled",Fulfilled);
                             cmp.set("v.MRPs",obj);
                             cmp.set("v.TotalWeight",TotalWeight);
-                            
+
                         }
                     });
                     $A.enqueueAction(action);
@@ -2764,17 +2779,17 @@ console.log('FileList : ', JSON.stringify(FileList));
         },
         SelectSerialForAllocation: function(cmp, event) {
             var count = event.currentTarget.getAttribute('data-serialcount');
-            var obj = cmp.get("v.SerialsForAllocation"); 
+            var obj = cmp.get("v.SerialsForAllocation");
             for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     var newSOL = cmp.get("v.NewSOLI");
                     newSOL.ERP7__MO_WO_Serial__c = obj[x].Id;
                     cmp.set("v.NewSOLI",newSOL);
                 }
             }
-            
+
         },
-        
+
         SetShowSerial : function(cmp, event, helper) {
             var obj = cmp.get("v.SerialsForAllocation");
             for(var x in obj){
@@ -2783,13 +2798,13 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.SerialsForAllocation", obj);
             cmp.set('v.selectAllSerials', false);
         },
-        
+
         selectTheSerial: function(cmp, event) {
             var checkedval = event.getSource().get('v.checked');
             var obj = cmp.get("v.SerialsForAllocation");
             cmp.set("v.SerialsForAllocation", obj);
         },
-        
+
         selectTheSerialonDiv: function(cmp, event) {
             var SId = event.currentTarget.getAttribute('data-serialId');
             var obj = cmp.get("v.SerialsForAllocation");
@@ -2800,16 +2815,16 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             cmp.set("v.SerialsForAllocation", obj);
         },
-        
+
         SerialForAllocation: function(cmp, event) {
             console.log('SerialForAllocation : ');
-            var obj = cmp.get("v.MRPs"); 
-            var moSerialNos = cmp.get("v.moSerialNos"); 
+            var obj = cmp.get("v.MRPs");
+            var moSerialNos = cmp.get("v.moSerialNos");
             var NewSerialsForAllocation = [];
             var stockAssignedSerialIds = [];
             cmp.set('v.selectAllSerials', false);
             for(var x in obj){
-                if(obj[x].isSelect) { 
+                if(obj[x].isSelect) {
                     cmp.set("v.selectedMRP",obj[x].MRP);
                     if(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c != undefined) cmp.set("v.WeightStr", obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
                     var soli = obj[x].SOLIs;
@@ -2830,11 +2845,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                         newSOL.ERP7__MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
                         cmp.set("v.NewSOLI",newSOL);
                         //alert('Ser'+newSOL.ERP7__MO_WO_Serial__c);
-                    } 
+                    }
                 }
             }
         },
-        
+
         selectAllSerials : function (cmp,event) {
             var checkedval = event.getSource().get('v.checked');
             cmp.set('v.selectAllSerials', checkedval);
@@ -2851,14 +2866,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             //alert(showSerialsCount);
             cmp.set("v.SerialsForAllocation", obj);
         },
-        
+
         /*  SelectMRP1: function(cmp, event) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             console.log('SelectMRP1 called');
             try{
                 var unchangedObj = cmp.get("v.MRPs");
                 console.log('unchangedObj : ',unchangedObj);
-                var obj = cmp.get("v.MRPs"); 
+                var obj = cmp.get("v.MRPs");
                 var TotalWeight = 0;
                 var Fulfilled = true;
                 var stockAssignedSerialIds = [];
@@ -2866,7 +2881,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                  cmp.set("v.WeightStr","0");
                 var MOId = cmp.get("v.ManuOrder.Id");
                 for(var x in obj){
-                    if(0 == x) { 
+                    if(0 == x) {
                         if(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c != undefined) cmp.set("v.WeightStr", obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
                         var soli = obj[x].SOLIs;
                         if(soli != undefined && soli.length > 0){
@@ -2899,7 +2914,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         if(NewSerialsForAllocation.length > 0){
                             newSOL.ERP7__MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
                         }
-                        cmp.set("v.Fulfilled",Fulfilled); 
+                        cmp.set("v.Fulfilled",Fulfilled);
                         cmp.set("v.MRPs",obj);
                         cmp.set("v.TotalWeight",TotalWeight);
                         cmp.set("v.NewSOLI",newSOL);
@@ -2910,7 +2925,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             unchangedObj[0].isSelect = true;
                             cmp.set("v.MRPs",unchangedObj);
                         }
-                       
+
                        // if(moSerialNos.length > 0) cmp.loadSerialForAllocation();
                     }
                 });
@@ -2927,10 +2942,10 @@ console.log('FileList : ', JSON.stringify(FileList));
             console.log('SelectMRP1 called');
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             try{
-                
+
                 window.scrollTo(0, 0);
                 cmp.set("v.exceptionError","");
-                var obj = cmp.get("v.MRPs"); 
+                var obj = cmp.get("v.MRPs");
                 var MOId = cmp.get("v.ManuOrder.Id");
                 if(obj != undefined && obj.length > 0) {
                     var selectedMRP = obj[0];
@@ -2953,7 +2968,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             var Fulfilled = true;
                             cmp.set("v.WeightStr","0");
                             for(var x in obj){
-                                if(0 == x) { 
+                                if(0 == x) {
                                     obj[x].isSelect = true;
                                     if(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c != undefined) cmp.set("v.WeightStr", obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
                                     obj[x].SOLIs = soli;
@@ -2969,7 +2984,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             cmp.set("v.Fulfilled",Fulfilled);
                             cmp.set("v.MRPs",obj);
                             cmp.set("v.TotalWeight",TotalWeight);
-                            
+
                         }
                     });
                     $A.enqueueAction(action);
@@ -2979,7 +2994,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.showSpinner",false);
             }
         },
-        
+
         closeStockAllocationModal : function(cmp, event) {
             cmp.set("v.WeightStr","0");
             cmp.set("v.Weight", 0);
@@ -2988,20 +3003,20 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.saPage", false);
             // cmp.popInit();
         },
-        
+
         SelectWIP: function(cmp, event) {
             //var count = event.currentTarget.getAttribute('data-wipcount');
             var count = event.currentTarget.dataset.index;
             var obj = cmp.get("v.WIPs");
             cmp.set("v.SelectedWIP",obj[count]);
             /*for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     cmp.set("v.SelectedWIP",obj[x]);
-                } 
+                }
             }
             cmp.set("v.WIPs",obj);*/
         },
-        
+
         SelectWIPflow: function(cmp, event) {
             //var count = event.currentTarget.getAttribute('data-wipcount');
             var count = event.currentTarget.dataset.index;
@@ -3015,31 +3030,31 @@ console.log('FileList : ', JSON.stringify(FileList));
                     cmp.set("v.ToScrap",0);
                 }
                 else {
-                    cmp.set("v.ToProduce",cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c')); 
+                    cmp.set("v.ToProduce",cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
                     cmp.set("v.ToScrap",0);
                 }
                 console.log('ToProduce finish SelectWIPflow : ',cmp.get("v.ToProduce"));
             }
             /*for(var x in obj){
-                if(count == x) { 
+                if(count == x) {
                     cmp.set("v.SelectedWIP",obj[x]);
-                } 
+                }
             }
             cmp.set("v.WIPs",obj);*/
         },
-        
-        UOMChange: function(cmp, event) { 
+
+        UOMChange: function(cmp, event) {
             cmp.set("v.exceptionError","");
-            var obj = cmp.get("v.MRPs"); 
+            var obj = cmp.get("v.MRPs");
             for(var x in obj){
                 if(obj[x].isSelect) {
                     obj[x].WeightMultiplier = 1;
                     obj[x].BOMWeightMultiplier = 1;
-                    
-                    var oldUOM = obj[x].SelectedUOM; 
+
+                    var oldUOM = obj[x].SelectedUOM;
                     var newUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure;
                     //var newUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure;
-                    //var newUOM = obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c;  
+                    //var newUOM = obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c;
                     //var oldUOM = obj[x].SelectedUOM;
                     if(newUOM != '' && newUOM != undefined && oldUOM != '' && oldUOM != undefined && newUOM != oldUOM){
                         //alert('get converted value from custom settings and evaluate');
@@ -3065,12 +3080,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                             var errMsgNew = $A.get('$Label.c.Conversion_values_between') + ' ' +oldUOM+' ' +$A.get('$Label.c.and')+ ' '+newUOM+' ' +$A.get('$Label.c.not_found');
                             cmp.set("v.exceptionError",errMsgNew);
                             //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
-                            obj[x].SelectedUOM = newUOM; 
+                            obj[x].SelectedUOM = newUOM;
                             break;
                         }
                     }
-                    
-                    oldUOM = obj[x].SelectedUOM; 
+
+                    oldUOM = obj[x].SelectedUOM;
                     newUOM = obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c;
                     if(newUOM != '' && newUOM != undefined && oldUOM != '' && oldUOM != undefined && newUOM != oldUOM){
                         //alert('get converted value from custom settings and evaluate');
@@ -3099,11 +3114,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                             break;
                         }
                     }
-                    
+
                 }
             } cmp.set("v.MRPs", obj);
         },
-        
+
         /*  CaptureWeight: function(cmp, event) {
             const unchangedObj = JSON.parse(JSON.stringify(cmp.get("v.MRPs")));
             var MO = cmp.get("v.ManuOrder");
@@ -3126,7 +3141,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             for(var x in obj){
                 if(obj[x].isSelect) {
                     var oldUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure;
-                    var newUOM = obj[x].SelectedUOM; 
+                    var newUOM = obj[x].SelectedUOM;
                     if(newUOM != oldUOM && weight >= 0){
                         //alert('get converted value from custom settings and evaluate');
                         var UOMCs = cmp.get("v.UOMCs");
@@ -3153,7 +3168,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             break;
                         }
                     }
-                    
+
                     if(obj[x].ActualWeight != undefined) weight = parseFloat(weight) + parseFloat(obj[x].ActualWeight);
                     var min = obj[x].MRP.ERP7__Expected_Quantity__c;
                     var max = obj[x].MRP.ERP7__Expected_Quantity__c;
@@ -3163,40 +3178,40 @@ console.log('FileList : ', JSON.stringify(FileList));
                     if(obj[x].MRP.ERP7__Maximum_Variance__c != undefined && obj[x].MRP.ERP7__Maximum_Variance__c != "") max = obj[x].MRP.ERP7__Expected_Quantity__c + obj[x].MRP.ERP7__Maximum_Variance__c;
                     if(obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c != undefined && obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c != "") imin = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c - obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
                     if(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c != undefined && obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c != "") imax = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c + obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                    
+
                     //New Values
                     min = min/obj[x].WeightMultiplier;
                     max = max/obj[x].WeightMultiplier;
                     imin = imin/obj[x].WeightMultiplier;
                     imax = imax/obj[x].WeightMultiplier;
-                    
-                    var NewSOLI = cmp.get("v.NewSOLI"); 
-                    if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){                    
+
+                    var NewSOLI = cmp.get("v.NewSOLI");
+                    if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                         var quant1 = 0;
                         var quantin1 = 0;
                         //if(obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c){
                         quant1 = parseFloat(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
                         if(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant1 += parseFloat(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c);
-                        
-                        
+
+
                         var SOLISM1 = obj[x].SOLIs;
                         for(var y in SOLISM1){
                             if(SOLISM1[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) quantin1 += parseFloat(SOLISM1[y].ERP7__Quantity__c);
                         }
-                        
+
                         // New Values quant1
                         quant1 = quant1/obj[x].WeightMultiplier;
                         if((quantin1 + onlyweight) > quant1) error = true;
                     }
                     var weightCheck = weight.toFixed(4);
                     var onlyweightCheck = onlyweight.toFixed(4);
-                    
+
                     if((obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == false && onlyweightCheck > 0 && weightCheck <= max) || (obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == true && onlyweightCheck > 0 && onlyweightCheck <= imax && onlyweightCheck >= imin && weightCheck <= max)){
                         if((obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && NewSOLI.ERP7__Serial__c == undefined) || (obj[x].MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c && NewSOLI.ERP7__Material_Batch_Lot__c == undefined) || (WO.ERP7__Product__r.ERP7__Serialise__c && NewSOLI.ERP7__MO_WO_Serial__c == undefined) || (WO.ERP7__Product__r.ERP7__Lot_Tracked__c && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == undefined)){
                             cmp.set("v.exceptionError","Required fields missing");
                             //setTimeout($A.getCallback(function(){cmp.set("v.exceptionError","");}), 5000);
-                        }  
-                        
+                        }
+
                         else if(obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && NewSOLI.ERP7__Serial__c != undefined && ((weight - obj[x].ActualWeight) > 1)){
                             cmp.set("v.exceptionError","Serialised product invalid quantity");
                             //setTimeout($A.getCallback(function(){cmp.set("v.exceptionError","");}), 5000);
@@ -3206,7 +3221,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             //setTimeout($A.getCallback(function(){cmp.set("v.exceptionError","");}), 5000);
                         }
                         else {
-                           
+
                             if(weight > obj[x].MRP.ERP7__Total_Amount_Required__c) obj[x].MRP.ERP7__Total_Amount_Required__c = weight;
                             if(obj[x].MRP.ERP7__Fulfilled_Amount__c >= 0) obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat(obj[x].MRP.ERP7__Fulfilled_Amount__c + (weight - obj[x].ActualWeight)*obj[x].WeightMultiplier);
                             else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - obj[x].ActualWeight)*obj[x].WeightMultiplier);
@@ -3224,16 +3239,16 @@ console.log('FileList : ', JSON.stringify(FileList));
                             action.setCallback(this, function(response) {
                                 var state = response.getState();
                                 if (state === "SUCCESS") {
-                                   
+
                                     if(response.getReturnValue().errorMsg != ''){
                                         cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                                         //setTimeout($A.getCallback(function(){cmp.set("v.exceptionError","");}), 5000);
                                         cmp.set("v.MRPs", unchangedObj);
                                     }
-                                    else { 
-                                        
+                                    else {
+
                                         //alert("here");
-                                        succeed = true;                                        
+                                        succeed = true;
                                         cmp.set("v.WeightStr","0");
                                         cmp.set("v.NewSOLI.ERP7__Material_Batch_Lot__c", undefined);
                                         cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
@@ -3250,29 +3265,29 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         cmp.set("v.WCAP",true);
                                         if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                                             var PrintSB = false;
-                                            var objm = cmp.get("v.MRPs"); 
-                                            for(var x in objm){ 
-                                                if(objm[x].isSelect) { 
+                                            var objm = cmp.get("v.MRPs");
+                                            for(var x in objm){
+                                                if(objm[x].isSelect) {
                                                     var quant = 0;
                                                     var quantin = 0;
                                                     quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                                    
+
                                                     var SOLISM = objm[x].SOLIs;
                                                     for(var y in SOLISM){
                                                         if((SOLISM[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
                                                     }
-                                                    if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false); 
-                                                } 
+                                                    if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
+                                                }
                                             }
-                                            for(var x in objm){ 
+                                            for(var x in objm){
                                                 var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                 var qin = 0;
                                                 var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                 var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                 if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
                                                 if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-                                                
+
                                                 var SOLISMS = objm[x].SOLIs;
                                                 for(var y in SOLISMS){
                                                     if((SOLISMS[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) qin += SOLISMS[y].ERP7__Quantity__c;
@@ -3285,7 +3300,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                             }
                                             cmp.set("v.PrintSB",PrintSB);
                                         }
-                                        
+
                                     }
                                 } else{
                                     cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
@@ -3303,7 +3318,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                 }
             }
-            
+
         },*/
         CaptureWeight: function(cmp, event) {
             try{
@@ -3318,18 +3333,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                 if (typeof WeightStr === 'string' || WeightStr instanceof String) doubleWeight = Number(WeightStr.replace(/[^0-9\.]+/g,""));
                 else doubleWeight = WeightStr;
                 console.log('doubleWeight : '+doubleWeight);
-                
+
                 //var weight =((doubleWeight + Number.EPSILON) * 100) / 100;
                 //var onlyweight = ((doubleWeight + Number.EPSILON) * 100) / 100;
-                
+
                 var weight = doubleWeight;
                 var onlyweight = doubleWeight;
-                
+
                 console.log('weight : '+weight);
-                
+
                 console.log('weight here1~>'+weight);
                 console.log('onlyweight here1~>'+onlyweight);
-                
+
                 cmp.set("v.Weight",doubleWeight);
                 cmp.set("v.WeightStr",doubleWeight);
                 document.getElementById("WeightStr").value = doubleWeight;
@@ -3339,7 +3354,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 for(var x in obj){
                     if(obj[x].isSelect) {
                         var oldUOM = obj[x].MRP.ERP7__MRP_Product__r.QuantityUnitOfMeasure;
-                        var newUOM = obj[x].SelectedUOM; 
+                        var newUOM = obj[x].SelectedUOM;
                         if(newUOM != oldUOM && weight >= 0){
                             var UOMCs = cmp.get("v.UOMCs");
                             var conversionFound = false;
@@ -3349,7 +3364,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     conversionFound = true;
                                     if(UOMCs[k].ERP7__From_UOM__c == oldUOM && UOMCs[k].ERP7__To_UOM__c == newUOM){
                                         newWeight = (UOMCs[k].ERP7__From_Value__c/UOMCs[k].ERP7__To_Value__c)*weight;
-                                    } 
+                                    }
                                     else if(UOMCs[k].ERP7__From_UOM__c == newUOM && UOMCs[k].ERP7__To_UOM__c == oldUOM){
                                         newWeight = (UOMCs[k].ERP7__To_Value__c/UOMCs[k].ERP7__From_Value__c)*weight;
                                     }
@@ -3367,55 +3382,55 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 }
                             }
                         }
-                        
+
                         console.log('weight here2~>'+weight);
                         console.log('onlyweight here2~>'+onlyweight);
                         console.log('obj[x].ActualWeight here2~>'+obj[x].ActualWeight);
                         console.log('obj[x].WeightMultiplier here2~>'+obj[x].WeightMultiplier);
-                        
+
                         if(obj[x].ActualWeight != undefined) weight = parseFloat(parseFloat(parseFloat(weight) + parseFloat(obj[x].ActualWeight))/obj[x].WeightMultiplier).toFixed(4); //parseFloat(weight) + parseFloat(obj[x].ActualWeight);
-                        
+
                         console.log('weight here3~>'+weight);
-                        
+
                         //weight = ((weight + Number.EPSILON) * 100) / 100;
                         var min = obj[x].MRP.ERP7__Expected_Quantity__c; //((obj[x].MRP.ERP7__Expected_Quantity__c + Number.EPSILON) * 100) / 100;
-                        var max = obj[x].MRP.ERP7__Expected_Quantity__c; //((obj[x].MRP.ERP7__Expected_Quantity__c + Number.EPSILON) * 100) / 100; 
+                        var max = obj[x].MRP.ERP7__Expected_Quantity__c; //((obj[x].MRP.ERP7__Expected_Quantity__c + Number.EPSILON) * 100) / 100;
                         var imin = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c; //((obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c + Number.EPSILON) * 100) / 100;
                         var imax = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c; //((obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c + Number.EPSILON) * 100) / 100;
                         if(obj[x].MRP.ERP7__Minimum_Variance__c != undefined && obj[x].MRP.ERP7__Minimum_Variance__c != "") min = obj[x].MRP.ERP7__Expected_Quantity__c - obj[x].MRP.ERP7__Minimum_Variance__c;
                         if(obj[x].MRP.ERP7__Maximum_Variance__c != undefined && obj[x].MRP.ERP7__Maximum_Variance__c != "") max = obj[x].MRP.ERP7__Expected_Quantity__c + obj[x].MRP.ERP7__Maximum_Variance__c;
                         if(obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c != undefined && obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c != "") imin = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c - obj[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
                         if(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c != undefined && obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c != "") imax = obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c + obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                        
+
                         //New Values
                         min = (min/obj[x].WeightMultiplier); //(((min/obj[x].WeightMultiplier) + Number.EPSILON) * 100) / 100;
                         max = (max/obj[x].WeightMultiplier); //(((max/obj[x].WeightMultiplier) + Number.EPSILON) * 100) / 100;
                         imin = (imin/obj[x].WeightMultiplier); //(((imin/obj[x].WeightMultiplier) + Number.EPSILON) * 100) / 100;
                         imax = (imax/obj[x].WeightMultiplier); //(((imax/obj[x].WeightMultiplier) + Number.EPSILON) * 100) / 100;
-                        var NewSOLI = cmp.get("v.NewSOLI"); 
+                        var NewSOLI = cmp.get("v.NewSOLI");
                         if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                             var quant1 = 0;
                             var quantin1 = 0;
                             quant1 = parseFloat(obj[x].MRP.ERP7__BOM__r.ERP7__Quantity__c);
-                            
+
                             if(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant1 += parseFloat(obj[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c);
-                            
+
                             var SOLISM1 = obj[x].SOLIs;
                             for(var y in SOLISM1){
                                 if(SOLISM1[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) quantin1 += parseFloat(SOLISM1[y].ERP7__Quantity__c);
                             }
-                            
+
                             // New Values quant1
                             quant1 = (quant1/obj[x].WeightMultiplier); //(((quant1/obj[x].WeightMultiplier) + Number.EPSILON) * 100) / 100;
-                            
+
                             if((quantin1 + onlyweight) > quant1) error = true;
                         }
                         //var weightCheck = ((weight + Number.EPSILON) * 100) / 100;
                         //var onlyweightCheck = ((onlyweight + Number.EPSILON) * 100) / 100;  //parseFloat(onlyweight);  //.toFixed(4);
-                        
+
                         var weightCheck = weight
                         var onlyweightCheck = onlyweight;
-                        
+
                         var selectedSerialNos = cmp.get("v.SerialsForAllocation");
                         var selectedSerialNos2Send = [];
                         for(var z in selectedSerialNos){
@@ -3423,7 +3438,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 selectedSerialNos2Send.push(selectedSerialNos[z].Id);
                             }
                         }
-                        
+
                         /*
                         alert('obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c : '+obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c);
                         alert('onlyweightCheck : '+onlyweightCheck);
@@ -3438,7 +3453,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         console.log('max : '+max);
                         console.log('imax : '+imax);
                         console.log('imin : '+imin);
-                        
+
                         if((obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == false && onlyweightCheck > 0 && weightCheck <= max) || (obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == true && onlyweightCheck > 0 && onlyweightCheck <= imax && onlyweightCheck >= imin && weightCheck <= max)){
                             if((obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && (NewSOLI.ERP7__Serial__c == undefined || NewSOLI.ERP7__Serial__c == null || NewSOLI.ERP7__Serial__c == '')) || (obj[x].MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c && (NewSOLI.ERP7__Material_Batch_Lot__c == undefined || NewSOLI.ERP7__Material_Batch_Lot__c == null || NewSOLI.ERP7__Material_Batch_Lot__c == '')) || (WO.ERP7__Product__r.ERP7__Serialise__c && (NewSOLI.ERP7__MO_WO_Serial__c == undefined || NewSOLI.ERP7__MO_WO_Serial__c ==  null || NewSOLI.ERP7__MO_WO_Serial__c == '')) || (WO.ERP7__Product__r.ERP7__Lot_Tracked__c && (NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == undefined || NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == null || NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == ''))){
                                 cmp.set("v.exceptionError",$A.get('$Label.c.Required_fields_missing'));
@@ -3454,18 +3469,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }else{
                                 console.log('0 : comp '+obj[x].MRP.ERP7__Fulfilled_Amount__c);
                                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-                                
+
                                 //if(weight > obj[x].MRP.ERP7__Total_Amount_Required__c) obj[x].MRP.ERP7__Total_Amount_Required__c = parseFloat(weight); //((weight + Number.EPSILON) * 100) / 100;
-                                
+
                                 if(selectedSerialNos2Send.length > 0){
                                     if(obj[x].MRP.ERP7__Fulfilled_Amount__c >= 0) obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat(obj[x].MRP.ERP7__Fulfilled_Amount__c + (weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier*selectedSerialNos2Send.length);
-                                    else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier)*selectedSerialNos2Send.length; 
+                                    else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier)*selectedSerialNos2Send.length;
                                 }
                                 else{
                                     if(obj[x].MRP.ERP7__Fulfilled_Amount__c >= 0) obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat(obj[x].MRP.ERP7__Fulfilled_Amount__c + (weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier);
-                                    else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier); 
+                                    else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - (obj[x].ActualWeight/obj[x].WeightMultiplier))*obj[x].WeightMultiplier);
                                 }
-                                
+
                                 /*
                                 if(obj[x].MRP.ERP7__Fulfilled_Amount__c >= 0) {
                                     console.log('In If');
@@ -3500,9 +3515,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                                             //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                                             cmp.set("v.MRPs", unchangedObj);
                                         }
-                                        else { 
+                                        else {
                                             cmp.set("v.selectAllSerials",false);
-                                            succeed = true;                                        
+                                            succeed = true;
                                             cmp.set("v.WeightStr","0");
                                             cmp.set("v.NewSOLI.ERP7__Material_Batch_Lot__c", undefined);
                                             cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
@@ -3522,14 +3537,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                                             if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                                                 var PrintSB = false;
                                                 var objm = cmp.get("v.MRPs");
-                                                for(var x in objm){ 
+                                                for(var x in objm){
                                                     if(objm[x].isSelect) {
                                                         var quant = 0;
                                                         var quantin = 0;
                                                         quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                         if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
                                                         //quant = Math.round((quant + Number.EPSILON) * 100) / 100;
-                                                        
+
                                                         var SOLISM = objm[x].SOLIs;
                                                         console.log('SOLISM : ',JSON.stringify(SOLISM));
                                                         for(var y in SOLISM){
@@ -3543,14 +3558,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                                                         if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
                                                     }
                                                 }
-                                                for(var x in objm){ 
+                                                for(var x in objm){
                                                     var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                     var qin = 0;
                                                     var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                     var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
                                                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-                                                    
+
                                                     var SOLISMS = objm[x].SOLIs;
                                                     for(var y in SOLISMS){
                                                         qin += SOLISMS[y].ERP7__Quantity__c;
@@ -3570,13 +3585,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                                                     }
                                                 }
                                                 cmp.set("v.PrintSB",PrintSB);
-                                                
+
                                             }
                                         }
                                         console.log('aftr serial allocation called');
                                         cmp.loadSerialForAllocation();
                                         console.log('aftr serial allocation called');
-                                        
+
                                     } else{
                                         cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
@@ -3600,7 +3615,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.MRPs", unchangedObj);
             }
         },
-        
+
         upsertWeights: function(cmp, event) {
             //document.getElementById("weightspins").style.visibility = "visible";
             var obj = JSON.stringify(cmp.get("v.MRPs"));
@@ -3624,14 +3639,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         NavRecord : function (component, event) {
             var RecId = event.target.getAttribute("title");
             //event.getSource().get("v.title");
             var RecUrl = "/" + RecId;
             window.open(RecUrl,'_blank');
         },
-        
+
         Evaluate : function (cmp, event) {
             var mrp_Main = cmp.get("v.MRPEdit.MRP");
             var alternate_Mrps = cmp.get("v.NewMRPs.MRPSS");
@@ -3640,7 +3655,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 var target = event.getSource();
                 var count = target.getElement().parentElement.name;
                 for(var x in alternate_Mrps){
-                    if(x != count) { 
+                    if(x != count) {
                         alternate_Mrps[x].isSelect = false;
                     }
                 }
@@ -3648,7 +3663,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             cmp.set("v.NewMRPs.MRPs",alternate_Mrps);
         },
-        
+
         EditMRP : function (cmp, event) {
             var count = event.getSource().get("v.name");
             cmp.set("v.MRPEdit","");
@@ -3656,7 +3671,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var obj = cmp.get("v.MRPs");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                 }
             }
@@ -3668,7 +3683,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 MRP: objsels,
                 MRPs: objs
             });
-            
+
             action.setCallback(this, function(response) {
                 var state = response.getState();
                 if (state === "SUCCESS") {
@@ -3683,14 +3698,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                 }
             });
             $A.enqueueAction(action);
-            
+
         },
-        
+
         closeEditMRPModal : function(cmp, event) {
             $A.util.removeClass(cmp.find("editMRPModal"), 'slds-fade-in-open');
-            $A.util.removeClass(cmp.find("myMRPModalBackdrop"),"slds-backdrop_open");        
+            $A.util.removeClass(cmp.find("myMRPModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         updateMRPNew : function (cmp, event) {
             //document.getElementById("mrpspins").style.visibility = "visible";
             var mrp_Main = cmp.get("v.MRPEdit.MRP");
@@ -3701,7 +3716,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 mrpMain1: JSON.stringify(mrp_Main),
                 alternateMrps: alternate_Mrps
             });
-            
+
             action.setCallback(this, function(response) {
                 var state = response.getState();
                 if (state === "SUCCESS") {
@@ -3717,7 +3732,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         DeleteRecordSOLI: function(cmp, event) {
             var result = confirm("Are you sure?");
             var RecordId = event.getSource().get("v.name");
@@ -3739,11 +3754,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                             cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                             //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         }
-                        else { 
+                        else {
                             cmp.set("v.MRPs",response.getReturnValue().MRPSS);
                             cmp.set("v.NewSOLI",response.getReturnValue().NewSOLI);
                             var ik = response.getReturnValue().MRPs;
-                            
+
                             var TW = 0;
                             var Fulfilled = true;
                             for(var y in ik){
@@ -3752,19 +3767,19 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             cmp.set("v.Fulfilled",Fulfilled);
                             cmp.set("v.TotalWeight",TW);
-                            
-                            var NewSOLI = cmp.get("v.NewSOLI"); 
+
+                            var NewSOLI = cmp.get("v.NewSOLI");
                             cmp.set("v.WCAP",true);
                             if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                                 var PrintSB = false;
-                                var objm = cmp.get("v.MRPs"); 
-                                for(var x in objm){ 
-                                    if(objm[x].isSelect) { 
+                                var objm = cmp.get("v.MRPs");
+                                for(var x in objm){
+                                    if(objm[x].isSelect) {
                                         var quant = 0;
                                         var quantin = 0;
                                         quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                         if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                        
+
                                         var SOLISM = objm[x].SOLIs;
                                         for(var y in SOLISM){
                                             if(SOLISM[y].ERP7__MO_WO_Serial__c != undefined && SOLISM[y].ERP7__MO_WO_Serial__c != null) { // added if condition by shaguftha
@@ -3773,18 +3788,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         }
                                         //quant = Math.round((quant + Number.EPSILON) * 100) / 100;
                                         //quantin = Math.round((quantin + Number.EPSILON) * 100) / 100;
-                                        
-                                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false); 
-                                    } 
+
+                                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
+                                    }
                                 }
-                                for(var x in objm){ 
+                                for(var x in objm){
                                     var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                     var qin = 0;
                                     var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                     var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
                                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-                                    
+
                                     var SOLISMS = objm[x].SOLIs;
                                     for(var y in SOLISMS){
                                         if(SOLISMS[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) qin += SOLISMS[y].ERP7__Quantity__c;
@@ -3802,29 +3817,29 @@ console.log('FileList : ', JSON.stringify(FileList));
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
                         cmp.loadSerialForAllocation();
-                    } else { 
+                    } else {
                         cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                         //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
                 });
                 $A.enqueueAction(action);
-            } 
+            }
         },
-        
-        SerialBOMValidation : function(cmp, event, helper) { 
-            var NewSOLI = cmp.get("v.NewSOLI"); 
+
+        SerialBOMValidation : function(cmp, event, helper) {
+            var NewSOLI = cmp.get("v.NewSOLI");
             cmp.set("v.WCAP",true);
             if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                 var PrintSB = false;
-                var objm = cmp.get("v.MRPs"); 
-                for(var x in objm){ 
-                    if(objm[x].isSelect) { 
+                var objm = cmp.get("v.MRPs");
+                for(var x in objm){
+                    if(objm[x].isSelect) {
                         var quant = 0;
                         var quantin = 0;
                         quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                         if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                        
+
                         var SOLISM = objm[x].SOLIs;
                         for(var y in SOLISM){
                             if(SOLISM[y].ERP7__MO_WO_Serial__c != undefined && SOLISM[y].ERP7__MO_WO_Serial__c != null) { // added if condition by shaguftha
@@ -3833,17 +3848,17 @@ console.log('FileList : ', JSON.stringify(FileList));
                         }
                         //quant = Math.round((quant + Number.EPSILON) * 100) / 100;
                         //quantin = Math.round((quantin + Number.EPSILON) * 100) / 100;
-                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false); 
-                    } 
+                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
+                    }
                 }
-                for(var x in objm){ 
+                for(var x in objm){
                     var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                     var qin = 0;
                     var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                     var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
                     if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-                    
+
                     var SOLISMS = objm[x].SOLIs;
                     for(var y in SOLISMS){
                         if(SOLISMS[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) qin += SOLISMS[y].ERP7__Quantity__c;
@@ -3859,12 +3874,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.PrintSB",PrintSB);
             }
         },
-        
+
         Reload : function (cmp, event) {
             //document.getElementById("rot").classList.add("erp-rotation");
             cmp.popInit();
         },
-        
+
         StartWO: function (cmp, event) {
             //window.scrollTo(0, 0);
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -3886,13 +3901,13 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         /*    WO2Finish : function (cmp, event) {
             console.log('WO2Finish called');
-            
+
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var UpdateWORec = event.getSource().get("v.name");
-            
+
             var qtyBuild = 0;
             var qtyScrap = 0;
             var wipFlows = cmp.get("v.WIPFlows");
@@ -3906,7 +3921,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     if(wipFlows[i].wipFlow.ERP7__Quantity_Scrapped__c > 0){
                         qtyScrap += wipFlows[i].wipFlow.ERP7__Quantity_Scrapped__c;
                     }
-                    
+
                 }
             }
             if(qtyBuild > 0) cmp.set("v.showCompleteWO",true);
@@ -3921,7 +3936,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     console.log('response GetWORec : ',response.getReturnValue());
                     cmp.set("v.MRPSS", objs);
                     console.log('EnterconsumeQty : ',cmp.get('v.EnterconsumeQty'));
-                   
+
                     if(cmp.get('v.EnterconsumeQty') == true){
                         if(!cmp.get('v.ManuOrder.ERP7__Product__r.ERP7__Serialise__c')) {
                             var MRPS = cmp.get('v.MRPSS');
@@ -3934,31 +3949,31 @@ console.log('FileList : ', JSON.stringify(FileList));
                             if(cmp.get("v.WIPflowQty") == 0) {
                                 var remainigQty = cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c') - (qtyBuild + qtyScrap);
                                 cmp.set("v.WIPflowQty",remainigQty);
-                                cmp.set("v.ToProduce",remainigQty); 
+                                cmp.set("v.ToProduce",remainigQty);
                             }
                             console.log('ToProduce finish : ',cmp.get("v.ToProduce"));
                         }
                     }
-                    
+
                     cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                     //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
-                    var obj = cmp.get("v.WIPs"); 
+                    var obj = cmp.get("v.WIPs");
                     for(var x in obj){
-                        if(0 == x) { 
+                        if(0 == x) {
                             cmp.set("v.SelectedWIP",obj[x].wipFlow);
                         }
                     }
                     cmp.set("v.WIPs",obj);
                     //cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", qtyBuild);
                 }
-                if(cmp.get("v.WIPFlows").length > 0){// 
+                if(cmp.get("v.WIPFlows").length > 0){//
                     //$A.util.addClass(cmp.find("finishModal"),"slds-fade-in-open");
                     cmp.set("v.fPage",true);
                     if(cmp.get("v.MRPSS").length > 0){
                         var MRPSS = cmp.get("v.MRPSS");
                         var WO = cmp.get("v.WorkOrder");
                         for(var x in MRPSS){
-                         
+
                         }
                     }
                     cmp.set("v.MRPSS", MRPSS);
@@ -3980,7 +3995,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     console.log('producedQty : ',producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Scrapped__c", scrapQty);
-                    
+
                 }
                 else if(cmp.get("v.MRPSS").length > 0 && cmp.get("v.WIPFlows").length <= 0){
                     cmp.set("v.fPage",true);
@@ -3989,7 +4004,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     var isCommitted = true;
                     var WO = cmp.get("v.WorkOrder");
                     var MRPSS = cmp.get("v.MRPSS");
-                    
+
                 }
                     else{
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
@@ -4001,18 +4016,30 @@ console.log('FileList : ', JSON.stringify(FileList));
                 //$A.util.addClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
             });
             $A.enqueueAction(action);
-        }, */
+      }, */
         WO2Finish : function (cmp, event) {
             console.log('WO2Finish called');
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-            var UpdateWORec =  event.getSource().get("v.name");
+            var agentWO = cmp.get("v.agentWOId");
+            console.log('agentWO',agentWO);
+            var UpdateWORec = event.getSource().get("v.name");
+            var MOId = JSON.stringify(cmp.get("v.ManuOrder"));
+            if(agentWO){
+                UpdateWORec = agentWO;
+            }
+            console.log('UpdateWORec',UpdateWORec);
+            console.log('MOId',MOId);
             //if(UpdateWORec == undefined || UpdateWORec == null || UpdateWORec == '') UpdateWORec = cmp.get("v.WorkOrder.Id");
             var qtyBuild = 0;
             var qtyScrap = 0;
             var wipFlows = cmp.get("v.WIPFlows");
-            console.log('wipFlows : ',wipFlows);
+            console.log('wipFlows : ', wipFlows);
             var action = cmp.get("c.GetWORec");
-            action.setParams({ RecId : UpdateWORec,MO : JSON.stringify(cmp.get("v.ManuOrder")),MRPS : JSON.stringify(cmp.get('v.MRPs'))});
+            action.setParams({
+                RecId: UpdateWORec,
+                MO: MOId,
+                MRPS: JSON.stringify(cmp.get("v.MRPs"))
+            });
             action.setCallback(this, function(response) {
                 var state = response.getState();
                 if (state === "SUCCESS") {
@@ -4045,11 +4072,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                         console.log('aPadded : ',aPadded);
                         var bPadded = bNumber.toString().padStart(4, '0');
                         console.log('aPadded : ',aPadded);
-                        
+
                         // Compare the padded numbers
                         return aPadded.localeCompare(bPadded);
                     });
-                     console.log('serials after : ',serials); 
+                     console.log('serials after : ',serials);
                     }
                     /* var MRPNEw = cmp.get('v.MRPs');
                     for(var x in MRPNEw){
@@ -4060,23 +4087,37 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                         }
                     }*/
+                    //added changes to keep the bom with 0 qty and proceed with building the end product 
                     var serials2Produce = [];
                     for(var x in serials){
                         var mrpcount = 0;
+                        var totalRequiredMRPs = 0;// added by bushra
                         for(var y in objs){
+                            var mrp = objs[y].MRP;// added by bm
                             var soli = objs[y].StockallocatedSerials;
-                            if(soli != undefined && soli.length > 0){
+                            if (mrp.ERP7__Total_Amount_Required__c > 0) {
+                                totalRequiredMRPs++;
+                            }
+                            if (mrp.ERP7__Total_Amount_Required__c == 0) {
+                                // NEW: Zero-req BOMs auto-count as "allocated" (no stock needed)
+                                mrpcount++;
+                            }
+                           else if(soli != undefined && soli.length > 0){
                                 if(soli.includes(serials[x].Id)) {
                                     mrpcount++;
                                     console.log('match');
                                 }
                             }
-                            
+
                         }
                         console.log('mrpcount : ',mrpcount);
                         console.log('objs.length : ',objs.length);
-                        if(mrpcount == objs.length){
+                        /*if(mrpcount == objs.length){
                             console.log('in match');
+                            serials[x].selected = false;
+                            serials2Produce.push(serials[x]);
+                        }*/
+                        if (mrpcount >= totalRequiredMRPs) { 
                             serials[x].selected = false;
                             serials2Produce.push(serials[x]);
                         }
@@ -4097,24 +4138,24 @@ console.log('FileList : ', JSON.stringify(FileList));
                         if(cmp.get("v.WIPflowQty") == 0) {
                             var remainigQty = cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c') - (qtyBuild + qtyScrap);
                             cmp.set("v.WIPflowQty",remainigQty);
-                            cmp.set("v.ToProduce",remainigQty); 
+                            cmp.set("v.ToProduce",remainigQty);
                         }
                         console.log('ToProduce finish : ',cmp.get("v.ToProduce"));
                     }
                 }
-                
+
                 cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                 //setTimeout($A.getCallback(function() {cmp.set("v.exceptionError","");}), 5000);
-                var obj = cmp.get("v.WIPs"); 
+                var obj = cmp.get("v.WIPs");
                 for(var x in obj){
-                    if(0 == x) { 
+                    if(0 == x) {
                         console.log('here 1');
                         cmp.set("v.SelectedWIP",obj[x].wipFlow);
                     }
                 }
                 cmp.set("v.WIPs",obj);
                 //alert('13');
-                if(cmp.get("v.WIPFlows").length > 0){// 
+                if(cmp.get("v.WIPFlows").length > 0){//
                     cmp.set("v.fPage",true);
                     var producedQty = 0;
                     var scrapQty = 0;
@@ -4130,7 +4171,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     scrapQty = Number.parseFloat(scrapQty).toFixed(4);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Scrapped__c", scrapQty);
-                    
+
                 }
                 else if(cmp.get("v.MRPSS").length > 0 && cmp.get("v.WIPFlows").length <= 0){
                     cmp.set("v.fPage",true);
@@ -4139,7 +4180,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     var isCommitted = true;
                     var WO = cmp.get("v.WorkOrder");
                     var MRPSS = cmp.get("v.MRPSS");
-                    
+
                 }
                     else{
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
@@ -4153,7 +4194,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         Consume_ScrapQty : function (cmp, event){
             console.log('Consume_ScrapQty called' );
             var MRPSS = cmp.get("v.MRPSS");
@@ -4180,16 +4221,16 @@ console.log('FileList : ', JSON.stringify(FileList));
                         {
                             console.log('If condition satisfies');
                             MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Fulfilled_Amount__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
-                        } */ 
+                        } */
                         // Commented to get the qty based on total amount required not based on the fulfilled amount for example if total MO Qty is 5 and fulfillied is 3 then the Consume will be (3 * 3)/5 = 1.8 which is not correct
                         // else
                         MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
                         /*if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c < (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap))
-                        { 
+                        {
                          if(ToProduce > 0)  MRPSS[x].quantityToConsume = Number.parseFloat(((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap +  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) - MRPSS[x].MRP.ERP7__Fulfilled_Amount__c)).toFixed(4); }*/
                     //}
                     console.log('MRPSS[x].quantityToConsume after :',MRPSS[x].quantityToConsume);
-                    
+
                 }
                 if(ToScrap >= 0){
                     //ToScrap >= 0 is removed on 10/04/23 from below if condition as it was making both the scrap and consume qty as 1 for serialise prod
@@ -4200,17 +4241,17 @@ console.log('FileList : ', JSON.stringify(FileList));
                     else {*/
                         MRPSS[x].quantityToScrap = (WO.ERP7__Quantity_Ordered__c >=0 && ToScrap >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToScrap)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
                         /* if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c < (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap))
-                        { 
+                        {
                          if(ToScrap > 0)  MRPSS[x].quantityToScrap = ((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap +  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) - MRPSS[x].MRP.ERP7__Fulfilled_Amount__c); }*/
-                        
+
                    // }
                     console.log('MRPSS[x].quantityToScrap after :',MRPSS[x].quantityToScrap);
-                    
+
                 }
             }
             cmp.set("v.MRPSS",MRPSS);
         },
-        
+
         FinishWIPFlow : function (cmp, event) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             if(cmp.get("v.wipFlowIndex") == -1){
@@ -4254,12 +4295,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             }
         },
-        
+
         setScrapWIPFlow : function (cmp, event) {
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             //var count = event.currentTarget.getAttribute('data-wfcount');
             var count = 0;
-            var obj = cmp.get("v.WIPFlows"); 
+            var obj = cmp.get("v.WIPFlows");
             var isMOserial = cmp.get("v.ManuOrder.ERP7__Serialise__c");
             obj[count].ERP7__Type__c = "Scrapped";
             var totalWIPFlowQty = 0;
@@ -4273,14 +4314,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                 else if(obj[count].wipFlow.ERP7__Product__r.ERP7__Serialise__c || isMOserial)
                     obj[count].wipFlow.ERP7__Status__c = "Completed";
                 var action = cmp.get("c.ScrapWIPFlow");
-                action.setParams({ 
+                action.setParams({
                     WIPFlow : JSON.stringify(obj[count])
                 });
                 action.setCallback(this, function(response) {
                     var state = response.getState();
                     if (state === "SUCCESS") {
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                        try { 
+                        try {
                             cmp.set("v.WIPs", response.getReturnValue().WIPs);
                             cmp.set("v.MRPSS",response.getReturnValue().MRPSS);
                             if(obj[count].wipFlow.ERP7__Status__c !="Completed")
@@ -4314,7 +4355,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             }
         },
-        
+
         validateBuiltQnty  : function(cmp, event, helper) {
             var WORec = cmp.get("v.WO2Fin");
             if(WORec.ERP7__Quantity_Built__c > WORec.ERP7__Quantity_Ordered__c){
@@ -4322,7 +4363,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set("v.WO2Fin",WORec);
             }
         },
-        
+
         validateFlowQnty  : function(cmp, event, helper) { // method changed by shaguftha on 08/08/23 to add a validation to prevent produce or scrap greater than orderedQty
             var obj = cmp.get("v.WIPFlows");
             cmp.set('v.exceptionError','');
@@ -4341,7 +4382,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 console.log('MRPS[i] : ',MRPS[i]);
                 console.log('obj[count] : ',obj[count]);
                 if(MRPS[i].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c &&  obj[count].wipFlow.ERP7__Product__r.ERP7__Serialise__c != true && enterQty > 1){
-                    cmp.set('v.exceptionError','There is a serialized BOM.You can produce only 1 Qty'); 
+                    cmp.set('v.exceptionError','There is a serialized BOM.You can produce only 1 Qty');
                     cmp.set('v.WIPflowQty',1);
                     return;
                 }
@@ -4356,13 +4397,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                     console.log('producedQty : ',producedQty);
                     console.log('scrapQty : ',scrapQty);
-                    if(enterQty > obj[x].wipFlow.ERP7__Quantity_Ordered__c && obj[x].wipFlow.ERP7__Quantity__c == 0 && obj[x].wipFlow.ERP7__Quantity_Scrapped__c == 0){ 
+                    if(enterQty > obj[x].wipFlow.ERP7__Quantity_Ordered__c && obj[x].wipFlow.ERP7__Quantity__c == 0 && obj[x].wipFlow.ERP7__Quantity_Scrapped__c == 0){
                         var qty = obj[x].wipFlow.ERP7__Quantity_Ordered__c;
                         cmp.set('v.WIPflowQty',qty);
                         enterQty = qty;
                         console.log('qty : ',qty);
                         cmp.set('v.exceptionError',$A.get('$Label.c.The_sum_of_qty_produced_and_scrapped_cannot_be_greater_than_order_qty'));
-                        
+
                     }
                     else if((obj[x].wipFlow.ERP7__Quantity__c + obj[x].wipFlow.ERP7__Quantity_Scrapped__c + enterQty) > obj[x].wipFlow.ERP7__Quantity_Ordered__c){
                         var qty = (obj[x].wipFlow.ERP7__Quantity_Ordered__c - (obj[x].wipFlow.ERP7__Quantity__c + obj[x].wipFlow.ERP7__Quantity_Scrapped__c));
@@ -4370,12 +4411,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                         enterQty = qty;
                         console.log('qty 2: ',qty);
                         cmp.set('v.exceptionError',$A.get('$Label.c.The_sum_of_qty_produced_and_scrapped_cannot_be_greater_than_order_qty'));
-                        
+
                     }
-                    
+
                 }
                 /* if(obj[x].wipFlow.ERP7__Status__c == "Completed"){
-                    
+
                   if(obj[x].wipFlow.ERP7__Type__c == "Produced")
                         producedQty += enterQty; // Number(obj[x].ERP7__Quantity__c);
                     if(obj[x].wipFlow.ERP7__Type__c == "Scrapped")
@@ -4387,14 +4428,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             //producedQty = Math.round((producedQty + Number.EPSILON) * 100) / 100;
             //scrapQty = Math.round((scrapQty + Number.EPSILON) * 100) / 100;
             //processQty = Math.round((processQty + Number.EPSILON) * 100) / 100;
-            
+
             /* var flow = JSON.stringify(obj[count]);
             var processqty = obj[count].wipFlow.ERP7__Work_Orders__r.ERP7__Quantity_Ordered__c * obj[count].wipFlow.ERP7__Quantity_Unit__c - (producedQty+scrapQty+processQty);
             if(obj[count].wipFlow.ERP7__Product__c == obj[count].wipFlow.ERP7__Work_Orders__r.ERP7__Product__c && obj[count].wipFlow.ERP7__Product__r.ERP7__Serialise__c == true && obj[count].wipFlow.ERP7__Quantity__c > 1){
                 obj[count].wipFlow.ERP7__Quantity__c = 1;
                 console.log('in 1');
                 cmp.set("v.WIPFlows",obj);
-            } 
+            }
             else if(obj[count].wipFlow.ERP7__Product__c == obj[count].wipFlow.ERP7__Work_Orders__r.ERP7__Product__c && obj[count].wipFlow.ERP7__Quantity__c > (obj[count].wipFlow.ERP7__Work_Orders__r.ERP7__Quantity_Ordered__c * obj[count].wipFlow.ERP7__Quantity_Unit__c - (producedQty+scrapQty))){
                 obj[count].wipFlow.ERP7__Quantity__c = obj[count].wipFlow.ERP7__Work_Orders__r.ERP7__Quantity_Ordered__c * obj[count].wipFlow.ERP7__Quantity_Unit__c - (producedQty+scrapQty);
                 console.log('in 2');
@@ -4414,10 +4455,10 @@ console.log('FileList : ', JSON.stringify(FileList));
             if(cmp.get('v.maxCutValidation') && totalProduced > cmp.get('v.MaxAllowedCuts')){
                 console.log('in');
                 cmp.set('v.WIPflowQty',0);
-                cmp.set('v.exceptionError',$A.get('$Label.c.The_Quantity_Produced_cannot_be_greater_than_expected') +' : '+cmp.get('v.MaxAllowedCuts')); 
+                cmp.set('v.exceptionError',$A.get('$Label.c.The_Quantity_Produced_cannot_be_greater_than_expected') +' : '+cmp.get('v.MaxAllowedCuts'));
             }
         },
-        
+
         FinishWO1 : function (cmp, event, helper) {
             $A.util.removeClass(cmp.find("mainSpin"),"slds-hide");
             var MRPS_toUse = cmp.get("v.MRPSS");
@@ -4438,14 +4479,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             console.log('MRPS_toUse.length : ',MRPS_toUse.length);
             if(MRPS_toUse != undefined && ConsumedMRPCount == MRPS_toUse.length && cmp.get('v.hideToProduceforMRP')) {//
                 WO.ERP7__Status__c = 'Complete';console.log('set wo status her2??');
-                WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Ordered__c; 
+                WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Ordered__c;
                 cmp.set("v.WO2Fin",WO);
                 cmp.set('v.WorkOrder',WO);
             }
             console.log('stock2Consume : '+stock2Consume);
             console.log('stock2Scrap : '+stock2Scrap);
             console.log('WO : ',WO);
-                
+
             if((stock2Consume + stock2Scrap) > 0){
                 var BOMaction = cmp.get("c.CommitTaskonFinsh");
                 BOMaction.setCallback(this, function(response) {
@@ -4462,19 +4503,19 @@ console.log('FileList : ', JSON.stringify(FileList));
                 helper.finalFinishWO(cmp, event);
             }
         },
-        
+
         //Build_Commit
         FinishWO : function (cmp, event, helper) {
             console.log('FinishWO called');
-            
+
             var WO = cmp.get("v.WorkOrder");
             var Task = cmp.get("v.SelectedTask");
             var wipStatus = '';
             var typewip = cmp.get('v.WIPflowType');
             console.log('showWIPsection~>'+cmp.get('v.showWIPsection'));
-            
+
             if(cmp.get('v.showWIPsection')){
-                
+
                 var wipflows = cmp.get('v.WIPFlows');
                 console.log('wipflows : ',wipflows);
                 if(wipflows.length == 0) {
@@ -4486,7 +4527,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 else{
                     console.log('inhere else');
                     var AllMRPs = cmp.get('v.MRPSS');
-                    
+
                     var ToProduce = cmp.get("v.ToProduce");
                     cmp.set("v.exceptionError", "");
                     var error = false;
@@ -4494,11 +4535,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                         cmp.set("v.exceptionError", $A.get('$Label.c.Built_quantity_cannot_be_null'));
                         error = true;
                     }
-                    
+
                     if(!error){
                         for(var x in AllMRPs){
                             console.log('AllMRPs[x] FinishWO : ',AllMRPs[x]);
-                            if(AllMRPs[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                             let mrp = AllMRPs[x].MRP;
+                            //mrp.ERP7__Total_Amount_Required__c != 0 , was added to build the end product if the req qty of any of any of the bom is 0
+                            if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                                 cmp.set("v.exceptionError", $A.get('$Label.c.Please_allocate_stock_to_consume'));
                                 error = true;
                             }
@@ -4523,18 +4566,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }  commented by shaguftha on 23_11_23*/
                         }
                     }
-                    
+
                     if(!error){
                         for(var x in AllMRPs){
-                            AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToConsume))).toFixed(4); 
+                            AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToConsume))).toFixed(4);
                             console.log('consumed Qty 5: ',AllMRPs[x].MRP.ERP7__Consumed_Quantity__c);
                             AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToScrap))).toFixed(4);
                         }
                         var count = 0;
                         var currentWIPflow = cmp.get('v.SelectedWIPflow');
-                        
+
                         var allWIPflows = cmp.get('v.WIPFlows');
-                        
+
                         var iscompleted = false;
                         var qtyBuild = 0;
                         var qtyScrapped = 0;
@@ -4559,15 +4602,15 @@ console.log('FileList : ', JSON.stringify(FileList));
                             }
                             // if(allWIPflows[x].wipFlow.Id == currentWIPflow.Id && ((Number(allWIPflows[x].wipFlow.ERP7__Quantity__c) + Number(allWIPflows[x].wipFlow.ERP7__Quantity_Scrapped__c)) == Number(allWIPflows[x].wipFlow.ERP7__Quantity_Ordered__c))) currentWIPflow.ERP7__Status__c = 'Completed';
                             //if((allWIPflows[x].wipFlow.ERP7__Type__c == 'Produced' || allWIPflows[x].wipFlow.ERP7__Type__c == 'Processed') && ((Number(allWIPflows[x].wipFlow.ERP7__Quantity__c)) == Number(allWIPflows[x].wipFlow.ERP7__Quantity_Ordered__c))) count=count+1;// iscompleted = true; //allWIPflows[x].wipFlow.ERP7__Status__c == 'Completed' || removed from if condition as it was completing the partial MO
-                            if(allWIPflows[x].wipFlow.ERP7__Quantity__c != null && allWIPflows[x].wipFlow.ERP7__Quantity__c > 0 && currentWIPflow.Id != allWIPflows[x].wipFlow.Id){ 
-                                
-                                qtyBuild += allWIPflows[x].wipFlow.ERP7__Quantity__c; 
+                            if(allWIPflows[x].wipFlow.ERP7__Quantity__c != null && allWIPflows[x].wipFlow.ERP7__Quantity__c > 0 && currentWIPflow.Id != allWIPflows[x].wipFlow.Id){
+
+                                qtyBuild += allWIPflows[x].wipFlow.ERP7__Quantity__c;
                             }
                             else if(allWIPflows[x].wipFlow.ERP7__Quantity_Scrapped__c != null && allWIPflows[x].wipFlow.ERP7__Quantity_Scrapped__c > 0 && currentWIPflow.Id != allWIPflows[x].wipFlow.Id) qtyScrapped += allWIPflows[x].wipFlow.ERP7__Quantity_Scrapped__c;
-                            
-                            
+
+
                         }
-                        
+
                         // if(count == allWIPflows.length) iscompleted =true;
                         //  else iscompleted = false;
                         //  console.log('iscompleted : ',iscompleted);
@@ -4581,7 +4624,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             if(currentWIPflow.ERP7__Type__c == 'Produced' || currentWIPflow.ERP7__Type__c == 'Processed') WO.ERP7__Quantity_Built__c = currentWIPflow.ERP7__Quantity__c;
                             if(currentWIPflow.ERP7__Type__c == 'Scrapped') WO.ERP7__Quantity_Scrapped__c = currentWIPflow.ERP7__Quantity__c;
                         }*/
-                        
+
                         if(!error){
                             console.log('inherer1 arshad');
                             cmp.set('v.SelectedWIPflow',currentWIPflow);
@@ -4630,10 +4673,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         }
                                         else cmp.popInit();
                                         cmp.set('v.WIPflowType', 'Produced'); // added to default back to the old list 17_07_24
-                                        
+
                                         //$A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                     }
-                                    else { 
+                                    else {
                                         cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                                         WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
                                         console.log('else WO Qty : ',WO.ERP7__Quantity_Built__c);
@@ -4642,10 +4685,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                                             AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = AllMRPs[x].MRP.ERP7__Consumed_Quantity__c - AllMRPs[x].quantityToConsume;
                                             console.log('consumed Qty 6: ',AllMRPs[x].MRP.ERP7__Consumed_Quantity__c);
                                             AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c =  AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c - AllMRPs[x].quantityToScrap;
-                                            
+
                                         }
                                         cmp.set("v.MRPSS", AllMRPs);
-                                        
+
                                         cmp.set("v.signatureExist", false);
                                         var selAttachs = cmp.get("v.SelectedAttachments");
                                         for(var x in selAttachs){
@@ -4656,14 +4699,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                     }
                                 }
-                                
+
                             });
                             $A.enqueueAction(action);
                         }
                     }
                 }
-                
-            } 
+
+            }
             else{
                 var wipflows = cmp.get('v.WIPFlows');
                 if(wipflows.length == 0) {
@@ -4679,10 +4722,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                     var totalQty = 0;
                     let today = new Date();
                     console.log(today);
-                    
+
                     let dd = today.getDate();
                     let mm = today.getMonth() + 1;
-                    
+
                     let yyyy = today.getFullYear();
                     if (dd < 10) {
                         dd = '0' + dd;
@@ -4718,28 +4761,29 @@ console.log('FileList : ', JSON.stringify(FileList));
                             console.log('consumed Qty 1: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
                             const sumofall = Number.parseFloat((Number(mrps[x].MRP.ERP7__Consumed_Quantity__c) + Number(mrps[x].MRP.ERP7__Scrapped_Quantity__c) + Number(mrps[x].quantityToConsume) + Number(mrps[x].quantityToScrap))).toFixed(4);
                             console.log('sumofall : ',sumofall);
-                            if(mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                            let mrp1 = mrps[x].MRP;
+                            if(mrp1.ERP7__Total_Amount_Required__c > 0 && mrp1.ERP7__Fulfilled_Amount__c == 0){
                                 cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                                 return;
                             } else if((parseFloat(mrps[x].quantityToConsume) + parseFloat(mrps[x].quantityToScrap)) > mrps[x].MRP.ERP7__Fulfilled_Amount__c){
                                 cmp.set('v.exceptionError',$A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot_be_greater_than_fulfilled_quantity'));
                                 return;
                             }
-                            
+
                                 else   if(sumofall > Number(mrps[x].MRP.ERP7__Fulfilled_Amount__c)){
                                     cmp.set("v.exceptionError", $A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot') +mrps[x].MRP.ERP7__MRP_Product__r.Name);
                                     return;
                                 }
-                                    /* commented  on 09_01_2023 to fix the issue of updating MRP with wrong qty when error encountered in the other MRPs 
+                                    /* commented  on 09_01_2023 to fix the issue of updating MRP with wrong qty when error encountered in the other MRPs
                                      * else{
-                                        mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4); 
+                                        mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4);
                                         mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(4);
                                         console.log('consumed Qty 2: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
                                     }*/
                         }
-                        
+
                         for(var x in mrps){
-                            mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4); 
+                            mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4);
                             mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(4);
                             console.log('consumed Qty 2: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
                         }
@@ -4751,14 +4795,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                     for(var x in wipflows){
                         console.log('wipflows[x].selected : ',wipflows[x].selected);
                         if(wipflows[x].selected){
-                            
+
                             console.log('selected');
                             //if(wipflows[x].wipFlow.ERP7__Product__c != cmp.get('v.WorkOrder.ERP7__Product__c') && cmp.get('v.TypeOfWIP') == 'Produced')   wipflows[x].wipFlow.ERP7__Type__c = 'Processed';
                             //else wipflows[x].wipFlow.ERP7__Type__c = cmp.get('v.TypeOfWIP');
                             if(wipflows[x].wipFlow.ERP7__Product__r.ERP7__Serialise__c){
                                 if(cmp.get('v.TypeOfWIP') == "Scrapped") wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c  = 1;
                                 else wipflows[x].wipFlow.ERP7__Quantity__c = 1;
-                            } 
+                            }
                             else {
                                 if(cmp.get('v.TypeOfWIP') == "Scrapped") wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c = cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c');
                                 else wipflows[x].wipFlow.ERP7__Quantity__c = cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c');
@@ -4768,28 +4812,28 @@ console.log('FileList : ', JSON.stringify(FileList));
                         }
                         if(wipflows[x].wipFlow.ERP7__Quantity__c != null && wipflows[x].wipFlow.ERP7__Quantity__c > 0) qtyBuild += wipflows[x].wipFlow.ERP7__Quantity__c;
                         else if(wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c != null && wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c > 0) qtyScrapped += wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c;
-      
-                        
-                    }  
+
+
+                    }
                 }*/
                         console.log('totalQty : ',totalQty);
                         console.log('SelectedWipflows bfr: ',JSON.stringify(SelectedWipflows));
                         if(cmp.get('v.TypeOfWIP') == 'Produced') {
                             WO.ERP7__Quantity_Built__c =  (WO.ERP7__Quantity_Built__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Built__c) + Number(totalQty)) : Number(totalQty);
                             SelectedWipflows.ERP7__Quantity__c = (SelectedWipflows.ERP7__Quantity__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity__c) + Number(totalQty)) : Number(totalQty);
-                        } 
+                        }
                         else if(cmp.get('v.TypeOfWIP') == 'Scrapped') {
                             WO.ERP7__Quantity_Scrapped__c =  (WO.ERP7__Quantity_Scrapped__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Scrapped__c) + Number(totalQty)) : Number(totalQty);
                             SelectedWipflows.ERP7__Quantity_Scrapped__c = (SelectedWipflows.ERP7__Quantity_Scrapped__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity_Scrapped__c) + Number(totalQty)) : Number(totalQty);
                         }
-                        
+
                         var selectedWIP = [];
                         selectedWIP.push(SelectedWipflows);
                         console.log('selectedWIP : ',JSON.stringify(selectedWIP));
                         console.log('arshad1 JSON.stringify(mrps)~>',JSON.stringify(mrps));
                         console.log('arshad1 JSON.stringify(WO)~>',JSON.stringify(WO));
                         console.log(' JSON.stringify(SelectSerials)~>',JSON.stringify(serialsToProduce));
-                        
+
                         var action = cmp.get("c.completetheWOandWIP");
                         $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
                         action.setParams({
@@ -4833,10 +4877,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         cmp.set("v.WO2Fin",updatedWO);
                                         helper.finalFinishWO(cmp,event);
                                     }
-                                    
+
                                     let mrps = cmp.get('v.MRPSS');
                                     for(var x in mrps){
-                                        mrps[x].quantityToConsume = 0; 
+                                        mrps[x].quantityToConsume = 0;
                                         mrps[x].quantityToScrap = 0;
                                     }
                                     cmp.set('v.MRPSS',mrps);
@@ -4846,15 +4890,15 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     cmp.popInit();
                                     cmp.set('v.TypeOfWIP', 'Produced'); // added to default back to the old list 08_01_24
                                     cmp.set('v.moSerialForProduction',serialstoset);
-                                    
+
                                     $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                 }
-                                else { 
+                                else {
                                     cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                                     if(cmp.get('v.TypeOfWIP') == 'Produced') {
                                         WO.ERP7__Quantity_Built__c =  (WO.ERP7__Quantity_Built__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Built__c) - Number(totalQty)) : 0;
                                        // SelectedWipflows.ERP7__Quantity__c = (SelectedWipflows.ERP7__Quantity__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity__c) + Number(totalQty)) : Number(totalQty);
-                                    } 
+                                    }
                                     else if(cmp.get('v.TypeOfWIP') == 'Scrapped') {
                                         WO.ERP7__Quantity_Scrapped__c =  (WO.ERP7__Quantity_Scrapped__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Scrapped__c) - Number(totalQty)) :0;
                                       //  SelectedWipflows.ERP7__Quantity_Scrapped__c = (SelectedWipflows.ERP7__Quantity_Scrapped__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity_Scrapped__c) + Number(totalQty)) : Number(totalQty);
@@ -4867,10 +4911,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = AllMRPs[x].MRP.ERP7__Consumed_Quantity__c - AllMRPs[x].quantityToConsume;
                                         AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c =  AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c - AllMRPs[x].quantityToScrap;
                                         console.log('consumed Qty 3: ',AllMRPs[x].MRP.ERP7__Consumed_Quantity__c);
-                                        
+
                                     }
                                     cmp.set("v.MRPSS", AllMRPs);
-                                    
+
                                     cmp.set("v.signatureExist", false);
                                     var selAttachs = cmp.get("v.SelectedAttachments");
                                     for(var x in selAttachs){
@@ -4886,13 +4930,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 console.log('error : ',error);
                                 if(error != undefined && error.length > 0) {
                                     cmp.set("v.exceptionError", error[0].message);
-                                    
+
                                 }
                                 console.log('SelectedWipflows err bfr set : ',JSON.stringify(SelectedWipflows));
                                 if(cmp.get('v.TypeOfWIP') == 'Produced') {
                                     WO.ERP7__Quantity_Built__c =  (WO.ERP7__Quantity_Built__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Built__c) - Number(totalQty)) : Number(totalQty);
                                     SelectedWipflows.ERP7__Quantity__c = (SelectedWipflows.ERP7__Quantity__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity__c) - Number(totalQty)) : Number(totalQty);
-                                } 
+                                }
                                 else if(cmp.get('v.TypeOfWIP') == 'Scrapped') {
                                     WO.ERP7__Quantity_Scrapped__c =  (WO.ERP7__Quantity_Scrapped__c > 0 && cmp.get("v.ManuOrder.ERP7__Serialise__c")) ? (Number(WO.ERP7__Quantity_Scrapped__c) - Number(totalQty)) : Number(totalQty);
                                     SelectedWipflows.ERP7__Quantity_Scrapped__c = (SelectedWipflows.ERP7__Quantity_Scrapped__c > 0) ? (Number(SelectedWipflows.ERP7__Quantity_Scrapped__c) - Number(totalQty)) : Number(totalQty);
@@ -4905,28 +4949,28 @@ console.log('FileList : ', JSON.stringify(FileList));
                         $A.enqueueAction(action);
                     }
                     else{
-                        cmp.set('v.exceptionError',$A.get('$Label.c.Please_Select_Serials_To_Produce')); 
+                        cmp.set('v.exceptionError',$A.get('$Label.c.Please_Select_Serials_To_Produce'));
                     }
                 }
-                
-                
+
+
             }
         },
-        
+
         closeFinishModal : function(cmp, event) {
             //$A.util.removeClass(cmp.find("finishModal"),"slds-fade-in-open");
             //$A.util.removeClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
-            cmp.set("v.fPage",false); 
+            cmp.set("v.fPage",false);
         },
-        
+
         GetResources: function(cmp, event) {
-            var obj = cmp.get("v.WorkPlanners"); 
-            var Name = cmp.get("v.ResourceStr"); 
-            var ST = cmp.get("v.StartTime"); 
-            var ET = cmp.get("v.EndTime"); 
+            var obj = cmp.get("v.WorkPlanners");
+            var Name = cmp.get("v.ResourceStr");
+            var ST = cmp.get("v.StartTime");
+            var ET = cmp.get("v.EndTime");
             var objsels = JSON.stringify(obj);
-            var WPId = cmp.get("v.SelectedWP"); 
-            var RRId = cmp.get("v.selectedRR"); 
+            var WPId = cmp.get("v.SelectedWP");
+            var RRId = cmp.get("v.selectedRR");
             console.log('ST: '+ST+' ET: '+ET);
             var action = cmp.get("c.GetAllResources");
             action.setParams({
@@ -4943,22 +4987,22 @@ console.log('FileList : ', JSON.stringify(FileList));
                     console.log('response.getReturnValue(): ',response.getReturnValue());
                     //cmp.popInit();
                     if(response.getReturnValue().errorMsg != '') cmp.set("v.ResourcePopupErrorMsg",response.getReturnValue().errorMsg);
-                    else { 
+                    else {
                         cmp.set("v.AvailableResources",response.getReturnValue().AvailableResources);
                     }
                 } else { cmp.set("v.ResourcePopupErrorMsg",response.getReturnValue().errorMsg); }
             });
             $A.enqueueAction(action);
-            
+
         },
-        
+
         upsertResources: function(cmp, event) {
             var obj = cmp.get("v.AvailableResources");
             var objsels = JSON.stringify(obj);
-            var ST = cmp.get("v.StartTime"); 
-            var ET =cmp.get("v.EndTime"); 
+            var ST = cmp.get("v.StartTime");
+            var ET =cmp.get("v.EndTime");
             var WOO = cmp.get("v.WorkOrder");
-            
+
             var action = cmp.get("c.SaveResources");
             action.setParams({
                 Resources: objsels,
@@ -4971,7 +5015,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 if (state === "SUCCESS") {
                     //cmp.popInit();
                     if(response.getReturnValue().errorMsg != '') cmp.set("v.ResourcePopupErrorMsg",response.getReturnValue().errorMsg);
-                    else { 
+                    else {
                         cmp.set("v.raPage",false);
                         //$A.util.removeClass(cmp.find("myResourceAllocationModal"),"slds-fade-in-open");
                         //$A.util.removeClass(cmp.find("myResourceAllocationModalBackdrop"),"slds-backdrop_open");
@@ -4981,20 +5025,20 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         closeResourceAllocationModal : function (cmp, event) {
             cmp.set("v.raPage",false);
             //$A.util.removeClass(cmp.find("myResourceAllocationModal"),"slds-fade-in-open");
             //$A.util.removeClass(cmp.find("myResourceAllocationModalBackdrop"),"slds-backdrop_open");
         },
-        
+
         SelectWP: function(cmp, event) {
             var count = String(event.currentTarget.getAttribute('data-rr'));
             var name = String(event.currentTarget.getAttribute('data-rrname'));
             cmp.set("v.selectedRR",count);
             cmp.set("v.selectedRRName",name);
         },
-        
+
         /* goBack : function(component,event,helper){
             window.history.back();
         },
@@ -5003,103 +5047,103 @@ console.log('FileList : ', JSON.stringify(FileList));
             document.getElementById("sigbody").style.visibility = "visible";
             cmp.set("v.IsSignatureTab",true);
         },
-        
+
         tab1 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",true);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab2 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",true);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab3 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",true);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab4 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",true);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab5 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",true);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab6 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",true);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab7 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",true);
             cmp.set("v.signatureTab",false);
         },
-        
+
         tab8 : function(cmp, event, helper) {
             cmp.set("v.worksheetTab",false);
             cmp.set("v.drawingTab",false);
             cmp.set("v.timeTrackingTab",false);
             cmp.set("v.MRPSTab",false);
             cmp.set("v.resourceTab",false);
-            
+
             cmp.set("v.currentProductionTab",false);
             cmp.set("v.serialorBatchesTab",false);
             cmp.set("v.signatureTab",true);
         },
-        
+
         displayWIPFlowsNext : function(component, event, helper) {
             var obj = component.get("v.AllWIPFlows");
             var start = component.get('v.WipflowsShowStart');
@@ -5121,10 +5165,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
             });
             $A.enqueueAction(action);*/
-            
-            
+
+
         },
-        
+
         displayWIPFlowsPrevious : function(component, event, helper) {
             var obj = component.get("v.AllWIPFlows");
             var start = component.get('v.WipflowsShowStart');
@@ -5146,9 +5190,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
             });
             $A.enqueueAction(action); */
-            
+
         },
-        
+
         displaySerialsNext : function(component, event, helper) {
             var obj = component.get("v.AllmoSerialNos");
             var start = component.get('v.moSerialNosShowStart');
@@ -5166,9 +5210,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                 }
             });
             $A.enqueueAction(action);
-            
+
         },
-        
+
         displaySerialsPrevious : function(component, event, helper) {
             var obj = component.get("v.AllmoSerialNos");
             var start = component.get('v.moSerialNosShowStart');
@@ -5187,15 +5231,15 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             $A.enqueueAction(action);
         },
-        
+
         closeError : function(cmp, event){
             cmp.set("v.exceptionError", "");
         },
-        
+
         closeWarning : function(cmp, event){
             cmp.set("v.warningError", "");
         },
-        
+
         getSOLISerialStock : function(cmp, event){
             if(!$A.util.isEmpty(cmp.get("v.NewSOLI.ERP7__Serial__c")) && !$A.util.isUndefinedOrNull(cmp.get("v.NewSOLI.ERP7__Serial__c"))){
                 //alert("getSOLISerialStock");
@@ -5220,7 +5264,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             else cmp.set("v.SOLI_SerialStock", 0);
         },
-        
+
         getSOLIBatchStock : function(cmp, event){
             if(!$A.util.isEmpty(cmp.get("v.NewSOLI.ERP7__Material_Batch_Lot__c")) && !$A.util.isUndefinedOrNull(cmp.get("v.NewSOLI.ERP7__Material_Batch_Lot__c"))){
                 var bId = cmp.get("v.NewSOLI.ERP7__Material_Batch_Lot__c");
@@ -5242,30 +5286,30 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
             else cmp.set("v.SOLI_BatchStock", 0);
         },
-        
-        onControllerFieldChange: function(component, event, helper) { 
+
+        onControllerFieldChange: function(component, event, helper) {
             var controllerValueKey = component.get("v.ControllingValue"); // get selected controller field value
             var depnedentFieldMap = component.get("v.depnedentFieldMap");
-            
+
             if (controllerValueKey != '--- None ---') {
-                
+
                 var ListOfDependentFields = depnedentFieldMap[controllerValueKey];
                 if(ListOfDependentFields.length > 0){
-                    component.set("v.bDisabledDependentFld" , false);  
-                    helper.fetchDepValues(component, ListOfDependentFields);    
+                    component.set("v.bDisabledDependentFld" , false);
+                    helper.fetchDepValues(component, ListOfDependentFields);
                 }else{
-                    component.set("v.bDisabledDependentFld" , true); 
+                    component.set("v.bDisabledDependentFld" , true);
                     component.set("v.listDependingValues", ['--- None ---']);
-                } 
-                
-                
+                }
+
+
             } else {
                 component.set("v.listDependingValues", ['--- None ---']);
                 component.set("v.bDisabledDependentFld" , true);
             }
-        }, 
+        },
         SaveTaskValues : function(cmp,event,helper){
-            
+
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
             var wid = cmp.get('v.WorkOrder.Id');
             var taks = cmp.get('v.tasklists');
@@ -5292,11 +5336,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                 else{
                     cmp.set('v.errorMsg',response.getReturnValue().errorMsg);
                 }
-                
+
             });
             $A.enqueueAction(action);
-            
-            
+
+
         },
         checkreq : function(cmp, event, helper) {
             try{
@@ -5304,12 +5348,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 var Task = cmp.get('v.SelectedTask');
                 var checks = cmp.get('v.Checklist');
                 var guidelines = cmp.get('v.guidelinechecklist');
-                
+
                 var guidelinelength = 0;
                 var checklistlength = 0;
                 if(guidelines != undefined && guidelines != null && guidelines != '') guidelinelength = guidelines.length;
                 if(checks != undefined && checks != null && checks != '') checklistlength = checks.length;
-                
+
                 if(checkval && checklistlength > 0 && guidelinelength == 0){
                     for(var i in checks){
                         if(checks[i].ERP7__Operation__c != null && checks[i].ERP7__Operation__c != '' && checks[i].ERP7__Operation__c == Task.ERP7__Operation__c && checks[i].ERP7__Is_Mandatory__c){
@@ -5322,10 +5366,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                         }
                         else{ break;}
                     }
-                    
+
                 }
             }catch(error){console.log('Error : '+error)}
-            
+
         },
         selectAll : function(cmp, event, helper) {
             /* var Task = cmp.get("v.SelectedTask");
@@ -5341,12 +5385,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             var val = event.getSource().get("v.checked");
             //cmp.find("checkingAll")
             cmp.set("v.checkAll",val);
-            
+
             for(var x in tasks){
                 //if(tasks[x].LOLI.ERP7__Quantity_Received__c > LOLI[x].LOLI.ERP7__Putaway_Quantity__c)
                 tasks[x].isSelected = val;
             }
-            cmp.set("v.tasklists",tasks); 
+            cmp.set("v.tasklists",tasks);
             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
             // }
             //cmp.set("v.checkAll",false);
@@ -5378,7 +5422,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 var allWIPflows = cmp.get('v.WIPFlows');
                 for(var x in allWIPflows){
                     if(x == count){
-                       allWIPflows[x].ERP7__Status__c = 'Completed'; 
+                       allWIPflows[x].ERP7__Status__c = 'Completed';
                     }
                 }
                 cmp.set('v.WIPFlows',allWIPflows);
@@ -5390,7 +5434,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             //if(confirmval)
           //  {
                 $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-                
+
                 var WId = event.getSource().get('v.name');
                 var WO = cmp.get('v.WorkOrder');
                 WO.ERP7__Status__c = 'Complete';
@@ -5418,15 +5462,15 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.enqueueAction(action);
            // }
         },
-        
+
         goBack : function(cmp, event){
             console.log('arshad goback called');
             var nav = cmp.get("v.NAV");
             var isFromMO = cmp.get("v.isFromMO");
-            
+
             console.log('nav~>'+nav);
             console.log('isFromMO~>'+isFromMO);
-            
+
             if(isFromMO){
                 var moId = cmp.get("v.ManuOrder").Id
                 if(!$A.util.isUndefinedOrNull(moId)){
@@ -5457,7 +5501,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 }
             }
         },
-        
+
         Nav2MO : function(cmp, event,helper){
             var moId = cmp.get("v.ManuOrder").Id
             if(!$A.util.isUndefinedOrNull(moId)){
@@ -5473,7 +5517,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                 });
             }
-            
+
             /* var evt = $A.get("e.force:navigateToComponent");
             evt.setParams({
                 componentDef : "c:Manufacturing_Orders",
@@ -5486,14 +5530,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             evt.fire();*/
         },
-        
+
         handleWipStatusChange : function(cmp, event,helper){
             //alert('handleWipStatusChange');
             var selectedValue = event.getSource().get("v.value"); //cmp.find("WIPFlowType").get("v.value");
             console.log('selectedValue : ',selectedValue);
             var nameValue = event.getSource().get("v.name");
             console.log('nameValue : ',nameValue);
-            
+
             if(nameValue != null && nameValue != '' && nameValue != undefined){
                 //added by shaguftha on 25/07/2023 to get the user entered value
                 let wipQty = cmp.get('v.WIPflowQty');
@@ -5527,8 +5571,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                 }
             }
-            
-            
+
+
         },
         generateSerialNumbers :  function(cmp, event,helper){
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -5536,14 +5580,14 @@ console.log('FileList : ', JSON.stringify(FileList));
             console.log('fromval : ',fromval);
             var prefix = cmp.get('v.SerialPrefix');
             console.log('prefix : ',prefix);
-                
+
                 const startNum = parseInt(cmp.get('v.startNum')) - 1;
                  const updatedSerials = [];
                 if (fromval && prefix) {
                     cmp.set('v.RefreshSerials',false);
                     const allSerials = cmp.get('v.AllmoSerialNos');
-                   
-                    var numericValue = parseInt(fromval); 
+
+                    var numericValue = parseInt(fromval);
                     for (let i = startNum; i < cmp.get('v.endNum'); i++) {
                         const serial = allSerials[i];
                         const formattedSerial = prefix + numericValue.toString().padStart(fromval.toString().length, '0');
@@ -5581,7 +5625,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         console.log('error : ',response.getError());
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
-                    
+
                 });
                 $A.enqueueAction(action);
             }
@@ -5598,19 +5642,19 @@ console.log('FileList : ', JSON.stringify(FileList));
             });
             urlEvent.fire();
         },
-        
+
         //select all
         selectAllWIps : function (cmp,event) {
             var checkedval = event.getSource().get('v.checked');
             let wipflows = cmp.get('v.WIPFlows');
             var totalQty = 0;
             var lmt = cmp.get('v.WipflowsShowforBuild');
-            
+
             for(var x in wipflows){
                 if(lmt > 0 && (wipflows[x].wipFlow.ERP7__Quantity__c + wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c) != wipflows[x].wipFlow.ERP7__Quantity_Ordered__c){
                     wipflows[x].selected = checkedval;
                     lmt--;
-                } 
+                }
                 if(wipflows[x].selected && (wipflows[x].wipFlow.ERP7__Quantity__c + wipflows[x].wipFlow.ERP7__Quantity_Scrapped__c) != wipflows[x].wipFlow.ERP7__Quantity_Ordered__c) totalQty++;
             }
             cmp.set('v.WIPFlows',wipflows);
@@ -5618,7 +5662,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.showWIPsection',false);
                 let mrps = cmp.get('v.MRPSS');
                 for(var x in mrps){
-                    if(mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                     let mrp =mrps[x].MRP ;
+                    if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                         cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                         return;
                     }
@@ -5632,11 +5677,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                             mrps[x].quantityToConsume = 0;
                             mrps[x].quantityToScrap = parseFloat(((mrps[x].MRP.ERP7__Total_Amount_Required__c/cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c')) * totalQty).toFixed($A.get("$Label.c.DecimalPlacestoFixedMO")));
                             //mrps[x].quantityToScrap = ((mrps[x].MRP.ERP7__Total_Amount_Required__c/cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c')) * totalQty);
-                        } 
+                        }
                     }
                 }
-                
-                
+
+
                 cmp.set('v.MRPSS',mrps);
                 if(cmp.get('v.TypeOfWIP') == 'Produced') {
                     cmp.set('v.TotalWIPQtyProduced',totalQty);
@@ -5651,7 +5696,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.showWIPsection',true);
                 let mrps = cmp.get('v.MRPSS');
                 for(var x in mrps){
-                    mrps[x].quantityToConsume = 0; 
+                    mrps[x].quantityToConsume = 0;
                     mrps[x].quantityToScrap = 0;
                 }
                 cmp.set('v.MRPSS',mrps);
@@ -5659,13 +5704,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.TotalWIPQtyScrapped',0);
             }
         },
-        
+
         SetWIPs : function (cmp,event) {
             var checkedval = cmp.get('v.selectAllCheckbox');
             let wipflows = cmp.get('v.WIPFlows');
             var totalQty = 0;
             var lmt = cmp.get('v.WipflowsShowforBuild');
-            
+
             for(var x in wipflows){
                 wipflows[x].selected = false;
             }
@@ -5680,11 +5725,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 if(serials[x].selected) totalQty++;
             }
             // cmp.set('v.WIPFlows',wipflows);
-            
+
             cmp.set('v.showWIPsection',false);
             let mrps = cmp.get('v.MRPSS');
             for(var x in mrps){
-                if(mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                 let mrp =mrps[x].MRP ;
+                    if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                     cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                     return;
                 }
@@ -5696,10 +5742,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                     else if(cmp.get('v.TypeOfWIP') == 'Scrapped'){
                         mrps[x].quantityToConsume = 0;
                         mrps[x].quantityToScrap =((mrps[x].MRP.ERP7__Total_Amount_Required__c/cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c')) * totalQty);;
-                    } 
+                    }
                 }
             }
-            
+
             cmp.set('v.MRPSS',mrps);
             if(cmp.get('v.TypeOfWIP') == 'Produced') {
                 cmp.set('v.TotalWIPQtyProduced',totalQty);
@@ -5710,7 +5756,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.TotalWIPQtyScrapped',totalQty);
             }
         },
-        
+
         handleWiptypeChangeOld : function(cmp,event){
             //alert('In handleWiptypeChange');
             $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
@@ -5750,7 +5796,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set('v.MRPSS',mrps);
             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
         },
-        
+
         //select single
         selectedWIps : function(cmp,event){
             console.log('selectedWIps called');
@@ -5774,47 +5820,48 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.showWIPsection',false);
                 let mrps = cmp.get('v.MRPSS');
                 for(var x in mrps){
-                    if(mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                    let mrp =mrps[x].MRP ;
+                    if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                         cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                         return;
                     }
                     else{
                         console.log('TypeOfWIP~>'+cmp.get('v.TypeOfWIP'));
-                        
+
                         if(cmp.get('v.TypeOfWIP') == 'Produced') {
                             console.log('mrps[x].quantityToConsume before~>'+mrps[x].quantityToConsume);
                             console.log('parseFloat(mrps[x].quantityToConsume)~>'+parseFloat(mrps[x].quantityToConsume));
                             console.log('mrps[x].MRP.ERP7__Total_Amount_Required__c~>'+mrps[x].MRP.ERP7__Total_Amount_Required__c);
                             console.log('v.WorkOrder.ERP7__Quantity_Ordered__c~>'+cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
-                            
+
                             if(checkedval)  mrps[x].quantityToConsume = parseFloat((mrps[x].quantityToConsume + (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'))).toFixed($A.get("$Label.c.DecimalPlacestoFixedMO")));
                             else mrps[x].quantityToConsume = parseFloat((mrps[x].quantityToConsume - (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'))).toFixed($A.get("$Label.c.DecimalPlacestoFixedMO")));
-                            
+
                             //if(checkedval)  mrps[x].quantityToConsume = parseFloat(mrps[x].quantityToConsume) + (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
                             //else mrps[x].quantityToConsume = parseFloat(mrps[x].quantityToConsume) - (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
                             mrps[x].quantityToScrap = 0;
-                            
+
                             console.log('mrps[x].quantityToConsume after~>'+mrps[x].quantityToConsume);
                         }
                         else if(cmp.get('v.TypeOfWIP') == 'Scrapped'){
                             mrps[x].quantityToConsume = 0;
-                            
+
                             if(checkedval) mrps[x].quantityToScrap = parseFloat((mrps[x].quantityToScrap + (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'))).toFixed($A.get("$Label.c.DecimalPlacestoFixedMO")));
                             else mrps[x].quantityToScrap = parseFloat((mrps[x].quantityToScrap - (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'))).toFixed($A.get("$Label.c.DecimalPlacestoFixedMO")));
-                            
+
                             //if(checkedval) mrps[x].quantityToScrap = parseFloat(mrps[x].quantityToScrap) + (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
                             //else mrps[x].quantityToScrap = parseFloat(mrps[x].quantityToScrap) - (mrps[x].MRP.ERP7__Total_Amount_Required__c / cmp.get('v.WorkOrder.ERP7__Quantity_Ordered__c'));
-                        } 
+                        }
                     }
                 }
-                
-                
+
+
                 cmp.set('v.MRPSS',mrps);
                 if(cmp.get('v.TypeOfWIP') == 'Produced') {
                     if(checkedval) cmp.set('v.TotalWIPQtyProduced',(cmp.get('v.TotalWIPQtyProduced') + 1));
                     else cmp.set('v.TotalWIPQtyProduced',(cmp.get('v.TotalWIPQtyProduced') - 1));
                     cmp.set('v.TotalWIPQtyScrapped',cmp.get('v.TotalWIPQtyScrapped'));
-                } 
+                }
                 else if(cmp.get('v.TypeOfWIP') == 'Scrapped'){
                     if(checkedval) cmp.set('v.TotalWIPQtyScrapped',(cmp.get('v.TotalWIPQtyScrapped') + 1));
                     else cmp.set('v.TotalWIPQtyScrapped',(cmp.get('v.TotalWIPQtyScrapped') - 1));
@@ -5826,7 +5873,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.showWIPsection',true);
                 let mrps = cmp.get('v.MRPSS');
                 for(var x in mrps){
-                    mrps[x].quantityToConsume = 0; 
+                    mrps[x].quantityToConsume = 0;
                     mrps[x].quantityToScrap = 0;
                 }
                 cmp.set('v.MRPSS',mrps);
@@ -5834,7 +5881,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.TotalWIPQtyScrapped',0);
             }
             console.log('SelectedWIPflow : ',JSON.stringify(cmp.get('v.SelectedWIPflow')));
-            
+
         },
         AutoStockAllocationInitial : function (cmp, event) {
             cmp.set("v.editErrorMsg","");
@@ -5853,7 +5900,7 @@ console.log('FileList : ', JSON.stringify(FileList));
         },
         allocateForMRP : function (cmp, event,helper) {
             console.log('allocateForMRP called ');
-            
+
             var MRPId = event.currentTarget.name;
             // alert(MRPId);
             if(MRPId != null && MRPId != '' && MRPId != undefined){
@@ -5879,9 +5926,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 else{
                                     objsel.push(obj[x]);
                                     //limit = obj[x].MRPQuantity;
-                                    break; 
+                                    break;
                                 }
-                        
+
                     }
                 }
                 // alert(parseInt(cmp.get("v.AutoSTockAllocationLimit")));
@@ -5893,7 +5940,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         MRPs: allMRPs,
                         AutostkLimit : allocatelimit
                     });
-                    
+
                     action.setCallback(this, function(response) {
                         var state = response.getState();
                         //alert(state);
@@ -5907,22 +5954,22 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     for(var x in obj){
                                         if(obj[x].MRP.Id == MRPId){
                                             obj[x] = resMRP[0];
-                                        } 
+                                        }
                                     }
                                     cmp.set("v.MRPs",obj);
                                 }
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                                
+
                             }
                             else {
                                 $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                                cmp.set("v.exceptionError",response.getReturnValue().errorMsg); 
+                                cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
                             }
                         }
-                        else { 
+                        else {
                             console.log('error ReserveMRPSStocks : ',response.getError());
                             var err = response.getError();
-                            if(err != undefined && err.length > 0) cmp.set("v.exceptionError",err[0].message); 
+                            if(err != undefined && err.length > 0) cmp.set("v.exceptionError",err[0].message);
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
                     });
@@ -5933,7 +5980,7 @@ console.log('FileList : ', JSON.stringify(FileList));
         selectSerialsForProduction: function (cmp, event) {
             var checkedval = event.getSource().get('v.checked');
             cmp.set('v.selectAllCheckbox', checkedval);
-            
+
             var obj = cmp.get("v.moSerialForProduction");
             var showSerialsCount = cmp.get("v.WipflowsShowforBuild");
             var startNum = cmp.get("v.startNum");
@@ -5944,23 +5991,24 @@ console.log('FileList : ', JSON.stringify(FileList));
             for(var x in obj){
                 obj[x].selected = false;
             }
-            
+
             console.log('selectedSerials 2: ',selectedSerials);
             for (var i = startNum; i < endNum && i < obj.length; i++) {
                 obj[i].selected = checkedval;
                 selectedSerials++;
             }
             console.log('selectedSerials 1 : '+selectedSerials);
-    
-           
+
+
             cmp.set("v.moSerialForProduction", obj);
-    
+
             if (checkedval) {
                 cmp.set('v.showWIPsection', false);
                 let mrps = cmp.get('v.MRPSS');
                 let totalSelected = selectedSerials;
                 for (var x in mrps) {
-                    if (mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0) {
+                    let mrp = mrps[x].MRP;
+                    if (mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0) {
                         cmp.set('v.exceptionError', $A.get('$Label.c.Please_allocate_stock_to_consume'));
                         return;
                     } else {
@@ -5973,9 +6021,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                         }
                     }
                 }
-    
+
                 cmp.set('v.MRPSS', mrps);
-    
+
                 if (cmp.get('v.TypeOfWIP') == 'Produced') {
                     cmp.set('v.TotalWIPQtyProduced', totalSelected);
                     cmp.set('v.TotalWIPQtyScrapped', 0);
@@ -5986,12 +6034,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             } else {
                 cmp.set('v.showWIPsection', false); //changed to true on 17 jul,24 jira AA-542
                 let mrps = cmp.get('v.MRPSS');
-                
+
                 for (var x in mrps) {
                     mrps[x].quantityToConsume = 0;
                     mrps[x].quantityToScrap = 0;
                 }
-                
+
                 cmp.set('v.MRPSS', mrps);
                 cmp.set('v.TotalWIPQtyProduced', 0);
                 cmp.set('v.TotalWIPQtyScrapped', 0);
@@ -6043,7 +6091,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.showWIPsection',true);
                 let mrps = cmp.get('v.MRPSS');
                 for(var x in mrps){
-                    mrps[x].quantityToConsume = 0; 
+                    mrps[x].quantityToConsume = 0;
                     mrps[x].quantityToScrap = 0;
                 }
                 cmp.set('v.MRPSS',mrps);
@@ -6068,12 +6116,12 @@ console.log('FileList : ', JSON.stringify(FileList));
             let serials = cmp.get('v.moSerialForProduction');
             let lmt = cmp.get('v.WipflowsShowforBuild');
             cmp.set('v.endNum', parseInt(cmp.get('v.startNum')) + parseInt(lmt)); // Adjust endNum calculation
-            
+
             // Resetting all serials to unselected
             for (let x in serials) {
                 serials[x].selected = false;
             }
-            
+
             cmp.set('v.moSerialForProduction', serials);
             cmp.set('v.selectAllCheckbox', false);
         },
@@ -6094,7 +6142,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                     cmp.set('v.showWIPsection',false);
                     let mrps = cmp.get('v.MRPSS');
                     for(var x in mrps){
-                        if(mrps[x].MRP.ERP7__Fulfilled_Amount__c == 0){
+                         let mrp =mrps[x].MRP ;
+                    if(mrp.ERP7__Total_Amount_Required__c > 0 && mrp.ERP7__Fulfilled_Amount__c == 0){
                             cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                             return;
                         }
@@ -6123,15 +6172,15 @@ console.log('FileList : ', JSON.stringify(FileList));
                     cmp.set('v.showWIPsection',false); // made from true to false shaguftha 01_01_24
                     let mrps = cmp.get('v.MRPSS');
                     for(var x in mrps){
-                        mrps[x].quantityToConsume = 0; 
+                        mrps[x].quantityToConsume = 0;
                         mrps[x].quantityToScrap = 0;
                     }
                     cmp.set('v.MRPSS',mrps);
                     cmp.set('v.TotalWIPQtyProduced',0);
                     cmp.set('v.TotalWIPQtyScrapped',0);
-                }  
+                }
             }
-            
+
         },
       /*  getWIPs: function(cmp, event) {
             console.log('combinedSearch called');
@@ -6146,8 +6195,8 @@ console.log('FileList : ', JSON.stringify(FileList));
             var width = cmp.get('v.selectedWidth');
             console.log('width : ',width);
             var searchResult = [];
-            if((searchWIPVal != null && searchWIPVal != '' && searchWIPVal != undefined) || 
-               (selectedGrade != null && selectedGrade != '' && selectedGrade != undefined && selectedGrade != '--None--') || 
+            if((searchWIPVal != null && searchWIPVal != '' && searchWIPVal != undefined) ||
+               (selectedGrade != null && selectedGrade != '' && selectedGrade != undefined && selectedGrade != '--None--') ||
                (thickness  != null && thickness != '' && thickness != undefined && thickness != '--None--') ||
               (width != null && width != '' && width != undefined && width != '--None--')){
                 for (var x in allWIPS) {
@@ -6165,14 +6214,14 @@ console.log('FileList : ', JSON.stringify(FileList));
                             (thickness  != null && thickness != '' && thickness != undefined && thickness != '--None--' && productThickness == thickness) ||
                             (width != null && width != '' && width != undefined && width != '--None--' &&  width == productWidth)) {
                             searchResult.push(allWIPS[x]);
-                        } 
+                        }
                     }
                 }
                 if (searchResult.length === 0)  cmp.set('v.warningError', 'No products available based on search..');
             }
-            
+
             console.log('searchResult : ', searchResult);
-            
+
             if (searchResult.length === 0) {
                 cmp.set('v.WIPFlows', allWIPS);
             } else {
@@ -6195,7 +6244,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var length = cmp.get('v.length');
             console.log('length : ',length);
             var searchResult = [];
-            
+
             for (var x in allWIPS) {
                 if(allWIPS[x].wipFlow != null && allWIPS[x].wipFlow != undefined){
                     var wipName = allWIPS[x].wipFlow.Name.toLowerCase();
@@ -6208,23 +6257,23 @@ console.log('FileList : ', JSON.stringify(FileList));
                     console.log('productWidth : ',productWidth);
                     var productLength = allWIPS[x].wipFlow.ERP7__Product__r.ERP7__Length__c;
                     console.log('productLength : ',productLength);
-                    
+
                     if ((selectedGrade === null || selectedGrade === '' || selectedGrade === '--None--' || productGrade === selectedGrade) &&
                         (thickness === null || thickness === '' || thickness === '--None--' || productThickness == thickness) &&
                         (width === null || width === '' || width === '--None--' ||  width == productWidth) &&
                         (length === null || length === '' || length === '--None--' ||  length == productLength) &&
                         (searchWIPVal === '' || wipName.includes(searchWIPVal) || productName.includes(searchWIPVal))) {
                         searchResult.push(allWIPS[x]);
-                    } 
+                    }
                 }
             }
-            
+
             if (searchResult.length === 0) {
                 cmp.set('v.warningError', $A.get('$Label.c.No_Products_Available'));
             }
-            
+
             console.log('searchResult : ', searchResult);
-            
+
             if (searchResult.length === 0) {
                 cmp.set('v.WIPFlows', allWIPS);
             } else {
@@ -6232,7 +6281,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 cmp.set('v.WIPFlows', searchResult);
             }
         },
-    
+
         handleWIPEdit : function(cmp, event) {
             var wipId = event.getSource().get('v.name');
             console.log(wipId);
@@ -6247,7 +6296,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 $A.util.addClass(cmp.find("editWIPModal"), 'slds-fade-in-open');
                 $A.util.addClass(cmp.find("myeditModalBackdrop"), 'slds-backdrop_open');
             }
-            
+
         },
         closeWIPpopup : function(cmp, event) {
             $A.util.removeClass(cmp.find("editWIPModal"), 'slds-fade-in-open');
@@ -6279,7 +6328,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             if(WIPflow[x].wipFlow.Id == wipresult.wip.Id) {
                                 WIPflow[x].wipFlow.ERP7__Quantity__c = wipresult.wip.ERP7__Quantity__c;
                                 WIPflow[x].wipFlow.ERP7__Quantity_Scrapped__c = wipresult.wip.ERP7__Quantity_Scrapped__c;
-                            } 
+                            }
                         }
                          cmp.set('v.WIPFlows',WIPflow);
                         if(wipresult.wo != undefined && wipresult.wo != null){
@@ -6288,7 +6337,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         }
                         helper.showToast($A.get('$Label.c.Success'),'success',$A.get('$Label.c.WIP_updated_successfully'))
                     }
-                   
+
                     $A.util.removeClass(cmp.find("editWIPModal"), 'slds-fade-in-open');
                     $A.util.removeClass(cmp.find("myeditModalBackdrop"), 'slds-backdrop_open');
                 }
@@ -6303,7 +6352,7 @@ console.log('FileList : ', JSON.stringify(FileList));
              var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                     break;
                 }
@@ -6312,7 +6361,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             cmp.set("v.SelectedTask.ERP7__Status__c", 'New');
             var action = cmp.get("c.CompleteTask");
             $A.enqueueAction(action);
-            
+
         },
         setStatusAsDone : function(cmp, event,helper) {
             //$A.util.removeClass(cmp.find("todoId"), 'dropbtn1');
@@ -6322,7 +6371,7 @@ console.log('FileList : ', JSON.stringify(FileList));
              var obj = cmp.get("v.Tasks");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                     break;
                 }
@@ -6339,7 +6388,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 let startNum = 0;
                 let endNum = 0;
                 let serials = cmp.get('v.moSerialForProduction');
-    
+
                 if (startingSerial) {
                     let found = false;
                     for (let i = 0; i < serials.length; i++) {
@@ -6358,11 +6407,11 @@ console.log('FileList : ', JSON.stringify(FileList));
                 } else {
                     console.log('Starting serial is empty, defaulting to startNum = 0');
                 }
-    
+
                 endNum = parseInt(startNum) + parseInt(count); // Ensure count is parsed as an integer
                 cmp.set('v.startNum', startNum);
                 cmp.set('v.endNum', endNum);
-    
+
                 console.log('startingSerial : ' + startingSerial);
                 console.log('count : ' + count);
                 console.log('startNum : ' + startNum);
@@ -6370,7 +6419,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                 for (let x in serials) {
                     serials[x].selected = false;
                 }
-            
+
                 cmp.set('v.moSerialForProduction', serials);
                 cmp.set('v.selectAllCheckbox', false);
                 cmp.set('v.TotalWIPQtyProduced',0);
@@ -6398,7 +6447,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             var obj = cmp.get("v.moSerialNos");
             var objsel;
             for(var x in obj){
-                if(x == count) { 
+                if(x == count) {
                     objsel = obj[count];
                 }
             }
@@ -6428,7 +6477,7 @@ console.log('FileList : ', JSON.stringify(FileList));
           upsertSerial: function(cmp, event) {
             var rec = cmp.get("v.SerialNumber2Upsert");
             console.log('rec : '+JSON.stringify(rec));
-            if(rec.Name == undefined || rec.Name == "" || rec.ERP7__Serial_Number__c == undefined || rec.ERP7__Serial_Number__c == "" || rec.ERP7__Date_of_Manufacture__c == undefined || rec.ERP7__Date_of_Manufacture__c == ""){ 
+            if(rec.Name == undefined || rec.Name == "" || rec.ERP7__Serial_Number__c == undefined || rec.ERP7__Serial_Number__c == "" || rec.ERP7__Date_of_Manufacture__c == undefined || rec.ERP7__Date_of_Manufacture__c == ""){
                 cmp.set("v.SerialPopupErrorMsg",$A.get('$Label.c.Required_fields_missing'));
             }
             else{
@@ -6460,28 +6509,28 @@ console.log('FileList : ', JSON.stringify(FileList));
         try {
             const mainSpin = cmp.find('mainSpin');
             $A.util.removeClass(mainSpin, "slds-hide");
-    
+
             const fromval = cmp.get('v.FromSerialNum');
             console.log('fromval:', fromval);
-    
+
             const prefix = cmp.get('v.SerialPrefix');
             console.log('prefix:', prefix);
-    
+
             const startNum = parseInt(cmp.get('v.startNum')) - 1;
             const endNum = parseInt(cmp.get('v.endNum'));
             console.log('startNum:', startNum);
             console.log('endNum:', endNum);
-    
+
             if (fromval && prefix) {
                 cmp.set('v.RefreshSerials', false);
                 const allSerials = cmp.get('v.AllmoSerialNos') || [];
                 const updatedSerials = [];
-    
+
                 // Ensure allSerials has enough objects
                 for (let i = allSerials.length; i < endNum; i++) {
                     allSerials.push({});
                 }
-    
+
                 var numericValue = parseInt(fromval);
                 for (let i = startNum; i < endNum; i++) {
                     const serial = allSerials[i];
@@ -6494,7 +6543,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     allSerials[i] = serial;
                     numericValue = numericValue + 1;
                 }
-    
+
                 console.log('updatedSerials:', updatedSerials);
                 var action = cmp.get("c.setSerials2");
                 action.setParams({ MOId: cmp.get('v.ManuOrder.Id'), serialsList: JSON.stringify(updatedSerials) });
@@ -6502,7 +6551,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     console.log('Callback executed');
                     console.log('Response:', response);
                     console.log('Return Value:', response.getReturnValue());
-    
+
                     if (response.getState() === "SUCCESS") {
                         console.log('Apex call successful');
                         if (response.getReturnValue() != null) {
@@ -6526,7 +6575,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     }
                 });
                 $A.enqueueAction(action);
-    
+
             } else {
                 $A.util.addClass(mainSpin, "slds-hide");
                 cmp.set('v.exceptionError', fromval ? $A.get('$Label.c.Please_enter_Prefix_to_generate_serial_Numbers') : $A.get('$Label.c.Please_enter_from_value_to_generate_serial_Numbers'));
@@ -6537,30 +6586,30 @@ console.log('FileList : ', JSON.stringify(FileList));
     },
     handleExpiryDateChange: function(cmp, event, helper) {
         console.log('handleExpiryDateChange called');
-        
+
         var newExpiryDate = event.getSource().get("v.value");
         console.log('newExpiryDate : ', newExpiryDate);
-        
+
         var selectedWIPflow = cmp.get("v.SelectedWIPflow");
         console.log('selectedWIPflow : ', JSON.stringify(selectedWIPflow));
-        
+
         if (!selectedWIPflow || !selectedWIPflow.Id) {
             console.error('Error: selectedWIPflow is undefined or missing Id');
             cmp.set("v.exceptionError", "No WIP Flow selected. Please select a WIP Flow and try again.");
             return;
         }
-        
+
         var wipFlowId = selectedWIPflow.Id;
         console.log('wipFlowId : ', wipFlowId);
-        
+
         var wipFlows = cmp.get("v.WIPFlows");
         console.log('wipFlows : ', JSON.stringify(wipFlows));
-        
+
         // Update selectedWIPflow
         selectedWIPflow.ERP7__Expiry_Date__c = newExpiryDate;
         cmp.set("v.SelectedWIPflow", selectedWIPflow);
         console.log('Updated selectedWIPflow : ', JSON.stringify(selectedWIPflow));
-        
+
         // Update corresponding WIPflow in v.WIPFlows
         var foundWIPflow = false;
         for (var i = 0; i < wipFlows.length; i++) {
@@ -6572,13 +6621,13 @@ console.log('FileList : ', JSON.stringify(FileList));
                 break;
             }
         }
-        
+
         if (!foundWIPflow) {
             console.error('Error: No WIP Flow found with ID: ', wipFlowId);
             cmp.set("v.exceptionError", "WIP Flow not found in WIPFlows. Please ensure the correct WIP Flow is selected.");
             return;
         }
-        
+
         cmp.set("v.WIPFlows", wipFlows);
         console.log('Updated wipFlows : ', JSON.stringify(wipFlows));
     }

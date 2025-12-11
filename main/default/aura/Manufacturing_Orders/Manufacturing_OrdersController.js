@@ -1599,6 +1599,28 @@ getAllDetails : function(cmp, event, helper) {
                                 obj[x].SOLIs = soli;
                                 obj[x].ActualWeight= actualfulfilledWeight;
                                 cmp.set("v.selectedMRP",obj[x].MRP);
+                                obj[x].pageSize = 50;
+obj[x].currentPage = 1;
+if (soli && soli.length > 0) {
+    obj[x].pagedSOLIs = soli.slice(0, 50);
+    obj[x].totalPages = Math.ceil(soli.length / 50);
+    obj[x].pageInfo = 'Showing 1 to ' + Math.min(50, soli.length) + ' of ' + soli.length;
+    
+    // Calculate display pages
+    var maxPages = 40;
+    var startPage = Math.max(1, obj[x].currentPage - 2);
+    var endPage = Math.min(obj[x].totalPages, startPage + maxPages - 1);
+    
+    obj[x].displayPages = [];
+    for (var pageNum = startPage; pageNum <= endPage; pageNum++) {
+        obj[x].displayPages.push(pageNum);
+    }
+} else {
+    obj[x].pagedSOLIs = [];
+    obj[x].totalPages = 1;
+    obj[x].displayPages = [1];
+    obj[x].pageInfo = 'No records found';
+}
                             }
                             else  {
                                 obj[x].isSelect = false;
@@ -1961,6 +1983,27 @@ getAllDetails : function(cmp, event, helper) {
                                 obj[x].SOLIs = soli;
                                 obj[x].ActualWeight= actualfulfilledWeight;
                                 cmp.set("v.selectedMRP",obj[x].MRP);
+                                obj[x].pageSize = 50;
+obj[x].currentPage = 1;
+if (soli && soli.length > 0) {
+    obj[x].pagedSOLIs = soli.slice(0, 50);
+    obj[x].totalPages = Math.ceil(soli.length / 50);
+    obj[x].pageInfo = 'Showing 1 to ' + Math.min(50, soli.length) + ' of ' + soli.length;
+    
+    var maxPages = 40;
+    var startPage = Math.max(1, obj[x].currentPage - 2);
+    var endPage = Math.min(obj[x].totalPages, startPage + maxPages - 1);
+    
+    obj[x].displayPages = [];
+    for (var pageNum = startPage; pageNum <= endPage; pageNum++) {
+        obj[x].displayPages.push(pageNum);
+    }
+} else {
+    obj[x].pagedSOLIs = [];
+    obj[x].totalPages = 1;
+    obj[x].displayPages = [1];
+    obj[x].pageInfo = 'No records found';
+}
                             }
                             else  obj[x].isSelect = false;
                             if(obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'gram' || obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'kilogram' || obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'milligram' || obj[x].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'lbs') TotalWeight += obj[x].MRP.ERP7__Total_Amount_Required__c;
@@ -2048,7 +2091,7 @@ getAllDetails : function(cmp, event, helper) {
         }
     },
 
-    CaptureWeight: function(cmp, event){
+    CaptureWeight: function(cmp, event,helper){
         try{
             console.log('CaptureWeight called');
             var MO = cmp.get("v.manuOrder");
@@ -2254,6 +2297,46 @@ getAllDetails : function(cmp, event, helper) {
                                             cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
 
                                             cmp.set("v.MRPs",response.getReturnValue().MRPs);
+
+                                            setTimeout(function() {
+                                                var MRPs = cmp.get("v.MRPs");
+                                                if (MRPs && MRPs.length > 0) {
+                                                    MRPs.forEach(function(mrp, index) {
+                                                        if (mrp.isSelect) {
+                                                            mrp.currentPage = 1;
+                                                        }
+                                                        
+                                                        if (!mrp.pageSize) mrp.pageSize = 50;
+                                                        if (!mrp.currentPage) mrp.currentPage = 1;
+                                                        
+                                                        if (mrp.SOLIs && mrp.SOLIs.length > 0) {
+                                                            var pageSize = mrp.pageSize;
+                                                            var startIndex = (mrp.currentPage - 1) * pageSize;
+                                                            var endIndex = Math.min(startIndex + pageSize, mrp.SOLIs.length);
+                                                            
+                                                            mrp.pagedSOLIs = [];
+                                                            for (var i = startIndex; i < endIndex; i++) {
+                                                                mrp.pagedSOLIs.push(mrp.SOLIs[i]);
+                                                            }
+                                                            
+                                                            mrp.totalPages = Math.ceil(mrp.SOLIs.length / pageSize);
+                                                            mrp.pageInfo = 'Showing ' + (startIndex + 1) + ' to ' + endIndex + ' of ' + mrp.SOLIs.length + ' records';
+                                                        } else {
+                                                            mrp.pagedSOLIs = [];
+                                                            mrp.totalPages = 1;
+                                                            mrp.pageInfo = 'No records found';
+                                                        }
+                                                    });
+                                                    
+                                                    cmp.set("v.MRPs", JSON.parse(JSON.stringify(MRPs)));
+                                                }
+                                            }, 100);
+                                            /* var MRPs1 = cmp.get("v.MRPs");
+                                            console.log('mrps -- ',JSON.stringify(MRPs1));
+                                            console.log('get mrps');
+                                            var mrp1 = MRPs1;
+                                            console.log('mrp1 ',JSON.stringify(mrp1));
+                                            helper.calculatePagination(cmp,mrp1);*/
                                             cmp.set("v.moSerialNos",response.getReturnValue().moSerialNos);
                                             var ik = response.getReturnValue().MRPs;
                                             var TW = 0;
@@ -3030,7 +3113,8 @@ getAllDetails : function(cmp, event, helper) {
     closeNewMRPModal : function (cmp,event) {
         $A.util.removeClass(cmp.find("newMRPModal"), 'slds-fade-in-open');
         $A.util.removeClass(cmp.find("myMRPModalBackdrop"),"slds-backdrop_open");
-        cmp.popInit();
+                        cmp.popInit();
+
     },
 
     closeEditMRPModal : function (cmp,event) {
@@ -3528,7 +3612,56 @@ getAllDetails : function(cmp, event, helper) {
         $A.enqueueAction(action);
     },
     
+changePage: function(cmp, event, helper) {
+    var source = event.getSource();
+    var mrpIndex = source.get("v.name");
+    var direction = source.get("v.value");
+    
+    var MRPs = cmp.get("v.MRPs");
+    var mrp = MRPs[mrpIndex];
+    
+    if (direction === 'next' && mrp.currentPage < mrp.totalPages) {
+        mrp.currentPage++;
+    } else if (direction === 'prev' && mrp.currentPage > 1) {
+        mrp.currentPage--;
+    }
+    
+    helper.calculatePagination(cmp, mrp);
+    
+    MRPs[mrpIndex] = mrp;
+    cmp.set("v.MRPs", MRPs);
+},
 
+goToPage: function(cmp, event, helper) {
+    var source = event.getSource();
+    var mrpIndex = source.get("v.name");
+    var pageNum = parseInt(source.get("v.value"));
+    
+    var MRPs = cmp.get("v.MRPs");
+    var mrp = MRPs[mrpIndex];
+    
+    if (pageNum >= 1 && pageNum <= mrp.totalPages) {
+        mrp.currentPage = pageNum;
+        helper.calculatePagination(cmp, mrp);
+        MRPs[mrpIndex] = mrp;
+        cmp.set("v.MRPs", MRPs);
+    }
+},
+
+changePageSize: function(cmp, event, helper) {
+    var pageSize = parseInt(event.getSource().get("v.value"));
+    cmp.set("v.pageSize", pageSize);
+    
+    var MRPs = cmp.get("v.MRPs");
+    if (MRPs) {
+        MRPs.forEach(function(mrp) {
+            mrp.pageSize = pageSize;
+            mrp.currentPage = 1; 
+            helper.calculatePagination(cmp, mrp);
+        });
+        cmp.set("v.MRPs", MRPs);
+    }
+}
 
 
 })

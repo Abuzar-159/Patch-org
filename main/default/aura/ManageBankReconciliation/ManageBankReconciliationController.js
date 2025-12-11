@@ -49,6 +49,9 @@
     
     doInit : function(cmp, event, helper) {
         //cmp.set("v.showMmainSpin",true);
+        var show =cmp.get("v.show");
+        if(show >50)show=50;
+        cmp.set("v.show",show);
         var action = cmp.get("c.getDefaultOrganisation");	
         action.setCallback(this,function(response){
             if(response.getState()==='SUCCESS'){
@@ -157,7 +160,8 @@
                     cmp.set("v.ItemTOdelete",'');
                     cmp.set("v.showPOPUp", false);
                     //this.showToast('Success!','success','Bank Reconciliation was deleted Successfully');
-                    cmp.set("v.SaveErrorMsg",'Successfully Deleted Record');
+                    helper.showToast('Success!','success','Successfully Deleted Record');
+                    //cmp.set("v.SaveErrorMsg2",'Successfully Deleted Record');//SaveErrorMsg
                    // cmp.doInit();
                    helper.fetchReconciliation(cmp, event);//added by asra
                 }
@@ -190,7 +194,8 @@
                                     cmp.set("v.showEditPopup",false);
                                     cmp.set("v.showMmainSpin",false);
                                     //cmp.set("v.exceptionError",'Updated Successfully');
-                                    cmp.set("v.SaveErrorMsg2",'Successfully Updated Record');
+                                   // cmp.set("v.SaveErrorMsg2",'Successfully Updated Record');
+                                    helper.showToast('Success!','success','Successfully Updated Record');
                                     //cmp.doInit();
                                     helper.fetchReconciliation(cmp, event);//added by asra
                                     

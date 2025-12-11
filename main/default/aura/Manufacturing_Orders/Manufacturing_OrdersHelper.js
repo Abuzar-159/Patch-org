@@ -419,4 +419,41 @@
             $A.util.addClass(component.find('mainSpin'), "slds-hide");
         }
     },
+calculatePagination: function(cmp, mrp) {
+    var pageSize = mrp.pageSize || 50;
+    var solis = mrp.SOLIs || [];
+    
+    mrp.totalPages = Math.ceil(solis.length / pageSize);
+    mrp.currentPage = mrp.currentPage || 1;
+    
+    if (mrp.currentPage < 1) mrp.currentPage = 1;
+    if (mrp.currentPage > mrp.totalPages && mrp.totalPages > 0) {
+        mrp.currentPage = mrp.totalPages;
+    }
+    
+    var startIndex = (mrp.currentPage - 1) * pageSize;
+    var endIndex = Math.min(startIndex + pageSize, solis.length);
+    
+    mrp.pagedSOLIs = [];
+    if (startIndex < solis.length) {
+        for (var i = startIndex; i < endIndex; i++) {
+            mrp.pagedSOLIs.push(solis[i]);
+        }
+    }
+    
+    var maxPagesToShow = 40;
+    var startPage = Math.max(1, mrp.currentPage - Math.floor(maxPagesToShow / 2));
+    var endPage = Math.min(mrp.totalPages, startPage + maxPagesToShow - 1);
+    
+    mrp.displayPages = [];
+    for (var pageNum = startPage; pageNum <= endPage; pageNum++) {
+        mrp.displayPages.push(pageNum);
+    }
+    
+    var start = startIndex + 1;
+    var end = endIndex;
+    mrp.pageInfo = 'Showing ' + start + ' to ' + end + ' of ' + solis.length + ' records';
+    
+    return mrp;
+}
 })
