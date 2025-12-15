@@ -523,7 +523,7 @@ public With Sharing Class OutboundLogisticsLightning {
 
          system.debug('*** OrderIds : ' + OrderIds);
          Transient List < ERP7__Stock_Outward_Line_Item__c > pplis = new List < ERP7__Stock_Outward_Line_Item__c > ();
-         Transient List < ERP7__Stock_Outward_Line_Item__c > Allpplis = Database.query('select ' + String.escapeSingleQuotes(PPLIFields) + ',ERP7__Logistic_Line_Item__r.ERP7__Quantity__c,ERP7__Product__r.ERP7__Serialise__c,ERP7__Product__r.ERP7__Lot_Tracked__c,ERP7__Product__r.ProductCode,ERP7__Product__r.ERP7__Picture__c,ERP7__Serial__r.Name,ERP7__Material_Batch_Lot__r.Name,ERP7__Product__r.Name,ERP7__Logistic_Line_Item__r.Name, ERP7__Logistic_Line_Item__r.ERP7__Picked_Quantity__c,ERP7__Logistic_Line_Item__r.ERP7__Packed_Quantity__c,ERP7__Serial__r.Id, ERP7__Serial__r.ERP7__Serial_Number__c, ERP7__Fixed_Asset__r.ERP7__Product__c, ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__r.Name from ERP7__Stock_Outward_Line_Item__c where (ERP7__Order__c =: OrderIds OR ERP7__Sales_Order__c In: OrderIds Or ERP7__Work_Orders__c In: OrderIds Or ERP7__Purchase_Orders__c In: OrderIds Or ERP7__Transfer_Order__c In: OrderIds) and (ERP7__Status__c  = :Reserved Or ERP7__Status__c =:Committed Or ERP7__Status__c =:ReturnedToSupplier ) and ERP7__Quantity__c > 0 and ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c = :selectedSite and ERP7__RMA_Line_Item__c = Null ');
+         Transient List < ERP7__Stock_Outward_Line_Item__c > Allpplis = Database.query('select ' + String.escapeSingleQuotes(PPLIFields) + ',ERP7__Logistic_Line_Item__r.ERP7__Quantity__c,ERP7__Product__r.ERP7__Serialise__c,ERP7__Product__r.ERP7__Lot_Tracked__c,ERP7__Product__r.ProductCode,ERP7__Product__r.ERP7__Picture__c,ERP7__Serial__r.Name,ERP7__Material_Batch_Lot__r.Name,ERP7__Product__r.Name,ERP7__Logistic_Line_Item__r.Name, ERP7__Logistic_Line_Item__r.ERP7__Picked_Quantity__c,ERP7__Logistic_Line_Item__r.ERP7__Packed_Quantity__c,ERP7__Serial__r.Id, ERP7__Serial__r.ERP7__Serial_Number__c, ERP7__Fixed_Asset__r.ERP7__Product__c, ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c,ERP7__Material_Batch_Lot__r.ERP7__Available_Quantity__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__r.Name,ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c from ERP7__Stock_Outward_Line_Item__c where (ERP7__Order__c =: OrderIds OR ERP7__Sales_Order__c In: OrderIds Or ERP7__Work_Orders__c In: OrderIds Or ERP7__Purchase_Orders__c In: OrderIds Or ERP7__Transfer_Order__c In: OrderIds) and (ERP7__Status__c  = :Reserved Or ERP7__Status__c =:Committed Or ERP7__Status__c =:ReturnedToSupplier ) and ERP7__Quantity__c > 0 and ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Warehouse__c = :selectedSite and ERP7__RMA_Line_Item__c = Null ');
          ERP7__Stock_Outward_Line_Item__c ss = new ERP7__Stock_Outward_Line_Item__c();
          system.debug('Allpplis : ' + Allpplis.size());
 
@@ -647,6 +647,7 @@ public With Sharing Class OutboundLogisticsLightning {
          Map < Id, ERP7__Inventory_Stock__c > WIISstockMap = new Map < Id, ERP7__Inventory_Stock__c > ();
          Map < Id, set < String >> WIISLocAddress = new Map < Id, set < String >> ();
          set < Id > InventorysIds = new set < Id > ();
+           
          system.debug('WIISLists~>' + WIISLists.size());
          for (ERP7__Inventory_Stock__c wiis: WIISLists) {
            InventorysIds.add(wiis.Id);
@@ -654,7 +655,9 @@ public With Sharing Class OutboundLogisticsLightning {
            if (wiis.ERP7__StorageContainer__c != null) prodKey += '|' + wiis.ERP7__StorageContainer__c;
            else if (wiis.ERP7__Location__c != null) prodKey += '|' + wiis.ERP7__Location__c;
            else if (wiis.ERP7__Warehouse__c != null) prodKey += '|' + wiis.ERP7__Warehouse__c;
-           system.debug('prodKey : ' + prodKey);
+            
+           
+           system.debug('prodKey :::::: ' + prodKey);
            if (wiis.ERP7__Product__c != null && WIISstockMap.containsKey(wiis.ERP7__Product__c)) WIISstockMap.put(wiis.ERP7__Product__c, wiis); // 26_04_24 removed and added ! for WIISstockMap condition to add only first inventory record 
            if (wiis.ERP7__StorageContainer__c != null) {
              if (!WIISoptions3.containsKey(wiis.ERP7__Product__c)) options3Ids.remove(wiis.ERP7__StorageContainer__c);
@@ -679,20 +682,31 @@ public With Sharing Class OutboundLogisticsLightning {
                  });
                }
                addressIds.add(wiis.ERP7__StorageContainer__c);
-               if (ProdStockWIIS.containsKey(prodKey)) {                 Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c;                 ProdStockWIIS.put(prodKey, myStock);
-               } else ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);
+               if (ProdStockWIIS.containsKey(prodKey)){
+                   Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c;                 
+                   ProdStockWIIS.put(prodKey, myStock);
+               }else{
+                   ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);
+               }
              }
            } else if (wiis.ERP7__Location__c != null) {
              if (!WIISoptions2.containsKey(wiis.ERP7__Product__c)) options2Ids.remove(wiis.ERP7__Warehouse__c);
-             system.debug('wiis.ERP7__Location__r.Name : ' + wiis.ERP7__Location__r.Name);             if (wiis.ERP7__Location__r.Name != null && !options2Ids.contains(wiis.ERP7__Location__c)) {               if (WIISoptions2.containsKey(wiis.ERP7__Product__c)) WIISoptions2.get(wiis.ERP7__Product__c).add(new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.Name));               else WIISoptions2.put(wiis.ERP7__Product__c, new set < SelectOptions > {                 new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.Name)
-               });
+             system.debug('wiis.ERP7__Location__r.Name : ' + wiis.ERP7__Location__r.Name);             
+               if (wiis.ERP7__Location__r.Name != null && !options2Ids.contains(wiis.ERP7__Location__c)) {              
+                   if (WIISoptions2.containsKey(wiis.ERP7__Product__c)){
+                       WIISoptions2.get(wiis.ERP7__Product__c).add(new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.Name));
+                    } else{
+                       WIISoptions2.put(wiis.ERP7__Product__c, new set < SelectOptions > {new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.Name)});
+                   }
              }
              options2Ids.add(wiis.ERP7__Location__c);
+               
              system.debug('wiis.ERP7__Location__r.ERP7__Barcode__c : ' + wiis.ERP7__Location__r.ERP7__Barcode__c);
              if (wiis.ERP7__Location__r.ERP7__Barcode__c != null) {
                if (!WIISaddress.containsKey(wiis.ERP7__Product__c)) addressIds.remove(wiis.ERP7__Location__c);
                Set < String > productAddress = WIISLocAddress.containsKey(wiis.ERP7__Product__c) ? WIISLocAddress.get(wiis.ERP7__Product__c) : new set < String > ();
                if (!productAddress.contains(wiis.ERP7__Location__c)) {
+                   system.debug('in prod address;;');
                  if (WIISaddress.containsKey(wiis.ERP7__Product__c)) WIISaddress.get(wiis.ERP7__Product__c).add(new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.ERP7__Barcode__c));
                  else WIISaddress.put(wiis.ERP7__Product__c, new set < SelectOptions > {
                    new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.ERP7__Barcode__c)
@@ -703,8 +717,12 @@ public With Sharing Class OutboundLogisticsLightning {
                  });
                }
                addressIds.add(wiis.ERP7__Location__c);
-               if (ProdStockWIIS.containsKey(prodKey)) {                 Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c;                 ProdStockWIIS.put(prodKey, myStock);
-               } else ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);
+               if (ProdStockWIIS.containsKey(prodKey)) {
+                   Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c;                 
+                   ProdStockWIIS.put(prodKey, myStock);
+               } else {
+                   ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);
+               }
              }
            } else if (wiis.ERP7__Warehouse__c != null) {
              if (wiis.Name != 'Serial Stock Holder') {
@@ -733,8 +751,11 @@ public With Sharing Class OutboundLogisticsLightning {
                  }
                  addressIds.add(wiis.ERP7__Warehouse__c);
                    system.debug('ProdStockWIIS.containsKey(prodKey)-'+ProdStockWIIS.containsKey(prodKey));
-                 if (ProdStockWIIS.containsKey(prodKey)) {                   Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c; system.debug('decimal myStock - '+myStock);                   ProdStockWIIS.put(prodKey, myStock);
-                 } else ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);
+                 if (ProdStockWIIS.containsKey(prodKey)) {          
+                     Decimal myStock = ProdStockWIIS.get(prodKey) + WIIS.ERP7__Number_of_Item_In_Stock__c; system.debug('decimal myStock - '+myStock);  
+                     ProdStockWIIS.put(prodKey, myStock);
+                  } else{ 
+                      ProdStockWIIS.put(prodKey, WIIS.ERP7__Number_of_Item_In_Stock__c);}
                }
              }
            }
@@ -781,7 +802,7 @@ public With Sharing Class OutboundLogisticsLightning {
                Set < SelectOptions > myBatches = new Set < SelectOptions > ();
                if (!InwardLine.ERP7__Product__r.ERP7__Lot_Tracked__c == true) myBatches.add(new SelectOptions('', '--None--'));
                myBatches.add(new SelectOptions(InwardLine.ERP7__Material_Batch_Lot__c, InwardLine.ERP7__Material_Batch_Lot__r.Name));
-               stockBatches.put(InwardLine.ERP7__Product__c, myBatches);             } else {               Set < SelectOptions > myBatches = stockBatches.get(InwardLine.ERP7__Product__c);               Boolean found = false;               for (SelectOptions SO: myBatches) {                 if (SO.Value == String.valueof(InwardLine.ERP7__Material_Batch_Lot__c)) {                   found = true;                   break;                 }               }               if (!found) {                 myBatches.add(new SelectOptions(InwardLine.ERP7__Material_Batch_Lot__c, InwardLine.ERP7__Material_Batch_Lot__r.Name));                 stockBatches.put(InwardLine.ERP7__Product__c, myBatches);               }
+               stockBatches.put(InwardLine.ERP7__Product__c, myBatches);} else {               Set < SelectOptions > myBatches = stockBatches.get(InwardLine.ERP7__Product__c);               Boolean found = false;               for (SelectOptions SO: myBatches) {                 if (SO.Value == String.valueof(InwardLine.ERP7__Material_Batch_Lot__c)) {                   found = true;                   break;                 }               }               if (!found) {                 myBatches.add(new SelectOptions(InwardLine.ERP7__Material_Batch_Lot__c, InwardLine.ERP7__Material_Batch_Lot__r.Name));                 stockBatches.put(InwardLine.ERP7__Product__c, myBatches);               }
                system.debug('stockBatches : ' + stockBatches);
              }
            } else if (InwardLine.ERP7__Serial__c != Null) {
@@ -869,10 +890,10 @@ public With Sharing Class OutboundLogisticsLightning {
                        swrap.LN = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__r.Name;                  swrap.LocationName = swrap.AddressName = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__c;
                        system.debug('un 1 ii');
                      } else {
-                       swrap.LN = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__r.Name;                     swrap.LocationName = swrap.AddressName = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__c;
+                       swrap.LN = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__r.Name;                     swrap.LocationName = swrap.AddressName = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__c; system.debug('swrap add name--'+swrap.AddressName);
                      }
                    } else if (WIISstockMap.get(solis.ERP7__Product__c).ERP7__Warehouse__c != null) {                swrap.WN = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Warehouse__r.Name;
-                     swrap.WarehouseName = swrap.AddressName = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Warehouse__c;
+                     swrap.WarehouseName = swrap.AddressName = WIISstockMap.get(solis.ERP7__Product__c).ERP7__Warehouse__c; system.debug('wrhse swrap add name--'+swrap.AddressName);
                    }
                    stockMap.put(solis.ERP7__Product__c, WIISstockMap.get(solis.ERP7__Product__c).Id);
                  }
@@ -890,17 +911,25 @@ public With Sharing Class OutboundLogisticsLightning {
                          system.debug('normal.get(swrap.address[0].value) -'+normal.get(swrap.address[0].value));
                        if (normal.containsKey(swrap.address[0].value)) myStock += normal.get(swrap.address[0].value);
                        system.debug('myStock after: ' + myStock);
-                     }else if (solis.ERP7__Product__r.ERP7__Lot_Tracked__c && !solis.ERP7__Product__r.ERP7__Serialise__c && myStock != 0){//added else if cnd by khaleeq solis.ERP7__Sales_Order_Line_Item__c != null && 
+                     }else if (solis.ERP7__Product__r.ERP7__Lot_Tracked__c && !solis.ERP7__Product__r.ERP7__Serialise__c && myStock != 0){//added else if cnd solis.ERP7__Sales_Order_Line_Item__c != null && 
                          system.debug('for batch ');
                          myStock += swrap.loli.ERP7__Quantity__c;
                          system.debug('for batch myStock -'+myStock);
                          
-                     }else if (solis.ERP7__Sales_Order_Line_Item__c != null && !solis.ERP7__Product__r.ERP7__Lot_Tracked__c && solis.ERP7__Product__r.ERP7__Serialise__c && myStock != 0){//added else if cnd by khaleeq solis.ERP7__Sales_Order_Line_Item__c != null && 
+                     }else if (solis.ERP7__Sales_Order_Line_Item__c != null && !solis.ERP7__Product__r.ERP7__Lot_Tracked__c && solis.ERP7__Product__r.ERP7__Serialise__c && myStock != 0){//added else if cnd solis.ERP7__Sales_Order_Line_Item__c != null && 
                          system.debug('for serial ');
                          myStock += swrap.loli.ERP7__Quantity__c;
                           system.debug('for serial myStock -'+myStock);
                      }
-                   }
+                   }/*else{
+                       if(ProdStockWIIS.containsKey(prodKey)){
+                           ProdStockWIIS.put(prodKey, ProdStockWIIS.get(prodKey) + sli.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c);
+                       }else{
+                           ProdStockWIIS.put(prodKey, sli.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c);
+                       system.debug('ProdStockWIIS+++++'+ProdStockWIIS.get(prodKey));
+                       }
+                       system.debug('ProdStockWIIS--------'+ProdStockWIIS.get(prodKey));
+                   }*/
                  }
                  //Changes started here from imran for polymem fix
                  if (swrap.binName != null) {
@@ -969,9 +998,9 @@ public With Sharing Class OutboundLogisticsLightning {
                        Decimal bStock;
                        //added by khaleeq for stock visblty
                       
-                      		//bStock = (batchStocks.get(swrap.BatchLotCodes[0].Value) != null) ? batchStocks.get(swrap.BatchLotCodes[0].Value) : batch.ERP7__Available_Quantity__c;
+                      		bStock = (batchStocks.get(swrap.BatchLotCodes[0].Value) != null) ? batchStocks.get(swrap.BatchLotCodes[0].Value) : batch.ERP7__Available_Quantity__c;
                       
-                          bStock = myStock;
+                         // bStock = myStock;
                        
                        //till here
                      //Imran need to verify this
