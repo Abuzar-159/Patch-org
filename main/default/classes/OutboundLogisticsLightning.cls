@@ -393,6 +393,39 @@ public With Sharing Class OutboundLogisticsLightning {
         system.debug('cswList~>'+cswList.size());
         return cswList;
     }
+    //new code 
+    public class BatchLogisticWrapper{
+        @AuraEnabled public String loli{get; set;}
+        @AuraEnabled public String BatchLotCode{get; set;}
+        @AuraEnabled public String inventoryId{get; set;}
+        @AuraEnabled public String productId{get; set;}
+        @AuraEnabled public String stockOutwardId{get; set;}
+        @AuraEnabled public Decimal qtyWithoutLoc{get; set;} 
+        @AuraEnabled public Map<String,Decimal> locationQtyMap{get; set;}
+        @AuraEnabled public Map<String,Decimal> binQtyMap{get; set;}
+    }
+    
+    public class InventoryLogisticWrapper{
+        @AuraEnabled public String loli{get; set;}
+        @AuraEnabled public Decimal qtyWithoutLoc{get; set;}
+        @AuraEnabled public Map<String,Decimal> locationQtyMap{get; set;}
+        @AuraEnabled public String stockOutwardId{get; set;}
+        @AuraEnabled public String productId{get; set;}
+        @AuraEnabled public String inventoryId{get; set;}
+        @AuraEnabled public String batchLotCode{get; set;}
+    }//end
+    public class stockWithoutbatch{
+        @AuraEnabled public String productId;
+        @AuraEnabled public String loliId;
+        @AuraEnabled public Decimal qtyWithoutLoc;
+        @AuraEnabled public Map<String, Decimal> locationQtyMap;
+        stockWithoutbatch(){
+            productId = '';
+            loliId = '';
+            qtyWithoutLoc = 0;
+            locationQtyMap = new Map<String, Decimal>();
+        }
+    }
 
      @AuraEnabled
  public static comWrap redirect2NextTab(String LogisticIds) {
@@ -474,6 +507,9 @@ public With Sharing Class OutboundLogisticsLightning {
      List < ERP7__StorageContainer__c > binList = new List < ERP7__StorageContainer__c > ();
      List < ERP7__Stock_Outward_Line_Item__c > PPLIList2Delete = new List < ERP7__Stock_Outward_Line_Item__c > ();
      Map < Id, Id > stockMap = new Map < Id, Id > ();
+       Map<Id, BatchLogisticWrapper> batchLogisticMap = new Map<Id, BatchLogisticWrapper>();
+         Map<Id, InventoryLogisticWrapper> inventoryLogisticMap = new Map<Id, InventoryLogisticWrapper>();
+       Map < Id, stockWithoutbatch > stockWithoutbatchMap = new Map < Id, stockWithoutbatch > ();
      //logistic Ids
      if (soIds.size() > 0) {
        if (!error) {
@@ -551,6 +587,48 @@ public With Sharing Class OutboundLogisticsLightning {
                    batchStocks.put(ss.ERP7__Material_Batch_Lot__c, stockOutQuan);                 
                    batchStocksIds.add(ss.ERP7__Material_Batch_Lot__c);
                }
+                 //new code to track batch stock
+                 if(ss.ERP7__Material_Batch_Lot__c != null && ss.ERP7__Serial__c==null){
+                     String productId = ss.ERP7__Product__c;
+                     String batchId = ss.ERP7__Material_Batch_Lot__c;
+                     String logistciLineId= ss.ERP7__Logistic_Line_Item__c;
+                     Decimal quantity = ss.ERP7__Quantity__c;
+                     String inventoryId = ss.ERP7__Site_Product_Service_Inventory_Stock__c;
+                     String batchLotCode = ss.ERP7__Material_Batch_Lot__c;
+                     String location = ss.ERP7__Site_Product_Service_Inventory_Stock__c!=null ? ss.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c:null;
+                     if(!batchLogisticMap.containsKey(logistciLineId)){
+                         BatchLogisticWrapper blw = new BatchLogisticWrapper();
+                         blw.productId = productId;
+                         blw.BatchLotCode = batchId;
+                         blw.loli = logistciLineId;
+                         blw.inventoryId = inventoryId;
+                         blw.BatchLotCode = batchLotCode;
+                         if(location != null){
+                             blw.locationQtyMap = new Map<String,Decimal>();
+                             blw.locationQtyMap.put(location,quantity);
+                         }else{
+                             blw.qtyWithoutLoc = quantity;
+                         }
+                         batchLogisticMap.put(logistciLineId, blw);
+                     }else{
+                         BatchLogisticWrapper existingBlw = batchLogisticMap.get(logistciLineId);
+                         if(location != null){
+                             if(existingBlw.locationQtyMap == null){
+                                 existingBlw.locationQtyMap = new Map<String,Decimal>();
+                             }
+                             if(existingBlw.locationQtyMap.containsKey(location)){
+                                 Decimal existingQty = existingBlw.locationQtyMap.get(location);
+                                 existingBlw.locationQtyMap.put(location, existingQty + quantity);
+                             }else{
+                                 existingBlw.locationQtyMap.put(location, quantity);
+                             }
+                         }else{
+                             existingBlw.qtyWithoutLoc = (existingBlw.qtyWithoutLoc == null ? 0 : existingBlw.qtyWithoutLoc) + quantity;
+                         }
+                         batchLogisticMap.put(logistciLineId, existingBlw);
+                     }
+                 }
+                 //new code end
                // 1st change 26_04_24
                if (ss.ERP7__Material_Batch_Lot__c == null && ss.ERP7__Serial__c == null) {
                  if (ss.ERP7__Site_Product_Service_Inventory_Stock__c != null) {
@@ -691,8 +769,9 @@ public With Sharing Class OutboundLogisticsLightning {
              }
            } else if (wiis.ERP7__Location__c != null) {
              if (!WIISoptions2.containsKey(wiis.ERP7__Product__c)) options2Ids.remove(wiis.ERP7__Warehouse__c);
-             system.debug('wiis.ERP7__Location__r.Name : ' + wiis.ERP7__Location__r.Name);             
-               if (wiis.ERP7__Location__r.Name != null && !options2Ids.contains(wiis.ERP7__Location__c)) {              
+             system.debug('wiis.ERP7__Location__r.Name : ' + wiis.ERP7__Location__r.Name);   
+               System.debug('options2Ids '+options2Ids);System.debug('!options2Ids.contains(wiis.ERP7__Location__c) '+!options2Ids.contains(wiis.ERP7__Location__c));
+               if (wiis.ERP7__Location__r.Name != null && !WIISoptions2.containsKey(wiis.ERP7__Product__c)) {    //!options2Ids.contains(wiis.ERP7__Location__c) removed for test          
                    if (WIISoptions2.containsKey(wiis.ERP7__Product__c)){
                        WIISoptions2.get(wiis.ERP7__Product__c).add(new SelectOptions(wiis.ERP7__Location__c, wiis.ERP7__Location__r.Name));
                     } else{
@@ -759,6 +838,79 @@ public With Sharing Class OutboundLogisticsLightning {
                }
              }
            }
+             //new code to track batch stock in WIIS
+             if(wiis.ERP7__Batch_Lot__c != null){
+                 String batchLot= wiis.ERP7__Batch_Lot__c;
+                 String productId = wiis.ERP7__Product__c;
+                 String inventoryId = wiis.Id;
+                 String locationId = wiis.ERP7__Location__c != null ? wiis.ERP7__Location__c : null;
+                 Decimal quantity = wiis.ERP7__Number_of_Item_In_Stock__c != null? wiis.ERP7__Number_of_Item_In_Stock__c: 0;
+                 if(!inventoryLogisticMap.containsKey(batchLot)){
+                     InventoryLogisticWrapper ilw = new InventoryLogisticWrapper();
+                     ilw.productId = productId;
+                     ilw.batchLotCode = batchLot;
+                     ilw.inventoryId = inventoryId;
+                     ilw.qtyWithoutLoc = 0;
+                     if(locationId != null){
+                         ilw.locationQtyMap = new Map<String,Decimal>();
+                         ilw.locationQtyMap.put(locationId,quantity);
+                     }else{
+                         ilw.qtyWithoutLoc = quantity;
+                     }
+                     inventoryLogisticMap.put(batchLot, ilw);
+                 }else{
+                     InventoryLogisticWrapper existingIlw = inventoryLogisticMap.get(batchLot);
+                     if(existingIlw!=null){
+                         if(locationId != null){
+                             if(existingIlw.locationQtyMap == null){
+                                 existingIlw.locationQtyMap = new Map<String,Decimal>();
+                             }
+                             if(existingIlw.locationQtyMap.containsKey(locationId)){
+                                 Decimal existingQty = existingIlw.locationQtyMap.get(locationId)!=null? existingIlw.locationQtyMap.get(locationId):0;
+                                 existingIlw.locationQtyMap.put(locationId, existingQty + quantity);
+                             }else{
+                                 existingIlw.locationQtyMap.put(locationId, quantity);
+                             }
+                         }else{
+                             existingIlw.qtyWithoutLoc = (existingIlw.qtyWithoutLoc == null ? 0 : existingIlw.qtyWithoutLoc) + quantity;
+                         }
+                         inventoryLogisticMap.put(batchLot, existingIlw);
+                     }
+                     
+                 }
+                 //when custom setting enabled
+                 if(!stockWithoutbatchMap.containsKey(productId)){
+                     stockWithoutbatch swbw = new stockWithoutbatch();
+                     swbw.productId = productId;
+                     if(locationId != null){
+                         swbw.locationQtyMap = new Map < String, Decimal > ();
+                         swbw.locationQtyMap.put(locationId, quantity);
+                     } else {
+                         swbw.qtyWithoutLoc = quantity;
+                     }
+                     stockWithoutbatchMap.put(productId, swbw);
+                 }else{
+                     stockWithoutbatch existingSwbw = stockWithoutbatchMap.get(productId);
+                     if(existingSwbw != null){
+                         if(locationId != null){
+                             if(existingSwbw.locationQtyMap == null){
+                                 existingSwbw.locationQtyMap = new Map < String, Decimal > ();
+                             }
+                             if(existingSwbw.locationQtyMap.containsKey(locationId)){
+                                 Decimal existingQty = existingSwbw.locationQtyMap.get(locationId) != null ? existingSwbw.locationQtyMap.get(locationId) : 0;
+                                 existingSwbw.locationQtyMap.put(locationId, existingQty + quantity);
+                             } else {
+                                 existingSwbw.locationQtyMap.put(locationId, quantity);
+                             }
+                         } else {
+                             existingSwbw.qtyWithoutLoc = (existingSwbw.qtyWithoutLoc == null ? 0 : existingSwbw.qtyWithoutLoc) + quantity;
+                         }
+                         stockWithoutbatchMap.put(productId, existingSwbw);
+                     }
+                 }
+                 
+             }
+             //new code end
          }
          system.debug('ProdStockWIIS : ' + ProdStockWIIS);
          WIISLists = new List < ERP7__Inventory_Stock__c > ();
@@ -856,7 +1008,7 @@ public With Sharing Class OutboundLogisticsLightning {
                   system.debug('in for loop 2');
                system.debug('lolisSolis : ' + lolisSolis.get(solis.Id).size());
                system.debug('val : ' + (solis.ERP7__Product__r.ERP7__Is_Kit__c && solis.ERP7__Explode__c));
-               if ((!solis.ERP7__Product__r.ERP7__Is_Kit__c && !solis.ERP7__Explode__c)) {                 system.debug('if executed : prodduct : ' + sli.ERP7__Product__c);                 Wrappers swrap = new Wrappers();                 if (sli.ERP7__Product__c != Null) swrap.Product = productMap.get(sli.ERP7__Product__c);                 if (sli.ERP7__Fixed_Asset__c != Null) swrap.Asset = assetMap.get(sli.ERP7__Fixed_Asset__c);                 swrap.loli = solis;                 myStock = 0;
+               if ((!solis.ERP7__Product__r.ERP7__Is_Kit__c && !solis.ERP7__Explode__c)) {                 system.debug('if executed : prodduct : ' + sli.ERP7__Product__c);                 Wrappers swrap = new Wrappers();                 if (sli.ERP7__Product__c != Null) swrap.Product = productMap.get(sli.ERP7__Product__c);                 if (sli.ERP7__Fixed_Asset__c != Null) swrap.Asset = assetMap.get(sli.ERP7__Fixed_Asset__c);                 swrap.loli = solis; Decimal myStock2=0;                myStock = 0;
                  system.debug('swrap.LOLI.Picked_Quantity__c  : ' + swrap.LOLI.ERP7__Picked_Quantity__c);
                  if (swrap.LOLI.ERP7__Picked_Quantity__c != null) {                   if (swrap.loli.ERP7__Picked_Quantity__c == swrap.loli.ERP7__Quantity__c) {
                      swrap.raisedQty = double.valueof(swrap.loli.ERP7__Picked_Quantity__c);                     swrap.remainingQty = double.valueof(swrap.loli.ERP7__Quantity__c - swrap.raisedQty);
@@ -881,7 +1033,11 @@ public With Sharing Class OutboundLogisticsLightning {
                       
                   }*/
                  system.debug('WIISaddress.containsKey(solis.ERP7__Product__c) : ' + WIISaddress.containsKey(solis.ERP7__Product__c));
-                 if (WIISaddress.containsKey(solis.ERP7__Product__c)) swrap.address.addAll(WIISaddress.get(solis.ERP7__Product__c));            if (WIISoptions1.containsKey(solis.ERP7__Product__c)) swrap.CurrentWarehouses.addAll(WIISoptions1.get(solis.ERP7__Product__c));            if (WIISoptions2.containsKey(solis.ERP7__Product__c)) swrap.CurrentLocations.addAll(WIISoptions2.get(solis.ERP7__Product__c));                if (WIISoptions3.containsKey(solis.ERP7__Product__c)) swrap.CurrentBins.addAll(WIISoptions3.get(solis.ERP7__Product__c));
+                 if (WIISaddress.containsKey(solis.ERP7__Product__c)){ swrap.address.addAll(WIISaddress.get(solis.ERP7__Product__c)); }
+                 if (WIISoptions1.containsKey(solis.ERP7__Product__c)){ swrap.CurrentWarehouses.addAll(WIISoptions1.get(solis.ERP7__Product__c)); } 
+                 System.debug('WIISoptions2.containsKey(solis.ERP7__Product__c) '+WIISoptions2.containsKey(solis.ERP7__Product__c));
+                 if (WIISoptions2.containsKey(solis.ERP7__Product__c)){ swrap.CurrentLocations.addAll(WIISoptions2.get(solis.ERP7__Product__c));}  
+                 if (WIISoptions3.containsKey(solis.ERP7__Product__c)){ swrap.CurrentBins.addAll(WIISoptions3.get(solis.ERP7__Product__c));}
                  system.debug('WIISstockMap.containsKey(solis.ERP7__Product__c) : ' + WIISstockMap.containsKey(solis.ERP7__Product__c));
                  if (WIISstockMap.containsKey(solis.ERP7__Product__c)) {
                    system.debug('WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__c : ' + WIISstockMap.get(solis.ERP7__Product__c).ERP7__Location__c);
@@ -915,7 +1071,23 @@ public With Sharing Class OutboundLogisticsLightning {
                          system.debug('for batch ');
                          myStock += swrap.loli.ERP7__Quantity__c;
                          system.debug('for batch myStock -'+myStock);
-                         
+                         //new code below
+                         if(stockWithoutbatchMap.containsKey(solis.ERP7__Product__c)){
+                            // myStock2 = swrap.loli.ERP7__Quantity__c;
+                             stockWithoutbatch swbw = stockWithoutbatchMap.get(solis.ERP7__Product__c);
+                             system.debug('swbw--' + swbw);
+                             if(swbw.locationQtyMap != null && swbw.locationQtyMap.containsKey(swrap.address[0].value)){
+                                 if(sli.ERP7__Site_Product_Service_Inventory_Stock__c!=null && sli.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c!=null && sli.ERP7__Site_Product_Service_Inventory_Stock__r.ERP7__Location__c== swrap.address[0].value){
+                                     myStock2 = swrap.loli.ERP7__Quantity__c;
+                                 }
+                                 myStock2 += swbw.locationQtyMap.get(swrap.address[0].value);
+                                 system.debug('for batch myStock with locationQtyMap -' + myStock2);
+                             } else {
+                                 myStock2 += swbw.qtyWithoutLoc;
+                                 system.debug('for batch myStock with qtyWithoutLoc -' + myStock2);
+                             }
+                             
+                         }//end
                      }else if (solis.ERP7__Sales_Order_Line_Item__c != null && !solis.ERP7__Product__r.ERP7__Lot_Tracked__c && solis.ERP7__Product__r.ERP7__Serialise__c && myStock != 0){//added else if cnd solis.ERP7__Sales_Order_Line_Item__c != null && 
                          system.debug('for serial ');
                          myStock += swrap.loli.ERP7__Quantity__c;
@@ -955,7 +1127,12 @@ public With Sharing Class OutboundLogisticsLightning {
                                                                                               }
                                                                                               
                                                                                           } else {
-                                                                                              swrap.inventoryStock = myStock; system.debug('in elseeee');
+                                                                                              if(solis.ERP7__Product__r.ERP7__Lot_Tracked__c && !solis.ERP7__Product__r.ERP7__Serialise__c){
+                                                                                                  swrap.inventoryStock = myStock2; system.debug('in elseeee');
+                                                                                              }else{
+                                                                                                  swrap.inventoryStock = myStock;
+                                                                                              }
+                                                                                              
                                                                                           }
                                                                                               }
 
@@ -996,9 +1173,62 @@ public With Sharing Class OutboundLogisticsLightning {
                      system.debug('batchStocks.get(swrap.BatchLotCodes[0].Value) : '+batchStocks.get(swrap.BatchLotCodes[0].Value));
                      if (batchStocks.get(swrap.BatchLotCodes[0].Value) == null) batch = [Select Id, Name, ERP7__Available_Quantity__c from ERP7__Batch__c where Id =: swrap.BatchLotCode Limit 1];
                        Decimal bStock;
-                       //added by khaleeq for stock visblty
+                       //added for stock visblty
                       
-                      		bStock = (batchStocks.get(swrap.BatchLotCodes[0].Value) != null) ? batchStocks.get(swrap.BatchLotCodes[0].Value) : batch.ERP7__Available_Quantity__c;
+                      	//	bStock = (batchStocks.get(swrap.BatchLotCodes[0].Value) != null) ? batchStocks.get(swrap.BatchLotCodes[0].Value) : batch.ERP7__Available_Quantity__c;
+                       //new code here to get the invcount+ stock outward count
+                       String batchLot= swrap.BatchLotCode;
+                       Boolean checkLocininventoryLogisticMap=false;
+                       String location = (swrap != null && swrap.address != null && !swrap.address.isEmpty() && swrap.address[0] != null && swrap.address[0].value != null)? swrap.address[0].value: null;
+                       System.debug('batchLot--'+batchLot);
+                       System.debug('location--'+location);
+                       String soliid= solis.Id;
+                       System.debug('soliid--'+soliid);
+                       if(batchLogisticMap.containsKey(soliid)){
+                           System.debug('in if batchLogisticMap--');
+                           BatchLogisticWrapper blw = batchLogisticMap.get(soliid);
+                           System.debug('blw before--'+blw);
+                           Decimal locQty2 = 0;
+                           if(blw.BatchLotCode != batchLot){
+                               locQty2 = 0;
+                               System.debug('batch lot not matched--');
+                           }else{Boolean isLoc=true;
+                               if(blw.locationQtyMap != null && blw.locationQtyMap.containsKey(location)){
+                                   System.debug('in locationQtyMap--');checkLocininventoryLogisticMap=true;isLoc=false;
+                                   locQty2 = blw.locationQtyMap.get(location) != null ? blw.locationQtyMap.get(location) : 0;
+                               }else if (isLoc || location == null || location == '') {
+                                   locQty2 = blw.qtyWithoutLoc != null ? blw.qtyWithoutLoc : 0;
+                               }else{
+                                   System.debug('in else locationQtyMap--');
+                                   locQty2 = 0;
+                               }
+                               bStock = locQty2;
+                               System.debug('bStock after adding reserved quantity--'+bStock);
+                           }
+                           
+                           
+                       }
+                       
+                       if(inventoryLogisticMap.containsKey(batchLot)){
+                           System.debug('in if inventoryLogisticMap--');
+                           InventoryLogisticWrapper ilw = inventoryLogisticMap.get(batchLot);
+                           System.debug('ilw before--'+ilw);
+                           System.debug('ilw--'+ilw);
+                           Decimal locQty = 0;
+                           if(checkLocininventoryLogisticMap && ilw.locationQtyMap != null && ilw.locationQtyMap.containsKey(location)){
+                               System.debug('in locationQtyMap--');
+                               locQty = ilw.locationQtyMap.get(location) != null ? ilw.locationQtyMap.get(location) : 0;
+                           }else if (!checkLocininventoryLogisticMap || location == null || location == '') {
+                               locQty = ilw.qtyWithoutLoc != null ? ilw.qtyWithoutLoc : 0;
+                           }else{
+                               System.debug('in else locationQtyMap--');
+                               locQty = 0;
+                           }
+                           bStock+= locQty;
+                           System.debug('bStock from inventory--'+bStock);
+                       }
+                       
+                       //end here
                       
                          // bStock = myStock;
                        
@@ -2011,7 +2241,7 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                      Decimal noLocMyStock = 0;
                     Decimal withLocMyStock = 0;
                     
-                   /* if(comw.dontDefaultSnLotPick){
+                    //if(!comw.dontDefaultSnLotPick){
                         for(Inventory_Stock__c WIIS : WIISList) {  
                             String addrType = detectAddressType(swrap.addressName);
                             if(swrap.Product.Id == WIIS.Product__c ) {
@@ -2047,34 +2277,32 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                                              system.debug('in batch 1--'+swrap.addressName);
                                             if(WIIS.ERP7__Warehouse__c!= null && WIIS.ERP7__Warehouse__c == swrap.addressName){
                                                  system.debug('in batch if 1--');
-                                                if(WIIS.ERP7__Location__c != null && WIIS.ERP7__Location__c != swrap.addressName) {// 
+                                                if(WIIS.ERP7__Location__c == null) {// 
                                                     withLocMyStock += WIIS.ERP7__Number_of_Item_In_Stock__c;system.debug('myst-'+withLocMyStock);
                                                     myStock = withLocMyStock;
-                                                   }else{
-                                                       noLocMyStock += WIIS.ERP7__Number_of_Item_In_Stock__c;system.debug('myst else-'+noLocMyStock);
-                                                        myStock = noLocMyStock;
                                                    }
                                             }else{
                                                 system.debug('in batch else 1--');
-                                                myStock += WIIS.ERP7__Number_of_Item_In_Stock__c;
+                                                //myStock += WIIS.ERP7__Number_of_Item_In_Stock__c;
                                             }
                                         }else{
                                              system.debug('in batch 2--');
                                             if(WIIS.ERP7__Warehouse__c!= null && WIIS.ERP7__Warehouse__c == swrap.addressName){
-                                                myStock += WIIS.ERP7__Number_of_Item_In_Stock__c;
+                                               // myStock += WIIS.ERP7__Number_of_Item_In_Stock__c;
                                             }   
                                         }       
                                     }
                                 } 
                             }         
-                        } 
-                    }else{*/
+                         
+                    }
+                    /*}else{
                         
                         for(Inventory_Stock__c WIIS : WIISList) { 
                         if(swrap.Product.Id == WIIS.Product__c ) myStock += WIIS.Number_of_Item_In_Stock__c;  //&& (swrap.batchLotCode == '' || WIIS.Batch_Lot_Code__c == swrap.batchLotCode)
-                   // }
+                   }
                         
-                    }   
+                    }   */
                     
                     system.debug('FETCH BATC STOCK --'+myStock);
                     List<ERP7__Stock_Outward_Line_Item__c> reservedSTOLI = new List<ERP7__Stock_Outward_Line_Item__c>();                   
@@ -2086,9 +2314,11 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
                 	Map<Id,Decimal> batchAvailStocks = new Map<Id,Decimal>();
                     for(ERP7__Stock_Outward_Line_Item__c outward : reservedSTOLI){
                         if(batchAvailStocks.containsKey(outward.ERP7__Material_Batch_Lot__c)){ 
+                            system.debug('one');
                             batchAvailStocks.put(outward.ERP7__Material_Batch_Lot__c,(batchAvailStocks.get(outward.ERP7__Material_Batch_Lot__c) + outward.ERP7__Quantity__c));
                         }else{
-                            batchAvailStocks.put(outward.ERP7__Material_Batch_Lot__c,(outward.ERP7__Site_Product_Service_Inventory_Stock__r.Number_of_Item_In_Stock__c + outward.ERP7__Quantity__c));
+                            system.debug('two');
+                            batchAvailStocks.put(outward.ERP7__Material_Batch_Lot__c,myStock);
                         }
                     }
                     if(swrap.BatchLotCode != '' && swrap.BatchLotCode != Null && batchAvailStocks.containsKey(swrap.BatchLotCode)) {
