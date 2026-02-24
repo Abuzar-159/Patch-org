@@ -1359,103 +1359,213 @@ public static Map<String, List<Map<String, String>>> getAllDocs(Id parentId) {
     
 
     
-     @AuraEnabled
-    public static String extractLineItemsFromText(String invoiceText) {
-        System.debug('🧾 [START] Received Invoice Text: ' + invoiceText);
+    //  @AuraEnabled
+    // public static String extractLineItemsFromText(String invoiceText) {
+    //     System.debug('🧾 [START] Received Invoice Text: ' + invoiceText);
 
-        Credentials__c cred;
-        try {
-            cred = [
-                SELECT ERP7__Encrypted_Key__c,
-                       ERP7__End_Point__c,
-                       URL__c,
-                       ERP7__Active__c,
-                       Name
-                FROM Credentials__c
-                WHERE Type__c = 'OCR' AND ERP7__Active__c = true AND Name = 'OCR'
-                LIMIT 10
-            ];
-            System.debug(' [CRED] Fetched Credential: ' + cred.Name);
-            System.debug(' [CRED] API Key (ERP7__Encrypted_Key__c): ' + cred.ERP7__Encrypted_Key__c);
-            System.debug(' [CRED] Endpoint (ERP7__End_Point__c): ' + cred.ERP7__End_Point__c);
-            System.debug(' [CRED] Fallback URL (URL__c): ' + cred.URL__c);
-        } catch (Exception e) {
-            System.debug(' [ERROR] Failed to fetch OCR credentials: ' + e.getMessage());
-            return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
-        }
+    //     Credentials__c cred;
+    //     try {
+    //         cred = [
+    //             SELECT ERP7__Encrypted_Key__c,
+    //                    ERP7__End_Point__c,
+    //                    URL__c,
+    //                    ERP7__Active__c,
+    //                    Name
+    //             FROM Credentials__c
+    //             WHERE Type__c = 'OCR' AND ERP7__Active__c = true AND Name = 'OCR'
+    //             LIMIT 10
+    //         ];
+    //         System.debug(' [CRED] Fetched Credential: ' + cred.Name);
+    //         System.debug(' [CRED] API Key (ERP7__Encrypted_Key__c): ' + cred.ERP7__Encrypted_Key__c);
+    //         System.debug(' [CRED] Endpoint (ERP7__End_Point__c): ' + cred.ERP7__End_Point__c);
+    //         System.debug(' [CRED] Fallback URL (URL__c): ' + cred.URL__c);
+    //     } catch (Exception e) {
+    //         System.debug(' [ERROR] Failed to fetch OCR credentials: ' + e.getMessage());
+    //         return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
+    //     }
 
-        if (cred == null) {
-            System.debug('️ [WARN] No active OCR credential found.');
-            return 'Error: No active OCR credential found.';
-        }
+    //     if (cred == null) {
+    //         System.debug('️ [WARN] No active OCR credential found.');
+    //         return 'Error: No active OCR credential found.';
+    //     }
 
-        if (String.isBlank(cred.ERP7__Encrypted_Key__c)) {
-            System.debug('️ [WARN] OCR Credential is missing API Key (ERP7__Encrypted_Key__c).');
-            return 'Error: OCR credential missing API Key.';
-        }
+    //     if (String.isBlank(cred.ERP7__Encrypted_Key__c)) {
+    //         System.debug('️ [WARN] OCR Credential is missing API Key (ERP7__Encrypted_Key__c).');
+    //         return 'Error: OCR credential missing API Key.';
+    //     }
 
-        String baseUrl = String.isBlank(cred.ERP7__End_Point__c)
-            ? cred.URL__c
-            : cred.ERP7__End_Point__c;
+    //     String baseUrl = String.isBlank(cred.ERP7__End_Point__c)
+    //         ? cred.URL__c
+    //         : cred.ERP7__End_Point__c;
 
-        if (String.isBlank(baseUrl)) {
-            System.debug('️ [WARN] OCR Credential is missing Endpoint/URL.');
-            return 'Error: OCR credential missing Endpoint/URL.';
-        }
+    //     if (String.isBlank(baseUrl)) {
+    //         System.debug('️ [WARN] OCR Credential is missing Endpoint/URL.');
+    //         return 'Error: OCR credential missing Endpoint/URL.';
+    //     }
 
-        System.debug('🌍 [INFO] Base URL before formatting: ' + baseUrl);
+    //     System.debug('🌍 [INFO] Base URL before formatting: ' + baseUrl);
 
-        if (!baseUrl.contains('?key=')) {
-            if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) {
-                baseUrl += 'key=';
-            } else if (baseUrl.contains('?')) {
-                baseUrl += '&key=';
-            } else {
-                baseUrl += '?key=';
-            }
-        }
+    //     if (!baseUrl.contains('?key=')) {
+    //         if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) {
+    //             baseUrl += 'key=';
+    //         } else if (baseUrl.contains('?')) {
+    //             baseUrl += '&key=';
+    //         } else {
+    //             baseUrl += '?key=';
+    //         }
+    //     }
 
-        System.debug('🌍 [INFO] Final formatted Base URL: ' + baseUrl);
+    //     System.debug('🌍 [INFO] Final formatted Base URL: ' + baseUrl);
 
-        String requestPayload = '{"contents":[{"parts":[{"text":"Extract line items in this format:\\n\\n' +
-            'Product Name\\nQuantity\\nUnit Price\\nPO Number (if available, else return as No PO)\\n\\n' +
-            'Rules:\\n- Ignore currency symbols.\\n- Trim and normalize names/POs.\\n- Only plain text, no extra info, not even the headers.\\n\\n' +
-            'Invoice:\\n\\n' + invoiceText.replaceAll('"','\\"') + '"}]}]}';
+    //     String requestPayload = '{"contents":[{"parts":[{"text":"Extract line items in this format:\\n\\n' +
+    //         'Product Name\\nQuantity\\nUnit Price\\nPO Number (if available, else return as No PO)\\n\\n' +
+    //         'Rules:\\n- Ignore currency symbols.\\n- Trim and normalize names/POs.\\n- Only plain text, no extra info, not even the headers.\\n\\n' +
+    //         'Invoice:\\n\\n' + invoiceText.replaceAll('"','\\"') + '"}]}]}';
 
-        System.debug('🧱 [PAYLOAD] ' + requestPayload);
+    //     System.debug('🧱 [PAYLOAD] ' + requestPayload);
 
-        String apiKey = cred.ERP7__Encrypted_Key__c;
-        Http http = new Http();
+    //     String apiKey = cred.ERP7__Encrypted_Key__c;
+    //     Http http = new Http();
 
-        try {
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint(baseUrl + apiKey);
-            req.setMethod('POST');
-            req.setHeader('Content-Type', 'application/json');
-            req.setTimeout(120000);
-            req.setBody(requestPayload);
+    //     try {
+    //         HttpRequest req = new HttpRequest();
+    //         req.setEndpoint(baseUrl + apiKey);
+    //         req.setMethod('POST');
+    //         req.setHeader('Content-Type', 'application/json');
+    //         req.setTimeout(120000);
+    //         req.setBody(requestPayload);
 
-            System.debug('🚀 [REQUEST] Sending to Endpoint: ' + req.getEndpoint());
-            System.debug('🚀 [REQUEST] Headers: ' + req.getHeader('Content-Type'));
+    //         System.debug('🚀 [REQUEST] Sending to Endpoint: ' + req.getEndpoint());
+    //         System.debug('🚀 [REQUEST] Headers: ' + req.getHeader('Content-Type'));
 
-            HttpResponse res = http.send(req);
+    //         HttpResponse res = http.send(req);
 
-            System.debug('📥 [RESPONSE] Status Code: ' + res.getStatusCode());
-            System.debug('📥 [RESPONSE] Body: ' + res.getBody());
+    //         System.debug('📥 [RESPONSE] Status Code: ' + res.getStatusCode());
+    //         System.debug('📥 [RESPONSE] Body: ' + res.getBody());
 
-            if (res.getStatusCode() == 200) {
-                System.debug(' [SUCCESS] OCR API call succeeded.');
-                return parseGeminiResponse(res.getBody());
-            } else {
-                System.debug(' [FAILURE] OCR API call failed → Code: ' + res.getStatusCode());
-                System.debug(' [FAILURE] Body: ' + res.getBody());
-                return 'Error: ' + res.getStatusCode() + ' → ' + res.getBody();
-            }
-        } catch (Exception e) {
-            System.debug(' [EXCEPTION] During HTTP callout: ' + e.getMessage());
-            return 'Error calling OCR API: ' + e.getMessage();
+    //         if (res.getStatusCode() == 200) {
+    //             System.debug(' [SUCCESS] OCR API call succeeded.');
+    //             return parseGeminiResponse(res.getBody());
+    //         } else {
+    //             System.debug(' [FAILURE] OCR API call failed → Code: ' + res.getStatusCode());
+    //             System.debug(' [FAILURE] Body: ' + res.getBody());
+    //             return 'Error: ' + res.getStatusCode() + ' → ' + res.getBody();
+    //         }
+    //     } catch (Exception e) {
+    //         System.debug(' [EXCEPTION] During HTTP callout: ' + e.getMessage());
+    //         return 'Error calling OCR API: ' + e.getMessage();
+    //     }
+    // }
+
+    @AuraEnabled
+public static String extractLineItemsFromText(String base64Pdf) {
+
+    System.debug(
+        '🧾 [START] Received Base64 length: ' +
+        (base64Pdf != null ? base64Pdf.length() : 0)
+    );
+
+    // ----------------- FETCH CREDENTIALS -----------------
+    Credentials__c cred;
+    try {
+        cred = [
+            SELECT ERP7__Encrypted_Key__c,
+                   ERP7__End_Point__c,
+                   URL__c,
+                   ERP7__Active__c,
+                   Name
+            FROM Credentials__c
+            WHERE Type__c = 'OCR'
+              AND ERP7__Active__c = true
+              AND Name = 'OCR'
+            LIMIT 1
+        ];
+    } catch (Exception e) {
+        return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
+    }
+
+    if (cred == null) {
+        return 'Error: No active OCR credential found.';
+    }
+
+    if (String.isBlank(cred.ERP7__Encrypted_Key__c)) {
+        return 'Error: OCR credential missing API Key.';
+    }
+
+    // ----------------- ENDPOINT BUILD -----------------
+    String baseUrl = String.isBlank(cred.ERP7__End_Point__c)
+        ? cred.URL__c
+        : cred.ERP7__End_Point__c;
+
+    if (String.isBlank(baseUrl)) {
+        return 'Error: OCR credential missing Endpoint/URL.';
+    }
+
+    if (!baseUrl.contains('?key=')) {
+        if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) {
+            baseUrl += 'key=';
+        } else if (baseUrl.contains('?')) {
+            baseUrl += '&key=';
+        } else {
+            baseUrl += '?key=';
         }
     }
+
+    // ----------------- PROMPT -----------------
+    String promptText =
+        'Extract line items in this format:\n\n' +
+        'Product Name\n' +
+        'Quantity\n' +
+        'Unit Price\n' +
+        'PO Number (if available, else No PO)\n\n' +
+        'Rules:\n' +
+        '- Ignore currency symbols\n' +
+        '- Trim and normalize values\n' +
+        '- Plain text only\n' +
+        '- No headers, no explanations';
+
+    // ----------------- GEMINI MULTIMODAL PAYLOAD -----------------
+    Map<String, Object> requestBody = new Map<String, Object>{
+        'contents' => new List<Object>{
+            new Map<String, Object>{
+                'parts' => new List<Object>{
+                    new Map<String, Object>{
+                        'text' => promptText
+                    },
+                    new Map<String, Object>{
+                        'inline_data' => new Map<String, Object>{
+                            'mime_type' => 'application/pdf',
+                            'data' => base64Pdf
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // ----------------- HTTP CALL -----------------
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint(baseUrl + cred.ERP7__Encrypted_Key__c);
+    req.setMethod('POST');
+    req.setHeader('Content-Type', 'application/json');
+    req.setTimeout(120000);
+    req.setBody(JSON.serialize(requestBody));
+
+    try {
+        HttpResponse res = new Http().send(req);
+
+        System.debug('📥 [RESPONSE] Status Code: ' + res.getStatusCode());
+
+        if (res.getStatusCode() == 200) {
+            return parseGeminiResponse(res.getBody());
+        } else {
+            return 'Error: ' + res.getStatusCode() + ' → ' + res.getBody();
+        }
+    } catch (Exception e) {
+        return 'Error calling OCR API: ' + e.getMessage();
+    }
+}
+
 
     private static String parseGeminiResponse(String body) {
         String extractedText = '';
@@ -1491,60 +1601,166 @@ public static Map<String, List<Map<String, String>>> getAllDocs(Id parentId) {
 
     // for the expance part 
 
-    @AuraEnabled
-public static String extractExpenseItemsFromText(String invoiceText) {
-    System.debug('🧾 [EXPENSE OCR] Received Text: ' + invoiceText);
+//     @AuraEnabled
+// public static String extractExpenseItemsFromText(String invoiceText) {
+//     System.debug('🧾 [EXPENSE OCR] Received Text: ' + invoiceText);
 
-    // Fetch Credentials
+//     // Fetch Credentials
+//     Credentials__c cred;
+//     try {
+//         cred = [
+//             SELECT ERP7__Encrypted_Key__c, ERP7__End_Point__c, URL__c,
+//                    ERP7__Active__c, Name
+//             FROM Credentials__c
+//             WHERE Type__c = 'OCR' AND ERP7__Active__c = true AND Name = 'OCR'
+//             LIMIT 1
+//         ];
+//     } catch (Exception e) {
+//         return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
+//     }
+
+//     if (cred == null || String.isBlank(cred.ERP7__Encrypted_Key__c))
+//         return 'Error: OCR credential missing API Key.';
+
+//     String baseUrl = String.isBlank(cred.ERP7__End_Point__c) ? cred.URL__c : cred.ERP7__End_Point__c;
+
+//     if (String.isBlank(baseUrl))
+//         return 'Error: OCR credential missing Endpoint/URL.';
+
+//     // Format endpoint
+//     if (!baseUrl.contains('?key=')) {
+//         if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) baseUrl += 'key=';
+//         else if (baseUrl.contains('?')) baseUrl += '&key=';
+//         else baseUrl += '?key=';
+//     }
+
+//     // --------- AI PROMPT FOR EXPENSE ITEMS ----------
+//     String requestPayload = '{"contents":[{"parts":[{"text":"Extract ONLY expense line items in this exact format:\\n\\n' +
+//         'QTY\\nUNIT_PRICE\\nDISCOUNT_AMOUNT\\nTAX_PERCENT\\nTAX_AMOUNT\\n\\n' +
+//         'Rules:\\n' +
+//         '- No product names.\\n' +
+//         '- Ignore currency symbols.\\n' +
+//         '- Return only numbers.\\n' +
+//         '- Each line item must be 5 lines. No extra text.\\n\\n' +
+//         'Invoice:\\n\\n' + invoiceText.replaceAll('"','\\"') + '"}]}]}' ;
+
+//     // HTTP CALL
+//     Http http = new Http();
+//     try {
+//         HttpRequest req = new HttpRequest();
+//         req.setEndpoint(baseUrl + cred.ERP7__Encrypted_Key__c);
+//         req.setMethod('POST');
+//         req.setHeader('Content-Type', 'application/json');
+//         req.setTimeout(120000);
+//         req.setBody(requestPayload);
+
+//         HttpResponse res = http.send(req);
+
+//         if (res.getStatusCode() == 200) {
+//             return parseGeminiExpenseResponse(res.getBody());
+//         } else {
+//             return 'Error: ' + res.getStatusCode() + ' → ' + res.getBody();
+//         }
+//     } catch (Exception e) {
+//         return 'Error calling OCR API: ' + e.getMessage();
+//     }
+// }
+
+@AuraEnabled
+public static String extractExpenseItemsFromText(String base64Pdf) {
+
+    System.debug(
+        '🧾 [EXPENSE OCR] Received Base64 length: ' +
+        (base64Pdf != null ? base64Pdf.length() : 0)
+    );
+
+    // ----------------- FETCH CREDENTIALS -----------------
     Credentials__c cred;
     try {
         cred = [
-            SELECT ERP7__Encrypted_Key__c, ERP7__End_Point__c, URL__c,
-                   ERP7__Active__c, Name
+            SELECT ERP7__Encrypted_Key__c,
+                   ERP7__End_Point__c,
+                   URL__c,
+                   ERP7__Active__c,
+                   Name
             FROM Credentials__c
-            WHERE Type__c = 'OCR' AND ERP7__Active__c = true AND Name = 'OCR'
+            WHERE Type__c = 'OCR'
+              AND ERP7__Active__c = true
+              AND Name = 'OCR'
             LIMIT 1
         ];
     } catch (Exception e) {
         return 'Error: Unable to fetch OCR credentials → ' + e.getMessage();
     }
 
-    if (cred == null || String.isBlank(cred.ERP7__Encrypted_Key__c))
+    if (cred == null || String.isBlank(cred.ERP7__Encrypted_Key__c)) {
         return 'Error: OCR credential missing API Key.';
-
-    String baseUrl = String.isBlank(cred.ERP7__End_Point__c) ? cred.URL__c : cred.ERP7__End_Point__c;
-
-    if (String.isBlank(baseUrl))
-        return 'Error: OCR credential missing Endpoint/URL.';
-
-    // Format endpoint
-    if (!baseUrl.contains('?key=')) {
-        if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) baseUrl += 'key=';
-        else if (baseUrl.contains('?')) baseUrl += '&key=';
-        else baseUrl += '?key=';
     }
 
-    // --------- AI PROMPT FOR EXPENSE ITEMS ----------
-    String requestPayload = '{"contents":[{"parts":[{"text":"Extract ONLY expense line items in this exact format:\\n\\n' +
-        'QTY\\nUNIT_PRICE\\nDISCOUNT_AMOUNT\\nTAX_PERCENT\\nTAX_AMOUNT\\n\\n' +
-        'Rules:\\n' +
-        '- No product names.\\n' +
-        '- Ignore currency symbols.\\n' +
-        '- Return only numbers.\\n' +
-        '- Each line item must be 5 lines. No extra text.\\n\\n' +
-        'Invoice:\\n\\n' + invoiceText.replaceAll('"','\\"') + '"}]}]}' ;
+    // ----------------- ENDPOINT BUILD -----------------
+    String baseUrl = String.isBlank(cred.ERP7__End_Point__c)
+        ? cred.URL__c
+        : cred.ERP7__End_Point__c;
 
-    // HTTP CALL
-    Http http = new Http();
+    if (String.isBlank(baseUrl)) {
+        return 'Error: OCR credential missing Endpoint/URL.';
+    }
+
+    if (!baseUrl.contains('?key=')) {
+        if (baseUrl.endsWith('?') || baseUrl.endsWith('&')) {
+            baseUrl += 'key=';
+        } else if (baseUrl.contains('?')) {
+            baseUrl += '&key=';
+        } else {
+            baseUrl += '?key=';
+        }
+    }
+
+    // ----------------- PROMPT (TEXT ONLY) -----------------
+    String promptText =
+        'Extract ONLY expense line items in this exact format:\n\n' +
+        'QTY\n' +
+        'UNIT_PRICE\n' +
+        'DISCOUNT_AMOUNT\n' +
+        'TAX_PERCENT\n' +
+        'TAX_AMOUNT\n' +
+        'Discription\n\n' +
+        'Rules:\n' +
+        '- No product names\n' +
+        '- Ignore currency symbols\n' +
+        '- Return only numbers\n' +
+        '- Each item must be exactly 5 lines\n' +
+        '- No extra text';
+
+    // ----------------- GEMINI MULTIMODAL PAYLOAD -----------------
+    Map<String, Object> requestBody = new Map<String, Object>{
+        'contents' => new List<Object>{
+            new Map<String, Object>{
+                'parts' => new List<Object>{
+                    new Map<String, Object>{
+                        'text' => promptText
+                    },
+                    new Map<String, Object>{
+                        'inline_data' => new Map<String, Object>{
+                            'mime_type' => 'application/pdf',
+                            'data' => base64Pdf
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // ----------------- HTTP CALL -----------------
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint(baseUrl + cred.ERP7__Encrypted_Key__c);
+    req.setMethod('POST');
+    req.setHeader('Content-Type', 'application/json');
+    req.setTimeout(120000);
+    req.setBody(JSON.serialize(requestBody));
+
     try {
-        HttpRequest req = new HttpRequest();
-        req.setEndpoint(baseUrl + cred.ERP7__Encrypted_Key__c);
-        req.setMethod('POST');
-        req.setHeader('Content-Type', 'application/json');
-        req.setTimeout(120000);
-        req.setBody(requestPayload);
-
-        HttpResponse res = http.send(req);
+        HttpResponse res = new Http().send(req);
 
         if (res.getStatusCode() == 200) {
             return parseGeminiExpenseResponse(res.getBody());

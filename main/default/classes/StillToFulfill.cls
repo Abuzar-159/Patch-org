@@ -31,7 +31,7 @@ public with sharing class StillToFulfill {
             if(SOS.size() > 0){
                 shipItems = packItems = pickItems = 0;
                 LO = SOS[0];
-                solisItemList = Database.query('select ' + String.escapeSingleQuotes(SOLIItemFields) + ' from ERP7__Logistic_Line_Item__c where ERP7__Logistic__c =:LogId or ERP7__Logistic__r.Name =:LogId');
+                solisItemList = Database.query('select ' + String.escapeSingleQuotes(SOLIItemFields) + ' from ERP7__Logistic_Line_Item__c where ERP7__Logistic__c =:LogId or ERP7__Logistic__r.Name =:LogId ORDER BY CreatedDate DESC LIMIT 1000');
                 for(ERP7__Logistic_Line_Item__c so_li :solisItemList){
                     if(so_li.Picked_Quantity__c != so_li.Quantity__c) pickItems++; 
                     if(so_li.Picked_Quantity__c != Null && so_li.Picked_Quantity__c > 0 && ((so_li.Packed_Quantity__c != Null && so_li.Picked_Quantity__c > so_li.Packed_Quantity__c) || so_li.Packed_Quantity__c == Null)) packItems++; 
@@ -56,7 +56,7 @@ public with sharing class StillToFulfill {
                 Back2SO = SOS[0].Id;
                 shipItems = packItems = pickItems = 0;
                 SO = SOS[0];
-                soliItemList = Database.query('select ' + String.escapeSingleQuotes(SOLIItemFields) + ' from ERP7__Sales_Order_Line_Item__c where ERP7__Sales_Order__c =:LogId or ERP7__Sales_Order__r.Name =:LogId');
+                soliItemList = Database.query('select ' + String.escapeSingleQuotes(SOLIItemFields) + ' from ERP7__Sales_Order_Line_Item__c where ERP7__Sales_Order__c =:LogId or ERP7__Sales_Order__r.Name =:LogId ORDER BY CreatedDate DESC LIMIT 1000');
                 
                 Set<Id> productIds = new Set<Id>();
                 for(ERP7__Sales_Order_Line_Item__c so_li :soliItemList){
@@ -70,7 +70,7 @@ public with sharing class StillToFulfill {
                         From ERP7__Inventory_Stock__c
                         Where ERP7__product__c IN: productIds And
                         ERP7__Active__c = true And
-                        ERP7__Number_of_Item_In_Stock__c > 0
+                        ERP7__Number_of_Item_In_Stock__c > 0 ORDER BY CreatedDate DESC LIMIT 1000
                     ]) {
                     if(ProductMap2Stock.containsKey(WarehouseItemInventoryStocks.ERP7__product__c)){
                         ProductMap2Stock.get(WarehouseItemInventoryStocks.ERP7__product__c).add(WarehouseItemInventoryStocks);
@@ -105,7 +105,7 @@ public with sharing class StillToFulfill {
     }
     
     public list <ERP7__Logistic__c> getAccountList() {
-        return [Select Id, Name From ERP7__Logistic__c limit 10000];
+        return [Select Id, Name From ERP7__Logistic__c ORDER BY CreatedDate DESC LIMIT 1000];
     }
     
 }

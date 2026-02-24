@@ -290,10 +290,11 @@ public with sharing class CreateDebitNote {
                //if(RTID != null) billObj.RecordTypeId=RTID;
               //if(Schema.sObjectType.Bill__c.fields.ERP7__Bill_Date__c.isCreateable() && Schema.sObjectType.Bill__c.fields.ERP7__Bill_Date__c.isUpdateable())  billObj.ERP7__Bill_Date__c=System.today();
                if(Schema.sObjectType.ERP7__Debit_Note__c.isCreateable() && Schema.sObjectType.ERP7__Debit_Note__c.isUpdateable()) { upsert billObj; } else { }
-                ERP7__Debit_Note__c bb=[select id,Name from ERP7__Debit_Note__c where Id=:billObj.Id];
+               /* ERP7__Debit_Note__c bb=[select id,Name from ERP7__Debit_Note__c where Id=:billObj.Id];*/ Id billObjId = billObj.Id; String soql = 'SELECT Id, Name' +(UserInfo.isMultiCurrencyOrganization() ? ', CurrencyIsoCode' : '') + ' FROM ERP7__Debit_Note__c WHERE Id = :billObjId';ERP7__Debit_Note__c bb = Database.query(soql);//chnage 1 by asra 10/2
                 //Id RTIDBLI; if(String.isNotEmpty(RTName)) RTIDBLI = Schema.SObjectType.ERP7__Bill_Line_Item__c.getRecordTypeInfosByDeveloperName().get(RTName).getRecordTypeId();
                 List<ERP7__Debit_Note_Item__c> billItemsList = (List<ERP7__Debit_Note_Item__c>)JSON.deserialize(BillItems, List<ERP7__Debit_Note_Item__c>.class);
                 for(Integer i=0;i<billItemsList.size();i++){
+                    if(UserInfo.isMultiCurrencyOrganization()){billItemsList[i].put('CurrencyIsoCode', bb.get('CurrencyIsoCode'));}////chnage 2 by asra 10/2
                     if(Schema.sObjectType.ERP7__Debit_Note_Item__c.fields.ERP7__Debit_Note__c.isCreateable() && Schema.sObjectType.ERP7__Debit_Note_Item__c.fields.ERP7__Debit_Note__c.isUpdateable()) {billItemsList[i].ERP7__Debit_Note__c  = billObj.id; } 
                     //if(RTIDBLI != null) billItemsList[i].RecordTypeId = RTIDBLI; 
                     if(String.isEmpty(billItemsList[i].ERP7__Chart_Of_Account__c) && Schema.sObjectType.ERP7__Debit_Note_Item__c.fields.ERP7__Chart_Of_Account__c.isCreateable() && Schema.sObjectType.ERP7__Debit_Note_Item__c.fields.ERP7__Chart_Of_Account__c.isUpdateable()){ billItemsList[i].ERP7__Chart_Of_Account__c = null;}if(billItemsList[i].ERP7__Quantity__c==null && Schema.sObjectType.Bill_Line_Item__c.fields.ERP7__Quantity__c.isCreateable() && Schema.sObjectType.Bill_Line_Item__c.fields.ERP7__Quantity__c.isUpdateable()) billItemsList[i].ERP7__Quantity__c=0; 

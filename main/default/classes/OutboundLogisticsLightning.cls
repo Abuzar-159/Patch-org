@@ -1073,7 +1073,7 @@ public With Sharing Class OutboundLogisticsLightning {
                          system.debug('for batch myStock -'+myStock);
                          //new code below
                          if(stockWithoutbatchMap.containsKey(solis.ERP7__Product__c)){
-                            // myStock2 = swrap.loli.ERP7__Quantity__c;
+                             myStock2 += swrap.loli.ERP7__Quantity__c;
                              stockWithoutbatch swbw = stockWithoutbatchMap.get(solis.ERP7__Product__c);
                              system.debug('swbw--' + swbw);
                              if(swbw.locationQtyMap != null && swbw.locationQtyMap.containsKey(swrap.address[0].value)){

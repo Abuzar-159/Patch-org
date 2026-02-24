@@ -3536,23 +3536,22 @@ console.log("UI updated. New uploadedFile list:", JSON.stringify(updated));
         helper.showToast($A.get('$Label.c.Success'),'success', 'OCR is now ' + (!current ? 'enabled' : 'disabled') + ', Make sure to uploaded file should have a PO number in it and related line items.');
 
         }
+        else{
+            helper.showToast($A.get('$Label.c.Success'),'success', 'OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');}
 
-        // helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
 
     },
 
       toggleOCRForExpense : function(component, event, helper) {
         let current = component.get("v.isActiveExp");
         component.set("v.isActiveExp", !current);
-        // if (!current){
-        //             helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
+      if (!current){
+             helper.showToast($A.get('$Label.c.Success'),'success', 'OCR is now ' + (!current ? 'enabled' : 'disabled') + ', for Expence bill.');
+        }
+        else{
+            helper.showToast($A.get('$Label.c.Success'),'success', 'OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
+        }
 
-        // // helper.showToast($A.get('$Label.c.Success'),'success', 'Make sure to uploaded file should have a PO number in it and related line items.');
-
-        // }
-
-        // helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
-                      helper.showToast($A.get('$Label.c.Success'),'success', ' OCR is now ' + (!current ? 'enabled' : 'disabled') + '.');
 
 
     },
@@ -3561,7 +3560,7 @@ console.log("UI updated. New uploadedFile list:", JSON.stringify(updated));
     
 handleFilesChange: function (component, event, helper) {
 
-    
+    console.log('[handleFilesChange] called');
     // 1️⃣ Clear any previously uploaded files
     var existingFiles = component.get('v.uploadedFile');
     if (existingFiles && existingFiles.length > 0) {

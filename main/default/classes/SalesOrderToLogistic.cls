@@ -310,9 +310,9 @@ public with sharing class SalesOrderToLogistic {
                     }
                     
                     /*list<Id> bomprodIds = new list<Id>();
-for(ERP7__BOM__c b:BOMList){
-bomprodIds.add(b.ERP7__BOM_Component__c);
-}*/
+                    for(ERP7__BOM__c b:BOMList){
+                    bomprodIds.add(b.ERP7__BOM_Component__c);
+                    }*/
                     
                     Order orderdetail = new Order();
                     orderdetail =[SELECT Id, Name, AccountId, Pricebook2Id, ERP7__Contact__c, ERP7__Ship_To_Address__c, ERP7__Channel__c, ERP7__Ready_To_Pick_Pack__c, Description,
@@ -338,8 +338,8 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
                                     bomwrapper bomwrap = new bomwrapper();
                                     Decimal proStockCount = 0;
                                     if (bom.ERP7__Quantity__c == null || Foli.Quantity == null) {
-    throw new AuraHandledException('Quantity is missing for BOM or Order Item. Please ensure all quantities are properly set.');
-}
+                                        throw new AuraHandledException('Quantity is missing for BOM or Order Item. Please ensure all quantities are properly set.');
+                                    }
                                   else  bom.ERP7__Quantity__c = bom.ERP7__Quantity__c*Foli.Quantity;
                                     if (BOMProductMap2Stock.containsKey(bom.ERP7__BOM_Component__c)) {
                                         for(ERP7__Inventory_Stock__c IS : BOMProductMap2Stock.get(bom.ERP7__BOM_Component__c)){
@@ -409,15 +409,16 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
     } 
     
     @AuraEnabled
-    Public Static SalesOrderToLogistic getSoliList(String SOId){ //, String DistributeChannelId
+    public static SalesOrderToLogistic getSoliList(String SOId){ //, String DistributeChannelId
         SalesOrderToLogistic so=new SalesOrderToLogistic(); 
         if(String.isNotEmpty(SOId)){
             List<ERP7__Sales_Order_Line_Item__c> SoliList=new List<ERP7__Sales_Order_Line_Item__c>();       
-            SoliList=[SELECT Id, Name , ERP7__Product__c, ERP7__Product__r.Name, ERP7__Quantity__c, ERP7__Base_Price__c, ERP7__VAT_Amount__c, ERP7__Discount_Amount__c 
-                      ,ERP7__Sales_Order__c,ERP7__Sales_Order__r.Name, ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c, ERP7__Site__c, ERP7__Active__c, ERP7__Logistic_Quantity__c, ERP7__Picked_Quantity__c, ERP7__Packed_Quantity__c, ERP7__Shipped_Quantity__c, ERP7__Reserved_Quantity__c
+            SoliList=[SELECT Id, Name , ERP7__Product__c, ERP7__Product__r.Name, ERP7__Product__r.ERP7__Track_Inventory__c, ERP7__Product__r.ERP7__Is_Kit__c, ERP7__Quantity__c, ERP7__Base_Price__c, ERP7__VAT_Amount__c, ERP7__Discount_Amount__c 
+                      ,ERP7__Sales_Order__c,ERP7__Sales_Order__r.Name, ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c, ERP7__Site__c, ERP7__Active__c, ERP7__Logistic_Quantity__c, ERP7__Picked_Quantity__c, ERP7__Packed_Quantity__c, ERP7__Shipped_Quantity__c, ERP7__Reserved_Quantity__c,ERP7__Price_Product__c,
+                      ERP7__Is_Kit__c, ERP7__Inventory_Tracked__c, ERP7__Version__c, ERP7__PriceBookId__c, ERP7__Insufficient_BOM__c
                       FROM ERP7__Sales_Order_Line_Item__c
-                      WHERE ERP7__Sales_Order__c=:SOId AND ERP7__Product__c!=Null AND ERP7__Product__r.ERP7__Track_Inventory__c=true]; //  AND ERP7__Site__c=:dc.ERP7__Site__c   //ERP7__Site__c='a2B1o000001pkxzEAA'
-            
+                      WHERE ERP7__Sales_Order__c=:SOId AND ERP7__Product__c!=Null AND (ERP7__Product__r.ERP7__Track_Inventory__c=true OR ERP7__Product__r.ERP7__Is_Kit__c=true)]; //  AND ERP7__Site__c=:dc.ERP7__Site__c   //ERP7__Site__c='a2B1o000001pkxzEAA'
+        
             set<String> SoliIds=new set<String>();            
             for(ERP7__Sales_Order_Line_Item__c s:SoliList) SoliIds.add(s.Id); //
             
@@ -499,7 +500,7 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
     } 
     
   /* @AuraEnabled
-    Public Static stockwrapper getupdatedstocksDC(String orditms,String chnId,String DCId,String OrdId,String LogItems){ 
+    Public Static stockwrapper getupdatedstocksDC(String orditms,String chnId,String DCId,String OrdId,String LogItems, String idType){ 
         try{
             stockwrapper stockwrap = new stockwrapper();
             //list<OrderItem> UpdatedOrdList = new list<OrderItem>();
@@ -728,7 +729,7 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
     }*/
     
  /*  @AuraEnabled
-    public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
+    public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems, String idType) { 
     try {
         stockwrapper stockwrap = new stockwrapper();
         list<OrderItem> Ordlist = new list<OrderItem>();
@@ -977,7 +978,7 @@ bomprodIds.add(b.ERP7__BOM_Component__c);
     
     
    /* @AuraEnabled
-public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
+public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems, String idType) { 
     try {
 
         System.debug('=== START getupdatedstocksDC ===');
@@ -1306,256 +1307,617 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
     } 
 }*/
 
-    
-    
-    
+
     
     // commented by saqlain to check the issue 
- @AuraEnabled
-public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems) { 
-    try {
-        stockwrapper stockwrap = new stockwrapper();
-        List<OrderItem> Ordlist = new List<OrderItem>();
+
+    // below code commented by abubakar toadd the Salesorderline item functionality in this below methord
+//  @AuraEnabled
+// public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems, String idType) { 
+//     try {
+//         stockwrapper stockwrap = new stockwrapper();
+
+//         // Initialize the wrapper list if not already done in the wrapper class constructor
+//         if(stockwrap.UpdatedSoliList == null) stockwrap.UpdatedSoliList = new List<ERP7__Sales_Order_Line_Item__c>();
+//         if(stockwrap.UpdatedOrdList == null) stockwrap.UpdatedOrdList = new List<OrderItem>();
+
+//         List<OrderItem> Ordlist = new List<OrderItem>();
         
-        // Handle Logistic Line Items
-        if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(LogItems) && LogItems != null && LogItems != '[]') {
-            List<ERP7__Logistic_Line_Item__c> logItemslist = (List<ERP7__Logistic_Line_Item__c>) JSON.deserialize(LogItems, List<ERP7__Logistic_Line_Item__c>.class);
-            Set<Id> productIds = new Set<Id>();
-            for (ERP7__Logistic_Line_Item__c loli : logItemslist) {
-                if (loli.ERP7__Product__c != null) {
-                    productIds.add(loli.ERP7__Product__c); 
-                }
-            }
-            ERP7__Distribution_Channel__c dc = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
-                                                FROM ERP7__Distribution_Channel__c 
-                                                WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
-                                                ORDER BY ERP7__Priority__c LIMIT 1];
-            if (dc.Id != null) {
-                Map<Id, Decimal> stockMap = new Map<Id, Decimal>();
-                for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
-                                              FROM ERP7__Inventory_Stock__c 
-                                              WHERE ERP7__product__c IN: productIds 
-                                              AND ERP7__Active__c = true 
-                                              AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
-                                              AND ERP7__Warehouse__c =: dc.ERP7__Site__c 
-                                              GROUP BY ERP7__Product__c]) {
-                    Id ProdId = (Id)result.get('ERP7__Product__c');
-                    Decimal totalStock = (Decimal)result.get('totalStock');
-                    stockMap.put(ProdId, stockMap.containsKey(ProdId) ? stockMap.get(ProdId) + totalStock : totalStock);
-                }
-                for (ERP7__Logistic_Line_Item__c loli : logItemslist) {             
-                    Decimal proStockCount = stockMap.containsKey(loli.ERP7__Product__c) ? stockMap.get(loli.ERP7__Product__c) : 0;
-                    loli.ERP7__Fulfilled_Quantity__c = proStockCount;
-                    stockwrap.UpdatedlogList.add(loli);
-                }
-            }
-        } else if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(orditms)) {
-            // Handle Order Items
-            Ordlist = (List<OrderItem>) JSON.deserialize(orditms, List<OrderItem>.class);
-            List<String> productIds = new List<String>();
-            for (OrderItem soli : Ordlist) {
-                if (soli.Product2Id != null) {
-                    if (!productIds.contains(soli.Product2Id)) {
-                        productIds.add(soli.Product2Id);
-                    }
-                }
-            }    
-            ERP7__Distribution_Channel__c dc = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
-                                                FROM ERP7__Distribution_Channel__c 
-                                                WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
-                                                ORDER BY ERP7__Priority__c LIMIT 1];
-            if (dc.Id != null) {
-                Map<Id, List<ERP7__Inventory_Stock__c>> ProductMap2Stock = new Map<Id, List<ERP7__Inventory_Stock__c>>();
-                for (ERP7__Inventory_Stock__c WarehouseItemInventoryStocks : [SELECT Id, Name, ERP7__Active__c, ERP7__Organisation__c, ERP7__Organisation_Business_Unit__c, ERP7__Warehouse__c, ERP7__product__c,
-                                                                             ERP7__Number_of_Item_In_Stock__c, ERP7__Number_of_Item_Purchased_In__c, ERP7__Number_of_Items_Dispatched__c, ERP7__No_of_Items_Sold__c 
-                                                                             FROM ERP7__Inventory_Stock__c 
-                                                                             WHERE ERP7__product__c IN: productIds 
-                                                                             AND ERP7__Active__c = true 
-                                                                             AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
-                                                                             AND ERP7__Warehouse__c =: dc.ERP7__Site__c]) {
-                    if (ProductMap2Stock.containsKey(WarehouseItemInventoryStocks.ERP7__product__c)) {
-                        ProductMap2Stock.get(WarehouseItemInventoryStocks.ERP7__product__c).add(WarehouseItemInventoryStocks);
-                    } else {
-                        List<ERP7__Inventory_Stock__c> WarehouseItemInventoryStockLists = new List<ERP7__Inventory_Stock__c>(); 
-                        WarehouseItemInventoryStockLists.add(WarehouseItemInventoryStocks); 
-                        ProductMap2Stock.put(WarehouseItemInventoryStocks.ERP7__product__c, WarehouseItemInventoryStockLists);
-                    }
-                }
-                for (OrderItem soli : Ordlist) {                   
-                    Decimal proStockCount = 0;
-                    if (soli.Product2Id != null && ProductMap2Stock.containsKey(soli.Product2Id)) {
-                        for (ERP7__Inventory_Stock__c IS : ProductMap2Stock.get(soli.Product2Id)) {
-                            proStockCount += IS.ERP7__Number_of_Item_In_Stock__c; 
-                        }
-                    }
-                    soli.ERP7__Reserved_Quantity__c = proStockCount;
-                    soli.ERP7__Remaining_Quantity__c = soli.Quantity - soli.ERP7__Logistic_Quantity__c;
-                    stockwrap.UpdatedOrdList.add(soli);
-                }
-            }
+//         // Handle Logistic Line Items
+//         if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(LogItems) && LogItems != null && LogItems != '[]') {
+//             List<ERP7__Logistic_Line_Item__c> logItemslist = (List<ERP7__Logistic_Line_Item__c>) JSON.deserialize(LogItems, List<ERP7__Logistic_Line_Item__c>.class);
+//             Set<Id> productIds = new Set<Id>();
+//             for (ERP7__Logistic_Line_Item__c loli : logItemslist) {
+//                 if (loli.ERP7__Product__c != null) {
+//                     productIds.add(loli.ERP7__Product__c); 
+//                 }
+//             }
+//             ERP7__Distribution_Channel__c dc = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
+//                                                 FROM ERP7__Distribution_Channel__c 
+//                                                 WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
+//                                                 ORDER BY ERP7__Priority__c LIMIT 1];
+//             if (dc.Id != null) {
+//                 Map<Id, Decimal> stockMap = new Map<Id, Decimal>();
+//                 for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+//                                               FROM ERP7__Inventory_Stock__c 
+//                                               WHERE ERP7__product__c IN: productIds 
+//                                               AND ERP7__Active__c = true 
+//                                               AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
+//                                               AND ERP7__Warehouse__c =: dc.ERP7__Site__c 
+//                                               GROUP BY ERP7__Product__c]) {
+//                     Id ProdId = (Id)result.get('ERP7__Product__c');
+//                     Decimal totalStock = (Decimal)result.get('totalStock');
+//                     stockMap.put(ProdId, stockMap.containsKey(ProdId) ? stockMap.get(ProdId) + totalStock : totalStock);
+//                 }
+//                 for (ERP7__Logistic_Line_Item__c loli : logItemslist) {             
+//                     Decimal proStockCount = stockMap.containsKey(loli.ERP7__Product__c) ? stockMap.get(loli.ERP7__Product__c) : 0;
+//                     loli.ERP7__Fulfilled_Quantity__c = proStockCount;
+//                     stockwrap.UpdatedlogList.add(loli);
+//                 }
+//             }
+//         } else if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(orditms)) {
+//             // Handle Order Items
+//             Ordlist = (List<OrderItem>) JSON.deserialize(orditms, List<OrderItem>.class);
+//             List<String> productIds = new List<String>();
+//             for (OrderItem soli : Ordlist) {
+//                 if (soli.Product2Id != null) {
+//                     if (!productIds.contains(soli.Product2Id)) {
+//                         productIds.add(soli.Product2Id);
+//                     }
+//                 }
+//             }    
+//             ERP7__Distribution_Channel__c dc = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
+//                                                 FROM ERP7__Distribution_Channel__c 
+//                                                 WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
+//                                                 ORDER BY ERP7__Priority__c LIMIT 1];
+//             if (dc.Id != null) {
+//                 Map<Id, List<ERP7__Inventory_Stock__c>> ProductMap2Stock = new Map<Id, List<ERP7__Inventory_Stock__c>>();
+//                 for (ERP7__Inventory_Stock__c WarehouseItemInventoryStocks : [SELECT Id, Name, ERP7__Active__c, ERP7__Organisation__c, ERP7__Organisation_Business_Unit__c, ERP7__Warehouse__c, ERP7__product__c,
+//                                                                              ERP7__Number_of_Item_In_Stock__c, ERP7__Number_of_Item_Purchased_In__c, ERP7__Number_of_Items_Dispatched__c, ERP7__No_of_Items_Sold__c 
+//                                                                              FROM ERP7__Inventory_Stock__c 
+//                                                                              WHERE ERP7__product__c IN: productIds 
+//                                                                              AND ERP7__Active__c = true 
+//                                                                              AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
+//                                                                              AND ERP7__Warehouse__c =: dc.ERP7__Site__c]) {
+//                     if (ProductMap2Stock.containsKey(WarehouseItemInventoryStocks.ERP7__product__c)) {
+//                         ProductMap2Stock.get(WarehouseItemInventoryStocks.ERP7__product__c).add(WarehouseItemInventoryStocks);
+//                     } else {
+//                         List<ERP7__Inventory_Stock__c> WarehouseItemInventoryStockLists = new List<ERP7__Inventory_Stock__c>(); 
+//                         WarehouseItemInventoryStockLists.add(WarehouseItemInventoryStocks); 
+//                         ProductMap2Stock.put(WarehouseItemInventoryStocks.ERP7__product__c, WarehouseItemInventoryStockLists);
+//                     }
+//                 }
+//                 for (OrderItem soli : Ordlist) {                   
+//                     Decimal proStockCount = 0;
+//                     if (soli.Product2Id != null && ProductMap2Stock.containsKey(soli.Product2Id)) {
+//                         for (ERP7__Inventory_Stock__c IS : ProductMap2Stock.get(soli.Product2Id)) {
+//                             proStockCount += IS.ERP7__Number_of_Item_In_Stock__c; 
+//                         }
+//                     }
+//                     soli.ERP7__Reserved_Quantity__c = proStockCount;
+//                     soli.ERP7__Remaining_Quantity__c = soli.Quantity - soli.ERP7__Logistic_Quantity__c;
+//                     stockwrap.UpdatedOrdList.add(soli);
+//                 }
+//             }
 
-            // Check for Explode__c, Stock_Outward_Line_Item__c, and MRP__c
-            Set<Id> orderItemIds = new Set<Id>();
-            for (OrderItem oi : Ordlist) {
-                orderItemIds.add(oi.Id);
-            }
-            Map<Id, OrderItem> orderItemMap = new Map<Id, OrderItem>([
-                SELECT Id, ERP7__Explode__c 
-                FROM OrderItem 
-                WHERE Id IN :orderItemIds AND ERP7__Explode__c = true
-            ]);
-            List<ERP7__Stock_Outward_Line_Item__c> stockOutwardItems = [
-                SELECT Id, ERP7__Order_Product__c 
-                FROM ERP7__Stock_Outward_Line_Item__c 
-                WHERE ERP7__Order_Product__c IN :orderItemIds
-            ];
-            List<ERP7__MRP__c> mrpRecords = [
-                SELECT Id, ERP7__Order_Product__c 
-                FROM ERP7__MRP__c 
-                WHERE ERP7__Order_Product__c IN :orderItemIds AND RecordType.Name = 'MRP Kit'
-            ];
-            Map<Id, Boolean> explodedOrderItems = new Map<Id, Boolean>();
-            for (Id oiId : orderItemIds) {
-                Boolean isExploded = orderItemMap.containsKey(oiId);
-                Boolean hasStockOutward = false;
-                Boolean hasMRP = false;
-                for (ERP7__Stock_Outward_Line_Item__c soli : stockOutwardItems) {
-                    if (soli.ERP7__Order_Product__c == oiId) {
-                        hasStockOutward = true;
-                        break;
-                    }
-                }
-                for (ERP7__MRP__c mrp : mrpRecords) {
-                    if (mrp.ERP7__Order_Product__c == oiId) {
-                        hasMRP = true;
-                        break;
-                    }
-                }
-                explodedOrderItems.put(oiId, isExploded && hasStockOutward && hasMRP);
-            }
-            stockwrap.ExplodedOrderItems = explodedOrderItems;
+//             // promt to geminai: the code below this comment needs to procccessed for salesorder line item as well
 
-            // Handle BOM for Kits
-            if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId)) {
-                Set<Id> BomproductIds = new Set<Id>(); 
-                List<Id> proIds = new List<Id>(); 
-                Map<Id, Decimal> proStocks = new Map<Id, Decimal>(); 
-                Set<Id> priceBookIds = new Set<Id>();    
-                List<Id> soliBOMVersion = new List<Id>(); 
-                Map<Id, Id> prodMap = new Map<Id, Id>();
+//             // Check for Explode__c, Stock_Outward_Line_Item__c, and MRP__c
+//             Set<Id> orderItemIds = new Set<Id>();
+//             for (OrderItem oi : Ordlist) {
+//                 orderItemIds.add(oi.Id);
+//             }
+//             Map<Id, OrderItem> orderItemMap = new Map<Id, OrderItem>([
+//                 SELECT Id, ERP7__Explode__c   // promt to geminai : in SOLIs also we have this field : ERP7__Explode__c
+//                 FROM OrderItem 
+//                 WHERE Id IN :orderItemIds AND ERP7__Explode__c = true
+//             ]);
+//             List<ERP7__Stock_Outward_Line_Item__c> stockOutwardItems = [
+//                 SELECT Id, ERP7__Order_Product__c 
+//                 FROM ERP7__Stock_Outward_Line_Item__c 
+//                 WHERE ERP7__Order_Product__c IN :orderItemIds   // promt to geminai : in this object salesorder line items (SOLIs) are linked with a field : ERP7__Sales_Order_Line_Item__c 
+//             ];
+//             List<ERP7__MRP__c> mrpRecords = [
+//                 SELECT Id, ERP7__Order_Product__c 
+//                 FROM ERP7__MRP__c 
+//                 WHERE ERP7__Order_Product__c IN :orderItemIds AND RecordType.Name = 'MRP Kit' // promt to geminai : in this object SOLIs are linked with a field : ERP7__Sales_Order_Line_Item__c
+//             ];
+//             Map<Id, Boolean> explodedOrderItems = new Map<Id, Boolean>();
+//             for (Id oiId : orderItemIds) {
+//                 Boolean isExploded = orderItemMap.containsKey(oiId);
+//                 Boolean hasStockOutward = false;
+//                 Boolean hasMRP = false;
+//                 for (ERP7__Stock_Outward_Line_Item__c soli : stockOutwardItems) {
+//                     if (soli.ERP7__Order_Product__c == oiId) {
+//                         hasStockOutward = true;
+//                         break;
+//                     }
+//                 }
+//                 for (ERP7__MRP__c mrp : mrpRecords) {
+//                     if (mrp.ERP7__Order_Product__c == oiId) {
+//                         hasMRP = true;
+//                         break;
+//                     }
+//                 }
+//                 explodedOrderItems.put(oiId, isExploded && hasStockOutward && hasMRP);
+//             }
+//             stockwrap.ExplodedOrderItems = explodedOrderItems; // promt to geminai : for the SOLIs we can create a new wrapper to send this info 
+
+//             // Handle BOM for Kits
+//             if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId)) {
+//                 Set<Id> BomproductIds = new Set<Id>(); 
+//                 List<Id> proIds = new List<Id>(); 
+//                 Map<Id, Decimal> proStocks = new Map<Id, Decimal>(); 
+//                 Set<Id> priceBookIds = new Set<Id>();    
+//                 List<Id> soliBOMVersion = new List<Id>(); 
+//                 Map<Id, Id> prodMap = new Map<Id, Id>();
                 
-                for (OrderItem Foli : Ordlist) {
-                    if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) {
-                        proIds.add(Foli.Product2Id); 
-                        if (Foli.ERP7__PriceBookId__c != null) priceBookIds.add(Foli.ERP7__PriceBookId__c); 
-                        if (Foli.ERP7__Version__c != null) soliBOMVersion.add(Foli.ERP7__Version__c);
-                        prodMap.put(Foli.Product2Id, Foli.Id);
+//                 for (OrderItem Foli : Ordlist) {
+//                     if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) { // promt to geminai : in SOLIs we have these fileds : ERP7__Inventory_Tracked__c, ERP7__Is_Kit__c
+//                         proIds.add(Foli.Product2Id); 
+//                         if (Foli.ERP7__PriceBookId__c != null) priceBookIds.add(Foli.ERP7__PriceBookId__c);  // promt to geminai : in SOLIs also we have this fields : ERP7__PriceBookId__c
+//                         if (Foli.ERP7__Version__c != null) soliBOMVersion.add(Foli.ERP7__Version__c); // promt to geminai : in SOLIs also we have this field: ERP7__Version__c
+//                         prodMap.put(Foli.Product2Id, Foli.Id);
+//                     }
+//                 }
+                
+//                 List<ERP7__BOM__c> BOMList = new List<ERP7__BOM__c>();
+//                 if (proIds.size() > 0) {
+//                     if (soliBOMVersion != null && !soliBOMVersion.isEmpty()) {
+//                         BOMList = [
+//                             SELECT Id, Name, ERP7__Active__c, ERP7__BOM_Product__c, ERP7__BOM_Component__c, ERP7__Quantity__c,
+//                                    BOM_Version__c, BOM_Version__r.Status__c, BOM_Version__r.RecordType.Name, 
+//                                    ERP7__BOM_Component__r.Name, ERP7__BOM_Component__r.Picture__c, ERP7__BOM_Component__r.Preview_Image__c
+//                             FROM ERP7__BOM__c
+//                             WHERE BOM_Version__c IN :soliBOMVersion
+//                               AND BOM_Version__r.Status__c = 'Certified'
+//                         ];
+//                     }
+//                 }
+                
+//                 for (ERP7__BOM__c bomItems : BOMList) { 
+//                     BomproductIds.add(bomItems.ERP7__BOM_Component__c); 
+//                 }
+                
+//                 ERP7__Distribution_Channel__c dchannel = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
+//                                                         FROM ERP7__Distribution_Channel__c 
+//                                                         WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
+//                                                         ORDER BY ERP7__Priority__c LIMIT 1];
+                
+//                 if (dchannel.Id != null) {
+//                     Map<Id, List<ERP7__Inventory_Stock__c>> BOMProductMap2Stock = new Map<Id, List<ERP7__Inventory_Stock__c>>();
+//                     for (ERP7__Inventory_Stock__c WarehouseItemInventoryBOMStocks : [SELECT Id, Name, ERP7__Active__c, ERP7__Organisation__c, ERP7__Organisation_Business_Unit__c, ERP7__Warehouse__c, ERP7__product__c,
+//                                                                                     ERP7__Number_of_Item_In_Stock__c, ERP7__Number_of_Item_Purchased_In__c, ERP7__Number_of_Items_Dispatched__c, ERP7__No_of_Items_Sold__c 
+//                                                                                     FROM ERP7__Inventory_Stock__c 
+//                                                                                     WHERE ERP7__product__c IN: BomproductIds 
+//                                                                                     AND ERP7__Active__c = true 
+//                                                                                     AND ERP7__Number_of_Item_In_Stock__c > 0 
+//                                                                                     AND ERP7__Warehouse__c =: dchannel.ERP7__Site__c]) {
+//                         if (BOMProductMap2Stock.containsKey(WarehouseItemInventoryBOMStocks.ERP7__product__c)) {
+//                             BOMProductMap2Stock.get(WarehouseItemInventoryBOMStocks.ERP7__product__c).add(WarehouseItemInventoryBOMStocks);
+//                         } else {
+//                             List<ERP7__Inventory_Stock__c> WarehouseItemInventoryStockListsBom = new List<ERP7__Inventory_Stock__c>(); 
+//                             WarehouseItemInventoryStockListsBom.add(WarehouseItemInventoryBOMStocks); 
+//                             BOMProductMap2Stock.put(WarehouseItemInventoryBOMStocks.ERP7__product__c, WarehouseItemInventoryStockListsBom);
+//                         }
+//                     }
+                    
+//                     List<Id> bomprodIds = new List<Id>();
+//                     for (ERP7__BOM__c b : BOMList) {
+//                         bomprodIds.add(b.ERP7__BOM_Component__c);
+//                     }
+                    
+//                     // 1. Initialize a variable to hold the Pricebook ID we need to find
+//                     List<String> targetPricebookId = new List<String>();
+
+//                     // 2. Logic to find the Pricebook ID based on the Type
+//                     if (idType == 'Order') {
+//                         // --- STANDARD ORDER LOGIC ---
+//                         List<Order> orderdetails = [SELECT Id, Name, AccountId, Pricebook2Id, ERP7__Contact__c, ERP7__Ship_To_Address__c, ERP7__Channel__c, ERP7__Ready_To_Pick_Pack__c, Description,
+//                                         ERP7__Shipment_Type__c, ERP7__Shipment_Preference_Speed__c, BillToContactId, ERP7__Bill_To_Address__c, ERP7__Bill_To_Return__c, ERP7__Billing_Account_Number_Return__c, ERP7__Billing_Address_Return__c, ERP7__Billing_Contact_Return__c 
+//                                         FROM Order 
+//                                         WHERE Id = :OrdId LIMIT 1];
+                        
+//                         if (!orderdetails.isEmpty()) {
+//                             targetPricebookId.add(orderdetails[0].Pricebook2Id);
+//                         }
+                    
+//                     } else if (idType == 'SalesOrder') {
+//                         // --- SALES ORDER LOGIC ---
+//                         // Query Sales Order Line Items to get the mapped Pricebook ID
+//                         List<ERP7__Sales_Order_Line_Item__c> soLines = [SELECT Id, ERP7__PriceBookId__c 
+//                                                                         FROM ERP7__Sales_Order_Line_Item__c 
+//                                                                         WHERE ERP7__Sales_Order__c = :OrdId 
+//                                                                         AND ERP7__PriceBookId__c != null];
+                        
+//                         if (!soLines.isEmpty()) {
+//                             for(ERP7__Sales_Order_Line_Item__c soLine : soLines) {
+//                                 if (!targetPricebookId.contains(soLine.ERP7__PriceBookId__c)) {
+//                                     targetPricebookId.add(soLine.ERP7__PriceBookId__c);
+//                                 }
+//                             }
+//                         }
+//                     }
+                    
+//                     List<PricebookEntry> pbe = new List<PricebookEntry>();
+                    
+//                     if(targetPricebookId.size() > 0){
+//                         pbe = [SELECT UnitPrice, ERP7__Purchase_Price__c, Product2.Id, Product2.Name, Product2.ProductCode, Product2.Description, Product2.ERP7__Version__c, Product2.ERP7__Configure__c, Product2.ERP7__Allow_Back_Orders__c, Product2.ERP7__Is_Kit__c, Product2.ERP7__Picture__c, Product2.ERP7__Serialise__c, Product2.QuantityUnitOfMeasure 
+//                                                FROM PricebookEntry 
+//                                                WHERE Pricebook2Id IN: targetPricebookId 
+//                                                AND Product2Id IN: bomprodIds 
+//                                                AND IsActive = TRUE];
+//                     }
+
+//                     Map<Id, PricebookEntry> pbeMap = new Map<Id, PricebookEntry>();
+//                     for (PricebookEntry pb : pbe) {
+//                         pbeMap.put(pb.Product2.Id, pb);
+//                     }
+                    
+//                     List<ERP7__BOM__c> BOMListFinal = new List<ERP7__BOM__c>();  
+//                     for (OrderItem Foli : Ordlist) {
+//                         if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) {
+//                             for (ERP7__BOM__c bom : BOMList) {
+//                                 if (bom.ERP7__BOM_Component__c != null && bom.ERP7__BOM_Product__c == Foli.Product2Id) {
+//                                     bom.ERP7__Quantity__c = bom.ERP7__Quantity__c * Foli.Quantity;
+//                                     BOMListFinal.add(bom);
+//                                 }
+//                             }
+//                         }
+//                     }
+                    
+//                     for (ERP7__BOM__c Boli : BOMList) {
+//                         bomwrapper bomwrap = new bomwrapper();
+//                         Decimal proStockCount = 0;
+//                         if (Boli.ERP7__BOM_Component__c != null) {
+//                             if (BOMProductMap2Stock.containsKey(Boli.ERP7__BOM_Component__c)) {
+//                                 for (ERP7__Inventory_Stock__c IS : BOMProductMap2Stock.get(Boli.ERP7__BOM_Component__c)) {
+//                                     proStockCount += IS.ERP7__Number_of_Item_In_Stock__c; 
+//                                 }
+//                             }
+//                             bomwrap.stock = proStockCount;
+//                             bomwrap.Bom = Boli;
+//                             if (prodMap.containsKey(Boli.BOM_Product__c)) {
+//                                 bomwrap.OrderProdId = prodMap.get(Boli.BOM_Product__c);
+//                             }
+//                             if (pbeMap.containsKey(Boli.ERP7__BOM_Component__c)) {
+//                                 bomwrap.pbe = pbeMap.get(Boli.ERP7__BOM_Component__c);
+//                             }
+//                             stockwrap.UpdatedBomList.add(bomwrap);
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         return stockwrap;
+//     } catch (Exception e) {
+//         System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+//         throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+//     } 
+// }
+
+    //below updated getupdatedstocksDC added by Abubakar on 14-sep-2026
+    @AuraEnabled
+    public static stockwrapper getupdatedstocksDC(String orditms, String chnId, String DCId, String OrdId, String LogItems, String idType) { 
+        try {
+            stockwrapper stockwrap = new stockwrapper();
+
+            // Initialize wrapper lists
+            if(stockwrap.UpdatedOrdList == null) stockwrap.UpdatedOrdList = new List<OrderItem>();
+            if(stockwrap.ExplodedOrderItems == null) stockwrap.ExplodedOrderItems = new Map<Id, Boolean>();
+
+            // 1. Handle Logistic Line Items (Common for all)
+            if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(LogItems) && LogItems != null && LogItems != '[]') {
+                List<ERP7__Logistic_Line_Item__c> logItemslist = (List<ERP7__Logistic_Line_Item__c>) JSON.deserialize(LogItems, List<ERP7__Logistic_Line_Item__c>.class);
+                Set<Id> productIds = new Set<Id>();
+                for (ERP7__Logistic_Line_Item__c loli : logItemslist) {
+                    if (loli.ERP7__Product__c != null) productIds.add(loli.ERP7__Product__c); 
+                }
+                
+                ERP7__Distribution_Channel__c dc = [SELECT Id, ERP7__Site__c FROM ERP7__Distribution_Channel__c WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null LIMIT 1];
+                
+                if (dc.Id != null) {
+                    Map<Id, Decimal> stockMap = new Map<Id, Decimal>();
+                    for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                                                  FROM ERP7__Inventory_Stock__c 
+                                                  WHERE ERP7__product__c IN: productIds AND ERP7__Active__c = true 
+                                                  AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
+                                                  AND ERP7__Warehouse__c =: dc.ERP7__Site__c GROUP BY ERP7__Product__c]) {
+                        stockMap.put((Id)result.get('ERP7__Product__c'), (Decimal)result.get('totalStock'));
+                    }
+                    for (ERP7__Logistic_Line_Item__c loli : logItemslist) {             
+                        Decimal proStockCount = stockMap.containsKey(loli.ERP7__Product__c) ? stockMap.get(loli.ERP7__Product__c) : 0;
+                        loli.ERP7__Fulfilled_Quantity__c = proStockCount;
+                        stockwrap.UpdatedlogList.add(loli);
                     }
                 }
+            } 
+            
+            // ==========================================================================
+            // LOGIC FOR SALES ORDERS (ERP7__Sales_Order__c)
+            // ==========================================================================
+            else if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(orditms) && idType == 'SalesOrder') {
                 
-                List<ERP7__BOM__c> BOMList = new List<ERP7__BOM__c>();
-                if (proIds.size() > 0) {
-                    if (soliBOMVersion != null && !soliBOMVersion.isEmpty()) {
-                        BOMList = [
-                            SELECT Id, Name, ERP7__Active__c, ERP7__BOM_Product__c, ERP7__BOM_Component__c, ERP7__Quantity__c,
-                                   BOM_Version__c, BOM_Version__r.Status__c, BOM_Version__r.RecordType.Name, 
-                                   ERP7__BOM_Component__r.Name, ERP7__BOM_Component__r.Picture__c, ERP7__BOM_Component__r.Preview_Image__c
-                            FROM ERP7__BOM__c
-                            WHERE BOM_Version__c IN :soliBOMVersion
-                              AND BOM_Version__r.Status__c = 'Certified'
-                        ];
+                List<ERP7__Sales_Order_Line_Item__c> SoliList = (List<ERP7__Sales_Order_Line_Item__c>) JSON.deserialize(orditms, List<ERP7__Sales_Order_Line_Item__c>.class);
+                Set<Id> productIds = new Set<Id>();
+                Set<Id> soliIds = new Set<Id>();
+                
+                for(ERP7__Sales_Order_Line_Item__c s : SoliList){
+                    if(s.ERP7__Product__c != null) productIds.add(s.ERP7__Product__c);
+                    soliIds.add(s.Id);
+                }
+
+                ERP7__Distribution_Channel__c dc = [SELECT Id, ERP7__Site__c FROM ERP7__Distribution_Channel__c WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null LIMIT 1];
+                
+                if (dc.Id != null) {
+                    // 1. Map stock by Product ID
+                    Map<Id, Decimal> productStockMap = new Map<Id, Decimal>();
+                    for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                                                FROM ERP7__Inventory_Stock__c 
+                                                WHERE ERP7__product__c IN: productIds AND ERP7__Active__c = true 
+                                                AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
+                                                AND ERP7__Warehouse__c =: dc.ERP7__Site__c GROUP BY ERP7__Product__c]) {
+                        productStockMap.put((Id)result.get('ERP7__Product__c'), (Decimal)result.get('totalStock'));
                     }
-                }
-                
-                for (ERP7__BOM__c bomItems : BOMList) { 
-                    BomproductIds.add(bomItems.ERP7__BOM_Component__c); 
-                }
-                
-                ERP7__Distribution_Channel__c dchannel = [SELECT Id, Name, ERP7__Channel__c, ERP7__Channel__r.Name, ERP7__Site__c, ERP7__Active__c
-                                                        FROM ERP7__Distribution_Channel__c 
-                                                        WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null 
-                                                        ORDER BY ERP7__Priority__c LIMIT 1];
-                
-                if (dchannel.Id != null) {
-                    Map<Id, List<ERP7__Inventory_Stock__c>> BOMProductMap2Stock = new Map<Id, List<ERP7__Inventory_Stock__c>>();
-                    for (ERP7__Inventory_Stock__c WarehouseItemInventoryBOMStocks : [SELECT Id, Name, ERP7__Active__c, ERP7__Organisation__c, ERP7__Organisation_Business_Unit__c, ERP7__Warehouse__c, ERP7__product__c,
-                                                                                    ERP7__Number_of_Item_In_Stock__c, ERP7__Number_of_Item_Purchased_In__c, ERP7__Number_of_Items_Dispatched__c, ERP7__No_of_Items_Sold__c 
-                                                                                    FROM ERP7__Inventory_Stock__c 
-                                                                                    WHERE ERP7__product__c IN: BomproductIds 
-                                                                                    AND ERP7__Active__c = true 
-                                                                                    AND ERP7__Number_of_Item_In_Stock__c > 0 
-                                                                                    AND ERP7__Warehouse__c =: dchannel.ERP7__Site__c]) {
-                        if (BOMProductMap2Stock.containsKey(WarehouseItemInventoryBOMStocks.ERP7__product__c)) {
-                            BOMProductMap2Stock.get(WarehouseItemInventoryBOMStocks.ERP7__product__c).add(WarehouseItemInventoryBOMStocks);
+                    
+                    // 2. Prepare for Exploded Check
+                    Map<Id, ERP7__Sales_Order_Line_Item__c> explodedSoliMap = new Map<Id, ERP7__Sales_Order_Line_Item__c>([
+                        SELECT Id, ERP7__Explode__c FROM ERP7__Sales_Order_Line_Item__c WHERE Id IN :soliIds AND ERP7__Explode__c = true
+                    ]);
+                    List<ERP7__Stock_Outward_Line_Item__c> stockOutwardItems = [
+                        SELECT Id, ERP7__Sales_Order_Line_Item__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Sales_Order_Line_Item__c IN :soliIds
+                    ];
+                    List<ERP7__MRP__c> mrpRecords = [
+                        SELECT Id, ERP7__Sales_Order_Line_Item__c FROM ERP7__MRP__c WHERE ERP7__Sales_Order_Line_Item__c IN :soliIds AND RecordType.Name = 'MRP Kit'
+                    ];
+
+                    // 3. Process each SOLI and create Wrapper
+                    for (ERP7__Sales_Order_Line_Item__c soli : SoliList) {
+                        SoliWrapper wrapper = new SoliWrapper();
+                        wrapper.soli = soli;
+
+                        // A. Calculate Reserved
+                        Decimal proStockCount = productStockMap.containsKey(soli.ERP7__Product__c) ? productStockMap.get(soli.ERP7__Product__c) : 0;
+                        wrapper.reservedQty = proStockCount;
+
+                        // B. Calculate Remaining (Qty - LogisticQty)
+                        Decimal qty = soli.ERP7__Quantity__c != null ? soli.ERP7__Quantity__c : 0;
+                        Decimal logQty = soli.ERP7__Logistic_Quantity__c != null ? soli.ERP7__Logistic_Quantity__c : 0;
+                        wrapper.remainingQty = qty - logQty;
+
+                        // C. Determine Active Status (Logic from OrderItem)
+                        Boolean isReadyToPickPack = (soli.ERP7__Sales_Order__r != null && soli.ERP7__Sales_Order__r.ERP7__Ready_To_Pick_Pack__c == true);
+                        if(wrapper.remainingQty <= 0) {
+                            wrapper.isActive = false;
+                        } else if (wrapper.remainingQty > 0 && (wrapper.remainingQty <= proStockCount || isReadyToPickPack)) {
+                            wrapper.isActive = true;
                         } else {
-                            List<ERP7__Inventory_Stock__c> WarehouseItemInventoryStockListsBom = new List<ERP7__Inventory_Stock__c>(); 
-                            WarehouseItemInventoryStockListsBom.add(WarehouseItemInventoryBOMStocks); 
-                            BOMProductMap2Stock.put(WarehouseItemInventoryBOMStocks.ERP7__product__c, WarehouseItemInventoryStockListsBom);
+                            wrapper.isActive = false; // Not enough stock or other condition
+                        }
+
+                        // D. Determine Exploded Status
+                        Boolean isExploded = explodedSoliMap.containsKey(soli.Id);
+                        Boolean hasStockOutward = false;
+                        Boolean hasMRP = false;
+                        for(ERP7__Stock_Outward_Line_Item__c so : stockOutwardItems){
+                            if(so.ERP7__Sales_Order_Line_Item__c == soli.Id) { hasStockOutward = true; break; }
+                        }
+                        for(ERP7__MRP__c mrp : mrpRecords){
+                            if(mrp.ERP7__Sales_Order_Line_Item__c == soli.Id) { hasMRP = true; break; }
+                        }
+                        wrapper.isExploded = (isExploded && hasStockOutward && hasMRP);
+
+                        stockwrap.UpdatedSoliListWrapper.add(wrapper);
+                    }
+
+                    // 4. Handle BOM/Kits for SOLI (Populate UpdatedBomList)
+                    // [Insert logic to query BOMs and fill stockwrap.UpdatedBomList based on SOLI products]
+                    // This logic mirrors the OrderItem BOM logic but uses SOLI fields.
+                    Set<Id> priceBookIds = new Set<Id>();
+                    List<Id> bomVersions = new List<Id>();
+                    Set<Id> kitProductIds = new Set<Id>();
+
+                    for (ERP7__Sales_Order_Line_Item__c soli : SoliList) {
+                        if (soli.ERP7__Is_Kit__c == true && soli.ERP7__Inventory_Tracked__c == false) {
+                            kitProductIds.add(soli.ERP7__Product__c);
+                            if (soli.ERP7__PriceBookId__c != null) priceBookIds.add(soli.ERP7__PriceBookId__c);
+                            if (soli.ERP7__Version__c != null) bomVersions.add(soli.ERP7__Version__c);
                         }
                     }
-                    
-                    List<Id> bomprodIds = new List<Id>();
-                    for (ERP7__BOM__c b : BOMList) {
-                        bomprodIds.add(b.ERP7__BOM_Component__c);
+                
+                    if (!kitProductIds.isEmpty()) {
+                        // Fetch BOMs (Using same query logic as OrderItem but adapted)
+                        List<ERP7__BOM__c> BOMList = new List<ERP7__BOM__c>();
+                        if(!bomVersions.isEmpty()){
+                            BOMList = [SELECT Id, Name, ERP7__Active__c, ERP7__BOM_Product__c, ERP7__BOM_Component__c, ERP7__Quantity__c,
+                                        BOM_Version__c, BOM_Version__r.Status__c, ERP7__BOM_Component__r.Name, ERP7__BOM_Component__r.Picture__c 
+                                        FROM ERP7__BOM__c
+                                        WHERE BOM_Version__c IN :bomVersions AND BOM_Version__r.Status__c = 'Certified'];
+                        }
+
+                        Set<Id> bomComponentIds = new Set<Id>();
+                        for (ERP7__BOM__c b : BOMList) bomComponentIds.add(b.ERP7__BOM_Component__c);
+
+                        if (dc.Id != null) {
+                            // Get Inventory for BOM Components
+                            Map<Id, Decimal> compStockMap = new Map<Id, Decimal>();
+                            for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                                                        FROM ERP7__Inventory_Stock__c 
+                                                        WHERE ERP7__product__c IN: bomComponentIds AND ERP7__Active__c = true 
+                                                        AND ERP7__Number_of_Item_In_Stock__c > 0 AND ERP7__Warehouse__c =: dc.ERP7__Site__c GROUP BY ERP7__Product__c]) {
+                                compStockMap.put((Id)result.get('ERP7__Product__c'), (Decimal)result.get('totalStock'));
+                            }
+
+                            // Get Pricebook Entries for BOM Components
+                            // Note: SOLIs might have different Pricebooks, we collect all relevant PBEs
+                            List<PricebookEntry> pbeList = [SELECT UnitPrice, ERP7__Purchase_Price__c, Product2.Id, Product2.Name 
+                                                            FROM PricebookEntry 
+                                                            WHERE Pricebook2Id IN :priceBookIds AND Product2Id IN :bomComponentIds AND IsActive = TRUE];
+                            Map<Id, PricebookEntry> pbeMap = new Map<Id, PricebookEntry>();
+                            for(PricebookEntry p : pbeList) pbeMap.put(p.Product2Id, p);
+
+                            // Process BOM Wrappers
+                            for (ERP7__Sales_Order_Line_Item__c soli : SoliList) {
+                                if (soli.ERP7__Is_Kit__c == true && soli.ERP7__Inventory_Tracked__c == false) {
+                                    for (ERP7__BOM__c bom : BOMList) {
+                                        if (bom.ERP7__BOM_Component__c != null && bom.ERP7__BOM_Product__c == soli.ERP7__Product__c) {
+                                            // Create Clone of BOM to adjust quantity
+                                            ERP7__BOM__c bomClone = bom.clone(true, true, true, true);
+                                            Decimal soliQty = soli.ERP7__Quantity__c != null ? soli.ERP7__Quantity__c : 0;
+                                            bomClone.ERP7__Quantity__c = (bom.ERP7__Quantity__c != null ? bom.ERP7__Quantity__c : 0) * soliQty;
+                                            
+                                            bomwrapper bw = new bomwrapper();
+                                            bw.Bom = bomClone;
+                                            bw.stock = compStockMap.containsKey(bom.ERP7__BOM_Component__c) ? compStockMap.get(bom.ERP7__BOM_Component__c) : 0;
+                                            bw.OrderProdId = soli.Id; // Mapping SOLI Id here
+                                            if (pbeMap.containsKey(bom.ERP7__BOM_Component__c)) bw.pbe = pbeMap.get(bom.ERP7__BOM_Component__c);
+                                            
+                                            stockwrap.UpdatedBomList.add(bw);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                    
-                    Order orderdetail = [SELECT Id, Name, AccountId, Pricebook2Id, ERP7__Contact__c, ERP7__Ship_To_Address__c, ERP7__Channel__c, ERP7__Ready_To_Pick_Pack__c, Description,
-                                       ERP7__Shipment_Type__c, ERP7__Shipment_Preference_Speed__c, BillToContactId, ERP7__Bill_To_Address__c, ERP7__Bill_To_Return__c, ERP7__Billing_Account_Number_Return__c, ERP7__Billing_Address_Return__c, ERP7__Billing_Contact_Return__c 
-                                       FROM Order WHERE Id =: OrdId LIMIT 1];
-                    
-                    
-                    List<PricebookEntry> pbe = [SELECT UnitPrice, ERP7__Purchase_Price__c, Product2.Id, Product2.Name, Product2.ProductCode, Product2.Description, Product2.ERP7__Version__c, Product2.ERP7__Configure__c, Product2.ERP7__Allow_Back_Orders__c, Product2.ERP7__Is_Kit__c, Product2.ERP7__Picture__c, Product2.ERP7__Serialise__c, Product2.QuantityUnitOfMeasure 
-                                               FROM PricebookEntry 
-                                               WHERE Pricebook2Id =: orderdetail.Pricebook2Id 
-                                               AND Product2Id IN: bomprodIds 
-                                               AND IsActive = TRUE];
-                    
-                    Map<Id, PricebookEntry> pbeMap = new Map<Id, PricebookEntry>();
-                    for (PricebookEntry pb : pbe) {
-                        pbeMap.put(pb.Product2.Id, pb);
+                }
+            }
+            // ==========================================================================
+            // LOGIC FOR STANDARD ORDERS (Order)
+            // ==========================================================================
+            else if (String.isNotEmpty(chnId) && String.isNotEmpty(DCId) && String.isNotEmpty(orditms) && idType == 'Order') { //  && idType == 'Order' (Optional check)
+                
+                // --- A. Deserialize & Update Stock for Order Items ---
+                List<OrderItem> Ordlist = (List<OrderItem>) JSON.deserialize(orditms, List<OrderItem>.class);
+                List<String> productIds = new List<String>();
+                Set<Id> orderItemIds = new Set<Id>();
+                
+                for (OrderItem soli : Ordlist) {
+                    if (soli.Product2Id != null) {
+                        if (!productIds.contains(soli.Product2Id)) productIds.add(soli.Product2Id);
                     }
+                    orderItemIds.add(soli.Id);
+                }    
+                
+                ERP7__Distribution_Channel__c dc = [SELECT Id, ERP7__Site__c FROM ERP7__Distribution_Channel__c WHERE Id =: DCId AND ERP7__Channel__c =: chnId AND ERP7__Site__c != null LIMIT 1];
+                
+                if (dc.Id != null) {
+                    Map<Id, Decimal> productStockMap = new Map<Id, Decimal>();
+                    for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                                                  FROM ERP7__Inventory_Stock__c 
+                                                  WHERE ERP7__product__c IN: productIds AND ERP7__Active__c = true 
+                                                  AND (ERP7__Number_of_Item_In_Stock__c > 0 OR (ERP7__Number_of_Item_In_Stock__c < 0 AND Name = 'Serial Stock Holder')) 
+                                                  AND ERP7__Warehouse__c =: dc.ERP7__Site__c GROUP BY ERP7__Product__c]) {
+                        productStockMap.put((Id)result.get('ERP7__Product__c'), (Decimal)result.get('totalStock'));
+                    }
+
+                    for (OrderItem soli : Ordlist) {                   
+                        Decimal proStockCount = productStockMap.containsKey(soli.Product2Id) ? productStockMap.get(soli.Product2Id) : 0;
+                        soli.ERP7__Reserved_Quantity__c = proStockCount;
+                        soli.ERP7__Remaining_Quantity__c = soli.Quantity - soli.ERP7__Logistic_Quantity__c;
+                        stockwrap.UpdatedOrdList.add(soli);
+                    }
+
+                    // --- B. Explode Logic for Order Item ---
+                    Map<Id, OrderItem> orderItemMap = new Map<Id, OrderItem>([
+                        SELECT Id, ERP7__Explode__c FROM OrderItem WHERE Id IN :orderItemIds AND ERP7__Explode__c = true
+                    ]);
+                    List<ERP7__Stock_Outward_Line_Item__c> stockOutwardItems = [
+                        SELECT Id, ERP7__Order_Product__c FROM ERP7__Stock_Outward_Line_Item__c WHERE ERP7__Order_Product__c IN :orderItemIds
+                    ];
+                    List<ERP7__MRP__c> mrpRecords = [
+                        SELECT Id, ERP7__Order_Product__c FROM ERP7__MRP__c WHERE ERP7__Order_Product__c IN :orderItemIds AND RecordType.Name = 'MRP Kit'
+                    ];
                     
-                    List<ERP7__BOM__c> BOMListFinal = new List<ERP7__BOM__c>();  
+                    for (Id oiId : orderItemIds) {
+                        Boolean isExploded = orderItemMap.containsKey(oiId);
+                        Boolean hasStockOutward = false; 
+                        Boolean hasMRP = false;
+                        for (ERP7__Stock_Outward_Line_Item__c soli : stockOutwardItems) {
+                            if (soli.ERP7__Order_Product__c == oiId) { hasStockOutward = true; break; }
+                        }
+                        for (ERP7__MRP__c mrp : mrpRecords) {
+                            if (mrp.ERP7__Order_Product__c == oiId) { hasMRP = true; break; }
+                        }
+                        stockwrap.ExplodedOrderItems.put(oiId, isExploded && hasStockOutward && hasMRP);
+                    }
+
+                    // --- C. Handle BOM/Kits for Order Item ---
+                    Set<Id> proIds = new Set<Id>(); 
+                    Set<Id> priceBookIds = new Set<Id>();    
+                    List<Id> soliBOMVersion = new List<Id>(); 
+                    Map<Id, Id> prodMap = new Map<Id, Id>();
+                    
                     for (OrderItem Foli : Ordlist) {
                         if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) {
-                            for (ERP7__BOM__c bom : BOMList) {
-                                if (bom.ERP7__BOM_Component__c != null && bom.ERP7__BOM_Product__c == Foli.Product2Id) {
-                                    bom.ERP7__Quantity__c = bom.ERP7__Quantity__c * Foli.Quantity;
-                                    BOMListFinal.add(bom);
-                                }
-                            }
+                            proIds.add(Foli.Product2Id); 
+                            if (Foli.ERP7__PriceBookId__c != null) priceBookIds.add(Foli.ERP7__PriceBookId__c);
+                            if (Foli.ERP7__Version__c != null) soliBOMVersion.add(Foli.ERP7__Version__c);
+                            prodMap.put(Foli.Product2Id, Foli.Id);
                         }
                     }
                     
-                    for (ERP7__BOM__c Boli : BOMList) {
-                        bomwrapper bomwrap = new bomwrapper();
-                        Decimal proStockCount = 0;
-                        if (Boli.ERP7__BOM_Component__c != null) {
-                            if (BOMProductMap2Stock.containsKey(Boli.ERP7__BOM_Component__c)) {
-                                for (ERP7__Inventory_Stock__c IS : BOMProductMap2Stock.get(Boli.ERP7__BOM_Component__c)) {
-                                    proStockCount += IS.ERP7__Number_of_Item_In_Stock__c; 
+                    if (proIds.size() > 0 && !soliBOMVersion.isEmpty()) {
+                        List<ERP7__BOM__c> BOMList = [
+                            SELECT Id, Name, ERP7__Active__c, ERP7__BOM_Product__c, ERP7__BOM_Component__c, ERP7__Quantity__c,
+                                   BOM_Version__c, ERP7__BOM_Component__r.Name, ERP7__BOM_Component__r.Picture__c
+                            FROM ERP7__BOM__c
+                            WHERE BOM_Version__c IN :soliBOMVersion AND BOM_Version__r.Status__c = 'Certified'
+                        ];
+                        
+                        Set<Id> BomproductIds = new Set<Id>();
+                        for (ERP7__BOM__c bomItems : BOMList) BomproductIds.add(bomItems.ERP7__BOM_Component__c);
+
+                        // Get Inventory for BOM Components
+                        Map<Id, Decimal> compStockMap = new Map<Id, Decimal>();
+                        for (AggregateResult result : [SELECT ERP7__Product__c, SUM(ERP7__Number_of_Item_In_Stock__c) totalStock 
+                                                      FROM ERP7__Inventory_Stock__c 
+                                                      WHERE ERP7__product__c IN: BomproductIds AND ERP7__Active__c = true 
+                                                      AND ERP7__Number_of_Item_In_Stock__c > 0 AND ERP7__Warehouse__c =: dc.ERP7__Site__c GROUP BY ERP7__Product__c]) {
+                            compStockMap.put((Id)result.get('ERP7__Product__c'), (Decimal)result.get('totalStock'));
+                        }
+
+                        // Get Pricebook ID (Assuming single order pricebook for standard order)
+                        List<Order> orderdetails = [SELECT Pricebook2Id FROM Order WHERE Id = :OrdId LIMIT 1];
+                        List<String> targetPricebookId = new List<String>();
+                        if (!orderdetails.isEmpty()) targetPricebookId.add(orderdetails[0].Pricebook2Id);
+                        
+                        List<PricebookEntry> pbe = new List<PricebookEntry>();
+                        if(targetPricebookId.size() > 0){
+                            pbe = [SELECT UnitPrice, Product2.Id, Product2.Name FROM PricebookEntry 
+                                   WHERE Pricebook2Id IN: targetPricebookId AND Product2Id IN: BomproductIds AND IsActive = TRUE];
+                        }
+                        Map<Id, PricebookEntry> pbeMap = new Map<Id, PricebookEntry>();
+                        for (PricebookEntry pb : pbe) pbeMap.put(pb.Product2.Id, pb);
+                        
+                        // Create Wrapper
+                        for (OrderItem Foli : Ordlist) {
+                            if (!Foli.ERP7__Inventory_Tracked__c && Foli.Is_Kit__c) {
+                                for (ERP7__BOM__c bom : BOMList) {
+                                    if (bom.ERP7__BOM_Component__c != null && bom.ERP7__BOM_Product__c == Foli.Product2Id) {
+                                        ERP7__BOM__c bomClone = bom.clone(true, true, true, true);
+                                        bomClone.ERP7__Quantity__c = (bom.ERP7__Quantity__c != null ? bom.ERP7__Quantity__c : 0) * (Foli.Quantity != null ? Foli.Quantity : 0);
+                                        
+                                        bomwrapper bomwrap = new bomwrapper();
+                                        bomwrap.stock = compStockMap.containsKey(bom.ERP7__BOM_Component__c) ? compStockMap.get(bom.ERP7__BOM_Component__c) : 0;
+                                        bomwrap.Bom = bomClone;
+                                        if (prodMap.containsKey(bom.ERP7__BOM_Product__c)) bomwrap.OrderProdId = prodMap.get(bom.ERP7__BOM_Product__c);
+                                        if (pbeMap.containsKey(bom.ERP7__BOM_Component__c)) bomwrap.pbe = pbeMap.get(bom.ERP7__BOM_Component__c);
+                                        
+                                        stockwrap.UpdatedBomList.add(bomwrap);
+                                    }
                                 }
                             }
-                            bomwrap.stock = proStockCount;
-                            bomwrap.Bom = Boli;
-                            if (prodMap.containsKey(Boli.BOM_Product__c)) {
-                                bomwrap.OrderProdId = prodMap.get(Boli.BOM_Product__c);
-                            }
-                            if (pbeMap.containsKey(Boli.ERP7__BOM_Component__c)) {
-                                bomwrap.pbe = pbeMap.get(Boli.ERP7__BOM_Component__c);
-                            }
-                            stockwrap.UpdatedBomList.add(bomwrap);
                         }
                     }
                 }
             }
-        }
-        return stockwrap;
-    } catch (Exception e) {
-        System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
-        throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
-    } 
-}
+            return stockwrap;
+        } catch (Exception e) {
+            System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+            throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+        } 
+    }
+
     
     public class bomwrapper{
         
@@ -1573,18 +1935,36 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
     
     public  class stockwrapper {
         @AuraEnabled public List<OrderItem> UpdatedOrdList { get; set; } 
+        @AuraEnabled public List<SoliWrapper> UpdatedSoliListWrapper { get; set; }
         @AuraEnabled public List<bomwrapper> UpdatedBomList { get; set; }
-         @AuraEnabled public List<ERP7__Logistic_Line_Item__c> UpdatedlogList { get; set; }
+        @AuraEnabled public List<ERP7__Logistic_Line_Item__c> UpdatedlogList { get; set; }
         @AuraEnabled public Map<Id, Boolean> ExplodedOrderItems { get; set; } 
         
         public stockwrapper (){
             UpdatedlogList = new List<ERP7__Logistic_Line_Item__c>();
             UpdatedOrdList = new List<OrderItem>();
+            UpdatedSoliListWrapper = new List<SoliWrapper>();
             UpdatedBomList = new List<bomwrapper>();
             ExplodedOrderItems = new Map<Id, Boolean>();
         }
     }
     
+    public class SoliWrapper {
+        @AuraEnabled public ERP7__Sales_Order_Line_Item__c soli {get;set;}
+        @AuraEnabled public Decimal remainingQty {get;set;}
+        @AuraEnabled public Decimal reservedQty {get;set;}
+        @AuraEnabled public Boolean isActive {get;set;}
+        @AuraEnabled public Boolean isExploded {get;set;}
+        
+        public SoliWrapper(){
+            soli = new ERP7__Sales_Order_Line_Item__c();
+            remainingQty = 0;
+            reservedQty = 0;
+            isActive = false;
+            isExploded = false;
+        }
+    }
+
     @AuraEnabled
     public static String getStoreAddress(String chanId){ 
         String DCId = '';
@@ -2338,7 +2718,7 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
     //     }    
     // }
  @AuraEnabled
-    public static String getCreateLogistic(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems){ 
+    public static String getCreateLogistic(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems, String SoliListItems){ 
         try{
             system.debug('getCreateLogistic called');
             System.debug('LogisticJson ->'+LogisticJSON);
@@ -2349,31 +2729,65 @@ public static stockwrapper getupdatedstocksDC(String orditms, String chnId, Stri
             list<OrderItem> Orditem = (OrderLIneItems != '') ? (list<OrderItem>) JSON.deserialize(OrderLIneItems, list<OrderItem> .class) : new list<OrderItem>();
             System.debug('ordtem sizeeeee'+Orditem.size());
             list<ERP7__BOM__c> bomitem = (BomItems != '') ? (list<ERP7__BOM__c>) JSON.deserialize(BomItems, list<ERP7__BOM__c> .class) : new list<ERP7__BOM__c>();
-                    system.debug('bomitem records received: ' + bomitem.size());
+            system.debug('bomitem records received: ' + bomitem.size());
 
-            
+            // --- NEW: Deserialize SOLI List ---
+            List<ERP7__Sales_Order_Line_Item__c> SoliList = (String.isNotEmpty(SoliListItems)) ? (List<ERP7__Sales_Order_Line_Item__c>) JSON.deserialize(SoliListItems, List<ERP7__Sales_Order_Line_Item__c>.class) : new List<ERP7__Sales_Order_Line_Item__c>();
+
             Id rTpe_MRPKIT; rTpe_MRPKIT = Schema.SObjectType.ERP7__MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId();
             list<ERP7__MRP__c> MRPS2Insert = new list<ERP7__MRP__c>();
             map<string,ERP7__MRP__c> MRPmap = new map<string,ERP7__MRP__c>();
             PreventRecursiveLedgerEntry.testCasesTransactions = true;
-            for(OrderItem orditm:Orditem){
-                if(orditm.Product2.ERP7__Is_Kit__c){
-                    for(ERP7__BOM__c bom:bomitem){
-                        ERP7__MRP__c MRP = new ERP7__MRP__c();
-                        if(orditm.Product2Id == bom.ERP7__BOM_Product__c){
-                            MRP.Name = bom.Name;
-                            MRP.ERP7__Total_Amount_Required__c = bom.Quantity__c;//*orditm.Quantity
-                            MRP.ERP7__BOM__c = bom.Id;
-                            MRP.Version__c = orditm.Version__c; 
-                            MRP.ERP7__MRP_Product__c = bom.ERP7__BOM_Component__c; 
-                            MRP.ERP7__Order_Product__c = orditm.Id; 
-                            if(rTpe_MRPKIT != null){ MRP.RecordTypeId = rTpe_MRPKIT; }
-                            if(orditm.ERP7__Insufficient_BOM__c != true){ MRP.Status__c = 'Reserved'; }
-                            MRPS2Insert.add(MRP);      
+
+            if(SoliList.size() > 0){
+                // --- NEW: SOLI MRP Logic (Mirroring Order Item) ---
+                for(ERP7__Sales_Order_Line_Item__c soli : SoliList){
+                    if(soli.ERP7__Is_Kit__c){ // Ensure this field is queried in your getSoliList method
+                        for(ERP7__BOM__c bom : bomitem){
+                            ERP7__MRP__c MRP = new ERP7__MRP__c();
+                            // Match SOLI Product to BOM Product
+                            if(soli.ERP7__Product__c == bom.ERP7__BOM_Product__c){
+                                MRP.Name = bom.Name;
+                                // Calculate Required Qty: BOM Qty * SOLI Qty
+                                MRP.ERP7__Total_Amount_Required__c = bom.ERP7__Quantity__c; // Note: In helper, we typically multiply by Parent Qty if needed, or pass the calculated qty.
+                                MRP.ERP7__BOM__c = bom.Id;
+                                MRP.Version__c = soli.ERP7__Version__c; 
+                                MRP.ERP7__MRP_Product__c = bom.ERP7__BOM_Component__c; 
+                                
+                                // Link to SOLI instead of Order Item
+                                MRP.ERP7__Sales_Order_Line_Item__c = soli.Id; 
+                                
+                                if(rTpe_MRPKIT != null){ MRP.RecordTypeId = rTpe_MRPKIT; }
+                                if(soli.ERP7__Insufficient_BOM__c != true){ MRP.Status__c = 'Reserved'; }
+                                
+                                MRPS2Insert.add(MRP);      
+                            }
+                        }
+                    }
+                } 
+            }
+
+            else if(Orditem.size() > 0){
+                for(OrderItem orditm:Orditem){
+                    if(orditm.Product2.ERP7__Is_Kit__c){
+                        for(ERP7__BOM__c bom:bomitem){
+                            ERP7__MRP__c MRP = new ERP7__MRP__c();
+                            if(orditm.Product2Id == bom.ERP7__BOM_Product__c){
+                                MRP.Name = bom.Name;
+                                MRP.ERP7__Total_Amount_Required__c = bom.Quantity__c;//*orditm.Quantity
+                                MRP.ERP7__BOM__c = bom.Id;
+                                MRP.Version__c = orditm.Version__c; 
+                                MRP.ERP7__MRP_Product__c = bom.ERP7__BOM_Component__c; 
+                                MRP.ERP7__Order_Product__c = orditm.Id; 
+                                if(rTpe_MRPKIT != null){ MRP.RecordTypeId = rTpe_MRPKIT; }
+                                if(orditm.ERP7__Insufficient_BOM__c != true){ MRP.Status__c = 'Reserved'; }
+                                MRPS2Insert.add(MRP);      
+                            }
                         }
                     }
                 }
-            }   
+            }
+            
             system.debug('MRPS2Insert : '+MRPS2Insert.size());
             if(MRPS2Insert.size() > 0)upsert MRPS2Insert;  
             system.debug('inside MRP Creation1-->:');

@@ -1081,7 +1081,7 @@ return comW;
                                     }
                                     else if((MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c == true)){// && MRPS.Lot_Serial == SOLI.ERP7__Material_Batch_Lot__r.Name
                                         System.debug('stock2Scrap : '+stock2Scrap);
-                                        if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = (SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c;}else{/*No access*/}
+                                        if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = stock2Scrap;}else{/*No access*/}//(SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c
                                         stock2Scrap = stock2Scrap - SDLI.Quantity__c;
                                         System.debug('SDLI.Quantity__c : '+SDLI.Quantity__c);
                                         if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isUpdateable()){SDLI.ERP7__Material_Batch_Lot__c = SOLI.ERP7__Material_Batch_Lot__c;}else{/*No access*/}
@@ -1108,7 +1108,7 @@ return comW;
 
                                     }
                                     else if(MRP.ERP7__MRP_Product__r.ERP7__Serialise__c != true && MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c != true) {
-                                        if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = (SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c;}else{/*No access*/}
+                                        if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = stock2Scrap;}else{/*No access*/}//(SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c
                                         stock2Scrap = stock2Scrap - SDLI.Quantity__c;
 
                                         //scrap inward.
@@ -1496,7 +1496,7 @@ return comW;
 
                                         }
                                         else if((MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c == true)){// && MRPS.Lot_Serial == SOLI.ERP7__Material_Batch_Lot__r.Name
-                                            if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = (SOLI.Site_Product_Service_Inventory_Stock__r.Number_of_Item_In_Stock__c > 0 && SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c;}else{/*No access*/}
+                                            if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c =stock2Scrap;}else{/*No access*/}// (SOLI.Site_Product_Service_Inventory_Stock__r.Number_of_Item_In_Stock__c > 0 && SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c
                                             stock2Scrap = stock2Scrap - SDLI.Quantity__c;
                                             if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isUpdateable()){SDLI.ERP7__Material_Batch_Lot__c = SOLI.ERP7__Material_Batch_Lot__c;}else{/*No access*/}
 
@@ -1517,7 +1517,7 @@ return comW;
 
                                         }
                                         else if(MRP.ERP7__MRP_Product__r.ERP7__Serialise__c != true && MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c != true) {
-                                            if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = (SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c;}else{/*No access*/}
+                                            if(Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.fields.Quantity__c.isUpdateable()){SDLI.Quantity__c = stock2Scrap ;}else{/*No access*/}//(SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c >= stock2Scrap)? stock2Scrap : SOLI.Site_Product_Service_Inventory_Stock__r.ERP7__Number_of_Item_In_Stock__c
                                             stock2Scrap = stock2Scrap - SDLI.Quantity__c;
 
                                             //scrap inward.

@@ -6,15 +6,17 @@
         helper.doini(component, event, helper);
         helper.getBillingOptionsPickList(component,event,helper);
         
-        if(component.get('v.SOId') != '') 
+        if(component.get('v.SOId') != '') {
             helper.fetchSoliList(component, event, helper);
-        else if(component.get('v.orderId') != '')
+            $A.util.removeClass(component.find('mainSpin'), "slds-hide"); // Show spinner because now the fetchstocksDC will start since the distribution channel is changed inside the fetchSoliList helper
+        }else if(component.get('v.orderId') != '')
             helper.fetchOrdItemList(component, event, helper);
-            else if(component.get('v.POId') != '')
-                helper.fetchPOItemList(component, event,helper);
-                else if(component.get('v.LogId') != ''){
-                    helper.fetchLogDetails(component, event,helper);
-                }
+        else if(component.get('v.POId') != '')
+            helper.fetchPOItemList(component, event,helper);
+        else if(component.get('v.LogId') != ''){
+            helper.fetchLogDetails(component, event,helper);
+        }
+
     },
     
     fetchSoliList:function(component,event,helper){
@@ -37,38 +39,372 @@
     fetchstocksDC: function(component, event, helper) {
     try {
         console.log('fetchstocksDC called dc~>' + component.get("v.DistributeChannelId"));
+
+        if(component.get("v.DistributeChannelId") == undefined || component.get("v.DistributeChannelId") == '' || component.get("v.DistributeChannelId") == null) {
+            return; // Exit if no distribution channel is selected
+        }   
         $A.util.removeClass(component.find('mainSpin'), "slds-hide");
         
-        var OrderId;
-        if (component.get('v.SOId') != '') 
+        // var OrderId;
+        // if (component.get('v.SOId') != '') 
+        //     OrderId = component.get('v.SOId');
+        // else if (component.get('v.orderId') != '')
+        //     OrderId = component.get('v.orderId');
+        // else if (component.get('v.POId') != '')
+        //     OrderId = component.get('v.POId');
+
+        console.log('component.get(v.SOId) = ' + component.get('v.SOId'));
+        console.log('component.get(v.orderId) = ' + component.get('v.orderId'));
+        console.log('component.get(v.POId) = ' + component.get('v.POId'));
+
+        var OrderId = '';
+        var idType = ''; // New variable to track the type
+
+        // Logic to determine ID and Type
+        if (component.get('v.SOId') != '' && component.get('v.SOId') != null) {
             OrderId = component.get('v.SOId');
-        else if (component.get('v.orderId') != '')
+            idType = 'SalesOrder'; // It is a Sales Order
+        } 
+        else if (component.get('v.orderId') != '' && component.get('v.orderId') != null) {
             OrderId = component.get('v.orderId');
-        else if (component.get('v.POId') != '')
+            idType = 'Order'; // It is a Standard Order
+        } 
+        else if (component.get('v.POId') != '' && component.get('v.POId') != null) {
             OrderId = component.get('v.POId');
-        
+            idType = 'PO'; // It is a Purchase Order
+        }
+
+        console.log('Final OrderId: ', OrderId);
+        console.log('Detected Type: ', idType);
+
+        console.log('JSON.stringify(component.get("v.OrdItemList")) = ' + JSON.stringify(component.get("v.OrdItemList")));
+        console.log('component.get("v.channelId") = ' + component.get("v.channelId"));
+        console.log('JSON.stringify(component.get("v.LLIList")) = ' + JSON.stringify(component.get("v.LLIList")));
+                
+        // 2. Logic to select the correct list for 'orditms' parameter
+        var itemsToSend = [];
+        if (idType === 'SalesOrder') {
+            itemsToSend = component.get("v.SoliList");
+        } else if(idType === 'Order') {
+            // Default to OrdItemList for Standard Orders (and potentially others if needed)
+            itemsToSend = component.get("v.OrdItemList");
+        }
+
         var action = component.get("c.getupdatedstocksDC");
         action.setParams({
             "OrdId": OrderId,
-            "orditms": JSON.stringify(component.get("v.OrdItemList")),
+            "orditms": JSON.stringify(itemsToSend),
             "chnId": component.get("v.channelId"),
             "DCId": component.get("v.DistributeChannelId"),
-            "LogItems": JSON.stringify(component.get("v.LLIList"))
+            "LogItems": JSON.stringify(component.get("v.LLIList")),
+            "idType": idType
         });
 
         action.setCallback(this, function(response) {
             if (response.getState() === "SUCCESS") {
-                console.log('response.getReturnValue() : ', response.getReturnValue());
-                if (response.getReturnValue() != null) {
+                var returnVal = response.getReturnValue();
+                console.log('response.getReturnValue() : ', returnVal);
+
+                // --- HELPER FUNCTION FOR KIT LOGIC (Add this inside the callback or helper) ---
+                // Calculates if a Kit is fully shipped based on its BOM components
+                var isKitFullyShipped = function(lineItem, bomList) {
+                    if (!lineItem || !bomList) return false;
+                    
+                    // Find all BOMs for this line item
+                    var relatedBoms = [];
+                    for(var k=0; k<bomList.length; k++){
+                        // Check link for OrderItem or SOLI
+                        if((lineItem.Id && bomList[k].OrderProdId == lineItem.Id) || 
+                           (lineItem.Product2Id && bomList[k].Bom.ERP7__BOM_Product__c == lineItem.Product2Id) ||
+                           (lineItem.ERP7__Product__c && bomList[k].Bom.ERP7__BOM_Product__c == lineItem.ERP7__Product__c)) {
+                            relatedBoms.push(bomList[k]);
+                        }
+                    }
+                    
+                    if(relatedBoms.length === 0) return false; // No BOMs found, assume not fully shipped
+                    
+                    // Logic: If the parent Logistic Qty is >= (Order Qty * Sum of BOM Qty per unit), it's done.
+                    // However, simpler check: Check if specific BOM stock/logistic status allows more.
+                    // For this requirement: "Show Qty itself until sum of (qty to logistic) of all BOMs is less then logisticed qty"
+                    
+                    // SIMPLIFIED LOGIC BASED ON REQUIREMENT:
+                    // If Logistic Qty on Parent > 0, it means *something* was shipped.
+                    // We need to compare Parent Logistic Qty vs (Parent Order Qty * Total BOM Components per Parent Unit).
+                    // Actually, usually Logistic Qty on parent is just a counter. 
+                    // Let's use the standard "Remaining Qty" logic provided:
+                    
+                    // If (ParentLogisticQty < (ParentQty * Sum(BOM_Quantities))), then return False (Not fully shipped)
+                    // But we don't have easy access to "Sum(BOM_Quantities)" easily without looping.
+                    
+                    // ALTERNATIVE: Just check if we can ship ONE more unit.
+                    // If we can ship 1 more unit (Inventory check is separate), then it is not fully shipped.
+                    
+                    // BASED ON USER REQUEST: 
+                    // "show that Qty only until the sum of (qty to logistic ) of all the BOMs of that kit is less then the logisticed qty of the end product"
+                    // Interpret: If (Parent.Logistic_Qty < Expected_Total_Logistic_Qty_For_Full_Order), then show Parent.Qty.
+                    
+                    var totalBomsPerUnit = 0;
+                    for(var b=0; b<relatedBoms.length; b++) {
+                        totalBomsPerUnit += (relatedBoms[b].Bom.ERP7__Quantity__c || 0);
+                    }
+                    
+                    var parentOrderQty = (lineItem.Quantity || lineItem.ERP7__Quantity__c || 0);
+                    var parentLogisticQty = (lineItem.ERP7__Logistic_Quantity__c || 0);
+                    
+                    var totalExpectedLogisticQty = totalBomsPerUnit;
+
+                    console.log('total expected Qty = ' + totalExpectedLogisticQty);
+                    console.log('parentLogisticQty = ' + parentLogisticQty);
+                    
+                    // If current accumulated logistic qty is less than total expected, we have remaining items.
+                    return (parentLogisticQty >= totalExpectedLogisticQty);
+                };
+
+
+                // addded a new methord for handlling the logistic creation of Sales Order line items by Abubakar on 14-02-2026 
+                if (returnVal != null && idType === 'SalesOrder' && returnVal.UpdatedSoliListWrapper) {
+                    var wrapperList = returnVal.UpdatedSoliListWrapper;
+                    var processedSoliList = [];
+                    var bomItems = returnVal.UpdatedBomList || []; // Get BOMs first
+                    component.set("v.BomItemList", bomItems);
+
+                    var explodedNames = [];
+                    var hasExplodedItems = false;
+                    var explodedIds = [];
+
+                    // Flatten Wrapper to simple Object for UI
+                    for(var i=0; i<wrapperList.length; i++) {
+                        var wrap = wrapperList[i];
+                        var soliObj = wrap.soli;
+
+                        // Map Wrapper fields to Object properties
+                        // soliObj.ERP7__Remaining_Quantity__c = wrap.remainingQty;
+                        soliObj.ERP7__Reserved_Quantity__c = wrap.reservedQty;
+                        soliObj.ERP7__Active__c = wrap.isActive; // Important for checkbox enable/disable
+                        soliObj.IsExploded = wrap.isExploded;
+
+                        // --- KIT REMAINING QTY LOGIC ---
+                        if (soliObj.ERP7__Is_Kit__c) {
+                            var fullyShipped = isKitFullyShipped(soliObj, bomItems);
+                            if (fullyShipped) {
+                                soliObj.ERP7__Remaining_Quantity__c = 0;
+                                soliObj.ERP7__Active__c = false; // Disable row
+                            } else {
+                                var parentTotalQty = soliObj.ERP7__Quantity__c || 1;
+                                var parentLogisticQty = soliObj.ERP7__Logistic_Quantity__c || 0;
+                                
+                                // 1. Calculate Ratio (Total BOM Qty per 1 Parent Kit)
+                                var totalBomQtyForOrder = 0;
+                                for (var j = 0; j < bomItems.length; j++) {
+                                    // Match BOM to this SOLI (OrderProdId)
+                                    if (bomItems[j].OrderProdId == soliObj.Id) {
+                                        totalBomQtyForOrder += (bomItems[j].Bom.ERP7__Quantity__c || 0);
+                                    }
+                                }
+
+                                // Ratio: If Parent Qty is 2 and Total BOM is 6, Ratio is 3
+                                var bomPerKitRatio = (parentTotalQty > 0) ? (totalBomQtyForOrder / parentTotalQty) : 0;
+                                
+                                // 2. Calculate Previously Shipped Kits
+                                var previouslyShippedKits = 0;
+                                if (bomPerKitRatio > 0) {
+                                    previouslyShippedKits = parentLogisticQty / bomPerKitRatio;
+                                }
+                                
+                                // 3. Set Remaining Quantity
+                                // Use Math.round to handle floating point precision (e.g. 1.9999 -> 2)
+                                var calculatedRemaining = parentTotalQty - previouslyShippedKits;
+                                soliObj.ERP7__Remaining_Quantity__c = Math.round(calculatedRemaining * 100) / 100;
+                                
+                                // 4. Disable if fully shipped
+                                if (soliObj.ERP7__Remaining_Quantity__c <= 0) {
+                                    soliObj.ERP7__Remaining_Quantity__c = 0;
+                                    soliObj.ERP7__Active__c = false; 
+                                }
+                            }
+                        } else {
+                            // Standard Product Logic
+                            soliObj.ERP7__Remaining_Quantity__c = wrap.remainingQty;
+                        }
+                        
+                        // Track exploded items for Toast message
+                        if (wrap.isExploded) {
+                            hasExplodedItems = true;
+                            explodedIds.push(soliObj.Id);
+                            explodedNames.push(soliObj.ERP7__Product__r ? soliObj.ERP7__Product__r.Name : soliObj.Name);
+                        }
+
+                        processedSoliList.push(soliObj);
+                    }
+
+                    component.set("v.BomItemList", returnVal.UpdatedBomList);
+                    
+                    // for (var i = 0; i < processedSoliList.length; i++) {
+                    //     if (processedSoliList[i].ERP7__Is_Kit__c) {
+                    //         var hasEnoughStock = true;
+                    //         for (var j = 0; j < bomItems.length; j++) {
+                    //             // Check Bom items mapped to this SOLI Id
+                    //             if (bomItems[j].OrderProdId == processedSoliList[i].Id && 
+                    //                 bomItems[j].stock < bomItems[j].Bom.ERP7__Quantity__c) {
+                    //                 hasEnoughStock = false;
+                    //                 break;
+                    //             }
+                    //         }
+                    //         processedSoliList[i].AllowKit = hasEnoughStock ? 'Allow' : 'Not-Allowed';
+                    //     }
+                    // }
+
+                    // Kit Availability Check (Mirroring OrderItem logic)
+                    var bomItems = component.get("v.BomItemList");
+                    for (var i = 0; i < processedSoliList.length; i++) {
+                        if (processedSoliList[i].ERP7__Is_Kit__c) {
+                            var hasEnoughStock = true;
+                            
+                            // Get quantities for calculation
+                            var parentTotalQty = processedSoliList[i].ERP7__Quantity__c || 1;
+                            var parentRemainingQty = processedSoliList[i].ERP7__Remaining_Quantity__c || 0;
+
+                            for (var j = 0; j < bomItems.length; j++) {
+                                // Check Bom items mapped to this SOLI Id
+                                if (bomItems[j].OrderProdId == processedSoliList[i].Id) {
+                                    
+                                    // Calculate Required Stock for REMAINING kits only
+                                    // Unit Ratio = Total BOM Qty / Total Parent Qty
+                                    var bomTotalQty = bomItems[j].Bom.ERP7__Quantity__c || 0;
+                                    var unitRatio = (parentTotalQty > 0) ? (bomTotalQty / parentTotalQty) : 0;
+                                    var requiredStockForRemaining = unitRatio * parentRemainingQty;
+                                    
+                                    // Check Stock
+                                    if (bomItems[j].stock < requiredStockForRemaining) {
+                                        hasEnoughStock = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            processedSoliList[i].AllowKit = hasEnoughStock ? 'Allow' : 'Not-Allowed';
+                        }
+                    }
+
+                    // Show Toast for Exploded Items
+                    if (hasExplodedItems) {
+                        var lang = $A.get("$Locale.language");
+                        var message = (lang === "fr") 
+                            ? "Vous avez déjà explosé les produits suivants : " + explodedNames.join(', ') + "."
+                            : "You have already exploded the following products: " + explodedNames.join(', ') + ".";
+                        
+                        component.set("v.exceptionError1", message);
+                        component.set("v.SelectedSoliList", explodedIds);
+                    }
+
+                    // Update List
+                    component.set("v.SoliList", processedSoliList);
+
+                    console.log('updated v.SoliList by Abubakar = ' + JSON.stringify(component.get("v.SoliList")));
+
+                    // // Re-calculate 'Select All' checkbox state
+                    // var allSOLIselected = true;
+                    // for (var i = 0; i < processedSoliList.length; i++) {
+                    //     // Logic: Must be active, have remaining quantity, and not be exploded
+                    //     if (!processedSoliList[i].IsExploded && processedSoliList[i].ERP7__Active__c) {
+                    //         // Check Kit Allow status if it's a kit, otherwise check standard qty logic
+                    //         if(processedSoliList[i].ERP7__Is_Kit__c){
+                    //             if(processedSoliList[i].AllowKit != 'Allow') {
+                    //                 // If kit is not allowed, we don't count it towards "Select All" logic (or treat as unchecked)
+                    //             } else {
+                    //                 allSOLIselected = allSOLIselected && processedSoliList[i].checked;
+                    //             }
+                    //         } else {
+                    //             allSOLIselected = allSOLIselected && processedSoliList[i].checked;
+                    //         }
+                    //     }
+                    // }
+                    // component.set("v.allSOLIselected", allSOLIselected);
+
+                    // 3. AUTO-SELECT LOGIC: Explicitly set .checked = true
+                    var selectedSoliIds = [];
+                    var allEligibleSelected = true;
+                    var hasEligibleItems = false;
+
+                    for (var i = 0; i < processedSoliList.length; i++) {
+                        var s = processedSoliList[i];
+                        
+                        // Determine Eligibility (Must match conditions in your selectAllSoli logic)
+                        var isEligible = !s.IsExploded && s.ERP7__Active__c && s.ERP7__Remaining_Quantity__c > 0;
+                        if(s.ERP7__Is_Kit__c && s.AllowKit == 'Not-Allowed'){
+                            isEligible = false;
+                        }else if(s.ERP7__Is_Kit__c && s.AllowKit == 'Allow' && s.ERP7__Remaining_Quantity__c > 0){
+                            isEligible = true;
+                        }
+
+                        if (isEligible) {
+                            s.checked = true; // <--- THIS CHECKED THE ROW
+                            selectedSoliIds.push(s);
+                            hasEligibleItems = true;
+                        } else {
+                            s.checked = false;
+                        }
+                    }
+
+                    // 4. Update Component
+                    // Only set Select All to true if we actually selected something
+                    component.set("v.allSOLIselected", hasEligibleItems); 
+                    component.set("v.SoliList", processedSoliList);
+                    component.set("v.SelectedSoliList", selectedSoliIds);
+                }
+                else if (returnVal != null && idType === 'Order') {
                     component.set("v.OrdItemList", response.getReturnValue().UpdatedOrdList);
                     component.set("v.BomItemList", response.getReturnValue().UpdatedBomList);
                     component.set("v.LLIList", response.getReturnValue().UpdatedlogList);
                     
                     let tempOrderitems = component.get("v.OrdItemList");
+                    var bomItems = component.get("v.BomItemList");
                     var explodedOrderItems = response.getReturnValue().ExplodedOrderItems;
                     var hasExplodedItems = false;
                     var explodedIds = [];
                     var explodedNames = [];
+
+                    for (var i = 0; i < tempOrderitems.length; i++) {
+                        var item = tempOrderitems[i];
+                        // --- KIT REMAINING QTY LOGIC ---
+                        if (tempOrderitems[i].Product2 && tempOrderitems[i].Product2.ERP7__Is_Kit__c) {
+                            var fullyShipped = isKitFullyShipped(tempOrderitems[i], bomItems);
+                            if (fullyShipped) {
+                                tempOrderitems[i].ERP7__Remaining_Quantity__c = 0;
+                                tempOrderitems[i].ERP7__Active__c = false; // Disable row
+                            } else {
+                                var parentTotalQty = item.Quantity || 1;
+                                var parentLogisticQty = item.ERP7__Logistic_Quantity__c || 0;
+                                
+                                // 1. Calculate Ratio
+                                var totalBomQtyForOrder = 0;
+                                for (var j = 0; j < bomItems.length; j++) {
+                                    // Match BOM to this Order Item
+                                    if (bomItems[j].OrderProdId == item.Id) {
+                                        totalBomQtyForOrder += (bomItems[j].Bom.ERP7__Quantity__c || 0);
+                                    }
+                                }
+
+                                var bomPerKitRatio = (parentTotalQty > 0) ? (totalBomQtyForOrder / parentTotalQty) : 0;
+                                
+                                // 2. Calculate Previously Shipped Kits
+                                var previouslyShippedKits = 0;
+                                if (bomPerKitRatio > 0) {
+                                    previouslyShippedKits = parentLogisticQty / bomPerKitRatio;
+                                }
+                                
+                                // 3. Set Remaining Quantity
+                                var calculatedRemaining = parentTotalQty - previouslyShippedKits;
+                                item.ERP7__Remaining_Quantity__c = Math.round(calculatedRemaining * 100) / 100;
+                                
+                                // 4. Disable if fully shipped
+                                if (item.ERP7__Remaining_Quantity__c <= 0) {
+                                    item.ERP7__Remaining_Quantity__c = 0;
+                                    item.ERP7__Active__c = false;
+                                }
+                            }
+                        }
+                        // Note: Non-kit Remaining Qty is already calculated in Apex for OrdItems
+                    }
                     
                     // Check for exploded items
                     for (var oiId in explodedOrderItems) {
@@ -86,61 +422,136 @@
                     component.set("v.OrdItemList", tempOrderitems);
                     
                     // Handle exploded items
-             //       if (hasExplodedItems) {
-                   //     component.set("v.exceptionError1", "You have already exploded the following products: " + explodedNames.join(', ') + ".");
-                   if (hasExplodedItems) {
-    var lang = $A.get("$Locale.language"); // gets current org/user language
-    var message = "";
+                    // if (hasExplodedItems) {
+                    // component.set("v.exceptionError1", "You have already exploded the following products: " + explodedNames.join(', ') + ".");
+                    if (hasExplodedItems) {
+                        var lang = $A.get("$Locale.language"); // gets current org/user language
+                        var message = "";
 
-    if (lang === "fr") {
-        message = "Vous avez déjà explosé les produits suivants : " + explodedNames.join(', ') + ".";
-    } else {
-        message = "You have already exploded the following products: " + explodedNames.join(', ') + ".";
-    }
+                        if (lang === "fr") {
+                            message = "Vous avez déjà explosé les produits suivants : " + explodedNames.join(', ') + ".";
+                        } else {
+                            message = "You have already exploded the following products: " + explodedNames.join(', ') + ".";
+                        }
 
-    component.set("v.exceptionError1", message);
+                        component.set("v.exceptionError1", message);
                         component.set("v.SelectedSoliList", explodedIds);
-                        
+                            
                         // Auto-create logistics for exploded items after 3 seconds
-                       // setTimeout(function() {
-                      //      helper.convertToLogistic(component, event, helper);
-                      //  }, 3000);
+                        // setTimeout(function() {
+                        //      helper.convertToLogistic(component, event, helper);
+                        //  }, 3000);
                     }
 
                    
-                    var allSOLIselected = true;
-                    for (var i = 0; i < tempOrderitems.length; i++) {
-                        if (!tempOrderitems[i].IsExploded && tempOrderitems[i].ERP7__Active__c && 
-                            ((tempOrderitems[i].ERP7__Remaining_Quantity__c <= tempOrderitems[i].ERP7__Reserved_Quantity__c && 
-                              tempOrderitems[i].ERP7__Remaining_Quantity__c > 0 && 
-                              tempOrderitems[i].ERP7__Remaining_Quantity__c <= tempOrderitems[i].Quantity) || 
-                             (tempOrderitems[i].Product2.ERP7__Is_Kit__c && tempOrderitems[i].AllowKit == 'Allow'))) {
-                            allSOLIselected = allSOLIselected && tempOrderitems[i].checked;
-                        }
-                    }
-                    component.set("v.allSOLIselected", allSOLIselected);
+                    // var allSOLIselected = true;
+                    // for (var i = 0; i < tempOrderitems.length; i++) {
+                    //     if (!tempOrderitems[i].IsExploded && tempOrderitems[i].ERP7__Active__c && 
+                    //         ((tempOrderitems[i].ERP7__Remaining_Quantity__c <= tempOrderitems[i].ERP7__Reserved_Quantity__c && 
+                    //           tempOrderitems[i].ERP7__Remaining_Quantity__c > 0 && 
+                    //           tempOrderitems[i].ERP7__Remaining_Quantity__c <= tempOrderitems[i].Quantity) || 
+                    //          (tempOrderitems[i].Product2.ERP7__Is_Kit__c && tempOrderitems[i].AllowKit == 'Allow'))) {
+                    //         allSOLIselected = allSOLIselected && tempOrderitems[i].checked;
+                    //     }
+                    // }
+                    // component.set("v.allSOLIselected", allSOLIselected);
                     
                     // Handle kit items inventory check
-                    var bomItems = component.get("v.BomItemList");
+                    // for (var i = 0; i < tempOrderitems.length; i++) {
+                    //     if (tempOrderitems[i].Product2.ERP7__Is_Kit__c) {
+                    //         var hasEnoughStock = true;
+                    //         for (var j = 0; j < bomItems.length; j++) {
+                    //             if (bomItems[j].OrderProdId == tempOrderitems[i].Id && 
+                    //                 bomItems[j].stock < bomItems[j].Bom.ERP7__Quantity__c) {
+                    //                 hasEnoughStock = false;
+                    //                 break;
+                    //             }
+                    //         }
+                    //         tempOrderitems[i].AllowKit = hasEnoughStock ? 'Allow' : 'Not-Allowed';
+                    //     }
+                    // }
+
                     for (var i = 0; i < tempOrderitems.length; i++) {
                         if (tempOrderitems[i].Product2.ERP7__Is_Kit__c) {
                             var hasEnoughStock = true;
+                            
+                            // Get quantities for calculation
+                            var parentTotalQty = tempOrderitems[i].Quantity || 1;
+                            var parentRemainingQty = tempOrderitems[i].ERP7__Remaining_Quantity__c || 0;
+
                             for (var j = 0; j < bomItems.length; j++) {
-                                if (bomItems[j].OrderProdId == tempOrderitems[i].Id && 
-                                    bomItems[j].stock < bomItems[j].Bom.ERP7__Quantity__c) {
-                                    hasEnoughStock = false;
-                                    break;
+                                if (bomItems[j].OrderProdId == tempOrderitems[i].Id) {
+                                    
+                                    // Calculate Required Stock for REMAINING kits only
+                                    var bomTotalQty = bomItems[j].Bom.ERP7__Quantity__c || 0;
+                                    var unitRatio = (parentTotalQty > 0) ? (bomTotalQty / parentTotalQty) : 0;
+                                    var requiredStockForRemaining = unitRatio * parentRemainingQty;
+
+                                    if (bomItems[j].stock < requiredStockForRemaining) {
+                                        hasEnoughStock = false;
+                                        break;
+                                    }
                                 }
                             }
                             tempOrderitems[i].AllowKit = hasEnoughStock ? 'Allow' : 'Not-Allowed';
                         }
                     }
                     component.set("v.OrdItemList", tempOrderitems);
+
+                    console.log('updated v.OrdItemList by Abubakar = ' + JSON.stringify(tempOrderitems));
+
+                    // 2. AUTO-SELECT LOGIC: Explicitly set .checked = true
+                    var selectedOrderIds = [];
+                    var hasEligibleItems = false;
+
+                    for (var i = 0; i < tempOrderitems.length; i++) {
+                        var item = tempOrderitems[i];
+                        
+                        // Determine Eligibility (Matches conditions in selectAllSoli)
+                        var isEligible = !item.IsExploded && item.ERP7__Active__c;
+
+                        // Must not be exploded and must be Active
+                        // Kit Eligibility
+                        if (item.Product2.ERP7__Is_Kit__c) {
+                            if (item.AllowKit == 'Allow' && item.ERP7__Remaining_Quantity__c > 0) {
+                                isEligible = true;
+                            }else{
+                                isEligible = false;
+                            }
+                        } 
+                        // Standard Product Eligibility (Check Stock vs Remaining)
+                        else {
+                            if (item.ERP7__Remaining_Quantity__c <= item.ERP7__Reserved_Quantity__c && 
+                                item.ERP7__Remaining_Quantity__c > 0 && 
+                                item.ERP7__Remaining_Quantity__c <= item.Quantity) {
+                                isEligible = true;
+                            }
+                        }
+
+                        // Apply Selection
+                        if (isEligible) {
+                            item.checked = true; // <--- THIS CHECKS THE ROW
+                            selectedOrderIds.push(item);
+                            hasEligibleItems = true;
+                        } else {
+                            item.checked = false;
+                        }
+                    }
+
+                    component.set("v.OrdItemList", tempOrderitems);
+                    component.set("v.allSOLIselected", hasEligibleItems);
+                    component.set("v.SelectedSoliList", selectedOrderIds);
                     
-                    // Refresh the UI
-                    component.set("v.reRenderSOLItable", false);
-                    component.set("v.reRenderSOLItable", true);
                 }
+
+                // Update Logs
+                if(returnVal.UpdatedlogList && returnVal.UpdatedlogList.length > 0) {
+                    component.set("v.LLIList", returnVal.UpdatedlogList);
+                }
+
+                // Refresh the UI
+                component.set("v.reRenderSOLItable", false);
+                component.set("v.reRenderSOLItable", true);
             } else {
                 var errors = response.getError();
                 if (errors && errors[0] && errors[0].message) {
@@ -205,6 +616,7 @@
                 "chnId" : component.get("v.channelId"),
                 "DCId": component.get("v.DistributeChannelId"),
                 "LogItems" : JSON.stringify(component.get("v.LLIList")),
+                "idType": ''
             });
             action.setCallback(this, function(response){
                 if(response.getState() === "SUCCESS"){
@@ -324,7 +736,8 @@
                 "orditms": JSON.stringify(component.get("v.OrdItemList")),
                 "chnId": component.get("v.channelId"),
                 "DCId": component.get("v.DistributeChannelId"),
-                "LogItems": JSON.stringify(component.get("v.LLIList"))
+                "LogItems": JSON.stringify(component.get("v.LLIList")),
+                "idType": ''
             });
 
             action.setCallback(this, function(response) {
@@ -465,7 +878,8 @@
                 "orditms": JSON.stringify(component.get("v.OrdItemList")),
                 "chnId": component.get("v.channelId"),
                 "DCId": component.get("v.DistributeChannelId"),
-                "LogItems": JSON.stringify(component.get("v.LLIList"))
+                "LogItems": JSON.stringify(component.get("v.LLIList")),
+                "idType": ''
             });
 
             action.setCallback(this, function(response) {
@@ -710,101 +1124,353 @@
      else $A.util.addClass(component.find("cnvrtLogBtnId"),'a_disabled');  //.getElement()  */
     },
     
-    selectAllSoli:function(component,event,helper){
-        var isSelect = event.getSource().get("v.checked");
-        console.log('isSelect : ',isSelect);
-        var elem=[]; elem=component.find('schId');
-        console.log('elem~>',elem);
-        var SelectedSoliList=[];
-        var SoliList =[]; SoliList=component.get("v.SoliList"); 
-        var OrdItemList=[]; OrdItemList=component.get('v.OrdItemList');
-        var POItemList=[]; POItemList=component.get('v.POItemList');
+    // selectAllSoli:function(component,event,helper){
+    //     var isSelect = event.getSource().get("v.checked");
+    //     console.log('isSelect : ',isSelect);
+    //     var elem=[]; elem=component.find('schId');
+    //     console.log('elem~>',elem);
+    //     var SelectedSoliList=[];
+    //     var SoliList =[]; SoliList=component.get("v.SoliList"); 
+    //     var OrdItemList=[]; OrdItemList=component.get('v.OrdItemList');
+    //     var POItemList=[]; POItemList=component.get('v.POItemList');
         
-        var SelectedSoliListDum=[];
+    //     var SelectedSoliListDum=[];
         
-        if(SoliList.length > 0){
-            for(var j=0; j<SoliList.length; j++){ 
-                if(isSelect==true){  // && SoliList[j].ERP7__Active__c==true
-                    if(SoliList[j].ERP7__Active__c==true){
-                        if(elem){
-                            if(elem.length){
-                                elem[j].set("v.checked",true);        
-                            }else elem.set("v.checked",true);        
-                        }
+    //     if(SoliList.length > 0){
+    //         for(var j=0; j<SoliList.length; j++){ 
+    //             if(isSelect==true){  // && SoliList[j].ERP7__Active__c==true
+    //                 if(SoliList[j].ERP7__Active__c==true){
+    //                     if(elem){
+    //                         if(elem.length){
+    //                             elem[j].set("v.checked",true);        
+    //                         }else elem.set("v.checked",true);        
+    //                     }
                         
-                        SelectedSoliListDum.push(SoliList[j]); 
-                    }          
-                }   
-                else{
-                    if(elem){
-                        if(elem.length){
-                            elem[j].set("v.checked",false);        
-                        }else elem.set("v.checked",false);        
-                    }
-                    SelectedSoliListDum=[];
-                }
-            }
-        }
-        else if(OrdItemList.length > 0)  {
-            for(var j=0; j<OrdItemList.length; j++){ 
-                if(isSelect==true){  
-                    if ((OrdItemList[j].ERP7__Active__c === true && ((OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].ERP7__Reserved_Quantity__c && OrdItemList[j].ERP7__Remaining_Quantity__c > 0 &&  OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].Quantity) || (OrdItemList[j].Product2.ERP7__Is_Kit__c && OrdItemList[j].AllowKit =='Allow')))){  // || OrdItemList[j].Product2.ERP7__Is_Kit__c    //.Quantity     
-                        console.log('here222');
-                        if(elem){
-                            console.log('here1:+ elem.length +',elem.length);
-                            if(elem.length){
-                                console.log('here2');
-                                elem[j].set("v.checked",true);        
-                            }else{
-                                console.log('here3');
-                                elem.set("v.checked",true);
-                            }   
-                        }         
-                        console.log('here pushed');
-                        SelectedSoliListDum.push(OrdItemList[j]); 
-                    }else{
-                        console.log('here notpushed');
-                    }
-                }   
-                else{
-                    if(elem){
-                        if(elem.length){
-                            elem[j].set("v.checked",false);        
-                        }else elem.set("v.checked",false);        
-                    }
-                    SelectedSoliListDum=[];
-                }
-            }
-        }
-            else if(POItemList.length > 0){
-                for(var j=0; j<POItemList.length; j++){ 
-                    if(isSelect==true){ 
-                        if(POItemList[j].ERP7__Active__c==true){          
-                            if(elem){
-                                if(elem.length){
-                                    elem[j].set("v.checked",true);        
-                                }else elem.set("v.checked",true);        
-                            }                                                     
-                            SelectedSoliListDum.push(POItemList[j]); 
-                        }          
-                    }   
-                    else{
-                        if(elem){
-                            if(elem.length){
-                                elem[j].set("v.checked",false);        
-                            }else elem.set("v.checked",false);        
-                        }
-                        SelectedSoliListDum=[];
-                    }
-                }
-            }
-        console.log('SelectedSoliListDum ~>'+SelectedSoliListDum.length);
-        component.set("v.SelectedSoliList",SelectedSoliListDum); //SelectedSoliList
+    //                     SelectedSoliListDum.push(SoliList[j]); 
+    //                 }          
+    //             }   
+    //             else{
+    //                 if(elem){
+    //                     if(elem.length){
+    //                         elem[j].set("v.checked",false);        
+    //                     }else elem.set("v.checked",false);        
+    //                 }
+    //                 SelectedSoliListDum=[];
+    //             }
+    //         }
+    //     }
+    //     else if(OrdItemList.length > 0)  {
+    //         for(var j=0; j<OrdItemList.length; j++){ 
+    //             if(isSelect==true){  
+    //                 if ((OrdItemList[j].ERP7__Active__c === true && ((OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].ERP7__Reserved_Quantity__c && OrdItemList[j].ERP7__Remaining_Quantity__c > 0 &&  OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].Quantity) || (OrdItemList[j].Product2.ERP7__Is_Kit__c && OrdItemList[j].AllowKit =='Allow')))){  // || OrdItemList[j].Product2.ERP7__Is_Kit__c    //.Quantity     
+    //                     console.log('here222');
+    //                     if(elem){
+    //                         console.log('here1:+ elem.length +',elem.length);
+    //                         if(elem.length){
+    //                             console.log('here2');
+    //                             elem[j].set("v.checked",true);        
+    //                         }else{
+    //                             console.log('here3');
+    //                             elem.set("v.checked",true);
+    //                         }   
+    //                     }         
+    //                     console.log('here pushed');
+    //                     SelectedSoliListDum.push(OrdItemList[j]); 
+    //                 }else{
+    //                     console.log('here notpushed');
+    //                 }
+    //             }   
+    //             else{
+    //                 if(elem){
+    //                     if(elem.length){
+    //                         elem[j].set("v.checked",false);        
+    //                     }else elem.set("v.checked",false);        
+    //                 }
+    //                 SelectedSoliListDum=[];
+    //             }
+    //         }
+    //     }
+    //         else if(POItemList.length > 0){
+    //             for(var j=0; j<POItemList.length; j++){ 
+    //                 if(isSelect==true){ 
+    //                     if(POItemList[j].ERP7__Active__c==true){          
+    //                         if(elem){
+    //                             if(elem.length){
+    //                                 elem[j].set("v.checked",true);        
+    //                             }else elem.set("v.checked",true);        
+    //                         }                                                     
+    //                         SelectedSoliListDum.push(POItemList[j]); 
+    //                     }          
+    //                 }   
+    //                 else{
+    //                     if(elem){
+    //                         if(elem.length){
+    //                             elem[j].set("v.checked",false);        
+    //                         }else elem.set("v.checked",false);        
+    //                     }
+    //                     SelectedSoliListDum=[];
+    //                 }
+    //             }
+    //         }
+    //     console.log('SelectedSoliListDum ~>'+SelectedSoliListDum.length);
+    //     component.set("v.SelectedSoliList",SelectedSoliListDum); //SelectedSoliList
         
-        if(isSelect && SelectedSoliListDum.length > 0) $A.util.removeClass(component.find("cnvrtLogBtnId"),'a_disabled');
-        else $A.util.addClass(component.find("cnvrtLogBtnId"),'a_disabled');                               
-    },
+    //     if(isSelect && SelectedSoliListDum.length > 0) $A.util.removeClass(component.find("cnvrtLogBtnId"),'a_disabled');
+    //     else $A.util.addClass(component.find("cnvrtLogBtnId"),'a_disabled');                               
+    // },
     
+    selectAllSoli: function(component, event, helper) {
+        var isSelect = event.getSource().get("v.checked");
+        console.log('isSelect : ', isSelect);
+        
+        var SelectedSoliListDum = [];
+        var SoliList = component.get("v.SoliList");
+        var OrdItemList = component.get('v.OrdItemList');
+        var POItemList = component.get('v.POItemList');
+
+        // --- 1. Handle Sales Order Line Items (SOLI) ---
+        if (SoliList && SoliList.length > 0) {
+            console.log('in SoliList');
+            
+            for (var j = 0; j < SoliList.length; j++) {
+                if (isSelect) {
+                    var isEligible = SoliList[j].ERP7__Active__c == true && !SoliList[j].IsExploded;
+                    
+                    // Specific Kit Logic if needed (matches your HTML logic)
+                    if(SoliList[j].ERP7__Is_Kit__c && SoliList[j].AllowKit == 'Allow' &&  SoliList[j].ERP7__Remaining_Quantity__c > 0){
+                        isEligible = true;
+                    }
+
+                    if (isEligible) {
+                        SoliList[j].checked = true; // Update Data Model
+                        SelectedSoliListDum.push(SoliList[j]);
+                    } else {
+                        SoliList[j].checked = false;
+                    }
+                } else {
+                    // Deselect All
+                    SoliList[j].checked = false; // Update Data Model
+                }
+            }
+            // Trigger UI Update via Data Binding
+            component.set("v.SoliList", SoliList);
+        }
+        
+        // --- 2. Handle Standard Order Items ---
+        else if (OrdItemList && OrdItemList.length > 0) {
+            console.log('in OrdItemList');
+            
+            for (var j = 0; j < OrdItemList.length; j++) {
+                if (isSelect) {
+                    // Complex eligibility check (Active, Stock vs Remaining, Kit Allowed)
+                    if (((OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].ERP7__Reserved_Quantity__c &&
+                          OrdItemList[j].ERP7__Remaining_Quantity__c > 0 &&
+                          OrdItemList[j].ERP7__Remaining_Quantity__c <= OrdItemList[j].Quantity) && OrdItemList[j].ERP7__Active__c == true && !OrdItemList[j].IsExploded
+                         )) {
+                        
+                        isEligible = true;
+                    } 
+                    if(OrdItemList[j].Product2.ERP7__Is_Kit__c && OrdItemList[j].AllowKit != 'Allow'){
+                        isEligible = false;
+                    }else if(OrdItemList[j].Product2.ERP7__Is_Kit__c && OrdItemList[j].AllowKit == 'Allow' && OrdItemList[j].ERP7__Remaining_Quantity__c > 0){
+                        isEligible = true;
+                    }
+                    if(isEligible){
+                        OrdItemList[j].checked = true; // Update Data Model
+                        SelectedSoliListDum.push(OrdItemList[j]);
+                    }else{
+                        OrdItemList[j].checked = false;
+                    }
+                } else {
+                    OrdItemList[j].checked = false;
+                }
+            }
+            component.set("v.OrdItemList", OrdItemList);
+        }
+        
+        // --- 3. Handle Purchase Order Items ---
+        else if (POItemList && POItemList.length > 0) {
+            for (var j = 0; j < POItemList.length; j++) {
+                if (isSelect) {
+                    if (POItemList[j].ERP7__Active__c == true) {
+                        POItemList[j].checked = true; // Update Data Model
+                        SelectedSoliListDum.push(POItemList[j]);
+                    } else {
+                        POItemList[j].checked = false;
+                    }
+                } else {
+                    POItemList[j].checked = false;
+                }
+            }
+            component.set("v.POItemList", POItemList);
+        }
+
+        console.log('SelectedSoliListDum size ~>' + SelectedSoliListDum.length);
+        component.set("v.SelectedSoliList", SelectedSoliListDum);
+
+        // Enable/Disable the main action button
+        if (isSelect && SelectedSoliListDum.length > 0) {
+            $A.util.removeClass(component.find("cnvrtLogBtnId"), 'a_disabled');
+        } else {
+            $A.util.addClass(component.find("cnvrtLogBtnId"), 'a_disabled');
+        }
+    },
+
+    handleQtyChange: function(component, event, helper) {
+
+        var inputCmp = event.getSource();
+        var val = inputCmp.get("v.value");
+
+        // --- FIX 1: STOP PREMATURE TOAST ---
+        // If the field is cleared (empty or NaN), clear errors and stop processing.
+        if (val === "" || val === null || isNaN(val)) {
+            inputCmp.setCustomValidity(""); // Clear native error
+            inputCmp.reportValidity();      // Update UI
+            return; 
+        }
+
+        var params = event.getSource().get("v.name").split('_');
+        var index = parseInt(params[0]);
+        var type = params[1]; // 'SOLI' or 'ORD'
+        var userInput = parseFloat(event.getSource().get("v.value"));
+        
+        var item;
+        var listName;
+        
+        if (type === 'SOLI') {
+            item = component.get("v.SoliList")[index];
+            listName = "v.SoliList";
+        } else {
+            item = component.get("v.OrdItemList")[index];
+            listName = "v.OrdItemList";
+        }
+
+        var isKit = (type === 'SOLI') ? item.ERP7__Is_Kit__c : (item.Product2 && item.Product2.ERP7__Is_Kit__c);
+        var parentTotalQty = (type === 'SOLI') ? item.ERP7__Quantity__c : item.Quantity;
+        var parentLogisticQty = item.ERP7__Logistic_Quantity__c || 0;
+        var maxAllowedQty = 0;
+        var kitStockAvailable = true; // Default true, set to false if BOM check fails
+
+        // --- KIT LOGIC ---
+        if (isKit) {
+            // 1. Calculate the "Ratio" (Total BOM Qty per 1 Parent Kit)
+            // We sum up the Total Required Qty of all BOMs for this line and divide by the Parent Order Qty.
+            var bomItems = component.get("v.BomItemList");
+            var totalBomQtyForOrder = 0;
+            
+            for (var j = 0; j < bomItems.length; j++) {
+                // Match BOM to Parent
+                if ((type === 'SOLI' && bomItems[j].OrderProdId === item.Id) || 
+                    (type === 'ORD' && bomItems[j].OrderProdId === item.Id)) {
+                    totalBomQtyForOrder += (bomItems[j].Bom.ERP7__Quantity__c || 0);
+                }
+            }
+
+            // Ratio: How many total BOM items make up ONE Kit unit?
+            // If Parent Qty is 2 and Total BOM Qty is 6 (2+4), then Ratio is 3.
+            var bomPerKitRatio = (parentTotalQty > 0) ? (totalBomQtyForOrder / parentTotalQty) : 0;
+
+            // 2. Determine how many Kits were ALREADY shipped
+            // Formula: Parent Logistic Qty (Sum of BOMs shipped) / Ratio
+            var previouslyShippedKits = 0;
+            if (bomPerKitRatio > 0) {
+                previouslyShippedKits = parentLogisticQty / bomPerKitRatio;
+            }
+
+            // 3. Max Remaining = Original Qty - Previously Shipped
+            // Use Math.ceil/floor tolerance or simple rounding to handle floating point issues
+            maxAllowedQty = parentTotalQty - previouslyShippedKits;
+            // Round to 2 decimals to avoid floating point weirdness (e.g. 1.999999)
+            maxAllowedQty = Math.round(maxAllowedQty * 100) / 100;
+
+            // 2. DYNAMIC STOCK CHECK
+            // Check if we have enough stock for the *Entered Quantity*
+            if(userInput > 0) {
+                for (var j = 0; j < bomItems.length; j++) {
+                    var b = bomItems[j];
+                    if ((type === 'SOLI' && b.OrderProdId === item.Id) || 
+                        (type === 'ORD' && b.OrderProdId === item.Id)) {
+                        
+                        // How many of THIS component do we need for 1 parent unit?
+                        var componentApexQty = b.Bom.ERP7__Quantity__c || 0;
+                        var componentUnitRatio = (parentTotalQty > 0) ? (componentApexQty / parentTotalQty) : 0;
+                        
+                        // Required Stock = Unit Ratio * User Input
+                        var requiredStock = componentUnitRatio * userInput;
+                        var availableStock = b.stock || 0;
+                        
+                        if (availableStock < requiredStock) {
+                            kitStockAvailable = false;
+                            break; // Fail fast if one component is missing
+                        }
+                    }
+                }
+            }
+        } 
+        // --- STANDARD PRODUCT LOGIC ---
+        else {
+            // Simple Subtraction
+            maxAllowedQty = parentTotalQty - parentLogisticQty;
+        }
+
+        // --- VALIDATION & UI UPDATE ---
+        var isValid = true;
+        var errorMsg = "";
+
+        if (userInput < 0) {
+            isValid = false;
+            errorMsg = $A.get('$Label.c.Invalid_Quantity');
+        } 
+        else if (userInput > maxAllowedQty) {
+            isValid = false;
+            errorMsg = $A.get('$Label.c.Given_quantity_is_not_available'); 
+        }
+        else if (isKit && !kitStockAvailable) {
+            // New Validation for Kits
+            isValid = false; 
+            // We treat this differently: We don't show a toast error immediately, 
+            // instead we disable the row (AllowKit = 'Not-Allowed').
+            // But we can show a specific message or just rely on the button disabling.
+            // Let's mark it invalid so the code below handles disabling.
+        }
+
+        // STANDARD ERROR HANDLING (Toast/Highlight)
+        if (!isValid) {
+            if(userInput < 0 || userInput > maxAllowedQty) {
+                sforce.one.showToast({
+                    "title": "Error",
+                    "message": errorMsg + " (Max: " + maxAllowedQty + ")",
+                    "type": "error"
+                });
+                
+                // Use Standard SLDS Error State (Fixes Red Box Glitch)
+                inputCmp.setCustomValidity(errorMsg); 
+                inputCmp.reportValidity(); 
+            }
+        } else {
+            // Clear Error
+            inputCmp.setCustomValidity(""); 
+            inputCmp.reportValidity();
+        }
+
+        // UPDATE ITEM STATUS
+        if(isKit) {
+            if(isValid && kitStockAvailable) {
+                item.AllowKit = 'Allow';
+            } else {
+                item.AllowKit = 'Not-Allowed'; // This Disables the row button in UI
+                if(!kitStockAvailable && userInput > 0 && userInput <= maxAllowedQty) {
+                     // Only show toast if quantity was technically within range but stock failed
+                     // Use a debounce or just set exceptionError to avoid spamming toasts while typing
+                     component.set("v.exceptionError", "Insufficient stock for Kit components for the entered quantity.");
+                }
+            }
+        }
+        
+        // REFRESH LIST TO UPDATE BUTTON STATE (AllowKit)
+        component.set(listName, component.get(listName));
+    },
+
   convertToLogistic: function(component, event, helper) {
     try {
         console.log('convertToLogistic called');
@@ -816,17 +1482,116 @@
         var SoliList = component.get("v.SoliList"); 
         var OrdItemList = component.get('v.OrdItemList');
         var POItemList = component.get('v.POItemList');
+        var BomItemList = component.get("v.BomItemList");
         
         if (SelectedSoliList && SelectedSoliList.length > 0) {
             var LLIList = [];
-            var BomItemList = component.get("v.BomItemList");
+            var globalCounter = 1;
             console.log('BomItemList:', BomItemList);
+
+            // =================================================================
+            // 1. GLOBAL VALIDATION LOOP
+            // =================================================================
+            for (let x = 0; x < SelectedSoliList.length; x++) {
+                var item = SelectedSoliList[x];
+                if (!item || typeof item === 'string' || item.IsExploded) continue;
+
+                var isKit = false;
+                var parentTotalQty = 0;
+                var parentLogisticQty = 0;
+                var itemName = '';
+
+                // Resolve Item Type and Properties
+                if (SoliList && SoliList.length > 0) {
+                    isKit = item.ERP7__Is_Kit__c;
+                    parentTotalQty = item.ERP7__Quantity__c || 0;
+                    parentLogisticQty = item.ERP7__Logistic_Quantity__c || 0;
+                    itemName = item.Name || 'SOLI';
+                } else if (OrdItemList && OrdItemList.length > 0) {
+                    isKit = item.Product2 && item.Product2.ERP7__Is_Kit__c;
+                    parentTotalQty = item.Quantity || 0;
+                    parentLogisticQty = item.ERP7__Logistic_Quantity__c || 0;
+                    itemName = item.Product2 ? item.Product2.Name : 'Order Item';
+                } else if (POItemList && POItemList.length > 0) {
+                    // PO Logic (Simplified for validation)
+                    parentTotalQty = item.ERP7__Quantity__c || 0;
+                    parentLogisticQty = item.ERP7__Logistic_Quantity__c || 0;
+                    itemName = item.Name || 'PO Item';
+                }
+
+                var userEnteredQty = parseFloat(item.ERP7__Remaining_Quantity__c) || 0;
+
+                // A. Validate Input Range
+                var maxQty = 0;
+                if (isKit) {
+                    // Kit Max Calculation (Same as handleQtyChange)
+                    var totalBomQtyForOrder = 0;
+                    for (var j = 0; j < BomItemList.length; j++) {
+                        if ((SoliList.length > 0 && BomItemList[j].OrderProdId === item.Id) || 
+                            (OrdItemList.length > 0 && BomItemList[j].OrderProdId === item.Id)) {
+                            totalBomQtyForOrder += (BomItemList[j].Bom.ERP7__Quantity__c || 0);
+                        }
+                    }
+                    var bomPerKitRatio = (parentTotalQty > 0) ? (totalBomQtyForOrder / parentTotalQty) : 0;
+                    var previouslyShippedKits = (bomPerKitRatio > 0) ? (parentLogisticQty / bomPerKitRatio) : 0;
+                    maxQty = Math.round((parentTotalQty - previouslyShippedKits) * 100) / 100;
+                } else {
+                    maxQty = parentTotalQty - parentLogisticQty;
+                }
+
+                if (userEnteredQty <= 0) {
+                    // helper toast not working 
+                    // helper.showToast('dismissible', 'Error', 'error', 'Invalid Quantity for ' + itemName + '. Must be greater than 0.', component);
+
+                    sforce.one.showToast({
+                        "title": "Error",
+                        "message": 'Invalid Quantity for ' + itemName + '. Must be greater than 0.',
+                        "type": "error"
+                    });
+                    return; // Stop Process
+                }
+                if (userEnteredQty > maxQty) {
+                    // helper.showToast('dismissible', 'Error', 'error', 'Quantity for ' + itemName + ' cannot exceed ' + maxQty + '.', component);
+
+                    sforce.one.showToast({
+                        "title": "Error",
+                        "message": 'Quantity for ' + itemName + ' cannot exceed ' + maxQty + '.',
+                        "type": "error"
+                    });
+                    return; // Stop Process
+                }
+
+                // B. Validate Stock Availability (Especially for Kits)
+                if (isKit) {
+                    for (var j = 0; j < BomItemList.length; j++) {
+                        var b = BomItemList[j];
+                        if ((SoliList.length > 0 && b.OrderProdId === item.Id) || 
+                            (OrdItemList.length > 0 && b.OrderProdId === item.Id)) {
+                            
+                            var componentApexQty = b.Bom.ERP7__Quantity__c || 0;
+                            var componentUnitRatio = (parentTotalQty > 0) ? (componentApexQty / parentTotalQty) : 0;
+                            var requiredStock = componentUnitRatio * userEnteredQty;
+                            
+                            if ((b.stock || 0) < requiredStock) {
+                                // helper.showToast('dismissible', 'Error', 'error', 'Insufficient stock for Kit "' + itemName + '". Check component availability.', component);
+                                
+                                sforce.one.showToast({
+                                    "title": "Error",
+                                    "message": 'Insufficient stock for Kit "' + itemName + '". Check component availability.',
+                                    "type": "error"
+                                });
+                                return; // Stop Process
+                            }
+                        }
+                    }
+                }
+            }
             
             for (let x = 0; x < SelectedSoliList.length; x++) {
                 var currentItem = SelectedSoliList[x];
                 
                 // Skip if item is just an ID string (not a full object)
-                if (typeof currentItem === 'string') {
+                if (!currentItem || typeof currentItem === 'string' || currentItem.IsExploded) {
                     console.log('Skipping string ID item:', currentItem);
                     continue;
                 }
@@ -844,24 +1609,99 @@
                     continue;
                 }
                 
+                // if (SoliList && SoliList.length > 0 && currentItem.ERP7__Product__c) {
+                //     console.log('SoliList processing');
+                //     var obj = { 
+                //         Name: currentItem.Name || 'SOLI-Logistic',
+                //         ERP7__Product__c: currentItem.ERP7__Product__c,
+                //         ERP7__Quantity__c: (currentItem.ERP7__Quantity__c || 0) - (currentItem.ERP7__Logistic_Quantity__c || 0),
+                //         ERP7__Price_Product__c: currentItem.ERP7__Base_Price__c || 0,                  
+                //         ERP7__Sales_Order_Line_Item__c: currentItem.Id,
+                //         ERP7__Logistic__c: ''
+                //     };
+                    
+                //     if (currentItem.ERP7__Product__r) {
+                //         obj.ERP7__Product__r = {
+                //             'Id': currentItem.ERP7__Product__c,
+                //             'Name': currentItem.ERP7__Product__r.Name || 'Unknown Product'
+                //         };
+                //     }
+                //     LLIList.push(obj);
+                // }
                 if (SoliList && SoliList.length > 0 && currentItem.ERP7__Product__c) {
                     console.log('SoliList processing');
-                    var obj = { 
-                        Name: currentItem.Name || 'SOLI-Logistic',
-                        ERP7__Product__c: currentItem.ERP7__Product__c,
-                        ERP7__Quantity__c: (currentItem.ERP7__Quantity__c || 0) - (currentItem.ERP7__Logistic_Quantity__c || 0),
-                        ERP7__Price_Product__c: currentItem.ERP7__Base_Price__c || 0,                  
-                        ERP7__Sales_Order_Line_Item__c: currentItem.Id,
-                        ERP7__Logistic__c: ''
-                    };
                     
-                    if (currentItem.ERP7__Product__r) {
-                        obj.ERP7__Product__r = {
-                            'Id': currentItem.ERP7__Product__c,
-                            'Name': currentItem.ERP7__Product__r.Name || 'Unknown Product'
+                    // --- NEW KIT LOGIC FOR SOLI ---
+                    if (currentItem.ERP7__Is_Kit__c) {
+                        console.log('Processing Kit SOLI');
+                        var kitComponentsAdded = false;
+
+                        // 1. Get Quantities for Ratio Calculation
+                        var parentTotalQty = currentItem.ERP7__Quantity__c || 1; 
+                        var userEnteredQty = parseFloat(currentItem.ERP7__Remaining_Quantity__c) || 0;
+                                            
+                        if (BomItemList && BomItemList.length > 0) {
+                            for (var j = 0; j < BomItemList.length; j++) {
+                                var bomItem = BomItemList[j];
+                                // Match BOM to this specific SOLI using the OrderProdId mapped in Apex
+                                if (bomItem && bomItem.Bom && 
+                                    bomItem.Bom.ERP7__BOM_Product__c === currentItem.ERP7__Product__c && 
+                                    bomItem.OrderProdId === currentItem.Id) {
+                                    
+                                    var componentName = 'Kit-Component';
+                                    if (bomItem.Bom.ERP7__BOM_Component__r && bomItem.Bom.ERP7__BOM_Component__r.Name) {
+                                        componentName = bomItem.Bom.ERP7__BOM_Component__r.Name;
+                                    }
+
+                                    // 2. Dynamic Calculation
+                                    var apexTotalBomQty = bomItem.Bom.ERP7__Quantity__c || 0; // Total BOM qty for the full order line
+                                    var unitBomQty = (parentTotalQty > 0) ? (apexTotalBomQty / parentTotalQty) : 0; // BOM qty per 1 parent unit
+                                    var calculatedQty = unitBomQty * userEnteredQty; // BOM qty for the Remaining/Selected parent units
+                                    
+                                    var obj = { 
+                                        Name: componentName + '-LogisticLine-' + (globalCounter++),
+                                        ERP7__Product__c: bomItem.Bom.ERP7__BOM_Component__c,
+                                        ERP7__Quantity__c: calculatedQty, // Quantity is already calc in Apex based on Parent Qty
+                                        ERP7__Price_Product__c: (bomItem.pbe ? bomItem.pbe.UnitPrice : 0),                  
+                                        ERP7__Sales_Order_Line_Item__c: currentItem.Id, // Link component back to Parent SOLI
+                                        ERP7__Logistic__c: '',
+                                        isKitComponent: true
+                                    };
+                                    
+                                    if (bomItem.Bom.ERP7__BOM_Component__r) {
+                                        obj.ERP7__Product__r = {
+                                            'Id': bomItem.Bom.ERP7__BOM_Component__c,
+                                            'Name': componentName
+                                        };
+                                    }
+                                    LLIList.push(obj);
+                                    kitComponentsAdded = true;
+                                }
+                            }
+                        }
+                        if (!kitComponentsAdded) console.log('No kit components found for SOLI:', currentItem.Id);
+                    } 
+                    // --- STANDARD SOLI LOGIC (Existing) ---
+                    else {
+                        var obj = { 
+                            Name: (currentItem.Name || 'SOLI') + '-LogisticLine-' + (globalCounter++),
+                            ERP7__Product__c: currentItem.ERP7__Product__c,
+                            // ERP7__Quantity__c: (currentItem.ERP7__Quantity__c || 0) - (currentItem.ERP7__Logistic_Quantity__c || 0),
+                            // CHANGE: Use the User Entered Remaining Quantity directly
+                            ERP7__Quantity__c: parseFloat(currentItem.ERP7__Remaining_Quantity__c) || 0,
+                            ERP7__Price_Product__c: currentItem.ERP7__Price_Product__c || 0,                  
+                            ERP7__Sales_Order_Line_Item__c: currentItem.Id,
+                            ERP7__Logistic__c: ''
                         };
+                        
+                        if (currentItem.ERP7__Product__r) {
+                            obj.ERP7__Product__r = {
+                                'Id': currentItem.ERP7__Product__c,
+                                'Name': currentItem.ERP7__Product__r.Name || 'Unknown Product'
+                            };
+                        }
+                        LLIList.push(obj);
                     }
-                    LLIList.push(obj);
                 }
                 else if (OrdItemList && OrdItemList.length > 0) {
                     console.log('OrdItemList processing');
@@ -873,6 +1713,10 @@
                     if (isKitProduct) {
                         console.log('Processing kit product');
                         var kitComponentsAdded = false;
+
+                        // 1. Get Quantities for Ratio Calculation
+                        var parentTotalQty = currentItem.Quantity || 1;
+                        var userEnteredQty = parseFloat(currentItem.ERP7__Remaining_Quantity__c) || 0;
                         
                         if (BomItemList && BomItemList.length > 0) {
                             for (var j = 0; j < BomItemList.length; j++) {
@@ -886,14 +1730,20 @@
                                     }
                                     
                                     console.log('Adding kit component:', componentName);
+
+                                    // 2. Dynamic Calculation
+                                    var apexTotalBomQty = bomItem.Bom.ERP7__Quantity__c || 0;
+                                    var unitBomQty = (parentTotalQty > 0) ? (apexTotalBomQty / parentTotalQty) : 0;
+                                    var calculatedQty = unitBomQty * userEnteredQty;
                                     
                                     var obj = { 
-                                        Name: componentName + '-LogisticLine-' + j,
+                                        Name: componentName + '-LogisticLine-' + (globalCounter++),
                                         ERP7__Product__c: bomItem.Bom.ERP7__BOM_Component__c,
-                                        ERP7__Quantity__c: bomItem.Bom.ERP7__Quantity__c || 1,
+                                        ERP7__Quantity__c: calculatedQty,
                                         ERP7__Price_Product__c: (bomItem.pbe ? bomItem.pbe.UnitPrice : 0),                  
                                         ERP7__Order_Product__c: currentItem.Id,
-                                        ERP7__Logistic__c: ''
+                                        ERP7__Logistic__c: '',
+                                        isKitComponent: true
                                     };
                                     
                                     if (bomItem.Bom.ERP7__BOM_Component__r) {
@@ -934,7 +1784,7 @@
                         // Only create LLI if we have a valid Product2Id
                         if (currentItem.Product2Id) {
                             var obj = { 
-                                Name: productName + '-LogisticLine-' + x,
+                                Name: productName + '-LogisticLine-' + (globalCounter++),
                                 ERP7__Product__c: currentItem.Product2Id,
                                 ERP7__Quantity__c: quantity,
                                 ERP7__Price_Product__c: currentItem.UnitPrice || 0,                  
@@ -978,7 +1828,7 @@
                                   (currentItem.ERP7__Remaining_Quantity__c || 0) - (currentItem.ERP7__Logistic_Quantity__c || 0);
 
                     var obj = { 
-                        Name: currentItem.Name || 'PO-Logistic',
+                        Name: (currentItem.Name || 'PO') + '-LogisticLine-' + (globalCounter++),
                         ERP7__Product__c: currentItem.ERP7__Product__c,
                         ERP7__Quantity__c: quantity,
                         ERP7__Price_Product__c: currentItem.ERP7__Unit_Price__c || 0,                  
@@ -1096,32 +1946,172 @@
             var selectedSoli=[];//SoliList[index];
             if(SoliList.length > 0){
                 selectedSoli=SoliList[index];	
-            }else 
-                if(ordItemList.length > 0){       
-                    selectedSoli=ordItemList[index];
+            }else if(ordItemList.length > 0){       
+                selectedSoli=ordItemList[index];
+            }
+            else if(POItemList.length > 0){
+                selectedSoli=POItemList[index];
+            }
+
+            // =================================================================
+            // 1. VALIDATION
+            // =================================================================
+            var isKit = false;
+            var parentTotalQty = 0;
+            var parentLogisticQty = 0;
+            var itemName = '';
+
+            if (SoliList.length > 0) {
+                isKit = selectedSoli.ERP7__Is_Kit__c;
+                parentTotalQty = selectedSoli.ERP7__Quantity__c;
+                parentLogisticQty = selectedSoli.ERP7__Logistic_Quantity__c;
+                itemName = selectedSoli.Name;
+            } else if (ordItemList.length > 0) {
+                isKit = selectedSoli.Product2.ERP7__Is_Kit__c;
+                parentTotalQty = selectedSoli.Quantity;
+                parentLogisticQty = selectedSoli.ERP7__Logistic_Quantity__c;
+                itemName = selectedSoli.Product2.Name;
+            }
+
+            // Only validate input for Sales/Orders (PO usually doesn't have user input field)
+            if (SoliList.length > 0 || ordItemList.length > 0) {
+                var userEnteredQty = parseFloat(selectedSoli.ERP7__Remaining_Quantity__c) || 0;
+                var maxQty = 0;
+
+                if (isKit) {
+                    var totalBomQtyForOrder = 0;
+                    for (var j = 0; j < BomItemList.length; j++) {
+                        if ((SoliList.length > 0 && BomItemList[j].OrderProdId === selectedSoli.Id) || 
+                            (ordItemList.length > 0 && BomItemList[j].OrderProdId === selectedSoli.Id)) {
+                            totalBomQtyForOrder += (BomItemList[j].Bom.ERP7__Quantity__c || 0);
+                        }
+                    }
+                    var bomPerKitRatio = (parentTotalQty > 0) ? (totalBomQtyForOrder / parentTotalQty) : 0;
+                    var previouslyShippedKits = (bomPerKitRatio > 0) ? (parentLogisticQty / bomPerKitRatio) : 0;
+                    maxQty = Math.round((parentTotalQty - previouslyShippedKits) * 100) / 100;
+                } else {
+                    maxQty = parentTotalQty - parentLogisticQty;
                 }
-                else if(POItemList.length > 0){
-                    selectedSoli=POItemList[index];
+
+                if (userEnteredQty <= 0) {
+                    // helper.showToast('dismissible', 'Error', 'error', 'Invalid Quantity. Must be greater than 0.', component);
+
+                    sforce.one.showToast({
+                        "title": "Error",
+                        "message": 'Invalid Quantity. Must be greater than 0.',
+                        "type": "error"
+                    });
+                    return;
                 }
+                if (userEnteredQty > maxQty) {
+                    // helper.showToast('dismissible', 'Error', 'error', 'Quantity cannot exceed ' + maxQty + '.', component);
+                    sforce.one.showToast({
+                        "title": "Error",
+                        "message": 'Quantity cannot exceed ' + maxQty + '.',
+                        "type": "error"
+                    });
+                    return;
+                }
+
+                // Check Stock for Kits
+                if (isKit) {
+                    for (var j = 0; j < BomItemList.length; j++) {
+                        var b = BomItemList[j];
+                        if ((SoliList.length > 0 && b.OrderProdId === selectedSoli.Id) || 
+                            (ordItemList.length > 0 && b.OrderProdId === selectedSoli.Id)) {
+                            
+                            var componentApexQty = b.Bom.ERP7__Quantity__c || 0;
+                            var componentUnitRatio = (parentTotalQty > 0) ? (componentApexQty / parentTotalQty) : 0;
+                            var requiredStock = componentUnitRatio * userEnteredQty;
+                            
+                            if ((b.stock || 0) < requiredStock) {
+                                // helper.showToast('dismissible', 'Error', 'error', 'Insufficient stock for Kit components.', component);
+
+                                sforce.one.showToast({
+                                    "title": "Error",
+                                    "message": 'Insufficient stock for Kit components.',
+                                    "type": "error"
+                                });
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
             
             var LLIList=component.get('v.LLIList'); //LLIList=[];
             var LLIListMore=[]; 
+            var globalCounter = 1;
             console.log('selectedSoli json~>'+JSON.stringify(selectedSoli));
+            // if(soliListForCom.length > 0){
+            //     console.log('soliListForCom inhere');
+            //     var obj = { 
+            //         Name:selectedSoli.Name,
+            //         ERP7__Product__c:selectedSoli.ERP7__Product__c,
+            //         ERP7__Quantity__c:selectedSoli.ERP7__Quantity__c-selectedSoli.ERP7__Logistic_Quantity__c,
+            //         ERP7__Price_Product__c:selectedSoli.ERP7__Base_Price__c,                                     
+            //         ERP7__Sales_Order_Line_Item__c:selectedSoli.Id,   
+            //         ERP7__Logistic__c:''    
+            //     };
+            //     obj.ERP7__Product__r={
+            //         'Id':selectedSoli.ERP7__Product__c,
+            //         'Name':selectedSoli.ERP7__Product__r.Name 
+            //     };
+            //     LLIListMore.push(obj); //ERP7__Quantity__c
+            // }
             if(soliListForCom.length > 0){
                 console.log('soliListForCom inhere');
-                var obj = { 
-                    Name:selectedSoli.Name,
-                    ERP7__Product__c:selectedSoli.ERP7__Product__c,
-                    ERP7__Quantity__c:selectedSoli.ERP7__Quantity__c-selectedSoli.ERP7__Logistic_Quantity__c,
-                    ERP7__Price_Product__c:selectedSoli.ERP7__Base_Price__c,                                     
-                    ERP7__Sales_Order_Line_Item__c:selectedSoli.Id,   
-                    ERP7__Logistic__c:''    
-                };
-                obj.ERP7__Product__r={
-                    'Id':selectedSoli.ERP7__Product__c,
-                    'Name':selectedSoli.ERP7__Product__r.Name 
-                };
-                LLIListMore.push(obj); //ERP7__Quantity__c
+                
+                // --- NEW KIT LOGIC FOR SINGLE SOLI ---
+                if(selectedSoli.ERP7__Is_Kit__c){
+                    console.log('Processing Single Kit SOLI');
+
+                    var parentTotalQty = selectedSoli.ERP7__Quantity__c || 1;
+                    var userEnteredQty = parseFloat(selectedSoli.ERP7__Remaining_Quantity__c) || 0;
+
+                    for(var j in BomItemList){
+                        // Match BOM Product to SOLI Product AND Match Reference ID to SOLI ID
+                        if(selectedSoli.ERP7__Product__c == BomItemList[j].Bom.ERP7__BOM_Product__c && 
+                           BomItemList[j].OrderProdId == selectedSoli.Id){
+                            
+                            var apexTotalBomQty = BomItemList[j].Bom.ERP7__Quantity__c || 0;
+                            var unitBomQty = (parentTotalQty > 0) ? (apexTotalBomQty / parentTotalQty) : 0;
+                            var calculatedQty = unitBomQty * userEnteredQty;
+
+                            var obj = { 
+                                Name: BomItemList[j].Bom.ERP7__BOM_Component__r.Name + '-LogisticLine-' + (globalCounter++),
+                                ERP7__Product__c: BomItemList[j].Bom.ERP7__BOM_Component__c,
+                                ERP7__Quantity__c: calculatedQty,
+                                ERP7__Price_Product__c: (BomItemList[j].pbe != undefined) ? BomItemList[j].pbe.UnitPrice : 0,                  
+                                ERP7__Sales_Order_Line_Item__c: selectedSoli.Id,
+                                ERP7__Logistic__c: '',
+                                isKitComponent: true
+                            };
+                            obj.ERP7__Product__r={
+                                'Id': BomItemList[j].Bom.ERP7__BOM_Component__c,
+                                'Name': BomItemList[j].Bom.ERP7__BOM_Component__r.Name 
+                            };
+                            LLIListMore.push(obj); 
+                        }
+                    }
+                } 
+                // --- STANDARD SOLI LOGIC (Existing) ---
+                else {
+                    var obj = { 
+                        Name: (selectedSoli.ERP7__Product__r.Name || selectedSoli.Name ) +'-LogisticLine-'+(globalCounter++),
+                        ERP7__Product__c: selectedSoli.ERP7__Product__c,
+                        // ERP7__Quantity__c: selectedSoli.ERP7__Quantity__c - selectedSoli.ERP7__Logistic_Quantity__c,
+                        ERP7__Quantity__c: parseFloat(selectedSoli.ERP7__Remaining_Quantity__c) || 0,
+                        ERP7__Price_Product__c: selectedSoli.ERP7__Price_Product__c,                                     
+                        ERP7__Sales_Order_Line_Item__c: selectedSoli.Id,   
+                        ERP7__Logistic__c: ''    
+                    };
+                    obj.ERP7__Product__r = {
+                        'Id': selectedSoli.ERP7__Product__c,
+                        'Name': selectedSoli.ERP7__Product__r.Name 
+                    };
+                    LLIListMore.push(obj); 
+                }
             }
             else if(OrderListListForCom.length > 0){
                 console.log('OrderListListForCom inhere');
@@ -1132,18 +2122,26 @@
                 }
                 if(selectedSoli.Product2.ERP7__Is_Kit__c){
                     console.log('BomItemList : ',BomItemList);
+                    var parentTotalQty = selectedSoli.Quantity || 1;
+                    var userEnteredQty = parseFloat(selectedSoli.ERP7__Remaining_Quantity__c) || 0;
+
                     for(var j in BomItemList){
                         console.log('BomItemList[j].Bom.ERP7__BOM_Product__c : ',BomItemList[j].Bom.ERP7__BOM_Product__c);
                         console.log('BomItemList[j].OrderProdId : ',BomItemList[j].OrderProdId);
                         if(selectedSoli.Product2Id == BomItemList[j].Bom.ERP7__BOM_Product__c && BomItemList[j].OrderProdId == selectedSoli.Id){
                             console.log('in here 123');
+
+                            var apexTotalBomQty = BomItemList[j].Bom.ERP7__Quantity__c || 0;
+                            var unitBomQty = (parentTotalQty > 0) ? (apexTotalBomQty / parentTotalQty) : 0;
+                            var calculatedQty = unitBomQty * userEnteredQty;
                             var obj = { 
-                                Name: BomItemList[j].Bom.ERP7__BOM_Component__r.Name+'-LogisticLine-1',
+                                Name: BomItemList[j].Bom.ERP7__BOM_Component__r.Name+'-LogisticLine-' + (globalCounter++), 
                                 ERP7__Product__c:BomItemList[j].Bom.ERP7__BOM_Component__c,
-                                ERP7__Quantity__c:BomItemList[j].Bom.ERP7__Quantity__c,
+                                ERP7__Quantity__c:calculatedQty,
                                 ERP7__Price_Product__c: (BomItemList[j].pbe != undefined) ? BomItemList[j].pbe.UnitPrice : 0,                  
                                 ERP7__Order_Product__c:selectedSoli.Id,
-                                ERP7__Logistic__c:''
+                                ERP7__Logistic__c:'',
+                                isKitComponent: true
                             };
                             obj.ERP7__Product__r={
                                 'Id':BomItemList[j].Bom.ERP7__BOM_Component__c,
@@ -1155,9 +2153,9 @@
                 }
                 else{
                     var obj = { 
-                        Name:selectedSoli.Product2.Name+'-LogisticLine-1',
+                        Name:selectedSoli.Product2.Name+'-LogisticLine-'+(globalCounter++),
                         ERP7__Product__c:selectedSoli.Product2Id,
-                        ERP7__Quantity__c:selectedSoli.ERP7__Remaining_Quantity__c, //selectedSoli.Quantity-selectedSoli.ERP7__Logistic_Quantity__c,
+                        ERP7__Quantity__c: parseFloat(selectedSoli.ERP7__Remaining_Quantity__c) || 0, //selectedSoli.Quantity-selectedSoli.ERP7__Logistic_Quantity__c,
                         ERP7__Price_Product__c:selectedSoli.UnitPrice,                  
                         ERP7__Order_Product__c:selectedSoli.Id,
                         ERP7__Logistic__c:''
@@ -1192,7 +2190,7 @@
                     //updated by matheen on 7/8/25 for GIIH-686
                     if(selectedSoli.ERP7__Quantity__c < selectedSoli.ERP7__Remaining_Quantity__c){
                          obj = { 
-                        Name:selectedSoli.Name,
+                        Name:selectedSoli.Name + '-LogisticLine-' + (globalCounter++),
                         ERP7__Product__c:selectedSoli.ERP7__Product__c,
                         ERP7__Quantity__c:selectedSoli.ERP7__Quantity__c,
                         ERP7__Price_Product__c:selectedSoli.ERP7__Unit_Price__c,                  
@@ -1202,7 +2200,7 @@
                     }
                      else{
                         obj = { 
-                        Name:selectedSoli.Name,
+                        Name:selectedSoli.Name + '-LogisticLine-' + (globalCounter++),
                         ERP7__Product__c:selectedSoli.ERP7__Product__c,
                         ERP7__Quantity__c:selectedSoli.ERP7__Remaining_Quantity__c-selectedSoli.ERP7__Logistic_Quantity__c,
                         ERP7__Price_Product__c:selectedSoli.ERP7__Unit_Price__c,                  
@@ -1254,38 +2252,127 @@
         
     },
     
-    getLLIDelete:function(component,event,helper){ 
-        var deleteconfirm = confirm($A.get('$Label.c.Do_you_want_to_Delete_Item'));
-        if(deleteconfirm){
-            var LLIList=component.get("v.LLIList");
-            //delete LLIList[event.currentTarget.dataset.service];
-            console.log('LLIList bfr: ',LLIList);
-            var index=event.currentTarget.dataset.service;
-            LLIList.splice(index,1);
-            //  delete LLIList[index];
+    // below code commented by abubakar to add a new validation to delete all the kit items if end product kit, 
+    // getLLIDelete:function(component,event,helper){ 
+    //     var deleteconfirm = confirm($A.get('$Label.c.Do_you_want_to_Delete_Item'));
+    //     if(deleteconfirm){
+    //         var LLIList=component.get("v.LLIList");
+    //         //delete LLIList[event.currentTarget.dataset.service];
+    //         console.log('LLIList bfr: ',LLIList);
+    //         var index=event.currentTarget.dataset.service;
+    //         LLIList.splice(index,1);
+    //         //  delete LLIList[index];
             
-            component.set("v.LLIList",LLIList);
-            console.log('LLIList after: ',LLIList);
-            component.set("v.reRenderLogisticTable",false);
-            component.set("v.reRenderLogisticTable",true);
+    //         component.set("v.LLIList",LLIList);
+    //         console.log('LLIList after: ',LLIList);
+    //         component.set("v.reRenderLogisticTable",false);
+    //         component.set("v.reRenderLogisticTable",true);
             
-            // if(LLIList.length==1 || LLIList.length==0)  helper.getLLIDeleteSingle(component, event, helper);  
-            if(LLIList.length==0){   
-                component.set("v.LLIList",[]); 
-                helper.getLLIDeleteSingle(component, event, helper);  
-            }   
+    //         // if(LLIList.length==1 || LLIList.length==0)  helper.getLLIDeleteSingle(component, event, helper);  
+    //         if(LLIList.length==0){   
+    //             component.set("v.LLIList",[]); 
+    //             helper.getLLIDeleteSingle(component, event, helper);  
+    //         }   
             
-            if(component.get("v.selectedTab")=='log'){     
-                component.set("v.selectedTab",'soli');
-                component.set("v.selectedTab",'log');
-            }
-            else if(component.get("v.selectedTab")=='soli'){
-                component.set("v.selectedTab",'log');
-                component.set("v.selectedTab",'soli');
-            }
+    //         if(component.get("v.selectedTab")=='log'){     
+    //             component.set("v.selectedTab",'soli');
+    //             component.set("v.selectedTab",'log');
+    //         }
+    //         else if(component.get("v.selectedTab")=='soli'){
+    //             component.set("v.selectedTab",'log');
+    //             component.set("v.selectedTab",'soli');
+    //         }
             
-        }
+    //     }
       
+    // },
+
+    getLLIDelete: function(component, event, helper) {
+        // 1. Identify the item and its Parent ID
+        var index = event.currentTarget.dataset.service;
+        var LLIList = component.get("v.LLIList");
+        var itemToDelete = LLIList[index];
+        
+        // Resolve Parent ID (Works for SOLI, OrderItem, or PO Item)
+        var parentId = itemToDelete.ERP7__Sales_Order_Line_Item__c || 
+                       itemToDelete.ERP7__Order_Product__c || 
+                       itemToDelete.ERP7__Purchase_Line_Items__c;
+
+        // 2. Check if this is a Kit (Multiple logistic lines sharing the same Parent ID)
+        var isKit = false;
+        var relatedCount = 0;
+        
+        if (parentId) {
+            for(var i = 0; i < LLIList.length; i++) {
+                var pId = LLIList[i].ERP7__Sales_Order_Line_Item__c || 
+                          LLIList[i].ERP7__Order_Product__c || 
+                          LLIList[i].ERP7__Purchase_Line_Items__c;
+                if (pId === parentId) {
+                    relatedCount++;
+                }
+            }
+            // If more than 1 item shares the same parent, we treat it as a Kit bundle
+            if (relatedCount > 1) isKit = true;
+        }
+
+        // 3. Execution Logic
+        if (isKit) {
+            // --- KIT DELETION LOGIC ---
+            var confirmMsg = "This item is part of a Kit. Deleting it will remove all components of this Kit from the list. Do you want to proceed?";
+            if (confirm(confirmMsg)) {
+
+                console.log('LLIList bfr: ', JSON.stringify(LLIList));
+                
+                // A. Delete ALL Logistic Line Items associated with this Kit (Parent ID)
+                var newLLIList = LLIList.filter(function(item) {
+                    var pId = item.ERP7__Sales_Order_Line_Item__c || 
+                              item.ERP7__Order_Product__c || 
+                              item.ERP7__Purchase_Line_Items__c;
+                    return pId !== parentId; // Keep only items that DO NOT match the Kit's Parent ID
+                });
+                component.set("v.LLIList", newLLIList);
+                
+                // C. UI Refresh
+                component.set("v.reRenderLogisticTable", false);
+                component.set("v.reRenderLogisticTable", true);
+                
+                // If list is empty, reset with a blank instance
+                if (newLLIList.length === 0) {
+                    helper.getLLIDeleteSingle(component, event, helper);
+                }
+                
+                console.log('LLIList after: ', JSON.stringify(component.get("v.LLIList")));
+            }
+        } 
+        else {
+            // --- EXISTING STANDARD DELETE LOGIC ---
+            var deleteconfirm = confirm($A.get('$Label.c.Do_you_want_to_Delete_Item'));
+            if (deleteconfirm) {
+                console.log('LLIList bfr: ', JSON.stringify(LLIList));
+                // Delete single item by index
+                LLIList.splice(index, 1);
+                
+                component.set("v.LLIList", LLIList);
+                component.set("v.reRenderLogisticTable", false);
+                component.set("v.reRenderLogisticTable", true);
+                
+                if (LLIList.length === 0) {
+                    component.set("v.LLIList", []);
+                    helper.getLLIDeleteSingle(component, event, helper);
+                }
+
+                console.log('LLIList after: ', JSON.stringify(component.get("v.LLIList")));
+                
+                // Toggle tabs to force refresh (Original Logic)
+                if (component.get("v.selectedTab") == 'log') {
+                    component.set("v.selectedTab", 'soli');
+                    component.set("v.selectedTab", 'log');
+                } else if (component.get("v.selectedTab") == 'soli') {
+                    component.set("v.selectedTab", 'log');
+                    component.set("v.selectedTab", 'soli');
+                }
+            }
+        }
     },
     
     addLLI: function(component, event, helper){

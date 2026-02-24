@@ -1364,47 +1364,47 @@
                     
                 }
                 
-                  // 💸 Discount calculation (fixed, safe & clear)
-var val1 = parseFloat(event.getSource().get("v.value")) || 0;
-
-// --- Calculate discount amount ---
-var discountPct = parseFloat(component.get("v.discountAmount")) || 0;
-var discountAmt = (discountPct * val1 / 100);
-discountAmt = parseFloat(discountAmt.toFixed(2));
-
-console.log("💰 Discount %:", discountPct, "| Discount Amt:", discountAmt);
-
-// --- Get current tax amount ---
-var taxPct = parseFloat(component.get("v.taxAmount")) || 0;
-console.log("💸 Tax %:", taxPct);
-
-// --- Branch 1: Discount only (no tax) ---
-if (discountAmt > 0 && taxPct === 0) {
-    var invAmount = parseFloat(component.get("v.InvAmount")) || 0;
-    console.log("Original InvAmount:", invAmount);
-
-    var finalInvAmt = Math.max(invAmount - discountAmt, 0);
-    component.set("v.InvAmount", finalInvAmt);
-
-    console.log("✅ Final invoice amount after discount:", finalInvAmt.toFixed(2));
-
-// --- Branch 2: Both discount and tax ---
-} else if (taxPct > 0) {
-    console.log("📊 Applying both discount and tax calculations...");
-    console.log("Original tax %:", taxPct);
-
-    var orderAmount = parseFloat(component.get("v.orderAmount")* val1 / 100) || 0;
-    console.log("Current orderAmount:", orderAmount);
-
-    
-    component.set("v.InvAmount", orderAmount);
-
-    console.log("✅ Final invoice amount after discount & tax:", orderAmount.toFixed(2));
-
-// --- Branch 3: No discount or tax ---
-} else {
-    console.log("ℹ️ No discount or tax applied (amount ≤ 0).");
-}
+                  // Discount calculation (fixed, safe & clear)
+            var val1 = parseFloat(event.getSource().get("v.value")) || 0;
+            
+            // --- Calculate discount amount ---
+            var discountPct = parseFloat(component.get("v.discountAmount")) || 0;
+            var discountAmt = (discountPct * val1 / 100);
+            discountAmt = parseFloat(discountAmt.toFixed(2));
+            
+            console.log("Discount %:", discountPct, "| Discount Amt:", discountAmt);
+            
+            // --- Get current tax amount ---
+            var taxPct = parseFloat(component.get("v.taxAmount")) || 0;
+            console.log(" Tax %:", taxPct);
+            
+            // Discount only (Its not in funtion , its comemnted ) 
+            if (discountAmt > 0 && taxPct === 0) {
+                var invAmount = parseFloat(component.get("v.InvAmount")) || 0;
+                console.log("Original InvAmount:", invAmount);
+            
+                var finalInvAmt = Math.max(invAmount - discountAmt, 0);
+              //  component.set("v.InvAmount", finalInvAmt);
+            
+                console.log("Final invoice amount after discount:", finalInvAmt.toFixed(2));
+            
+            // Both discount and tax ---
+            } else if (taxPct > 0) {
+                console.log("Applying both discount and tax calculations...");
+                console.log("Original tax %:", taxPct);
+            
+                var orderAmount = parseFloat(component.get("v.orderAmount")* val1 / 100) || 0;
+                console.log("Current orderAmount:", orderAmount);
+            
+                
+                component.set("v.InvAmount", orderAmount);
+            
+                console.log("Final invoice amount after discount & tax:", orderAmount.toFixed(2));
+            
+            // No discount or tax ---
+            } else {
+                console.log(" No discount or tax applied (amount ≤ 0).");
+            }
 
                 console.log('inhere11');
             }else{
@@ -1430,26 +1430,21 @@ if (discountAmt > 0 && taxPct === 0) {
                 $A.enqueueAction(component.get("c.getallinvoiceLI"));
             }
         } catch (e) {
-    // 1) Raw object (best chance to see LockerService proxy)
     console.error('err raw ->', e);
 
-    // 2) Standard fields (even if non-enumerable)
     console.log('err.name:', e && e.name);
     console.log('err.message:', e && e.message);
     console.log('err.toString():', e && e.toString && e.toString());
 
-    // 3) Stack if present
     if (e && e.stack) {
         console.log('err.stack:\n' + e.stack);
     }
 
-    // 4) What properties does it actually have?
     try {
         console.log('err keys:', Object.keys(e));
         console.log('err own props:', Object.getOwnPropertyNames(e));
     } catch (_) {}
 
-    // 5) JSON as a last resort
     try {
         console.log('err JSON:', JSON.stringify(e));
     } catch (_) {

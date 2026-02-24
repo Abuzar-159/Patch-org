@@ -396,18 +396,56 @@ trigger InventoryManaging_SalesOrderLineItems on Sales_Order_Line_Item__c(before
                 /*
                 FOR UPDATING LOGISTIC QUANTITY OF SOLI Starts
                 */
+                    // if (PreventRecursiveLedgerEntry.SOLI_CalculateLogisticQuantity && !System.Trigger.isInsert) {
+                    //     List<ERP7__Logistic_Line_Item__c> logList = [SELECT Id, Name, ERP7__Quantity__c, ERP7__Sales_Order_Line_Item__c FROM ERP7__Logistic_Line_Item__c WHERE ERP7__Sales_Order_Line_Item__c In :System.Trigger.New];
+                    //     if(logList.size() > 0) PreventRecursiveLedgerEntry.SOLI_CalculateLogisticQuantity = false;
+                    //     //  List<OrderItem> ord = System.Trigger.New ;  
+                    //     if(logList.size() > 0){
+                    //         for(ERP7__Sales_Order_Line_Item__c soli : System.Trigger.New){ 
+                    //             if (soli.Id == null) continue;
+
+                    //             Decimal LogQuantity = 0; 
+                    //             for(ERP7__Logistic_Line_Item__c logLi : logList){
+                    //                 if(logLi.ERP7__Sales_Order_Line_Item__c == soli.Id && logLi.ERP7__Quantity__c != Null) LogQuantity += logLi.ERP7__Quantity__c;                                           
+                    //             }
+                    //             soli.ERP7__Logistic_Quantity__c = LogQuantity; 
+                    //         } 
+                    //     }
+                    // }   
+
                     if (PreventRecursiveLedgerEntry.SOLI_CalculateLogisticQuantity) {
-                        List<ERP7__Logistic_Line_Item__c> logList = [SELECT Id, Name, ERP7__Quantity__c, ERP7__Sales_Order_Line_Item__c FROM ERP7__Logistic_Line_Item__c WHERE ERP7__Sales_Order_Line_Item__c In :System.Trigger.New];
-                        if(logList.size() > 0) PreventRecursiveLedgerEntry.SOLI_CalculateLogisticQuantity = false;
-                        //  List<OrderItem> ord = System.Trigger.New ;  
-                        for(ERP7__Sales_Order_Line_Item__c soli : System.Trigger.New){ 
-                            Decimal LogQuantity = 0; 
-                            for(ERP7__Logistic_Line_Item__c logLi : logList){
-                                if(logLi.ERP7__Sales_Order_Line_Item__c == soli.Id && logLi.ERP7__Quantity__c != Null) LogQuantity += logLi.ERP7__Quantity__c;                                           
+                        // CASE 1: INSERT - Just set it to 0. No query needed.
+                        if (System.Trigger.isInsert) {
+                            for (ERP7__Sales_Order_Line_Item__c soli : (List<ERP7__Sales_Order_Line_Item__c>)System.Trigger.New) {
+                                soli.ERP7__Logistic_Quantity__c = 0;
                             }
-                            soli.ERP7__Logistic_Quantity__c = LogQuantity; 
-                        } 
-                    }   
+                        }
+                        
+                        // CASE 2: UPDATE - Run your existing logic (Calculations)
+                        else if (System.Trigger.isUpdate) {
+                            List<ERP7__Logistic_Line_Item__c> logList = [
+                                SELECT Id, Name, ERP7__Quantity__c, ERP7__Sales_Order_Line_Item__c 
+                                FROM ERP7__Logistic_Line_Item__c 
+                                WHERE ERP7__Sales_Order_Line_Item__c IN :System.Trigger.New
+                            ];
+
+                            // Only run logic if we found related items
+                            if (logList.size() > 0) {
+                                PreventRecursiveLedgerEntry.SOLI_CalculateLogisticQuantity = false;
+
+                                for (ERP7__Sales_Order_Line_Item__c soli : (List<ERP7__Sales_Order_Line_Item__c>)System.Trigger.New) { 
+                                    Decimal LogQuantity = 0; 
+                                    for (ERP7__Logistic_Line_Item__c logLi : logList) {
+                                        // Safe to check ID now because we are in Update context
+                                        if (logLi.ERP7__Sales_Order_Line_Item__c == soli.Id && logLi.ERP7__Quantity__c != null) {
+                                            LogQuantity += logLi.ERP7__Quantity__c;                                       
+                                        }
+                                    }
+                                    soli.ERP7__Logistic_Quantity__c = LogQuantity; 
+                                }
+                            }
+                        }
+                    }
                 /*
                 FOR UPDATING LOGISTIC QUANTITY OF SOLI Ends
                 */

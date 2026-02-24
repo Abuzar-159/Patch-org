@@ -233,9 +233,9 @@
                                     <th width="10%" class="slds-text-heading--label" scope="col">{!$Label.c.PackageSlip_List_Line_Item_Name} </th>                                                       
                                     <th class="slds-text-heading--label" scope="col">{!$Label.c.AddSubscription_Product} </th>                                                        
                                     <th class="slds-text-heading--label" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price}</th>
-                                    <aura:if isTrue="{!v.orderId != ''}">
+                                    <!-- <aura:if isTrue="{!v.orderId != ''}"> -->
                                         <th width="10%" class="slds-text-heading--label" scope="col">{!$Label.c.PackageSlip_List_Quantity}</th>
-                                    </aura:if>
+                                    <!-- </aura:if> -->
                                     <th width="15%" class="slds-text-heading--label" scope="col">{!$Label.c.REMAINING_QUANTITY}</th>  
                                     <th width="15%" class="slds-text-heading--label" scope="col">{!$Label.c.LOGISTIC_QUANTITY}</th>
                                     <aura:if isTrue="{!v.POId == ''}">
@@ -252,39 +252,75 @@
                                 <aura:if isTrue="{!v.reRenderSOLItable}">     
                                     <aura:if isTrue="{!v.SOId != ''}">
                                         <aura:iteration items="{!v.SoliList}" var="s" indexVar="Index">                         
-                                            <tr>                                          
-                                                <td>                             
+                                            <tr>  
+                                                <td>         
                                                     <div class="slds-p-top--xx-small"> 
-                                                        <span title="{!s.ERP7__Active__c?'':'Not Allowed'}"> 
-                                                            <lightning:input type="checkbox"  value="{!s.Id}" onchange="{!c.selectSoli}" disabled="{!or(s.ERP7__Active__c==false,or(v.DistributeChannelId == '',v.DistributeChannelId == Undefined))}" aura:id="schId" />                                        
-                                                        </span> 
+                                                        <span> 
+                                                            <aura:if isTrue="{!s.ERP7__Is_Kit__c}">
+                                                                <!-- <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{!or(s.AllowKit == 'Not-Allowed', s.IsExploded)}" aura:id="schId" /> -->
+                                                                <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" 
+                                                                disabled="{!or(or(s.AllowKit == 'Not-Allowed', s.IsExploded), s.ERP7__Remaining_Quantity__c == 0)}" 
+                                                                aura:id="schId" />
+                                                            <aura:set attribute="else">
+                                                                <aura:if isTrue="{!or(or(or(lessthanorequal(s.ERP7__Remaining_Quantity__c,0),s.ERP7__Remaining_Quantity__c > s.ERP7__Quantity__c),s.ERP7__Remaining_Quantity__c == ''),lessthan(s.ERP7__Reserved_Quantity__c,s.ERP7__Remaining_Quantity__c))}">
+                                                                    <lightning:input type="checkbox" value="{!s.Id}" checked="false" disabled="true"  aura:id="schId" />     
+                                                                    
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{!or(or(s.ERP7__Active__c!=true,or(v.DistributeChannelId == '',v.DistributeChannelId == Undefined)),(s.ERP7__Remaining_Quantity__c > s.ERP7__Reserved_Quantity__c))}" aura:id="schId" />      
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </aura:set>
+                                                            </aura:if>                                 
+                                                        </span>  
                                                     </div>
-                                                </td>                                        
+                                                </td>
+                                                
                                                 <td>                             
                                                     <div class="slds-p-top--xx-small"> 
-                                                        
                                                         <div class="slds-truncate-overide" >
                                                             <a class="svg" target="_blank" onclick="{!c.showLogisticRecordDetailsPage}" href="{!v.nameUrl}" data-record="{!s.Id}">{!s.Name}</a> 
                                                         </div>
                                                     </div>
                                                 </td>
+
                                                 <td> 
                                                     <div class="slds-p-top--xx-small"> 
-                                                        
                                                         <div class="slds-truncate-overide-180" >
                                                             <a class="svg" target="_blank" onclick="{!c.showLogisticRecordDetailsPage}" href="{!v.nameUrl}" data-record="{!s.ERP7__Product__c}">{!s.ERP7__Product__r.Name}</a>
                                                         </div>
-                                                        
                                                     </div>
-                                                </td>                                        
+                                                </td>                         
+
                                                 <td>  
                                                     <div class=" slds-p-top--xx-small">
-                                                        <lightning:formattedNumber style="currency" value="{!s.ERP7__Base_Price__c}" />
+                                                        <lightning:formattedNumber style="currency" value="{!s.ERP7__Price_Product__c}" />
                                                     </div>
                                                 </td>
+
                                                 <td> 
                                                     <div class="slds-p-top--xx-small" >
                                                         <lightning:formattedNumber value="{!s.ERP7__Quantity__c}" />
+                                                    </div>
+                                                </td>
+
+                                                <td> 
+                                                    <div class=" slds-p-top--xx-small" >
+                                                        <aura:if isTrue="{!s.ERP7__Is_Kit__c}">
+                                                            <lightning:input type="number" 
+                                                                            value="{!s.ERP7__Remaining_Quantity__c}" 
+                                                                            class="nolble" 
+                                                                            name="{!Index + '_SOLI'}"
+                                                                            onchange="{!c.handleQtyChange}"
+                                                                            disabled="{!s.ERP7__Remaining_Quantity__c == 0}"/>
+                                                        <aura:set attribute="else">
+                                                            <lightning:input type="number" 
+                                                                            value="{!s.ERP7__Remaining_Quantity__c}" 
+                                                                            name="{!Index + '_SOLI'}"
+                                                                            onchange="{!c.handleQtyChange}"
+                                                                            disabled="{!s.ERP7__Remaining_Quantity__c == 0}"
+                                                                            class="nolble"/>
+                                                        </aura:set>
+                                                        </aura:if>
                                                     </div>
                                                 </td>
                                                 
@@ -293,67 +329,108 @@
                                                         <lightning:formattedNumber value="{!s.ERP7__Logistic_Quantity__c}" />
                                                     </div>
                                                 </td> 
+
                                                 <td>   
                                                     <div class="slds-p-top--xx-small">
                                                         <lightning:formattedNumber value="{!s.ERP7__Picked_Quantity__c}" />
                                                     </div>
                                                 </td> 
+
                                                 <td>   
                                                     <div class="slds-p-top--xx-small">
                                                         <lightning:formattedNumber value="{!s.ERP7__Packed_Quantity__c}" />
                                                     </div>
                                                 </td> 
+
                                                 <td>   
                                                     <div class="slds-p-top--xx-small">
                                                         <lightning:formattedNumber value="{!s.ERP7__Shipped_Quantity__c}" />
                                                     </div>
                                                 </td> 
+
                                                 <td>   
                                                     <div class="slds-p-top--xx-small"> 
-                                                        <lightning:formattedNumber value="{!s.ERP7__Reserved_Quantity__c}" />
+                                                        <aura:if isTrue="{!s.ERP7__Is_Kit__c}">
+                                                            <lightning:formattedtext value="Kit Product" />
+                                                            <aura:set attribute="else">
+                                                                <lightning:formattedNumber value="{!s.ERP7__Reserved_Quantity__c}" />
+                                                            </aura:set>
+                                                        </aura:if>
                                                     </div>
                                                 </td>
-                                                <td>   
-                                                    
-                                                    
-                                                    <div data-service="{!Index}"  
-                                                         title="{!s.ERP7__Active__c!=true?'Not Allowed':''}">
-                                                        
-                                                        
-                                                        <p class="{!s.ERP7__Active__c!=true?'badge badge-success customstandard a_disabled':'CursorPointerClass badge badge-success customstandard'}">
-                                                            <lightning:icon iconName="standard:fulfillment_order" size="x-small" variant="inverse" class="standard-address"></lightning:icon>&nbsp;{!$Label.c.Pack_Logistic}
-                                                        </p>
-                                                        
-                                                    </div> 
+
+                                                <td>    
+                                                    <aura:if isTrue="{!s.ERP7__Is_Kit__c}">
+                                                        <div data-service="{!Index}" onclick="{!c.singleConvertToLogistic}" 
+                                                            class="{!or(or(s.AllowKit == 'Not-Allowed', s.IsExploded), s.ERP7__Remaining_Quantity__c == 0) ? 'a_disabled badge badge-info customstandard' : 'badge badge-info customstandard CursorPointerClass slds-p-top--xx-small'}" >
+                                                            <lightning:icon iconName="standard:fulfillment_order" size="x-small" variant="inverse" ></lightning:icon>&nbsp;{!$Label.c.Pack_Logistic}
+                                                        </div>
+                                                    <aura:set attribute="else">
+                                                        <aura:if isTrue="{!or(or(or(lessthanorequal(s.ERP7__Remaining_Quantity__c,0),s.ERP7__Remaining_Quantity__c > s.ERP7__Quantity__c),s.ERP7__Remaining_Quantity__c == ''),(lessthan(s.ERP7__Reserved_Quantity__c, s.ERP7__Remaining_Quantity__c)))}">
+                                                            <div data-service="{!Index}"  class="a_disabled badge badge-info customstandard" >
+                                                                <lightning:icon iconName="standard:fulfillment_order" size="x-small" variant="inverse" class="standard-address"></lightning:icon>&nbsp;{!$Label.c.Pack_Logistic} 
+                                                            </div> 
+                                                            
+                                                            <aura:set attribute="else">
+                                                                <div data-service="{!Index}" onclick="{!c.singleConvertToLogistic}" class="{!(!or(or(s.ERP7__Active__c!=true,or(v.DistributeChannelId == '',v.DistributeChannelId == Undefined)),(s.ERP7__Remaining_Quantity__c > s.ERP7__Reserved_Quantity__c)))?'badge badge-info customstandard CursorPointerClass slds-p-top--xx-small':'a_disabled badge badge-info '}" >
+                                                                    <lightning:icon iconName="standard:fulfillment_order" size="x-small" variant="inverse" ></lightning:icon>&nbsp;{!$Label.c.Pack_Logistic} 
+                                                                </div> 
+                                                            </aura:set>
+                                                        </aura:if>
+                                                    </aura:set>
+                                                    </aura:if>
                                                 </td> 
-                                            </tr>   
-                                            
-                                        </aura:iteration> 
+                                            </tr>
+
+                                            <aura:if isTrue="{!s.ERP7__Is_Kit__c}">
+                                                <aura:iteration items="{!v.BomItemList}" var="BOM" indexVar="Index">
+                                                    <aura:if isTrue="{!s.Id == BOM.OrderProdId}"> 
+                                                        <tr>  
+                                                            <td><div class="slds-p-top--xx-small"></div></td>
+                                                            <td><div class="slds-p-top--xx-small"></div></td>
+                                                            <td> 
+                                                                <div class="slds-p-top--xx-small"> 
+                                                                    <div class="slds-truncate-overide-180">
+                                                                        <lightning:formattedUrl value="{!'/'+BOM.Bom.ERP7__BOM_Component__c}" label="{!BOM.Bom.ERP7__BOM_Component__r.Name}" target="_blank" />
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber style="currency" value="{!BOM.pbe.UnitPrice}" /></div></td>                
+                                                            <td><div class=" slds-p-top--xx-small" ><lightning:formattedNumber value="{!BOM.Bom.ERP7__Quantity__c}" /></div></td>
+                                                            <td><div class=" slds-p-top--xx-small" ></div></td>
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber value="" /></div></td> 
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber value="" /></div></td> 
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber value="" /></div></td> 
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber value="" /></div></td> 
+                                                            <td><div class="slds-p-top--xx-small"><lightning:formattedNumber value="{!BOM.stock}" /></div></td>
+                                                            <td></td> 
+                                                        </tr> 
+                                                    </aura:if>
+                                                </aura:iteration> 
+                                            </aura:if>
+                                        </aura:iteration>
                                     </aura:if>
                                     <aura:if isTrue="{!v.orderId != ''}">
                                         <aura:iteration items="{!v.OrdItemList}" var="s" indexVar="Index">                         
                                             <tr>  
                                                 <td>                             
                                                     <div class=" slds-p-top--xx-small"> 
-                                                        <span > 
-                                                            
+                                                        <span> 
                                                             <aura:if isTrue="{!s.Product2.ERP7__Is_Kit__c}">
+                                                                <!-- <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{!or(s.AllowKit == 'Not-Allowed', s.IsExploded)}" aura:id="schId" /> -->
+                                                                <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" 
+                                                                    disabled="{!or(or(s.AllowKit == 'Not-Allowed', s.IsExploded), s.ERP7__Remaining_Quantity__c == 0)}" 
+                                                                    aura:id="schId" />
                                                                 
-                                                                
-                                                                <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{!or(s.AllowKit == 'Not-Allowed', s.IsExploded)}" aura:id="schId" />
-                                                                
-                                                                
-                                                                
-                                                                <aura:set attribute="else">
-                                                                    <aura:if isTrue="{!or(or(or(lessthanorequal(s.ERP7__Remaining_Quantity__c,0),s.ERP7__Remaining_Quantity__c > s.Quantity),s.ERP7__Remaining_Quantity__c == ''),lessthan(s.ERP7__Reserved_Quantity__c,s.ERP7__Remaining_Quantity__c))}">
-                                                                        
-                                                                        <lightning:input type="checkbox" value="{!s.Id}" checked="false" disabled="true"  aura:id="schId" />     
-                                                                        <aura:set attribute="else">
-                                                                            <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{(!or(or(s.ERP7__Active__c!=true,or(v.DistributeChannelId == '',v.DistributeChannelId == Undefined)),(s.ERP7__Remaining_Quantity__c > s.ERP7__Reserved_Quantity__c))}" aura:id="schId" />      
-                                                                        </aura:set>
-                                                                    </aura:if>
-                                                                </aura:set>
-                                                                
+                                                            <aura:set attribute="else">
+                                                                <aura:if isTrue="{!or(or(or(lessthanorequal(s.ERP7__Remaining_Quantity__c,0),s.ERP7__Remaining_Quantity__c > s.Quantity),s.ERP7__Remaining_Quantity__c == ''),lessthan(s.ERP7__Reserved_Quantity__c,s.ERP7__Remaining_Quantity__c))}">
+                                                                    
+                                                                    <lightning:input type="checkbox" value="{!s.Id}" checked="false" disabled="true"  aura:id="schId" />     
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:input type="checkbox" value="{!s.Id}" checked="{!s.checked}" onchange="{!c.selectSoli}" disabled="{(!or(or(s.ERP7__Active__c!=true,or(v.DistributeChannelId == '',v.DistributeChannelId == Undefined)),(s.ERP7__Remaining_Quantity__c > s.ERP7__Reserved_Quantity__c))}" aura:id="schId" />      
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </aura:set>
                                                             </aura:if>                                 
                                                         </span>  
                                                     </div>
@@ -387,8 +464,29 @@
                                                 
                                                 <td> 
                                                     <div class=" slds-p-top--xx-small" >
-                                                        <lightning:input type="number" value="{!s.ERP7__Remaining_Quantity__c}" class="nolble"/>
-                                                        <!--lightning:formattedNumber value="{!s.Quantity}" /-->
+                                                        <!-- <aura:if isTrue="{!s.Product2.ERP7__Is_Kit__c}">
+                                                            <lightning:input type="number" value="{!s.ERP7__Remaining_Quantity__c}" class="nolble" disabled="{!s.ERP7__Remaining_Quantity__c == 0}"/>
+                                                        <aura:set attribute="else">
+                                                            <lightning:input type="number" value="{!s.ERP7__Remaining_Quantity__c}" class="nolble"/>
+                                                        </aura:set>
+                                                        </aura:if> -->
+
+                                                        <aura:if isTrue="{!s.Product2.ERP7__Is_Kit__c}">
+                                                            <lightning:input type="number" 
+                                                                            value="{!s.ERP7__Remaining_Quantity__c}" 
+                                                                            class="nolble" 
+                                                                            name="{!Index + '_ORD'}"
+                                                                            onchange="{!c.handleQtyChange}"
+                                                                            disabled="{!s.ERP7__Remaining_Quantity__c == 0}"/>
+                                                        <aura:set attribute="else">
+                                                            <lightning:input type="number" 
+                                                                            value="{!s.ERP7__Remaining_Quantity__c}" 
+                                                                            name="{!Index + '_ORD'}"
+                                                                            onchange="{!c.handleQtyChange}"
+                                                                            disabled="{!s.ERP7__Remaining_Quantity__c == 0}"
+                                                                            class="nolble"/>
+                                                        </aura:set>
+                                                        </aura:if>
                                                     </div>
                                                 </td>
                                                 
@@ -424,14 +522,11 @@
                                                 </td>
                                                 <td>    
                                                     
-                                                    <aura:if isTrue="{!s.Product2.ERP7__Is_Kit__c}">
-                                                        
-                                                        
-                                                        <div data-service="{!Index}" onclick="{!c.singleConvertToLogistic}" class="{!or(s.AllowKit == 'Not-Allowed', s.IsExploded) ? 'a_disabled badge badge-info customstandard' : 'badge badge-info customstandard CursorPointerClass slds-p-top--xx-small'}" >
-                                                            
+                                                    <aura:if isTrue="{!s.Product2.ERP7__Is_Kit__c}">   
+                                                        <div data-service="{!Index}" onclick="{!c.singleConvertToLogistic}" 
+                                                            class="{!or(or(s.AllowKit == 'Not-Allowed', s.IsExploded), s.ERP7__Remaining_Quantity__c == 0) ? 'a_disabled badge badge-info customstandard' : 'badge badge-info customstandard CursorPointerClass slds-p-top--xx-small'}" >
                                                             <lightning:icon iconName="standard:fulfillment_order" size="x-small" variant="inverse" ></lightning:icon>&nbsp;{!$Label.c.Pack_Logistic}
-                                                            
-                                                        </div> 
+                                                        </div>
                                                         
                                                         <aura:set attribute="else">
                                                             <aura:if isTrue="{!or(or(or(lessthanorequal(s.ERP7__Remaining_Quantity__c,0),s.ERP7__Remaining_Quantity__c > s.Quantity),s.ERP7__Remaining_Quantity__c == ''),(lessthan(s.ERP7__Reserved_Quantity__c, s.ERP7__Remaining_Quantity__c)))}">
@@ -839,7 +934,7 @@
                                         <th class="slds-text-heading--label" scope="col">{!$Label.c.AddSubscription_Product}<span class="red">*</span></th>
                                         <th class="slds-text-heading--label" scope="col">{!$Label.c.PackageSlip_List_Quantity}<span class="red">*</span></th>                        
                                         <th class="slds-text-heading--label" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price}</th>   
-                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.InventoryConsole_Total_Price}</th> 
+                                        <th class="slds-text-heading--label" scope="col">{!$Label.c.InvoiceSubTotal}</th> 
                                          
                                            
                                         <aura:if isTrue="{!and(v.LogId != null ,v.LogId != '')}">
@@ -876,8 +971,14 @@
                                                 </td>                                
                                                 <td>  
                                                     <div class=" slds-p-top--xx-small">
-                                                        <lightning:input type="text" variant="label-hidden" value="{!i.ERP7__Quantity__c}" name="{!Index}" onchange="{!c.verifyQuantity}" aura:id="loliQuantityIds" disabled="{!and(v.LogId != null ,v.LogId != '')}"/> 
-                                                        
+                                                        <!-- <lightning:input type="text" variant="label-hidden" value="{!i.ERP7__Quantity__c}" name="{!Index}" onchange="{!c.verifyQuantity}" aura:id="loliQuantityIds" disabled="{!and(v.LogId != null ,v.LogId != '')}"/>  -->
+                                                        <lightning:input type="text" 
+                                                            variant="label-hidden" 
+                                                            value="{!i.ERP7__Quantity__c}" 
+                                                            name="{!Index}" 
+                                                            onchange="{!c.verifyQuantity}" 
+                                                            aura:id="loliQuantityIds" 
+                                                            disabled="{!or(and(v.LogId != null ,v.LogId != ''), i.isKitComponent)}"/>
                                                     </div> 
                                                 </td>                                  
                                                 <td>   

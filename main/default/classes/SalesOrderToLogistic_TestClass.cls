@@ -72,7 +72,7 @@ Private class SalesOrderToLogistic_TestClass {
         List<OrderItem> orditems = new List<OrderItem> ();
         orditems.add(orditem);
         try{ SalesOrderToLogistic.getordItemList(ord1.Id); }catch(Exception e){}
-        try{ SalesOrderToLogistic.getupdatedstocksDC(JSON.serialize(orditems),channel.Id,dc.Id,ord1.Id,''); }catch(Exception e){}
+        try{ SalesOrderToLogistic.getupdatedstocksDC(JSON.serialize(orditems),channel.Id,dc.Id,ord1.Id,'', 'Order'); }catch(Exception e){}
       try{ SalesOrderToLogistic.getSoliList(salOr.Id);  }catch(Exception e){}
        try{SalesOrderToLogistic.getLogisticExisting(salOr.Id,'',''); }catch(Exception e){}//ord1.Id 
        try{SalesOrderToLogistic.getLogisticExisting('',ord1.Id,''); }catch(Exception e){}
@@ -95,8 +95,93 @@ Private class SalesOrderToLogistic_TestClass {
         PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = true;
         ERP7__Stock_Outward_Line_Item__c stock = new ERP7__Stock_Outward_Line_Item__c(Name= name ,Product__c=Product.Id,ERP7__Active__c =true,ERP7__Site_Product_Service_Inventory_Stock__c =WarehouseItemInventoryStock.Id,ERP7__Sales_Order_Line_Item__c =solim.Id,ERP7__Sales_Order__c =salOr.Id,ERP7__Logistic_Line_Item__c = loli.Id);
         insert stock;
-        try{ SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'',''); }catch(Exception e){}
+        try{ SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'','', ''); }catch(Exception e){}
         SalesOrderToLogistic.getUpdateLogistic(LogisticJSON,LLIListJSON);
+
+       // ---------------------------------------------------------
+       // NEW TEST COVERAGE FOR getupdatedstocksDC
+       // ---------------------------------------------------------
+
+       // 1. Cover Logic for Logistic Line Items (LogItems param)
+       List<ERP7__Logistic_Line_Item__c> lliListForTest = [SELECT Id, Name, ERP7__Product__c, ERP7__Quantity__c FROM ERP7__Logistic_Line_Item__c WHERE Id = :loli.Id];
+       String logItemsJsonParam = JSON.serialize(lliListForTest);
+       SalesOrderToLogistic.getupdatedstocksDC('', channel.Id, dc.Id, '', logItemsJsonParam, '');
+
+
+       // 2. Cover Logic for Sales Order (idType == 'SalesOrder') - Basic Scenario
+       List<ERP7__Sales_Order_Line_Item__c> soliListForTest = [SELECT Id, ERP7__Product__c, ERP7__Quantity__c, ERP7__Logistic_Quantity__c, ERP7__Is_Kit__c, ERP7__Inventory_Tracked__c, ERP7__Explode__c FROM ERP7__Sales_Order_Line_Item__c WHERE Id = :solim.Id];
+       String soliJsonParam = JSON.serialize(soliListForTest);
+       SalesOrderToLogistic.getupdatedstocksDC(soliJsonParam, channel.Id, dc.Id, salOr.Id, '', 'SalesOrder');
+
+
+       // 3. Cover Logic for Sales Order (Kit Product & Exploded Check)
+       // A. Setup Kit Product Data
+       Product.ERP7__Is_Kit__c = true;
+       Product.ERP7__Track_Inventory__c = false;
+       update Product;
+
+       // B. Create Component Product & Inventory Header
+       Product2 compProd = new Product2(Name = 'Component Prod', IsActive = true, ERP7__Track_Inventory__c = true);
+       insert compProd;
+       
+       // Create Inventory Stock Header (Active = true)
+       Inventory_Stock__c compStock = new Inventory_Stock__c(
+           Organisation__c = orgn.id, 
+           Name='CompStock', 
+           Active__c=true, 
+           Warehouse__c=site.Id, 
+           Product__c=compProd.Id
+       );
+       insert compStock;
+
+       // C. INSERT STOCK INWARD to drive the Roll-Up (Sets Stock to 100)
+       // This updates 'ERP7__Number_of_Item_Purchased_In__c' on the parent Stock
+       Stock_Inward_Line_Item__c inwardItem = new Stock_Inward_Line_Item__c(
+           Name = 'Stock In',
+           ERP7__Active__c = true,
+           ERP7__Site_ProductService_InventoryStock__c = compStock.Id,
+           ERP7__Product__c = compProd.Id,
+           ERP7__Quantity__c = 100
+       );
+       insert inwardItem;
+
+       // D. Create BOM Version & BOM Line
+       ERP7__Version__c ver = new ERP7__Version__c(ERP7__Product__c = Product.Id, ERP7__Status__c = 'Certified', ERP7__Active__c = true, ERP7__Start_Date__c = Date.today());
+       insert ver;
+       
+       ERP7__BOM__c bomLine = new ERP7__BOM__c(
+           BOM_Version__c = ver.Id, 
+           ERP7__BOM_Product__c = Product.Id, 
+           ERP7__BOM_Component__c = compProd.Id, 
+           ERP7__Quantity__c = 1, 
+           ERP7__Active__c = true
+       );
+       insert bomLine;
+
+       // E. Update SOLI to match Kit/Exploded conditions
+       solim.ERP7__Explode__c = true; 
+       solim.ERP7__Version__c = ver.Id; 
+       update solim;
+
+       // F. Create MRP Record
+       List<RecordType> mrpRt = [SELECT Id FROM RecordType WHERE SobjectType = 'ERP7__MRP__c' AND DeveloperName = 'MRP_Kit' LIMIT 1];
+       if(!mrpRt.isEmpty()){
+           ERP7__MRP__c mrp = new ERP7__MRP__c(
+               ERP7__Sales_Order_Line_Item__c = solim.Id, 
+               RecordTypeId = mrpRt[0].Id, 
+               ERP7__MRP_Product__c = compProd.Id,
+               ERP7__Order_Product__c = null 
+           );
+           insert mrp;
+       }
+
+       // G. Call method again with updated Kit/Exploded Data
+       soliListForTest = [SELECT Id, ERP7__Product__c, ERP7__Quantity__c, ERP7__Logistic_Quantity__c, ERP7__Is_Kit__c, ERP7__Inventory_Tracked__c, ERP7__PriceBookId__c, ERP7__Version__c, ERP7__Explode__c FROM ERP7__Sales_Order_Line_Item__c WHERE Id = :solim.Id];
+       soliJsonParam = JSON.serialize(soliListForTest);
+       
+       SalesOrderToLogistic.getupdatedstocksDC(soliJsonParam, channel.Id, dc.Id, salOr.Id, '', 'SalesOrder');
+
+       
        String salName = 'ERP';
        String sal1Name = 'ERP';
        System.assertEquals(salName, sal1Name); 
@@ -140,7 +225,7 @@ Private class SalesOrderToLogistic_TestClass {
         String LogisticJSON1='{"ERP7__Type__c":"Outbound","Name":"Test","ERP7__Account__c":"'+acc1.Id+'","ERP7__From_Address__c":"'+address.Id+'","ERP7__Channel__c":"'+channel.Id+'","ERP7__Distribution_Channel__c":"'+dc.Id+'","ERP7__Order_S__c":"'+ord1.Id+'"}';
        
        String LLIListJSON1='[{"Name":"SOLI-23420","ERP7__Product__c":"'+Product.Id+'","ERP7__Quantity__c":1,"ERP7__Price_Product__c":215,"ERP7__Ship_From_Address__c" : "'+address.Id+'","ERP7__Order_Product__c":"'+orditem.Id+'","ERP7__Logistic__c":"'+log1.Id+'"}]';//,"ERP7__Sales_Order_Line_Item__c":"a0f1o00000W5AUSAA3","ERP7__Logistic__c":""
-        try{ SalesOrderToLogistic.getCreateLogistic(LogisticJSON1, LLIListJSON1,'',''); }catch(Exception e){}
+        try{ SalesOrderToLogistic.getCreateLogistic(LogisticJSON1, LLIListJSON1,'','', ''); }catch(Exception e){}
         String salName = 'ERP7';
         String sal1Name = 'ERP7';
         System.assertEquals(salName, sal1Name);
@@ -242,7 +327,7 @@ Private class SalesOrderToLogistic_TestClass {
         String LogisticJSON='{"ERP7__Type__c":"Outbound","Name":"Test","ERP7__Account__c":"'+acc.Id+'","ERP7__From_Address__c":"'+address.Id+'","ERP7__Channel__c":"'+channel.Id+'","ERP7__Distribution_Channel__c":"'+dc.Id+'","ERP7__Sales_Order__c":"'+salOr.Id+'"}';
        
        String LLIListJSON='[{"Name":"SOLI-23420","ERP7__Product__c":"'+pro.Id+'","ERP7__Quantity__c":1,"ERP7__Price_Product__c":215,"ERP7__Ship_From_Address__c" : "'+address.Id+'","ERP7__Sales_Order_Line_Item__c":"'+solim.Id+'"}]';
-     try{  SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'',''); }catch(Exception e){}
+     try{  SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'','', ''); }catch(Exception e){}
      try{  SalesOrderToLogistic.getLogisticExisting('','',PO.Id);  }catch(Exception e){}
        String salName = 'ERP';
        String sal1Name = 'ERP';
@@ -302,7 +387,7 @@ Private class SalesOrderToLogistic_TestClass {
         String LogisticJSON='{"ERP7__Type__c":"Outbound","Name":"Test","ERP7__Account__c":"'+acc.Id+'","ERP7__From_Address__c":"'+address.Id+'","ERP7__Channel__c":"'+channel.Id+'","ERP7__Distribution_Channel__c":"'+dc.Id+'","ERP7__Order_S__c":"'+ord1.Id+'"}';
        
        String LLIListJSON='[{"Name":"SOLI-23420","ERP7__Product__c":"'+pro.Id+'","ERP7__Quantity__c":1,"ERP7__Price_Product__c":215,"ERP7__Ship_From_Address__c" : "'+address.Id+'","ERP7__Order_Product__c":"'+orditem.Id+'"}]';
-     try{  SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'',''); }catch(Exception e){}
+     try{  SalesOrderToLogistic.getCreateLogistic(LogisticJSON, LLIListJSON,'','', ''); }catch(Exception e){}
        //SalesOrderToLogistic.getLogisticExisting('','',PO.Id); 
        String salName = 'ERP';
        String sal1Name = 'ERP';

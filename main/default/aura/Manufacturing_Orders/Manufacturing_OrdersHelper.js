@@ -420,6 +420,87 @@
         }
     },
 calculatePagination: function(cmp, mrp) {
+    console.log('calculatePagination called for MRP:', mrp.MRP ? mrp.MRP.Id : 'unknown');
+    
+    // Set default page size if not present
+    if (!mrp.pageSize) {
+        mrp.pageSize = 50;
+    }
+    
+    var pageSize = mrp.pageSize;
+    var solis = mrp.SOLIs || [];
+    
+    console.log('Total SOLIs:', solis.length, 'Page Size:', pageSize);
+    
+    // Calculate total pages
+    mrp.totalPages = Math.ceil(solis.length / pageSize);
+    if (mrp.totalPages < 1) {
+        mrp.totalPages = 1;
+    }
+    
+    // Set current page to 1 if not set
+    if (!mrp.currentPage) {
+        mrp.currentPage = 1;
+    }
+    
+    // Validate current page is within bounds
+    if (mrp.currentPage < 1) {
+        mrp.currentPage = 1;
+    }
+    if (mrp.currentPage > mrp.totalPages && mrp.totalPages > 0) {
+        mrp.currentPage = mrp.totalPages;
+    }
+    
+    console.log('Current Page:', mrp.currentPage, 'Total Pages:', mrp.totalPages);
+    
+    // Calculate start and end index for current page
+    var startIndex = (mrp.currentPage - 1) * pageSize;
+    var endIndex = Math.min(startIndex + pageSize, solis.length);
+    
+    // Create paged SOLIs array
+    mrp.pagedSOLIs = [];
+    if (solis.length > 0 && startIndex < solis.length) {
+        for (var i = startIndex; i < endIndex; i++) {
+            mrp.pagedSOLIs.push(solis[i]);
+        }
+    }
+    
+    console.log('Paged SOLIs:', mrp.pagedSOLIs.length, 'Start:', startIndex, 'End:', endIndex);
+    
+    // Calculate display pages (page numbers to show)
+    var maxPagesToShow = 40;
+    var halfPages = Math.floor(maxPagesToShow / 2);
+    var startPage = Math.max(1, mrp.currentPage - halfPages);
+    var endPage = Math.min(mrp.totalPages, startPage + maxPagesToShow - 1);
+    
+    // Adjust startPage if we're near the end
+    if (endPage - startPage < maxPagesToShow - 1) {
+        startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    
+    // Build displayPages array
+    mrp.displayPages = [];
+    for (var pageNum = startPage; pageNum <= endPage; pageNum++) {
+        mrp.displayPages.push(pageNum);
+    }
+    
+    console.log('Display Pages:', mrp.displayPages.length, 'From:', startPage, 'To:', endPage);
+    
+    // Set page info text
+    if (solis.length === 0) {
+        mrp.pageInfo = 'No records found';
+    } else {
+        var displayStart = startIndex + 1;
+        var displayEnd = endIndex;
+        mrp.pageInfo = 'Showing ' + displayStart + ' to ' + displayEnd + ' of ' + solis.length + ' records';
+    }
+    
+    console.log('Page Info:', mrp.pageInfo);
+    console.log('calculatePagination completed');
+    
+    return mrp;
+}
+    /*calculatePagination: function(cmp, mrp) {
     var pageSize = mrp.pageSize || 50;
     var solis = mrp.SOLIs || [];
     
@@ -455,5 +536,6 @@ calculatePagination: function(cmp, mrp) {
     mrp.pageInfo = 'Showing ' + start + ' to ' + end + ' of ' + solis.length + ' records';
     
     return mrp;
-}
+}*/
+    
 })

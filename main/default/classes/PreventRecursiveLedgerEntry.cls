@@ -73,4 +73,5 @@ global Class PreventRecursiveLedgerEntry{
     //new 
     public static Map<Id, List<Sales_Order_Line_Item__c>> kitSoliBySO;
     public static Boolean loaded = false;
+    public Static Boolean LogisticsDone = false;
 }

@@ -4474,6 +4474,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                      ConsumedMRPCount += 1;
                 }
             }
+             if((Number(WO.ERP7__Quantity_Built__c) + Number(WO.ERP7__Quantity_Scrapped__c)) == Number(WO.ERP7__Quantity_Ordered__c)){
+        WO.ERP7__Status__c = 'Complete';
+        console.log('Setting WO Status to Complete - Qty matches');
+    }
             if(ConsumedMRPCount > 0 && MRPS_toUse != undefined && ConsumedMRPCount != MRPS_toUse.length && cmp.get('v.hideToProduceforMRP')) cmp.set('v.showCompleteWO',true);
             console.log('showCompleteWO : ',cmp.get('v.showCompleteWO'));
             console.log('MRPS_toUse.length : ',MRPS_toUse.length);

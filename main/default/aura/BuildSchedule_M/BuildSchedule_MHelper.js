@@ -71,6 +71,12 @@
     },
 
     finalFinishWO : function(cmp, event,helper){
+         var WORec = cmp.get("v.WO2Fin");
+        console.log('WO Status before update:', WORec.ERP7__Status__c);
+console.log('Built Qty:', WORec.ERP7__Quantity_Built__c);
+console.log('Scrapped Qty:', WORec.ERP7__Quantity_Scrapped__c);
+console.log('Ordered Qty:', WORec.ERP7__Quantity_Ordered__c);
+console.log('byPassWOComplete:', cmp.get('v.byPassWOComplete'));
         var WORec = cmp.get("v.WO2Fin");
         console.log('WORec : ',WORec);
         var flows = JSON.stringify(cmp.get("v.WIPFlows"));console.log('byPassWOComplete ',cmp.get('v.byPassWOComplete'));

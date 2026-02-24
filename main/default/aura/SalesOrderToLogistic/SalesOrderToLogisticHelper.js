@@ -196,7 +196,7 @@
                     component.set("v.selectedTab",'log');
                     component.set("v.selectedTab",'soli');                                                  
                 } 
-                $A.util.addClass(component.find('mainSpin'), "slds-hide");
+                // $A.util.addClass(component.find('mainSpin'), "slds-hide");
                 this.getLogisticExisting(component, event, helper);
                 
             }else{
@@ -366,29 +366,86 @@
                     }
                 }*/
                 for (var x = 0; x < LLIList.length; x++) {
-    var orderProdId = LLIList[x].ERP7__Order_Product__c;
-    if (orderProdId && orderLineItemsMap.has(orderProdId) && !addedOrderItemIds.has(orderProdId)) {
-        OrderLineItems2return.push(orderLineItemsMap.get(orderProdId));
-        addedOrderItemIds.add(orderProdId);  // Ensure unique
-    }
-}
-                
-                console.log('OrderLineItems2return after: ', OrderLineItems2return);
-                var OrderLineItemsJSON = JSON.stringify(OrderLineItems2return);
-                var bomwrap = component.get("v.BomItemList");
-                
-                var bomlist = [];
-                for(var i in bomwrap){
-                    bomlist[i] = bomwrap[i].Bom;
+                    var orderProdId = LLIList[x].ERP7__Order_Product__c;
+                    if (orderProdId && orderLineItemsMap.has(orderProdId) && !addedOrderItemIds.has(orderProdId)) {
+                        OrderLineItems2return.push(orderLineItemsMap.get(orderProdId));
+                        addedOrderItemIds.add(orderProdId);  // Ensure unique
+                    }
                 }
                 
-                var BomItemsJSON =  JSON.stringify(bomlist);
+                var OrderLineItemsJSON = JSON.stringify(OrderLineItems2return);
+                console.log('OrderLineItemsJSON after: ', OrderLineItemsJSON);
+
+                // var bomwrap = component.get("v.BomItemList");
+                
+                // var bomlist = [];
+                // for(var i in bomwrap){
+                //     bomlist[i] = bomwrap[i].Bom;
+                // }
+                
+                // var BomItemsJSON =  JSON.stringify(bomlist);
+                // action.setParams({
+                //     "LogisticJSON":LogisticJSON,
+                //     "LLIListJSON":LLIListJSON,
+                //     "OrderLIneItems":OrderLineItemsJSON,
+                //     "BomItems":BomItemsJSON,
+                // });  
+                
+                // --- NEW CODE START: Prepare SOLI Items ---
+                var SoliList = component.get("v.SoliList");
+                var SoliItems2return = [];
+                var addedSoliIds = new Set();
+                
+                if (SoliList && SoliList.length > 0) {
+                    var soliMap = new Map();
+                    for (var i = 0; i < SoliList.length; i++) {
+                        soliMap.set(SoliList[i].Id, SoliList[i]);
+                    }
+                    
+                    // Match LLI items back to their parent SOLI records
+                    for (var x = 0; x < LLIList.length; x++) {
+                        var soliId = LLIList[x].ERP7__Sales_Order_Line_Item__c;
+                        if (soliId && soliMap.has(soliId) && !addedSoliIds.has(soliId)) {
+                            SoliItems2return.push(soliMap.get(soliId));
+                            addedSoliIds.add(soliId); 
+                        }
+                    }
+                }
+                var SoliItemsJSON = JSON.stringify(SoliItems2return);
+                console.log('SoliItemsJSON: ', SoliItemsJSON);
+                
+                // --- NEW CODE END ---
+
+               var bomwrap = component.get("v.BomItemList");
+                var bomlist = [];
+                
+                if(bomwrap && bomwrap.length > 0) {
+                    // We only want to send BOMs that belong to the Order Items or SOLIs we are actually creating logistics for.
+                    // We can check against the Sets we populated earlier: addedSoliIds and addedOrderItemIds
+                    
+                    for(var i in bomwrap) {
+                        var bomWrapperItem = bomwrap[i];
+                        
+                        // Check if this BOM belongs to a valid Parent Item (SOLI or OrderItem) that is being processed
+                        var parentId = bomWrapperItem.OrderProdId;
+                        
+                        // Check if the Parent ID exists in either of our "To Return" sets
+                        // Note: addedSoliIds and addedOrderItemIds are Sets created earlier in this function
+                        if (parentId && (addedSoliIds.has(parentId) || addedOrderItemIds.has(parentId))) {
+                            bomlist.push(bomWrapperItem.Bom);
+                        }
+                    }
+                }
+                
+                var BomItemsJSON = JSON.stringify(bomlist);
+                
                 action.setParams({
-                    "LogisticJSON":LogisticJSON,
-                    "LLIListJSON":LLIListJSON,
-                    "OrderLIneItems":OrderLineItemsJSON,
-                    "BomItems":BomItemsJSON,
-                });  
+                    "LogisticJSON": LogisticJSON,
+                    "LLIListJSON": LLIListJSON,
+                    "OrderLIneItems": OrderLineItemsJSON,
+                    "BomItems": BomItemsJSON,
+                    "SoliListItems": SoliItemsJSON // <--- Pass the new SOLI JSON
+                });
                 action.setCallback(this, function(response) {
                     if (response.getState() === "SUCCESS") {  
                         console.log('getCreateLogistic resp~>',response.getReturnValue());
@@ -590,6 +647,7 @@
         if(toastEvent != undefined){
             toastEvent.setParams({
                 "mode":modeType,
+                "title": title,
                 "type": type,
                 "message": message
             });

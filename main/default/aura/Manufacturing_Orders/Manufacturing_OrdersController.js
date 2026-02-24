@@ -1784,6 +1784,7 @@ if (soli && soli.length > 0) {
             }*/
             //alert('4');
             console.log('SerialForAllocation in here');
+            
 
         }catch(e){
             console.log('err occured~>',e);
@@ -2271,184 +2272,203 @@ if (soli && soli.length > 0) {
                                     MRPs: objs,
                                     SerialNos: moSerialNos
                                 });
-                                action.setCallback(this, function(response) {
-                                    var state = response.getState();
-                                    if (state === "SUCCESS") {
-                                        //cmp.popInit();
-                                        console.log('response.getReturnValue() SaveNewSOLI : ',response.getReturnValue());
-                                        if(response.getReturnValue().errorMsg != ''){
-                                            cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
+                               // In your CaptureWeight function, find this line:
+// action.setCallback(this, function(response) {
+// And replace the ENTIRE callback function with this:
 
-                                            cmp.set("v.MRPs", unchangedObj);
-                                            //if(obj[x].MRP.ERP7__Fulfilled_Amount__c > 0) obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat(obj[x].MRP.ERP7__Fulfilled_Amount__c - (weight - obj[x].ActualWeight)*obj[x].WeightMultiplier);
+action.setCallback(this, function(response) {
+    var state = response.getState();
+    if (state === "SUCCESS") {
+        console.log('response.getReturnValue() SaveNewSOLI : ',response.getReturnValue());
+        if(response.getReturnValue().errorMsg != ''){
+            cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
+            cmp.set("v.MRPs", unchangedObj);
+        } else {
+            cmp.set("v.selectAllSerials",false);
+            succeed = true;
 
-                                            //console.log('after apex error thrown obj[x].MRP.ERP7__Fulfilled_Amount__c~>'+obj[x].MRP.ERP7__Fulfilled_Amount__c);
+            cmp.set("v.WeightStr","0");
+            cmp.set("v.NewSOLI.ERP7__Material_Batch_Lot__c", undefined);
+            cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
 
-                                            //if(obj[x].MRP.ERP7__Fulfilled_Amount__c > 0) obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat(obj[x].MRP.ERP7__Fulfilled_Amount__c - (weight - obj[x].ActualWeight)*obj[x].WeightMultiplier);
-                                            //else obj[x].MRP.ERP7__Fulfilled_Amount__c = parseFloat((weight - obj[x].ActualWeight)*obj[x].WeightMultiplier);
-                                        }
-                                        else {
-                                            cmp.set("v.selectAllSerials",false);
-                                            succeed = true;
-                                            //obj[x].SOLIs = response.getReturnValue().SOLIs;
+            // Get updated MRPs and PRESERVE current pagination state
+            var updatedMRPs = response.getReturnValue().MRPs;
+            var currentMRPs = cmp.get("v.MRPs");
+            
+            // Recalculate pagination for all MRPs while preserving page numbers
+            if (updatedMRPs && updatedMRPs.length > 0) {
+                for (var idx = 0; idx < updatedMRPs.length; idx++) {
+                    // Preserve pagination settings from current state
+                    var existingMRP = currentMRPs.find(m => m.MRP && m.MRP.Id === updatedMRPs[idx].MRP.Id);
+                    
+                    if (existingMRP) {
+                        // Keep the current page and page size
+                        updatedMRPs[idx].pageSize = existingMRP.pageSize || 50;
+                        updatedMRPs[idx].currentPage = existingMRP.currentPage || 1;
+                    } else {
+                        // Set defaults for new MRPs
+                        updatedMRPs[idx].pageSize = 50;
+                        updatedMRPs[idx].currentPage = 1;
+                    }
+                    
+                    // Recalculate pagination with preserved page number
+                    if (updatedMRPs[idx].SOLIs) {
+                        var pageSize = updatedMRPs[idx].pageSize;
+                        var solis = updatedMRPs[idx].SOLIs;
+                        
+                        updatedMRPs[idx].totalPages = Math.ceil(solis.length / pageSize);
+                        if (updatedMRPs[idx].totalPages < 1) {
+                            updatedMRPs[idx].totalPages = 1;
+                        }
+                        
+                        // Keep current page valid - if SOLIs were deleted and we're beyond last page, go to last page
+                        if (updatedMRPs[idx].currentPage > updatedMRPs[idx].totalPages) {
+                            updatedMRPs[idx].currentPage = updatedMRPs[idx].totalPages;
+                        }
+                        
+                        var startIndex = (updatedMRPs[idx].currentPage - 1) * pageSize;
+                        var endIndex = Math.min(startIndex + pageSize, solis.length);
+                        
+                        // Create paged SOLIs
+                        updatedMRPs[idx].pagedSOLIs = [];
+                        for (var i = startIndex; i < endIndex; i++) {
+                            updatedMRPs[idx].pagedSOLIs.push(solis[i]);
+                        }
+                        
+                        // Calculate display pages
+                        var maxPages = 40;
+                        var startPage = Math.max(1, updatedMRPs[idx].currentPage - 2);
+                        var endPage = Math.min(updatedMRPs[idx].totalPages, startPage + maxPages - 1);
+                        
+                        updatedMRPs[idx].displayPages = [];
+                        for (var pageNum = startPage; pageNum <= endPage; pageNum++) {
+                            updatedMRPs[idx].displayPages.push(pageNum);
+                        }
+                        
+                        // Set page info
+                        if (solis.length === 0) {
+                            updatedMRPs[idx].pageInfo = 'No records found';
+                        } else {
+                            updatedMRPs[idx].pageInfo = 'Showing ' + (startIndex + 1) + ' to ' + endIndex + ' of ' + solis.length + ' records';
+                        }
+                    }
+                }
+            }
+            
+         
+            // Set the updated MRPs
+            cmp.set("v.MRPs", updatedMRPs);
+            cmp.set("v.moSerialNos",response.getReturnValue().moSerialNos);
+            
+            var ik = response.getReturnValue().MRPs;
+            var TW = 0;
+            var Fulfilled = true;
+            for(var y in ik){
+                if(ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'gram' || 
+                   ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'kilogram' || 
+                   ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'milligram' || 
+                   ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'lbs') {
+                    TW += ik[y].MRP.ERP7__Total_Amount_Required__c;
+                }
+                if(ik[y].ActualWeight < ik[y].MRP.ERP7__Total_Amount_Required__c) {
+                    Fulfilled = false;
+                }
+            }
 
-                                            cmp.set("v.WeightStr","0");
-                                            cmp.set("v.NewSOLI.ERP7__Material_Batch_Lot__c", undefined);
-                                            cmp.set("v.NewSOLI.ERP7__Serial__c", undefined);
+            cmp.set("v.Fulfilled",Fulfilled);
+            cmp.set("v.TotalWeight",TW);
+            cmp.set("v.WCAP",true);
+            
+            if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
+                var PrintSB = false;
+                var objm = cmp.get("v.MRPs");
+                for(var x in objm){
+                    if(objm[x].isSelect) {
+                        var quant = 0;
+                        var quantin = 0;
+                        quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                        if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
 
-                                            cmp.set("v.MRPs",response.getReturnValue().MRPs);
+                        var SOLISM = objm[x].SOLIs;
+                        for(var y in SOLISM){
+                            if(SOLISM[y].ERP7__MO_WO_Serial__c != '' && SOLISM[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISM[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
+                        }
+                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
+                    }
+                }
 
-                                            setTimeout(function() {
-                                                var MRPs = cmp.get("v.MRPs");
-                                                if (MRPs && MRPs.length > 0) {
-                                                    MRPs.forEach(function(mrp, index) {
-                                                        if (mrp.isSelect) {
-                                                            mrp.currentPage = 1;
-                                                        }
-                                                        
-                                                        if (!mrp.pageSize) mrp.pageSize = 50;
-                                                        if (!mrp.currentPage) mrp.currentPage = 1;
-                                                        
-                                                        if (mrp.SOLIs && mrp.SOLIs.length > 0) {
-                                                            var pageSize = mrp.pageSize;
-                                                            var startIndex = (mrp.currentPage - 1) * pageSize;
-                                                            var endIndex = Math.min(startIndex + pageSize, mrp.SOLIs.length);
-                                                            
-                                                            mrp.pagedSOLIs = [];
-                                                            for (var i = startIndex; i < endIndex; i++) {
-                                                                mrp.pagedSOLIs.push(mrp.SOLIs[i]);
-                                                            }
-                                                            
-                                                            mrp.totalPages = Math.ceil(mrp.SOLIs.length / pageSize);
-                                                            mrp.pageInfo = 'Showing ' + (startIndex + 1) + ' to ' + endIndex + ' of ' + mrp.SOLIs.length + ' records';
-                                                        } else {
-                                                            mrp.pagedSOLIs = [];
-                                                            mrp.totalPages = 1;
-                                                            mrp.pageInfo = 'No records found';
-                                                        }
-                                                    });
-                                                    
-                                                    cmp.set("v.MRPs", JSON.parse(JSON.stringify(MRPs)));
-                                                }
-                                            }, 100);
-                                            /* var MRPs1 = cmp.get("v.MRPs");
-                                            console.log('mrps -- ',JSON.stringify(MRPs1));
-                                            console.log('get mrps');
-                                            var mrp1 = MRPs1;
-                                            console.log('mrp1 ',JSON.stringify(mrp1));
-                                            helper.calculatePagination(cmp,mrp1);*/
-                                            cmp.set("v.moSerialNos",response.getReturnValue().moSerialNos);
-                                            var ik = response.getReturnValue().MRPs;
-                                            var TW = 0;
-                                            var Fulfilled = true;
-                                            for(var y in ik){
-                                                if(ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'gram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'kilogram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'milligram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'lbs') TW += ik[y].MRP.ERP7__Total_Amount_Required__c;
-                                                if(ik[y].ActualWeight < ik[y].MRP.ERP7__Total_Amount_Required__c) Fulfilled = false;
-                                            }
+                for(var x in objm){
+                    var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    var qin = 0;
+                    var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
+                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
 
-                                            cmp.set("v.Fulfilled",Fulfilled);
-                                            cmp.set("v.TotalWeight",TW);
-                                            cmp.set("v.WCAP",true);
-                                            if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
-                                                var PrintSB = false;
-                                                var objm = cmp.get("v.MRPs");
-                                                for(var x in objm){
-                                                    if(objm[x].isSelect) {
-                                                        var quant = 0;
-                                                        var quantin = 0;
-                                                        //if(objm[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c){
-                                                        quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                        if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                                        //alert("max in :"+quant);
+                    var SOLISMS = objm[x].SOLIs;
+                    for(var y in SOLISMS){
+                        if(SOLISMS[y].ERP7__MO_WO_Serial__c != '' && SOLISMS[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISMS[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) qin += SOLISMS[y].ERP7__Quantity__c;
+                    }
+                    if(qin*objm[x].WeightMultiplier >= qmin) PrintSB = true;
+                    else{
+                        PrintSB = false;
+                        break;
+                    }
+                }
 
-                                                        var SOLISM = objm[x].SOLIs;
-                                                        for(var y in SOLISM){
-                                                            if(SOLISM[y].ERP7__MO_WO_Serial__c != '' && SOLISM[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISM[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
-                                                        }
-                                                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
-                                                        //}
-                                                    }
-                                                }
+                cmp.set("v.PrintSB",PrintSB);
+            }
+            else if(NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != "" && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != undefined){
+                var PrintSB = false;
+                var objm = cmp.get("v.MRPs");
+                for(var x in objm){
+                    if(objm[x].isSelect) {
+                        var quant = 0;
+                        var quantin = 0;
+                        quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                        if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
 
-                                                for(var x in objm){
-                                                    var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    var qin = 0;
-                                                    var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
+                        var SOLISM = objm[x].SOLIs;
+                        for(var y in SOLISM){
+                            if(SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c != '' && SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c != undefined && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != '' && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != undefined && (SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
+                        }
 
-                                                    var SOLISMS = objm[x].SOLIs;
-                                                    for(var y in SOLISMS){
-                                                        if(SOLISMS[y].ERP7__MO_WO_Serial__c != '' && SOLISMS[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISMS[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) qin += SOLISMS[y].ERP7__Quantity__c;
-                                                    }
-                                                    if(qin*objm[x].WeightMultiplier >= qmin) PrintSB = true;
-                                                    else{
-                                                        PrintSB = false;
-                                                        break;
-                                                    }
-                                                }
+                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
+                    }
+                }
 
-                                                cmp.set("v.PrintSB",PrintSB);
-                                            }
-                                            ////////////////////////////////////////////////////
-                                            else  if(NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != "" && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != undefined){
-                                                var PrintSB = false;
-                                                var objm = cmp.get("v.MRPs");
-                                                for(var x in objm){
-                                                    if(objm[x].isSelect) {
-                                                        var quant = 0;
-                                                        var quantin = 0;
-                                                        //if(objm[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c){
-                                                        quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                        if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                                        //alert("max in :"+quant);
+                for(var x in objm){
+                    var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    var qin = 0;
+                    var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
+                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
 
-                                                        var SOLISM = objm[x].SOLIs;
-                                                        for(var y in SOLISM){
-                                                            if(SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c != '' && SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c != undefined && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != '' && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c != undefined && (SOLISM[y].ERP7__MO_WO_Material_Batch_Lot__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
-                                                        }
+                    var SOLISMS = objm[x].SOLIs;
+                    for(var y in SOLISMS){
+                        if(SOLISMS[y].ERP7__MO_WO_Serial__c != '' && SOLISMS[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISMS[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) qin += SOLISMS[y].ERP7__Quantity__c;
+                    }
+                    if(qin*objm[x].WeightMultiplier >= qmin) PrintSB = true;
+                    else{
+                        PrintSB = false;
+                        break;
+                    }
+                }
 
-                                                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
-                                                        //}
-                                                    }
-                                                }
-
-                                                ////////////////////////////////////////////////////////
-                                                for(var x in objm){
-                                                    var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    var qin = 0;
-                                                    var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-
-                                                    var SOLISMS = objm[x].SOLIs;
-                                                    for(var y in SOLISMS){
-                                                        if(SOLISMS[y].ERP7__MO_WO_Serial__c != '' && SOLISMS[y].ERP7__MO_WO_Serial__c != undefined && NewSOLI.ERP7__MO_WO_Serial__c != '' && NewSOLI.ERP7__MO_WO_Serial__c != undefined && (SOLISMS[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) qin += SOLISMS[y].ERP7__Quantity__c;
-                                                    }
-                                                    if(qin*objm[x].WeightMultiplier >= qmin) PrintSB = true;
-                                                    else{
-                                                        PrintSB = false;
-                                                        break;
-                                                    }
-                                                }
-
-                                                cmp.set("v.PrintSB",PrintSB);
-                                            }
-                                        }
-                                        cmp.set('v.SelectedSerialsCount',0);
-                                        cmp.loadSerialForAllocation();
-
-
-                                    }
-                                    else {
-                                        var error = response.getError();
-                                        console.log('error : ',error);
-                                        if(error != undefined) cmp.set("v.exceptionError",error[0].message);
-                                    }
-                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                                });
+                cmp.set("v.PrintSB",PrintSB);
+            }
+        }
+        cmp.set('v.SelectedSerialsCount',0);
+        cmp.loadSerialForAllocation();
+    }
+    else {
+        var error = response.getError();
+        console.log('error : ',error);
+        if(error != undefined) cmp.set("v.exceptionError",error[0].message);
+    }
+    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+});
                                 $A.enqueueAction(action);
                             }
                     }
@@ -2554,110 +2574,152 @@ if (soli && soli.length > 0) {
         //window.location.href = '/apex/ERP7__ManufacturingSchedule';
     },*/
 
-    DeleteRecordSOLI: function(cmp, event) {
-        console.log('DeleteRecordSOLI called');
-        var result = confirm("Are you sure?");
-        var RecordId = event.getSource().get("v.name");
-        var obj = cmp.get("v.MRPs");
-        if (result) {
-            $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
-            try{
-                var obj = cmp.get("v.MRPs");
-                var objs = JSON.stringify(obj);
-                var action = cmp.get("c.DeleteSOLI");
-                action.setParams({
-                    SOLI: RecordId,
-                    MRPs: objs
-                });
-                action.setCallback(this, function(response) {
-                    var state = response.getState();
-                    if (state === "SUCCESS") {
-                        //cmp.popInit();
-                        if(response.getReturnValue().errorMsg != '') cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
-                        else {
-                            cmp.set("v.MRPs",response.getReturnValue().MRPs);
-                            //cmp.set("v.NewSOLI",response.getReturnValue().NewSOLI);
-                            var ik = response.getReturnValue().MRPs;
-                            var TW = 0;
-                            var Fulfilled = true;
-                            for(var y in ik){
-                                if(ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'gram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'kilogram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'milligram' || ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'lbs') TW += ik[y].MRP.ERP7__Total_Amount_Required__c;
-                                if(ik[y].ActualWeight < ik[y].MRP.ERP7__Total_Amount_Required__c) Fulfilled = false;
-                            }
-                            cmp.set("v.Fulfilled",Fulfilled);
-                            cmp.set("v.TotalWeight",TW);
-
-                            ///////////////////////////////////////////
-                            var NewSOLI = cmp.get("v.NewSOLI");
-                            //alert(NewSOLI.ERP7__MO_WO_Serial__c);
-                            cmp.set("v.WCAP",true);
-                            if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
-                                var PrintSB = false;
-                                var objm = cmp.get("v.MRPs");
-                                for(var x in objm){
-                                    if(objm[x].isSelect) {
-                                        var quant = 0;
-                                        var quantin = 0;
-                                        //if(objm[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c){
-                                        quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                        if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                        //alert("max in :"+quant);
-
-                                        var SOLISM = objm[x].SOLIs;
-                                        for(var y in SOLISM){
-                                            if((SOLISM[y].ERP7__MO_WO_Serial__c).substr(0, 15) == (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) quantin += SOLISM[y].ERP7__Quantity__c;
-                                        }
-                                        //alert("already in :"+quantin);
-                                        if(quantin*objm[x].WeightMultiplier >= quant) cmp.set("v.WCAP",false);
-                                        //}
-                                    }
-                                }
-
-                                for(var x in objm){
-                                    var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                    var qin = 0;
-                                    var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                    var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
-                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
-                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
-
-                                    var SOLISMS = objm[x].SOLIs;
-                                    for(var y in SOLISMS){
-                                        if(SOLISMS[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) qin += SOLISMS[y].ERP7__Quantity__c;
-                                    }
-                                    if(qin*objm[x].WeightMultiplier >= qmin) PrintSB = true;
-                                    else{
-                                        PrintSB = false;
-                                        break;
-                                    }
-                                }
-
-                                //new code start. To get mo serials after deleting soli
-                                var newSerials=response.getReturnValue().moSerialNos;
-                                console.log('serials of mo after delting soli ',JSON.stringify(newSerials));
-                                if(newSerials!==null && newSerials!==undefined && newSerials!==undefined && newSerials.length>0){
-                                    cmp.set("v.moSerialNos",newSerials);
-                                }
-                                //new code end
-
-                                cmp.set("v.PrintSB",PrintSB);
-                            }
-                            ////////////////////////////////////////////////////
-                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
-                        }
-                        cmp.loadSerialForAllocation();
+  DeleteRecordSOLI: function(cmp, event, helper) {
+    console.log('DeleteRecordSOLI called');
+    var result = confirm("Are you sure?");
+    var RecordId = event.getSource().get("v.name");
+    
+    if (result) {
+        $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+        try {
+            var obj = cmp.get("v.MRPs");
+            var objs = JSON.stringify(obj);
+            var action = cmp.get("c.DeleteSOLI");
+            action.setParams({
+                SOLI: RecordId,
+                MRPs: objs
+            });
+          action.setCallback(this, function(response) {
+                var state = response.getState();
+                if (state === "SUCCESS") {
+                    if(response.getReturnValue().errorMsg != '') {
+                        cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                     } else {
-                        cmp.set("v.exceptionError",response.getReturnValue().errorMsg);
-                        $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                        // Get updated MRPs from response
+                        var updatedMRPs = response.getReturnValue().MRPs;
+                        var currentMRPs = cmp.get("v.MRPs");
+                        
+                        // Update pagination for each MRP while preserving current page
+                        if (updatedMRPs && updatedMRPs.length > 0) {
+                            for (var i = 0; i < updatedMRPs.length; i++) {
+                                // Find matching current MRP to preserve page number
+                                var existingMRP = currentMRPs.find(m => m.MRP && m.MRP.Id === updatedMRPs[i].MRP.Id);
+                                
+                                if (existingMRP) {
+                                    updatedMRPs[i].pageSize = existingMRP.pageSize || 50;
+                                    updatedMRPs[i].currentPage = existingMRP.currentPage || 1;
+                                }
+                                
+                                if (updatedMRPs[i].SOLIs) {
+                                    // Recalculate pagination with preserved page number
+                                    updatedMRPs[i] = helper.calculatePagination(cmp, updatedMRPs[i]);
+                                }
+                            }
+                        }
+                        // Set the updated MRPs back to component
+                        cmp.set("v.MRPs", updatedMRPs);
+                        cmp.set("v.NewSOLI", response.getReturnValue().NewSOLI);
+
+                        var ik = updatedMRPs;
+                        var TW = 0;
+                        var Fulfilled = true;
+                        for(var y in ik) {
+                            if(ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'gram' || 
+                               ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'kilogram' || 
+                               ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'milligram' || 
+                               ik[y].MRP.ERP7__BOM__r.ERP7__Unit_of_Measure__c == 'lbs') {
+                                TW += ik[y].MRP.ERP7__Total_Amount_Required__c;
+                            }
+                            if(ik[y].ActualWeight < ik[y].MRP.ERP7__Total_Amount_Required__c) {
+                                Fulfilled = false;
+                            }
+                        }
+                        cmp.set("v.Fulfilled", Fulfilled);
+                        cmp.set("v.TotalWeight", TW);
+
+                        // Handle serial validation
+                        var NewSOLI = cmp.get("v.NewSOLI");
+                        cmp.set("v.WCAP", true);
+                        
+                        if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined) {
+                            var PrintSB = false;
+                            var objm = cmp.get("v.MRPs");
+                            
+                            for(var x in objm) {
+                                if(objm[x].isSelect) {
+                                    var quant = 0;
+                                    var quantin = 0;
+                                    quant = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                                    if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) {
+                                        quant += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
+                                    }
+
+                                    var SOLISM = objm[x].SOLIs;
+                                    for(var y in SOLISM) {
+                                        if((SOLISM[y].ERP7__MO_WO_Serial__c).substr(0, 15) == 
+                                           (NewSOLI.ERP7__MO_WO_Serial__c).substr(0, 15)) {
+                                            quantin += SOLISM[y].ERP7__Quantity__c;
+                                        }
+                                    }
+                                    if(quantin * objm[x].WeightMultiplier >= quant) {
+                                        cmp.set("v.WCAP", false);
+                                    }
+                                }
+                            }
+
+                            for(var x in objm) {
+                                var q = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                                var qin = 0;
+                                var qmin = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                                var qmax = objm[x].MRP.ERP7__BOM__r.ERP7__Quantity__c;
+                                if(objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c > 0) {
+                                    qmax += objm[x].MRP.ERP7__BOM__r.ERP7__Maximum_Variance__c;
+                                }
+                                if(objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c > 0) {
+                                    qmin -= objm[x].MRP.ERP7__BOM__r.ERP7__Minimum_Variance__c;
+                                }
+
+                                var SOLISMS = objm[x].SOLIs;
+                                for(var y in SOLISMS) {
+                                    if(SOLISMS[y].ERP7__MO_WO_Serial__c == NewSOLI.ERP7__MO_WO_Serial__c) {
+                                        qin += SOLISMS[y].ERP7__Quantity__c;
+                                    }
+                                }
+                                if(qin * objm[x].WeightMultiplier >= qmin) {
+                                    PrintSB = true;
+                                } else {
+                                    PrintSB = false;
+                                    break;
+                                }
+                            }
+
+                            // Update serial numbers if returned from server
+                            var newSerials = response.getReturnValue().moSerialNos;
+                            console.log('serials of mo after deleting soli', JSON.stringify(newSerials));
+                            if(newSerials !== null && newSerials !== undefined && newSerials.length > 0) {
+                                cmp.set("v.moSerialNos", newSerials);
+                            }
+
+                            cmp.set("v.PrintSB", PrintSB);
+                        }
                     }
-                });
-                $A.enqueueAction(action);
-            }
-            catch(err) {
-                //alert("Exception : "+err.message);
-            }
+                    
+                    // Reload serial numbers for allocation
+                    cmp.loadSerialForAllocation();
+                    
+                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                } else {
+                    cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
+                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                }
+            });
+            $A.enqueueAction(action);
+        } catch(err) {
+            console.log("Exception in DeleteRecordSOLI:", err);
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
         }
-    },
+    }
+},
 
     NewMRP : function (cmp, event) {
         cmp.set("v.editErrorMsg","");
@@ -3661,7 +3723,223 @@ changePageSize: function(cmp, event, helper) {
         });
         cmp.set("v.MRPs", MRPs);
     }
-}
+},
+   /* allocateAllMRPs : function(cmp, event, helper) {
+    try {
+        console.log('=== allocateAllMRPs FUNCTION START ===');
+        console.log('Button clicked, function called');
+        
+        cmp.set("v.exceptionError", "");
+        console.log('Cleared exceptionError');
+        
+        $A.util.removeClass(cmp.find('mainSpin'), "slds-hide");
+        console.log('Removed hide class from spinner - spinner should be visible');
+
+        cmp.set("v.saPage", false);
+        cmp.set("v.SerialsForAllocation", []);
+        cmp.set("v.SelectedSerialsCount", 0);
+        console.log('Reset page state variables');
+
+        var obj = cmp.get("v.MRPs") || [];
+        console.log('Retrieved MRPs from component:');
+        console.log('  Number of MRPs:', obj.length);
+        console.log('  MRPs data:', obj);
+        
+        var objsel = [];
+        console.log('Initialized empty objsel array');
+
+        var allocatelimit = parseInt(cmp.get("v.AutoSTockAllocationLimit"));
+        console.log('Retrieved AutoSTockAllocationLimit:');
+        console.log('  Raw value:', cmp.get("v.AutoSTockAllocationLimit"));
+        console.log('  Parsed to int:', allocatelimit);
+        console.log('  Is NaN?', isNaN(allocatelimit));
+        
+        var mo = cmp.get("v.manuOrder");
+        console.log('Retrieved manuOrder:', mo);
+        
+        if (mo && mo.ERP7__Product__r && mo.ERP7__Product__r.ERP7__Serialise__c) {
+            console.log('Product is serialized, checking for custom label...');
+            var serialLabelValue = $A.get('$Label.c.AutoStockLimitSerial');
+            console.log('  Label value:', serialLabelValue);
+            console.log('  Label type:', typeof serialLabelValue);
+            
+            allocatelimit = parseInt(serialLabelValue);
+            console.log('  Updated allocatelimit to:', allocatelimit);
+            console.log('  Is NaN?', isNaN(allocatelimit));
+        } else {
+            console.log('Product is NOT serialized or product data missing');
+            if (!mo) console.log('  manuOrder is null/undefined');
+            else if (!mo.ERP7__Product__r) console.log('  Product__r is null/undefined');
+            else console.log('  ERP7__Serialise__c is:', mo.ERP7__Product__r.ERP7__Serialise__c);
+        }
+
+        console.log('=== STARTING MRP FILTERING ===');
+        console.log('Will filter MRPs where remaining quantity > 0');
+        var unallocatedCount = 0;
+        
+        for (var i = 0; i < obj.length; i++) {
+            console.log('\n--- Processing MRP index', i, '---');
+            console.log('  MRP object:', obj[i]);
+            
+            if (!obj[i] || !obj[i].MRP) {
+                console.log('  WARNING: MRP object or MRP property is undefined, skipping');
+                continue;
+            }
+            
+            var total = parseFloat(obj[i].MRP.ERP7__Total_Amount_Required__c || 0);
+            var fulfilled = parseFloat(obj[i].MRP.ERP7__Fulfilled_Amount__c || 0);
+            var remaining = total - fulfilled;
+            
+            console.log('  MRP ID:', obj[i].MRP.Id);
+            console.log('  Total required:', total);
+            console.log('  Already fulfilled:', fulfilled);
+            console.log('  Remaining needed:', remaining);
+            
+            if (remaining > 0) {
+                console.log('  ✓ This MRP needs allocation');
+                obj[i].MRPQuantity = remaining;
+                objsel.push(obj[i]);
+                unallocatedCount++;
+                console.log('  Added to objsel. MRPQuantity set to:', remaining);
+                console.log('  objsel length now:', objsel.length);
+            } else {
+                console.log('  ✗ This MRP is already fulfilled, skipping');
+            }
+        }
+        
+        console.log('=== FILTERING COMPLETE ===');
+        console.log('Total MRPs processed:', obj.length);
+        console.log('Unallocated MRPs found:', unallocatedCount);
+        console.log('objsel final length:', objsel.length);
+        console.log('objsel contents:', objsel);
+
+        if (objsel.length === 0) {
+            console.log('No unallocated MRPs found, exiting function');
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+            cmp.set("v.exceptionError", "No unallocated MRPs found.");
+            console.log('Spinner hidden, error message set');
+            return;
+        }
+
+        console.log('=== PREPARING APEX CALL ===');
+        console.log('Action name: ReserveMRPSStocks');
+        
+        var objselJSON = JSON.stringify(objsel);
+        console.log('Serialized objsel to JSON:');
+        console.log('  JSON length:', objselJSON.length);
+        console.log('  First 200 chars:', objselJSON.substring(0, 200));
+        
+        console.log('Sending parameters to Apex:');
+        console.log('  AutostkLimit:', allocatelimit);
+        console.log('  Is allocatelimit valid number?', !isNaN(allocatelimit));
+
+        var action = cmp.get("c.ReserveMRPSStocksNew");
+        action.setParams({
+            MRPs: objselJSON,
+            AutostkLimit: allocatelimit
+        });
+
+        console.log('Setting callback for Apex action...');
+
+        action.setCallback(this, function(resp) {
+            console.log('\n=== APEX CALLBACK FIRED ===');
+            console.log('Response state:', resp.getState());
+            console.log('Full response:', resp);
+            
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+            console.log('Spinner hidden');
+
+            if (resp.getState() !== "SUCCESS") {
+                console.log('Apex call FAILED');
+                var err = resp.getError();
+                console.log('Error array:', err);
+                console.log('Error length:', err ? err.length : 0);
+                
+                if (err && err.length) {
+                    var errorMsg = err[0].message;
+                    console.log('First error message:', errorMsg);
+                    cmp.set("v.exceptionError", errorMsg);
+                } else {
+                    console.log('No error details available');
+                    cmp.set("v.exceptionError", "Unknown Apex error");
+                }
+                return;
+            }
+
+            console.log('Apex call SUCCESS');
+            var ret = resp.getReturnValue();
+            console.log('Return value from Apex:', ret);
+            console.log('Return value type:', typeof ret);
+            
+            if (ret && ret.errorMsg) {
+                console.log('Apex returned error message:', ret.errorMsg);
+                cmp.set("v.exceptionError", ret.errorMsg);
+                return;
+            }
+
+            console.log('No error message in return value');
+            console.log('Calling showToast...');
+            helper.showToast('Success','success',$A.get("$Label.c.Stock_allocated_succesfully"));
+            console.log('Toast shown');
+
+            // Merge updated MRPs back into v.MRPs by Id
+            var updated = (ret && ret.MRPs) ? ret.MRPs : [];
+            console.log('Updated MRPs from response:', updated);
+            console.log('Number of updated MRPs:', updated.length);
+            
+            var mapById = {};
+            console.log('Creating map of updated MRPs by ID...');
+            for (var u = 0; u < updated.length; u++) {
+                if (updated[u] && updated[u].MRP && updated[u].MRP.Id) {
+                    mapById[updated[u].MRP.Id] = updated[u];
+                    console.log('  Mapped ID:', updated[u].MRP.Id);
+                } else {
+                    console.log('  WARNING: Invalid updated MRP at index', u, ':', updated[u]);
+                }
+            }
+            console.log('Map size:', Object.keys(mapById).length);
+
+            console.log('Merging updated MRPs into original obj...');
+            var mergeCount = 0;
+            for (var j = 0; j < obj.length; j++) {
+                var id = obj[j] && obj[j].MRP ? obj[j].MRP.Id : null;
+                if (id && mapById[id]) {
+                    console.log('  Updating MRP at index', j, 'with ID:', id);
+                    obj[j] = mapById[id];
+                    mergeCount++;
+                }
+            }
+            console.log('Total MRPs merged:', mergeCount);
+
+            console.log('Setting updated MRPs back to component...');
+            cmp.set("v.MRPs", obj);
+            console.log('MRPs updated in component');
+            
+            console.log('=== APEX CALLBACK COMPLETE ===');
+        });
+
+        console.log('Enqueuing Apex action...');
+        $A.enqueueAction(action);
+        console.log('Action enqueued');
+        
+        console.log('=== allocateAllMRPs FUNCTION COMPLETE (async) ===');
+
+    } catch (e) {
+        console.error('\n=== EXCEPTION CAUGHT ===');
+        console.error('Error message:', e.message);
+        console.error('Error stack:', e.stack);
+        console.error('Full error object:', e);
+        
+        $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+        console.error('Spinner hidden due to exception');
+        
+        cmp.set("v.exceptionError", e.message);
+        console.error('Exception error message set:', e.message);
+        
+        console.error('=== EXCEPTION HANDLING COMPLETE ===');
+    }
+}*/
+
 
 
 })

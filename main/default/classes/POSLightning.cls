@@ -3143,6 +3143,40 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                             From Sales_Order_Line_Item__c Where Id In: SOLIIds]);*/
             
             if(itemWrapperLists.size() > 0){
+                // --------new code added by abubakar on 15-02-2026 --------- for linking the kit products with their versions
+
+                // 1. Collect Product IDs for Kit items that need a Version
+                Set<Id> productIdsForVersions = new Set<Id>();
+                // Assuming 'itemWrapperLists' is your list variable
+                for (Integer i = 0; i < itemWrapperLists.size(); i++) {
+                    if (!itemWrapperLists[i].trackInventory && itemWrapperLists[i].product.Is_Kit__c) {
+                        // Use the correct product ID reference from your wrapper or line item logic
+                        productIdsForVersions.add(itemWrapperLists[i].product.Id); 
+                    }
+                }
+
+                // 2. Query Versions and Build Map (Product Id -> Version Id)
+                Map<Id, Id> productToVersionMap = new Map<Id, Id>();
+                if (!productIdsForVersions.isEmpty()) {
+                    // Query Active and Certified versions. 
+                    // ORDER BY ERP7__Default__c DESC ensures the 'Default' version appears first in the list for each product.
+                    List<ERP7__Version__c> versions = [SELECT Id, ERP7__Product__c 
+                                                    FROM ERP7__Version__c 
+                                                    WHERE ERP7__Product__c IN :productIdsForVersions 
+                                                    AND ERP7__Active__c = TRUE 
+                                                    AND ERP7__Status__c = 'Certified' 
+                                                    ORDER BY ERP7__Default__c DESC];
+                                                    
+                    for (ERP7__Version__c v : versions) {
+                        // Since we ordered by Default DESC, the first time we see a Product ID, 
+                        // it corresponds to the Default version (if one exists).
+                        if (!productToVersionMap.containsKey(v.ERP7__Product__c)) {
+                            productToVersionMap.put(v.ERP7__Product__c, v.Id);
+                        }
+                    }
+                }
+                // --------- Abubakar code ends here ---------
+
                 for(integer i = 0; i < itemWrapperLists.size(); i++){
                     if(itemWrapperLists[i].orderLineItemId == '') {
                         
@@ -3151,7 +3185,8 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                             lineItem = (itemWrapperLists[i].scanned && itemWrapperLists[i].orderLineItemId != '') ? [Select Id, Name, Base_Price__c, Description__c, ERP7__Detailed_Description__c, Discount_Amount__c, Invoice__c, Price_Product__c, Total_Price__c,
                             VAT_Amount__c, Organisation__c, Organisation_Business_Unit__c, Commission__c, Commission_Rate_Card__c, Commission_Rate_Card__r.Commission_Plan__c, ERP7__End_Time__c, ERP7__Tax__c, 
                             product__c, product__r.Name,product__r.Description,product__r.StockKeepingUnit, product__r.SKU__c, product__r.QuantityUnitOfMeasure,product__r.ERP7__UoM__c, Quantity__c, Sales_Order__c, Loyalty_Points__c, Order_Line_Status__c, Explode__c, ERP7__Allocate_Stock__c, 
-                            ERP7__Sort_Order__c, Loyalty_Program__c, Sales_Order__r.Name, Sales_Order__r.Sub_Total__c, Sales_Order__r.Total_Discount__c, Sales_Order__r.Total_Due__c, Sales_Order__r.Total_Tax_Amount__c, ERP7__Start_Time__c, ERP7__Cost__c, ERP7__Asset__c
+                            ERP7__Sort_Order__c, Loyalty_Program__c, Sales_Order__r.Name, Sales_Order__r.Sub_Total__c, Sales_Order__r.Total_Discount__c, Sales_Order__r.Total_Due__c, Sales_Order__r.Total_Tax_Amount__c, ERP7__Start_Time__c, ERP7__Cost__c, ERP7__Asset__c,
+                            ERP7__Version__c
                             From Sales_Order_Line_Item__c Where Id = : itemWrapperLists[i].orderLineItemId] : new Sales_Order_Line_Item__c();
                             //lineItem = (itemWrapperLists[i].scanned && itemWrapperLists[i].orderLineItemId != '') ? SOLIList.get(itemWrapperLists[i].orderLineItemId) : new Sales_Order_Line_Item__c();
                         }
@@ -3187,7 +3222,7 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                                 else if(SalesOrder2Create.Is_Back_Order__c && !itemWrapperLists[i].trackInventory && itemWrapperLists[i].product.Is_Kit__c) lineItem.Order_Line_Status__c = 'Requested';
                                 else if(!SalesOrder2Create.Is_Back_Order__c && !itemWrapperLists[i].trackInventory && itemWrapperLists[i].product.Is_Kit__c) lineItem.Order_Line_Status__c = 'Requested';
                                 else if(SalesOrder2Create.Is_Pre_Order__c) lineItem.Order_Line_Status__c = 'Requested';
-                                else lineItem.Order_Line_Status__c = 'Reserved';                        
+                                else lineItem.Order_Line_Status__c = 'Requested';                        
                             }
                         
                         if(itemWrapperLists[i].product.Is_Asset__c == true){
@@ -3203,7 +3238,15 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                             lineItem.ERP7__Asset__c = Serial.ERP7__Asset__c;
                             }
                          }
-                        
+
+                        // below if block added by abubakar on 15-02-2026
+                        if(!itemWrapperLists[i].trackInventory && itemWrapperLists[i].product.Is_Kit__c && lineItem.Version__c == null){
+                            // Check if we found a valid Certified/Default version for this product
+                            if (productToVersionMap.containsKey(lineItem.product__c)) {
+                                lineItem.ERP7__Version__c = productToVersionMap.get(lineItem.product__c);
+                            }
+                        }
+
                         salesOrderLineItem.add(lineItem);
                         
                         for(ERP7__Serial_Number__c Serial : itemWrapperLists[i].SerialNos){
@@ -3285,6 +3328,15 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                         if(Schema.sobjectType.Channel__c.fields.Organisation_Business_Unit__c.isAccessible()) lineItem.Organisation_Business_Unit__c = currentSalepoint.Organisation_Business_Unit__c;
                         if(Schema.sobjectType.ERP7__Sales_Order__c.fields.Is_Back_Order__c.isAccessible())
                         if(lineItem.Order_Line_Status__c == '' || lineItem.Order_Line_Status__c == Null) { lineItem.Order_Line_Status__c = (SalesOrder2Create.Is_Back_Order__c || SalesOrder2Create.Is_Pre_Order__c) ? 'Requested' : 'Reserved'; }
+                        
+                        // below code added by abubakar on 15-02-2026 for linking the kit products with their versions
+                        if(!itemWrapperLists[i].trackInventory && itemWrapperLists[i].product.Is_Kit__c && lineItem.Version__c == null){
+                            // Check if we found a valid Certified/Default version for this product
+                            if (productToVersionMap.containsKey(lineItem.product__c)) {
+                                lineItem.ERP7__Version__c = productToVersionMap.get(lineItem.product__c);
+                            }
+                        }
+                        
                         salesOrderLineItem.add(lineItem);                        
                         
                         for(ERP7__Serial_Number__c Serial : itemWrapperLists[i].SerialNos){                            

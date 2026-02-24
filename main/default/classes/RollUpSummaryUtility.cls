@@ -103,7 +103,7 @@ for(AggregateResult q : Database.query(aggregateQuery)){
                     //r will be null if no records exist (e.g. last record deleted)
                     if(r != null) { 
                         Decimal value = ((Decimal)r.get(field) == null ) ? 0 :  (Decimal)r.get(field);
-                        
+                        System.debug('value before:'+value);
                         //changed made by Arshad 25 july 23
                         if(multiCurrencyEnabled){
                             String childField = d.childField;
@@ -111,8 +111,21 @@ for(AggregateResult q : Database.query(aggregateQuery)){
                             value = value * 1;
                             if(userCurrencyIso != '' && r.get('MyRecordCurrencyISO') != null && r.get('MyRecordCurrencyISO') != ''){
                                // if(userCurrencyIso != r.get('MyRecordCurrencyISO')){
-                                if(fieldToken != null && fieldToken.getDescribe().getType() == Schema.DisplayType.Currency){
+                                /*if(fieldToken != null && fieldToken.getDescribe().getType() == Schema.DisplayType.Currency){
                                     if(conversionRate != null){  value = (value * conversionRate).setScale(2, RoundingMode.HALF_UP);}
+                                }*/
+                                if(fieldToken != null && fieldToken.getDescribe().getType() == Schema.DisplayType.Currency){
+                                    System.debug('--- ROLLUP DEBUG START ---');
+                                    System.debug('ParentId=' + s.Id);
+                                    System.debug('ParentField=' + d.parentField);
+                                    System.debug('UserCurrency=' + userCurrencyIso);
+                                    System.debug('ChildAggCurrency(MyRecordCurrencyISO)=' + String.valueOf(r.get('MyRecordCurrencyISO')));
+                                    System.debug('conversionRate: '+conversionRate);
+                                    System.debug('AGG VALUE BEFORE CONVERSION = ' + value);
+                                    if(conversionRate != null){  value = (value * conversionRate).setScale(2, RoundingMode.HALF_UP);}
+                                    
+                                    System.debug('AGG VALUE AFTER (NO CONVERSION)=' + value);
+                                    System.debug('--- ROLLUP DEBUG END ---');
                                 }
                                 
                                // }
