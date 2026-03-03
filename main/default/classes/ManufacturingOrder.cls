@@ -2457,7 +2457,7 @@ public static comWrap ReserveMRPSStocksNew(String MRPs,Integer AutostkLimit){
 
 
     @AuraEnabled
-    public static comWrap SaveNewSOLI(String NewSOLI, String MRPs, String SerialNos){
+    public static comWrap SaveNewSOLI(String NewSOLI, String MRPs, String SerialNos,String locationId ){
         Savepoint sp = Database.setSavepoint();
         List<mrpWrap> mrpWrappers = (List<mrpWrap>) JSON.deserialize(MRPs, List<mrpWrap> .class);
         ERP7__Stock_Outward_Line_Item__c mySOLI = (ERP7__Stock_Outward_Line_Item__c) JSON.deserialize(NewSOLI, ERP7__Stock_Outward_Line_Item__c .class);
@@ -2479,9 +2479,17 @@ public static comWrap ReserveMRPSStocksNew(String MRPs,Integer AutostkLimit){
                     String WarehouseFields = UtilClass.selectStarFromSObject('ERP7__Inventory_Stock__c');
                     String AllWarehouseFields = WarehouseFields + ''; 
                     List<Inventory_Stock__c> WIISLists = new List<Inventory_Stock__c> ();
-                    if(!mrp.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && !mrp.MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c)
-                        WIISLists = Database.query('select ' + String.escapeSingleQuotes(AllWarehouseFields) + ', Warehouse__r.Name, Location__r.Name, StorageContainer__r.Name, Warehouse__r.Barcode__c, Location__r.Barcode__c, StorageContainer__r.Barcode__c from Inventory_Stock__c where (Warehouse__c =: selectedSite And (Product__c =: Prod And Number_of_Item_In_Stock__c > 0) And Active__c = true) Order By ERP7__Expiry_Date__c ASC'); 
-                    else if(mrp.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c){
+                  //  if(!mrp.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && !mrp.MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c)
+                  //      WIISLists = Database.query('select ' + String.escapeSingleQuotes(AllWarehouseFields) + ', Warehouse__r.Name, Location__r.Name, StorageContainer__r.Name, Warehouse__r.Barcode__c, Location__r.Barcode__c, StorageContainer__r.Barcode__c from Inventory_Stock__c where (Warehouse__c =: selectedSite And (Product__c =: Prod And Number_of_Item_In_Stock__c > 0) And Active__c = true) Order By ERP7__Expiry_Date__c ASC'); 
+                   if(!mrp.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && !mrp.MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c) {
+    String locId = locationId; // assign to local variable for SOQL binding
+    if(locId != null && locId != '') {
+        WIISLists = Database.query('select ' + String.escapeSingleQuotes(AllWarehouseFields) + ', Warehouse__r.Name, Location__r.Name, StorageContainer__r.Name, Warehouse__r.Barcode__c, Location__r.Barcode__c, StorageContainer__r.Barcode__c from Inventory_Stock__c where Warehouse__c =: selectedSite And Product__c =: Prod And Number_of_Item_In_Stock__c > 0 And Active__c = true And ERP7__Location__c =: locId Order By ERP7__Expiry_Date__c ASC');
+    } else {
+        WIISLists = Database.query('select ' + String.escapeSingleQuotes(AllWarehouseFields) + ', Warehouse__r.Name, Location__r.Name, StorageContainer__r.Name, Warehouse__r.Barcode__c, Location__r.Barcode__c, StorageContainer__r.Barcode__c from Inventory_Stock__c where Warehouse__c =: selectedSite And Product__c =: Prod And Number_of_Item_In_Stock__c > 0 And Active__c = true Order By ERP7__Expiry_Date__c ASC');
+    }
+
+                   } else if(mrp.MRP.ERP7__MRP_Product__r.ERP7__Serialise__c){
                         List<ERP7__Stock_Inward_Line_Item__c>  SDLIs = [Select Id, Name, Active__c, ERP7__Fixed_Asset__c, ERP7__Quantity__c, ERP7__Sales_Order__c, ERP7__Serial__c, ERP7__Serial__r.Name, ERP7__Serial__r.ERP7__Serial_Number__c, Batch_Lot_Code__c,
                                                                         Product__c, ERP7__Site_ProductService_InventoryStock__c, ERP7__Site_ProductService_InventoryStock__r.ERP7__Warehouse__c, ERP7__Site_ProductService_InventoryStock__r.ERP7__Number_of_Item_In_Stock__c, ERP7__Sales_Order_Line_Item__c,
                                                                         ERP7__Site_ProductService_InventoryStock__r.ERP7__Version__c
@@ -3894,5 +3902,42 @@ public static comWrap MRPNewUpdate1(string MRP1){
         }
      
     }
-   
+   @AuraEnabled
+public static List<String> getLocationsForProduct(String productId, String siteId) {
+    List<String> locationIds = new List<String>();
+    if(productId == null || siteId == null) return locationIds;
+    
+    // Locations are in related list of warehouse - filter by warehouse (site)
+    for(AggregateResult ar : [
+        SELECT ERP7__Location__c locId
+        FROM ERP7__Inventory_Stock__c
+        WHERE ERP7__Warehouse__c = :siteId
+        AND ERP7__Product__c = :productId
+        AND ERP7__Number_of_Item_In_Stock__c > 0
+        AND ERP7__Active__c = true
+        AND ERP7__Location__c != null
+        GROUP BY ERP7__Location__c
+    ]) {
+        locationIds.add((String)ar.get('locId'));
+    }
+    return locationIds;
+}
+    @AuraEnabled
+public static Decimal getLocationStock(String locationId, String productId, String siteId) {
+    if(locationId == null || productId == null) return 0;
+    
+    Decimal stock = 0;
+    for(AggregateResult ar : [
+        SELECT SUM(ERP7__Number_of_Item_In_Stock__c) totalStock
+        FROM ERP7__Inventory_Stock__c
+        WHERE ERP7__Location__c = :locationId
+        AND ERP7__Product__c = :productId
+        AND ERP7__Warehouse__c = :siteId
+        AND ERP7__Number_of_Item_In_Stock__c > 0
+        AND ERP7__Active__c = true
+    ]) {
+        if(ar.get('totalStock') != null) stock = (Decimal)ar.get('totalStock');
+    }
+    return stock;
+}
 }

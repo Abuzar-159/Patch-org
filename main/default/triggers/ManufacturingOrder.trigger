@@ -116,56 +116,82 @@ trigger ManufacturingOrder on Manufacturing_Order__c(after insert, after update,
                 Map<Id, ERP7__Stock_Inward_Line_Item__c> pliStockInward = new Map<Id, ERP7__Stock_Inward_Line_Item__c>();
                 
                 List<ERP7__Stock_Inward_Line_Item__c> existingInwards = [Select Id,Name,ERP7__Manufacturing_Order__c,ERP7__Quantity__c from ERP7__Stock_Inward_Line_Item__c where ERP7__Manufacturing_Order__c IN: System.Trigger.NewMap.KeySet() and Name = 'Awaiting Stock' and ERP7__Status__c =  'Awaiting Stock'];
+                System.debug('existingInwards : '+existingInwards.size());
                 Map<Id,ERP7__Stock_Inward_Line_Item__c> MOInwards = new Map<Id,ERP7__Stock_Inward_Line_Item__c> ();
                 
                 for(ERP7__Stock_Inward_Line_Item__c sin :existingInwards) MOInwards.put(sin.ERP7__Manufacturing_Order__c,sin);
                  for (Manufacturing_Order__c MO: System.Trigger.New) {
+                    System.debug('MO.Status : '+MO.ERP7__Status__c);
                     if(MO.ERP7__Serialise__c){
-                        /*
-                        if(!MOInwards.containsKey(MO.Id)){
-                            ERP7__Inventory_Stock__c Stock2Create = new ERP7__Inventory_Stock__c(ERP7__Active__c = true, Name = 'Awaiting Stock', ERP7__Checked_In_Date__c = system.today(), ERP7__Product__c = MO.ERP7__Product__c); //ERP7__Version__c = MO.ERP7__Version__c
-                            if(MO.ERP7__Finished_Products_SiteId__c != Null) Stock2Create.ERP7__Warehouse__c = MO.ERP7__Finished_Products_SiteId__c;
+                    //     if(!MOInwards.containsKey(MO.Id)){
+                    //         ERP7__Inventory_Stock__c Stock2Create = new ERP7__Inventory_Stock__c(ERP7__Active__c = true, Name = 'Awaiting Stock', ERP7__Checked_In_Date__c = system.today(), ERP7__Product__c = MO.ERP7__Product__c); //ERP7__Version__c = MO.ERP7__Version__c
+                    //        if(MO.ERP7__Finished_Products_SiteId__c != Null) Stock2Create.ERP7__Warehouse__c = MO.ERP7__Finished_Products_SiteId__c;
                             
-                            ERP7__Stock_Inward_Line_Item__c StockInward2Create = new ERP7__Stock_Inward_Line_Item__c(ERP7__Manufacturing_Order__c = MO.Id, Name = 'Awaiting Stock', ERP7__Active__c = true, ERP7__Product__c = MO.ERP7__Product__c, ERP7__Status__c = 'Awaiting Stock');
-                            if(MO.ERP7__Status__c == 'Completed') StockInward2Create.ERP7__Quantity__c = 0;
-                            else  StockInward2Create.ERP7__Quantity__c = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
+                    //         ERP7__Stock_Inward_Line_Item__c StockInward2Create = new ERP7__Stock_Inward_Line_Item__c(ERP7__Manufacturing_Order__c = MO.Id, Name = 'Awaiting Stock', ERP7__Active__c = true, ERP7__Product__c = MO.ERP7__Product__c, ERP7__Status__c = 'Awaiting Stock');
+                    //         System.debug('new creating inv and SILI Stock2Create StockInward2Create : '+Stock2Create+' StockInward2Create : '+StockInward2Create);
+                    //         if(MO.ERP7__Status__c == 'Completed') StockInward2Create.ERP7__Quantity__c = 0;
+                    //         else  StockInward2Create.ERP7__Quantity__c = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
+                    //         pliStock.put(MO.Id, Stock2Create);
+                    //         pliStockInward.put(MO.Id, StockInward2Create);
+                    //         StockList2Create.add(Stock2Create);
+                    //         StocksInwardList2Create.add(StockInward2Create);
+                    //     }
+
+                    //     else{
+                    //         ERP7__Stock_Inward_Line_Item__c StockInward2Update = MOInwards.get(MO.Id);
+                    //         if(MO.ERP7__Status__c == 'Completed') StockInward2Update.ERP7__Quantity__c = 0;
+                    //         else  StockInward2Update.ERP7__Quantity__c = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
+                    //         system.debug('StockInward2Update.ERP7__Quantity__c  : '+StockInward2Update.ERP7__Quantity__c);
+                    //         StocksInwardList2Create.add(StockInward2Update);
+                    //     }
+                    // }
+                    // commented existing code 126-147 and added this by matheen 148-194 on 16-8-25 for new inevntory is being created with 0 qty (PROD ISSUE)
+                    if (!MOInwards.containsKey(MO.Id)) {
+                        Decimal pendingQty = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
+
+                        if (pendingQty <= 0) {
+                            System.debug('Skipping new Inventory/Inward creation for MO ' + MO.Id + ' because pendingQty = ' + pendingQty);
+                        } else {
+                            ERP7__Inventory_Stock__c Stock2Create = new ERP7__Inventory_Stock__c(
+                                ERP7__Active__c = true,
+                                Name = 'Awaiting Stock',
+                                ERP7__Checked_In_Date__c = System.today(),
+                                ERP7__Product__c = MO.ERP7__Product__c
+                            );
+                            if (MO.ERP7__Finished_Products_SiteId__c != null) {
+                                Stock2Create.ERP7__Warehouse__c = MO.ERP7__Finished_Products_SiteId__c;
+                            }
+
+                            ERP7__Stock_Inward_Line_Item__c StockInward2Create = new ERP7__Stock_Inward_Line_Item__c(
+                                ERP7__Manufacturing_Order__c = MO.Id,
+                                Name = 'Awaiting Stock',
+                                ERP7__Active__c = true,
+                                ERP7__Product__c = MO.ERP7__Product__c,
+                                ERP7__Status__c = 'Awaiting Stock',
+                                ERP7__Quantity__c = pendingQty
+                            );
+
+                            System.debug('Creating Inventory and Inward for MO ' + MO.Id + ' with qty ' + pendingQty);
+
                             pliStock.put(MO.Id, Stock2Create);
                             pliStockInward.put(MO.Id, StockInward2Create);
                             StockList2Create.add(Stock2Create);
                             StocksInwardList2Create.add(StockInward2Create);
                         }
-                        else{
-                            ERP7__Stock_Inward_Line_Item__c StockInward2Update = MOInwards.get(MO.Id);
-                            if(MO.ERP7__Status__c == 'Completed') StockInward2Update.ERP7__Quantity__c = 0;
-                            else  StockInward2Update.ERP7__Quantity__c = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
-                            system.debug('StockInward2Update.ERP7__Quantity__c  : '+StockInward2Update.ERP7__Quantity__c);
-                            StocksInwardList2Create.add(StockInward2Update);
-                        }
-                        */
-                        if (!MOInwards.containsKey(MO.Id)) {                        Decimal pendingQty = MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
-
-                        if (pendingQty <= 0) {  System.debug('Skipping new Inventory/Inward creation for MO ' + MO.Id + ' because pendingQty = ' + pendingQty);
-                        } else {
-                            ERP7__Inventory_Stock__c Stock2Create = new ERP7__Inventory_Stock__c(ERP7__Active__c = true,Name = 'Awaiting Stock',ERP7__Checked_In_Date__c = System.today(),ERP7__Product__c = MO.ERP7__Product__c);
-                            if (MO.ERP7__Finished_Products_SiteId__c != null) {             Stock2Create.ERP7__Warehouse__c = MO.ERP7__Finished_Products_SiteId__c;
-                            }
-
-                            ERP7__Stock_Inward_Line_Item__c StockInward2Create = new ERP7__Stock_Inward_Line_Item__c(ERP7__Manufacturing_Order__c = MO.Id,Name = 'Awaiting Stock',ERP7__Active__c = true,ERP7__Product__c = MO.ERP7__Product__c,ERP7__Status__c = 'Awaiting Stock',ERP7__Quantity__c = pendingQty);
-
-                            System.debug('Creating Inventory and Inward for MO ' + MO.Id + ' with qty ' + pendingQty);
-
-                            pliStock.put(MO.Id, Stock2Create);                            pliStockInward.put(MO.Id, StockInward2Create);                            StockList2Create.add(Stock2Create);                            StocksInwardList2Create.add(StockInward2Create);
-                        }
                     } else {
                         ERP7__Stock_Inward_Line_Item__c StockInward2Update = MOInwards.get(MO.Id);
-                        if (MO.ERP7__Status__c == 'Completed') {                            StockInward2Update.ERP7__Quantity__c = 0;
-                        } else {                            StockInward2Update.ERP7__Quantity__c =  MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
+                        if (MO.ERP7__Status__c == 'Completed') {
+                            StockInward2Update.ERP7__Quantity__c = 0;
+                        } else {
+                            StockInward2Update.ERP7__Quantity__c =
+                            MO.ERP7__Quantity__c - (MO.ERP7__Scrap_Quantity__c + MO.ERP7__Quantity_Produced__c);
                         }
                         System.debug('Updating existing Inward for MO ' + MO.Id + ' to qty ' + StockInward2Update.ERP7__Quantity__c);
                         StocksInwardList2Create.add(StockInward2Update);
                     }
-                    }
+
                  }
+                }
                 for (Manufacturing_Order__c MO: MOs2CreateWIPs) {
                     //new code for serial batch wip
                     if(MO.ERP7__Serialise__c && MO.ERP7__Lot_Tracked__c){
@@ -267,7 +293,7 @@ trigger ManufacturingOrder on Manufacturing_Order__c(after insert, after update,
                 //}  //commented the for loop for bulikifing
                 if(WIPs2Insert.size() > 0 && Schema.sObjectType.ERP7__WIP__c.isCreateable()) { insert WIPs2Insert; } else{  }
                 
-                if(StockList2Create.size() > 0)  insert StockList2Create;
+                if(StockList2Create.size() > 0)  { System.debug('inserting stockList2Create'); insert StockList2Create;}
                 
                 for(Id pliId : pliStockInward.KeySet()){
                     pliStockInward.get(pliId).ERP7__Site_ProductService_InventoryStock__c = pliStock.get(pliId).Id;

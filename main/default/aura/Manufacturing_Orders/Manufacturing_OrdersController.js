@@ -2265,12 +2265,14 @@ if (soli && soli.length > 0) {
                                 var objsels = JSON.stringify(NewSOLI);
                                 var objs = JSON.stringify(obj);
                                 var moSerialNos = JSON.stringify(selectedSerialNos2Send);
+                                var locationId = cmp.get("v.NewSOLI.ERP7__Location__c") || '';
 
                                 var action = cmp.get("c.SaveNewSOLI");
                                 action.setParams({
                                     NewSOLI: objsels,
                                     MRPs: objs,
-                                    SerialNos: moSerialNos
+                                    SerialNos: moSerialNos,
+                                        locationId: locationId
                                 });
                                // In your CaptureWeight function, find this line:
 // action.setCallback(this, function(response) {
@@ -3939,7 +3941,58 @@ changePageSize: function(cmp, event, helper) {
         console.error('=== EXCEPTION HANDLING COMPLETE ===');
     }
 }*/
+getSOLILocationStock: function(cmp, event, helper) {
+    var locationId = cmp.get("v.NewSOLI.ERP7__Location__c");
+    if(!locationId) {
+        cmp.set("v.SOLI_LocationStock", 0);
+        return;
+    }
 
+    var mrps = cmp.get("v.MRPs");
+    var selectedMRP = null;
+    for(var i = 0; i < mrps.length; i++) {
+        if(mrps[i].isSelect) { selectedMRP = mrps[i]; break; }
+    }
+    if(!selectedMRP) return;
+
+    var productId = selectedMRP.MRP.ERP7__MRP_Product__c;
+    var siteId = '';
+    if(cmp.get("v.manuOrder").ERP7__Routing__c != undefined && cmp.get("v.manuOrder").ERP7__Routing__c != null) {
+        if(cmp.get("v.manuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != undefined) {
+            siteId = cmp.get("v.manuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c;
+        }
+    }
+
+    var action = cmp.get("c.getLocationStock");
+    action.setParams({ locationId: locationId, productId: productId, siteId: siteId });
+    action.setCallback(this, function(response) {
+        if(response.getState() === "SUCCESS") {
+            cmp.set("v.SOLI_LocationStock", response.getReturnValue() || 0);
+        } else {
+            cmp.set("v.SOLI_LocationStock", 0);
+        }
+    });
+    $A.enqueueAction(action);
+},
+  lookupClickLocation: function(cmp, event, helper) {
+    var mrps = cmp.get("v.MRPs");
+    var selectedMRP = null;
+    for(var i = 0; i < mrps.length; i++) {
+        if(mrps[i].isSelect) { selectedMRP = mrps[i]; break; }
+    }
+    if(!selectedMRP) return;
+
+    var siteId = '';
+    if(cmp.get("v.manuOrder").ERP7__Routing__c != undefined && cmp.get("v.manuOrder").ERP7__Routing__c != null) {
+        if(cmp.get("v.manuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != undefined && cmp.get("v.manuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c != null) {
+            siteId = cmp.get("v.manuOrder").ERP7__Routing__r.ERP7__Raw_Materials_Site__c;
+        }
+    }
+    if(!siteId) return;
+
+    // Filter location lookup to only show locations belonging to this site/warehouse
+    cmp.set("v.locationQry", "AND ERP7__Site__c = '" + siteId + "'");
+},
 
 
 })
