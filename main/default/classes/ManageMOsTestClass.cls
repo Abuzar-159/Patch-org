@@ -229,7 +229,7 @@ insert OT;*/
             ManufacturingOrder.SaveAllMRPs(JSON.serialize(comws));
             ERP7__Stock_Outward_Line_Item__c NewSOLI = new ERP7__Stock_Outward_Line_Item__c(Quantity__c=1, ERP7__MRP_Material_Requirements_Planning__c = mrp.Id);
             List<Id> srIds = new list<Id>();
-            ManufacturingOrder.SaveNewSOLI(JSON.serialize(NewSOLI),JSON.serialize(comws),JSON.serialize(srIds));
+            ManufacturingOrder.SaveNewSOLI(JSON.serialize(NewSOLI),JSON.serialize(comws),JSON.serialize(srIds) ,'');
             List<ERP7__Stock_Outward_Line_Item__c> mySOLIs = [Select Id, Name, ERP7__Quantity__c from ERP7__Stock_Outward_Line_Item__c];
             if(mySOLIs.size() > 0) ManufacturingOrder.DeleteSOLI(mySOLIs[0].Id,JSON.serialize(comws));
             ManufacturingOrder.MRPNewUpdate1(JSON.serialize(mrp));
