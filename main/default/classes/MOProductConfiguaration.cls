@@ -2375,6 +2375,7 @@ String prcsId = String.join(new List<String>(ProcessCycleIds), ',');*/
         return pw;
     }
     
+    
     public class PicklistWrapper{
         @AuraEnabled
         public Map<String, List<String>> pickListMap;
@@ -2464,6 +2465,79 @@ String prcsId = String.join(new List<String>(ProcessCycleIds), ',');*/
     }
 
     
-    
+    // New Wrapper for Pagination
+    public class PaginatedProdWrap {
+        @AuraEnabled public Integer totalRecords { get; set; }
+        @AuraEnabled public List<wrapper> products { get; set; }
+    }
+
+    @AuraEnabled
+    public static PaginatedProdWrap getPaginatedProds(String processId, String ProductId, String search, String Family, String SubFamily, Integer lim, Integer off) {
+        PaginatedProdWrap resultWrap = new PaginatedProdWrap();
+        
+        string siteId = '';
+        if(processId != null && processId != '' && ProductId != null && ProductId != ''){
+            List<ERP7__Routing__c> route = [Select Id,Name,ERP7__Process__c,ERP7__Raw_Materials_Site__c from ERP7__Routing__c where ERP7__Process__c=:processId and ERP7__Product__c =: ProductId limit 1]; 
+            if(route.size() > 0) siteId = route[0].ERP7__Raw_Materials_Site__c;
+        }
+        
+        List<wrapper> wrap = new List<wrapper>();
+        if(search != null && search != '') search = '%'+search+'%';
+        
+        String baseQuery = ' FROM Product2 WHERE IsActive = true and ERP7__Track_Inventory__c = true';
+        if(Family != null && Family != '') { baseQuery += ' and Family = :Family'; }
+        if(SubFamily != null && SubFamily != '') { baseQuery += ' and ERP7__Product_Service_Family__c = :SubFamily'; }
+        if(search != null && search != '') { baseQuery+= ' and (Name LIKE :search or ProductCode LIKE :search or StockKeepingUnit LIKE :search )'; }
+        
+        // 1. Get Total Count for Pagination UI
+        String countQuery = 'SELECT count()' + baseQuery;
+        resultWrap.totalRecords = Database.countQuery(countQuery);
+        
+        // 2. Fetch only the Paginated Chunk
+        String dataQuery = 'SELECT Id,Name,Description,ProductCode,ERP7__Purchase_Lead_Time_days__c,ERP7__Vendor_product_Name__c,QuantityUnitOfMeasure' + baseQuery + ' Order By Name LIMIT :lim OFFSET :off';
+        List<Product2> prodList = Database.query(dataQuery);
+        
+        set<Id> productIds = new set<Id>();
+        for(Product2 pr : prodList) productIds.add(pr.Id);
+        
+        List <Inventory_Stock__c> WarehouseItemInventoryStocks = new List <Inventory_Stock__c>();
+        if(siteId != null && siteId != ''){
+            WarehouseItemInventoryStocks = [Select Id, Name, Active__c, Organisation__c, Organisation_Business_Unit__c, Warehouse__c, product__c,ERP7__No_of_Items_Requested__c,ERP7__Number_of_Items_Awaiting_in_Stock__c, ERP7__Number_of_Item_In_Stock__c, ERP7__Version__c From Inventory_Stock__c Where product__c In: productIds And Active__c = true And Warehouse__c =: siteId and (ERP7__Number_of_Item_In_Stock__c > 0 Or ERP7__No_of_Items_Requested__c > 0 or ERP7__Number_of_Items_Awaiting_in_Stock__c > 0)];
+        }
+        
+        Map<String, Decimal> stockView = new Map<String, Decimal>();
+        Map<String, Decimal> demandView = new Map<String, Decimal>();
+        Map<String, Decimal> AwaitingstockView = new Map<String, Decimal>();
+        List<ERP7__Cost_Card__c> CC = [Select Id,Name,ERP7__Cost__c,ERP7__Product__c from ERP7__Cost_Card__c where ERP7__Product__c IN: productIds and ERP7__Cost__c != null and ERP7__Active__c = true and ERP7__Default__c = true and ERP7__Start_Date__c <=:System.today() and ERP7__End_Date__c >= : System.today() and ERP7__Supplier__c = null Order By ERP7__Default__c ];
+        Map<Id,ERP7__Cost_Card__c> ccMap = new Map<Id,ERP7__Cost_Card__c>();
+        for(ERP7__Cost_Card__c cc1 : CC){ if(!ccMap.containsKey(cc1.ERP7__Product__c)) ccMap.put(cc1.ERP7__Product__c,cc1); }
+        
+        for(Id prId : productIds){
+            Decimal stock = 0; Decimal demand = 0; Decimal Awaitingstock=0;
+            for(Inventory_Stock__c inven : WarehouseItemInventoryStocks){
+                if(prId == inven.product__c){
+                    stock += inven.ERP7__Number_of_Item_In_Stock__c;
+                    demand += inven.ERP7__No_of_Items_Requested__c;
+                    Awaitingstock += inven.ERP7__Number_of_Items_Awaiting_in_Stock__c;
+                }
+            }
+            stockView.put(prId,stock); demandView.put(prId,demand); AwaitingstockView.put(prId,Awaitingstock);
+        }
+        for(Product2 pr : prodList){
+            wrapper wrapNew = new wrapper();
+            wrapNew.prod = pr;
+            wrapNew.UOM = pr.QuantityUnitOfMeasure;
+            wrapNew.quantity = 0; wrapNew.MaxVariance = 0; wrapNew.MinVariance = 0; wrapNew.Multiples = 0;
+            wrapNew.stock = stockView.containsKey(pr.Id) ? stockView.get(pr.Id) : 0;
+            wrapNew.demand = demandView.containsKey(pr.Id) ? demandView.get(pr.Id) : 0;
+            wrapNew.AwaitStock = AwaitingstockView.containsKey(pr.Id) ? AwaitingstockView.get(pr.Id) : 0;
+            if(ccMap.containsKey(pr.Id)) { wrapNew.CostPrice = ccMap.get(pr.Id).ERP7__Cost__c; wrapNew.CostcardId = ccMap.get(pr.Id).Id; }
+            else wrapNew.CostPrice = 0;
+            wrap.add(wrapNew);
+        }
+        
+        resultWrap.products = wrap;
+        return resultWrap;
+    }
     
 }

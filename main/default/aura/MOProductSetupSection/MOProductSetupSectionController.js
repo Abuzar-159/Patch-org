@@ -2466,6 +2466,7 @@
     
     addProducts : function(component, event, helper) { 
         try{
+            helper.syncCurrentPageToSelected(component); // ADD THIS LINE FIRST
             let selectedProds = component.get('v.selectedListOfProducts');
             if(selectedProds != undefined && selectedProds != null && selectedProds.length > 0){
                 component.set('v.showspinner',true);
@@ -2605,6 +2606,7 @@
                     }
                 }
             }
+            component.set("v.currentPage", 1); // ADD THIS LINE
             component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {
@@ -2630,6 +2632,7 @@
                     }
                 }
             }
+            component.set("v.currentPage", 1); // ADD THIS LINE
             component.set('v.showspinner',true);
             helper.getProducts(component);
             helper.parentFieldChange(component, event, helper);
@@ -2656,6 +2659,7 @@
                     }
                 }
             }
+            component.set("v.currentPage", 1); // ADD THIS LINE
             component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {
@@ -2678,6 +2682,7 @@
             if(selectedProds == null && selectedProds == undefined && selectedProds.length == 0) selectedProds = [];
             for(var x in allprods){
                 if(allprods[x].prod.Id == prodId){
+                    allprods[x].isChecked = valcheck; // ADD THIS LINE
                     var index = selectedProds.findIndex(item => item.prod.Id === prodId);
                     console.log('index : ',index);
                     if (valcheck) {
@@ -2799,5 +2804,62 @@
         }catch(e){
             console.log('error : ',e);
         }
-    }
+    },
+
+   // --- START PAGINATION LOGIC --- //
+
+    firstProdPage : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        component.set("v.currentPage", 1);
+        helper.getProducts(component);
+    },
+
+    prevProdPage : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        component.set("v.currentPage", component.get("v.currentPage") - 1);
+        helper.getProducts(component); 
+    },
+
+    nextProdPage : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        component.set("v.currentPage", component.get("v.currentPage") + 1);
+        helper.getProducts(component); 
+    },
+
+    lastProdPage : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        component.set("v.currentPage", component.get("v.totalPages"));
+        helper.getProducts(component);
+    },
+
+    handlePageSizeChange : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        
+        // Ensure pageSize is treated as an Integer
+        let newSize = parseInt(component.get("v.pageSize"), 10);
+        component.set("v.pageSize", newSize);
+        
+        // Whenever page size changes, safely bounce the user back to page 1
+        component.set("v.currentPage", 1);
+        helper.getProducts(component);
+    },
+
+    handlePageJump : function(component, event, helper) {
+        helper.syncCurrentPageToSelected(component); // Save current work
+        
+        let pageNum = parseInt(component.get("v.currentPage"), 10);
+        let totalPages = parseInt(component.get("v.totalPages"), 10);
+        
+        // Validation: Prevent users from typing invalid page numbers (like 0, -5, or 9999)
+        if (!pageNum || pageNum < 1) {
+            pageNum = 1;
+        } else if (pageNum > totalPages) {
+            pageNum = totalPages;
+        }
+        
+        component.set("v.currentPage", pageNum);
+        helper.getProducts(component);
+    },
+
+    // --- END PAGINATION LOGIC --- //
 })
