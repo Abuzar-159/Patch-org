@@ -2465,7 +2465,7 @@ String prcsId = String.join(new List<String>(ProcessCycleIds), ',');*/
     }
 
     
-    // New Wrapper for Pagination
+   // Standard Wrapper for Pagination
     public class PaginatedProdWrap {
         @AuraEnabled public Integer totalRecords { get; set; }
         @AuraEnabled public List<wrapper> products { get; set; }
@@ -2484,22 +2484,43 @@ String prcsId = String.join(new List<String>(ProcessCycleIds), ',');*/
         List<wrapper> wrap = new List<wrapper>();
         if(search != null && search != '') search = '%'+search+'%';
         
-        String baseQuery = ' FROM Product2 WHERE IsActive = true and ERP7__Track_Inventory__c = true';
+        String baseQuery = 'SELECT Id,Name,Description,ProductCode,ERP7__Purchase_Lead_Time_days__c,ERP7__Vendor_product_Name__c,QuantityUnitOfMeasure FROM Product2 WHERE IsActive = true and ERP7__Track_Inventory__c = true';
+        
         if(Family != null && Family != '') { baseQuery += ' and Family = :Family'; }
         if(SubFamily != null && SubFamily != '') { baseQuery += ' and ERP7__Product_Service_Family__c = :SubFamily'; }
         if(search != null && search != '') { baseQuery+= ' and (Name LIKE :search or ProductCode LIKE :search or StockKeepingUnit LIKE :search )'; }
         
-        // 1. Get Total Count for Pagination UI
-        String countQuery = 'SELECT count()' + baseQuery;
-        resultWrap.totalRecords = Database.countQuery(countQuery);
+        // 1. Bypass the OFFSET limit by pulling the results into memory (up to 10,000)
+        baseQuery += ' Order By Name LIMIT 10000';
+        List<Product2> allProds = Database.query(baseQuery);
         
-        // 2. Fetch only the Paginated Chunk
-        String dataQuery = 'SELECT Id,Name,Description,ProductCode,ERP7__Purchase_Lead_Time_days__c,ERP7__Vendor_product_Name__c,QuantityUnitOfMeasure' + baseQuery + ' Order By Name LIMIT :lim OFFSET :off';
-        List<Product2> prodList = Database.query(dataQuery);
+        // 2. Set the total records for the UI calculation
+        resultWrap.totalRecords = allProds.size();
         
+        // 3. APEX LIST SLICING: Grab only the chunk we need for the current page
+        List<Product2> paginatedProds = new List<Product2>();
+        Integer startIndex = off;
+        Integer endIndex = Math.min(off + lim, allProds.size());
+        
+        if (startIndex < allProds.size()) {
+            for (Integer i = startIndex; i < endIndex; i++) {
+                paginatedProds.add(allProds[i]);
+            }
+        }
+        
+        // Extract IDs ONLY for the current page's products to save SOQL limits
         set<Id> productIds = new set<Id>();
-        for(Product2 pr : prodList) productIds.add(pr.Id);
+        for(Product2 pr : paginatedProds) {
+            productIds.add(pr.Id);
+        }
         
+        // If the page is empty, return early
+        if(productIds.isEmpty()) {
+            resultWrap.products = wrap;
+            return resultWrap;
+        }
+        
+        // 4. Query related data ONLY for the current page's chunk
         List <Inventory_Stock__c> WarehouseItemInventoryStocks = new List <Inventory_Stock__c>();
         if(siteId != null && siteId != ''){
             WarehouseItemInventoryStocks = [Select Id, Name, Active__c, Organisation__c, Organisation_Business_Unit__c, Warehouse__c, product__c,ERP7__No_of_Items_Requested__c,ERP7__Number_of_Items_Awaiting_in_Stock__c, ERP7__Number_of_Item_In_Stock__c, ERP7__Version__c From Inventory_Stock__c Where product__c In: productIds And Active__c = true And Warehouse__c =: siteId and (ERP7__Number_of_Item_In_Stock__c > 0 Or ERP7__No_of_Items_Requested__c > 0 or ERP7__Number_of_Items_Awaiting_in_Stock__c > 0)];
@@ -2523,7 +2544,9 @@ String prcsId = String.join(new List<String>(ProcessCycleIds), ',');*/
             }
             stockView.put(prId,stock); demandView.put(prId,demand); AwaitingstockView.put(prId,Awaitingstock);
         }
-        for(Product2 pr : prodList){
+        
+        // 5. Wrap only the paginated products to return to the UI
+        for(Product2 pr : paginatedProds){
             wrapper wrapNew = new wrapper();
             wrapNew.prod = pr;
             wrapNew.UOM = pr.QuantityUnitOfMeasure;

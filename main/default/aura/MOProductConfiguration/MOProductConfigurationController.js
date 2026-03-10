@@ -22,7 +22,7 @@
                 console.log('today : ',today);
                 component.set('v.today',today);
                 var pdt = component.get("v.prodlst");
-              /*  var returndetails = component.get('v.CurrProdLst');
+                var returndetails = component.get('v.CurrProdLst');
                 console.log('returndetails : ',returndetails);
                 for(var i in pdt){
                     component.set("v.recSize",pdt[i].recSize);
@@ -35,7 +35,7 @@
                     }
                     
                     
-                }*/
+                }
                 component.set('v.prodlst',pdt);
                 if(component.get("v.prodlst").length>0){
                     var startCount = component.get("v.Offset") + 1;
