@@ -4698,8 +4698,8 @@
         component.set("v.accountTab",false);
     },
     
-    openCardModal : function(component, event, helper) {
-        /*
+   /* openCardModal : function(component, event, helper) {
+        /  ----- *
         
         component.set('v.selInvList',[]);
         var action=component.get('c.SOInvoiceList');
@@ -4726,10 +4726,52 @@
                 console.log('Error:',response.getError());
             }
         });
-        $A.enqueueAction(action);*/
+        $A.enqueueAction(action);* ---- /
         
         $A.util.addClass(component.find("myModalCard"),"slds-fade-in-open");
         $A.util.addClass(component.find("myModalCardBackdrop"),"slds-backdrop_open");
+    },  */
+    
+   openCardModal : function(component, event, helper) {
+        console.log("openCardModal triggered");
+        var invoice = component.get("v.Invoiced");
+        console.log("Invoice value:", invoice);
+        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
+        console.log("Resolved Invoice Id:", invoiceId);
+        if(!invoiceId){
+            console.log("No invoice selected");
+            helper.showToast("Error","Please select an invoice first","error");
+            return;
+        }
+        console.log("Calling Apex isInvoicePosted");
+        var action = component.get("c.isInvoicePosted");
+        action.setParams({
+            invoiceId : invoiceId
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            console.log("Apex response state:", state);
+            if(state === "SUCCESS"){
+                var isPosted = response.getReturnValue();
+                console.log("Is Invoice Posted:", isPosted);
+                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+                if(!isPosted){
+                    console.log("Invoice is NOT posted");
+                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
+                    return;
+                }
+                console.log("Invoice is posted. Opening modal");
+                $A.util.addClass(component.find("myModalCard"),"slds-fade-in-open");
+                $A.util.addClass(component.find("myModalCardBackdrop"),"slds-backdrop_open");
+            } 
+            else if(state === "ERROR"){
+                var errors = response.getError();
+                console.log("Apex Error:", errors);
+                helper.showToast("Error","Error validating invoice","error");
+            }
+        });
+        console.log("Enqueueing Apex action");
+        $A.enqueueAction(action);
     },
     
     closeCardModal : function(component, event, helper) {
@@ -4753,9 +4795,53 @@
         component.set('v.Payment.ERP7__Total_Amount__c',totalAmt);
     },*/
     
-    openBankModal : function(component, event, helper) {
+  /*  openBankModal : function(component, event, helper) {
         $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
         $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
+    },  */
+    
+    openBankModal : function(component, event, helper) {
+        console.log("openBankModal triggered");
+        var invoice = component.get("v.Invoiced");
+        console.log("Invoice value:", invoice);
+        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
+        console.log("Resolved Invoice Id:", invoiceId);
+        if(!invoiceId){
+            console.log("No invoice selected");
+            helper.showToast("Error","Please select an invoice first","error");
+            return;
+        }
+        console.log("Calling Apex isInvoicePosted");
+        var action = component.get("c.isInvoicePosted");
+        action.setParams({
+            invoiceId : invoiceId
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            console.log("Apex response state:", state);
+            if(state === "SUCCESS"){
+                var isPosted = response.getReturnValue();
+                console.log("Is Invoice Posted:", isPosted);
+                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+                if(!isPosted){
+                    console.log("Invoice is NOT posted");
+                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
+                    return;
+                }
+                console.log("Invoice is posted. Opening Bank modal");
+                console.log("Bank Modal element:", component.find("myModalBank"));
+                console.log("Bank Backdrop element:", component.find("myModalBankBackdrop"));
+                $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
+                $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
+            }
+            else if(state === "ERROR"){
+                var errors = response.getError();
+                console.log("Apex Error:", errors);
+                helper.showToast("Error","Error validating invoice","error");
+            }
+        });
+        console.log("Enqueueing Apex action");
+        $A.enqueueAction(action);
     },
     
     closeBankModal : function(component, event, helper) {
@@ -4764,9 +4850,53 @@
         component.popInit();
     },
     
-    openCashModal : function(component, event, helper) {
+   /* openCashModal : function(component, event, helper) {
         $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
         $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
+    },  */
+    
+    openCashModal : function(component, event, helper) {
+        console.log("openCashModal triggered");
+        var invoice = component.get("v.Invoiced");
+        console.log("Invoice value:", invoice);
+        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
+        console.log("Resolved Invoice Id:", invoiceId);
+        if(!invoiceId){
+            console.log("No invoice selected");
+            helper.showToast("Error","Please select an invoice first","error");
+            return;
+        }
+        console.log("Calling Apex isInvoicePosted");
+        var action = component.get("c.isInvoicePosted");
+        action.setParams({
+            invoiceId : invoiceId
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            console.log("Apex response state:", state);
+            if(state === "SUCCESS"){
+                var isPosted = response.getReturnValue();
+                console.log("Is Invoice Posted:", isPosted);
+                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+                if(!isPosted){
+                    console.log("Invoice is NOT posted");
+                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
+                    return;
+                }
+                console.log("Invoice is posted. Opening Cash modal");
+                console.log("Cash Modal element:", component.find("myModalCash"));
+                console.log("Cash Backdrop element:", component.find("myModalCashBackdrop"));
+                $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
+                $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
+            } 
+            else if(state === "ERROR"){
+                var errors = response.getError();
+                console.log("Apex Error:", errors);
+                helper.showToast("Error","Error validating invoice","error");
+            }
+        });
+        console.log("Enqueueing Apex action");
+        $A.enqueueAction(action);
     },
     
     closeCashModal : function(component, event, helper) {
@@ -4851,11 +4981,55 @@
         component.popInit();
     },
     
-    openApplyCredModal : function(component, event, helper) {
+  /*  openApplyCredModal : function(component, event, helper) {
         $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
         $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
-    },
+    },  */
     
+    openApplyCredModal : function(component, event, helper) {
+        console.log("openApplyCredModal triggered");
+        var invoice = component.get("v.Invoiced");
+        console.log("Invoice value:", invoice);
+        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
+        console.log("Resolved Invoice Id:", invoiceId);
+        if(!invoiceId){
+            console.log("No invoice selected");
+            helper.showToast("Error","Please select an invoice first","error");
+            return;
+        }
+        console.log("Calling Apex isInvoicePosted");
+        var action = component.get("c.isInvoicePosted");
+        action.setParams({
+            invoiceId : invoiceId
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            console.log("Apex response state:", state);
+            if(state === "SUCCESS"){
+                var isPosted = response.getReturnValue();
+                console.log("Is Invoice Posted:", isPosted);
+                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+                if(!isPosted){
+                    console.log("Invoice is NOT posted");
+                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
+                    return;
+                }
+                console.log("Invoice is posted. Opening Apply Credit modal");
+                console.log("ApplyCred Modal element:", component.find("myModalApplyCred"));
+                console.log("ApplyCred Backdrop element:", component.find("myModalApplyBackdrop"));
+                $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
+                $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
+            }
+            else if(state === "ERROR"){
+                var errors = response.getError();
+                console.log("Apex Error:", errors);
+                helper.showToast("Error","Error validating invoice","error");
+            }
+        });
+        console.log("Enqueueing Apex action");
+        $A.enqueueAction(action);
+    },
+        
     closeApplyCredModal : function(component, event, helper) {
         $A.util.removeClass(component.find("myModalApplyCred"),"slds-fade-in-open");
         $A.util.removeClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");

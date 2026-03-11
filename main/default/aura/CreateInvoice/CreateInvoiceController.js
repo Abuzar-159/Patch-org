@@ -149,6 +149,7 @@
     },
 
     setDefaultValues : function(component, event, helper) {
+        component.set("v.showMmainSpin69",true);
 		console.log('called setDefaultValues');
         		console.log('invrecordId', component.get("v.invrecordId"));
 
@@ -183,6 +184,9 @@
                 //helper.fetchScheduleInvoices(component);
             }
         }
+       setTimeout($A.getCallback(function() {
+            component.set("v.showMmainSpin69", false);
+        }), 6000);
     },
 
     handleSubmit: function(component, event, helper) {

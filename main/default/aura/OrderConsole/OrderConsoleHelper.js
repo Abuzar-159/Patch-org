@@ -14,6 +14,18 @@
         $A.enqueueAction(action);
     },
     
+    showToast : function(title, message, type){
+        var toast = $A.get("e.force:showToast");
+        if(toast){
+            toast.setParams({
+                title: title,
+                message: message,
+                type: type
+            });
+            toast.fire();
+        }
+    },
+    
     hideSpinner : function (component, event) {
         var spinner = component.find('mainSpin');
         $A.util.addClass(spinner, "slds-hide");    

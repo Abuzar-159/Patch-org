@@ -982,6 +982,7 @@
                 console.log("how is value printed ",component.get('v.Header'));
                 component.set("v.ProcessCycleId",currentPr);
                 component.set('v.selectedListOfProducts',[]);
+                component.set("v.currentPage", 1);
                 helper.getProducts(component);
                 setTimeout(function() {
                     component.set('v.showspinner', false);
@@ -1217,6 +1218,7 @@
             component.set('v.Header',$A.get("$Label.c.Work_in_Progress_WIPs"));
             component.set("v.ProcessCycleId",currentPr);
             component.set('v.selectedListOfProducts',[]);
+            component.set("v.currentPage", 1);
             helper.getProducts(component);
             setTimeout(function() {
                 component.set('v.showspinner', false);
@@ -2606,8 +2608,8 @@
                     }
                 }
             }
-            component.set("v.currentPage", 1); // ADD THIS LINE
-            component.set('v.showspinner',true);
+                component.set("v.currentPage", 1);
+                component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {
                 component.set('v.showspinner', false);
@@ -2632,7 +2634,7 @@
                     }
                 }
             }
-            component.set("v.currentPage", 1); // ADD THIS LINE
+            component.set("v.currentPage", 1);
             component.set('v.showspinner',true);
             helper.getProducts(component);
             helper.parentFieldChange(component, event, helper);
@@ -2659,7 +2661,7 @@
                     }
                 }
             }
-            component.set("v.currentPage", 1); // ADD THIS LINE
+            component.set("v.currentPage", 1);
             component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {

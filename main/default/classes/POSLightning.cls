@@ -8299,5 +8299,14 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
     }
     //========================Product Configuration end=====================
     
+    
+     @AuraEnabled
+    public static Boolean isInvoicePosted(Id invoiceId){
+        ERP7__Invoice__c inv = [
+            SELECT Id, ERP7__Posted__c
+            FROM ERP7__Invoice__c WHERE Id = :invoiceId LIMIT 1
+        ];
+        return inv.ERP7__Posted__c;
+    }
  
 }
