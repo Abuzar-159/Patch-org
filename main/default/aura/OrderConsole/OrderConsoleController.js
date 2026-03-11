@@ -4740,7 +4740,8 @@
         console.log("Resolved Invoice Id:", invoiceId);
         if(!invoiceId){
             console.log("No invoice selected");
-            helper.showToast("Error","Please select an invoice first","error");
+            $A.util.addClass(component.find("myModalCard"),"slds-fade-in-open");
+            $A.util.addClass(component.find("myModalCardBackdrop"),"slds-backdrop_open");
             return;
         }
         console.log("Calling Apex isInvoicePosted");
@@ -4808,7 +4809,8 @@
         console.log("Resolved Invoice Id:", invoiceId);
         if(!invoiceId){
             console.log("No invoice selected");
-            helper.showToast("Error","Please select an invoice first","error");
+            $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
+            $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
             return;
         }
         console.log("Calling Apex isInvoicePosted");
@@ -4863,7 +4865,8 @@
         console.log("Resolved Invoice Id:", invoiceId);
         if(!invoiceId){
             console.log("No invoice selected");
-            helper.showToast("Error","Please select an invoice first","error");
+           $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
+           $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
             return;
         }
         console.log("Calling Apex isInvoicePosted");
@@ -4994,7 +4997,8 @@
         console.log("Resolved Invoice Id:", invoiceId);
         if(!invoiceId){
             console.log("No invoice selected");
-            helper.showToast("Error","Please select an invoice first","error");
+           $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
+           $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
             return;
         }
         console.log("Calling Apex isInvoicePosted");
