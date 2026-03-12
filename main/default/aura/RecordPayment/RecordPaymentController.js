@@ -706,7 +706,7 @@
        $A.enqueueAction(action);
     },
     
-    goBack : function(component, event, helper) {
+   /* goBack : function(component, event, helper) {
         try{
             if (component.get("v.FromClosing") === true) {
                 var evt = $A.get("e.force:navigateToComponent");
@@ -734,8 +734,68 @@
             
         }
         catch(e){console.log('Error in Back:',e);}
-    },
-   
+    },  */
+    
+    goBack : function(component, event, helper) {
+    try{
+        console.log("===== goBack START =====");
+
+        var fromClosing = component.get("v.FromClosing");
+        var recordId = component.get("v.recordId"); // Invoice Id
+        var paymentId = component.get("v.paymentId"); // Payment Id
+        var fromAccRec = component.get("v.fromAccRec");
+        var accPeriod = component.get("v.AccoutingPeriod");
+
+        console.log("FromClosing:", fromClosing);
+        console.log("Invoice recordId:", recordId);
+        console.log("PaymentId:", paymentId);
+        console.log("fromAccRec:", fromAccRec);
+
+        // 1️⃣ Navigate back to Closing Checklist
+        if (fromClosing === true) {
+
+            console.log("Navigating to Closing Checklist");
+
+            window.location.href =
+            '/lightning/cmp/c__ManageClosingOfBooksCheckList?c__AP=' +
+            accPeriod.Id;
+
+            return;
+        }
+
+        // 2️⃣ Navigate to Payment record (Preferred)
+        if(!$A.util.isEmpty(paymentId)){
+
+            console.log("Navigating to Payment record:", paymentId);
+
+            window.location.href = '/' + paymentId;
+
+            return;
+        }
+
+        // 3️⃣ Fallback → Navigate to Invoice
+        if(!$A.util.isEmpty(recordId) && fromAccRec === false){
+
+            console.log("Navigating to Invoice record:", recordId);
+
+            window.location.href = '/' + recordId;
+
+            return;
+        }
+
+        // 4️⃣ Final fallback
+        console.log("Reloading page");
+
+        location.reload();
+
+        console.log("===== goBack END =====");
+
+    }
+    catch(e){
+        console.error("Error in Back:", e);
+    }
+},
+       
     setPostToTrue:function(component, event, helper) {
       component.set('v.post',true);  
     },
