@@ -103,12 +103,15 @@
     },
 
     handleInvoiceSuccess: function(cmp, event, helper) {
+        
         var payload = event.getParams().response;
         cmp.set("v.invrecordId",payload.id);
         if(payload.id) helper.CreateInvoiceAndLineItem(cmp,event,helper);
     },
 
     onchangeInvoiceField: function(cmp, event, helper) {
+                cmp.set("v.showMmainSpin69",true);
+
 
         var sourceField = event.getSource();
         console.log('sourceField', sourceField);
@@ -146,10 +149,15 @@
             default:
                 // code block
         }
+        
+         setTimeout($A.getCallback(function() {
+            cmp.set("v.showMmainSpin69", false);
+        }), 6000);
     },
 
     setDefaultValues : function(component, event, helper) {
-        component.set("v.showMmainSpin69",true);
+                component.set("v.showMmainSpin69",true);
+
 		console.log('called setDefaultValues');
         		console.log('invrecordId', component.get("v.invrecordId"));
 
@@ -184,9 +192,10 @@
                 //helper.fetchScheduleInvoices(component);
             }
         }
-       setTimeout($A.getCallback(function() {
+         setTimeout($A.getCallback(function() {
             component.set("v.showMmainSpin69", false);
         }), 6000);
+      
     },
 
     handleSubmit: function(component, event, helper) {

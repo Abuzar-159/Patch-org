@@ -265,6 +265,7 @@
                         "ShowPaymentType":ShowPaymentType,
                         "showPage":showPage,
                         "OrgId" : component.get("v.Organisation.Id"),
+                        "fromAccRec" :true,
                     },function(newCmp, status, errorMessage){
                         if (status === "SUCCESS") {
                             var body = component.find("body");
@@ -283,6 +284,7 @@
                         "navigateToRecord":false,
                         "ShowPaymentType":true,
                         "showPage":true,
+                		 "fromAccRec" :true,
                         "OrgId" : component.get("v.Organisation.Id"),
                     },function(newCmp, status, errorMessage){
                         if (status === "SUCCESS") {

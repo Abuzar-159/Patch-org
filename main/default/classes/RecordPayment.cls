@@ -924,13 +924,24 @@ public With Sharing class RecordPayment {
         if(Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Payment_Type__c.isCreateable() && Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Payment_Type__c.isUpdateable()) payments.ERP7__Payment_Type__c=PM;
         if(Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Payment_Gateway__c.isCreateable() && Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Payment_Gateway__c.isUpdateable()) payments.ERP7__Payment_Gateway__c = PM;
         //if(PM=='Credit' && RType!='Customer Payment' && RType != 'Debit_Note_Payments' && Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Transaction_Type__c.isCreateable() && Schema.sObjectType.ERP7__Payment__c.fields.ERP7__Transaction_Type__c.isUpdateable())payments.ERP7__Transaction_Type__c='CreditPayment';
-        if(RType =='Customer Payment' || RType == 'Debit_Note_Payments' ){
+        /*if(RType =='Customer Payment' || RType == 'Debit_Note_Payments' ){
             if(Schema.sObjectType.ERP7__Payment__c.isCreateable() && Schema.sObjectType.ERP7__Payment__c.isUpdateable()){ upsert payments;} else{returnValue.put('error', 'Not allowed to upsert payment'); }
             ERP7__Payment__c payName = [Select id, Name from ERP7__Payment__c where id=:payments.id limit 1]; 
             returnValue.put('pay', payName); 
             returnValue.put('payments',payments);
         }
-        return returnValue;
+        return returnValue; */
+        if(Schema.sObjectType.ERP7__Payment__c.isCreateable() && Schema.sObjectType.ERP7__Payment__c.isUpdateable()){
+            upsert payments;
+            ERP7__Payment__c payName = [SELECT Id, Name  FROM ERP7__Payment__c  WHERE Id = :payments.Id LIMIT 1];
+            returnValue.put('pay', payName);
+            returnValue.put('payments', payments);
+        }
+        else{
+            returnValue.put('error', 'Not allowed to upsert payment');
+        }
+        
+         return returnValue;
     }
     
     @AuraEnabled

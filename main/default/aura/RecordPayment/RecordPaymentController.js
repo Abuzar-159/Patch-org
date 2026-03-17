@@ -772,6 +772,22 @@
 
             return;
         }
+        
+        if(fromAccRec === true){
+            
+            console.log("Navigating Back to AR , Payment tab");
+            
+             var evt = $A.get("e.force:navigateToComponent");
+            evt.setParams({
+                componentDef : "c:AccountsReceivable",
+                componentAttributes: {
+                    "showTabs" : 'pay'
+                }
+            });
+            evt.fire();
+
+        
+        }
 
         // 3️⃣ Fallback → Navigate to Invoice
         if(!$A.util.isEmpty(recordId) && fromAccRec === false){
@@ -786,15 +802,21 @@
         // 4️⃣ Final fallback
         console.log("Reloading page");
 
-        location.reload();
+       
 
-        console.log("===== goBack END =====");
+       setTimeout(function() {
+            console.log("===== goBack END =====");
+        }, 2000); // 500 ms delay (you can change this)
+        
+        
 
     }
     catch(e){
         console.error("Error in Back:", e);
     }
 },
+    
+ 
        
     setPostToTrue:function(component, event, helper) {
       component.set('v.post',true);  
@@ -1038,7 +1060,7 @@
     },
     
     
-    saveRefund : function(c,e,h){
+   /* saveRefund : function(c,e,h){
         
         var msg = 'Fields marked as * are required';
         if(c.get('v.post')){
@@ -1096,6 +1118,144 @@
                 }
             }
         });
+        $A.enqueueAction(a);
+    },  */
+    
+    saveRefund : function(c,e,h){
+        
+        console.log('🚀 saveRefund started');
+
+        var msg = 'Fields marked as * are required';
+        console.log('Message set:', msg);
+
+        console.log('Post flag value:', c.get('v.post'));
+
+        if(c.get('v.post')){
+            console.log('Setting Posted Date:', c.get('v.today'));
+            c.set("v.payment.ERP7__Posted_Date__c", c.get('v.today'));
+        }else{
+            console.log('Clearing Posted Date');
+            c.set("v.payment.ERP7__Posted_Date__c",null);
+        }
+        
+        console.log('Showing Spinner');
+        h.showSpinner(c,e);
+
+        var validation = true;
+
+        console.log('Payment Mode:', c.get('v.paymentMode'));
+
+        if(c.get('v.paymentMode')=='Cash' || c.get('v.paymentMode')=='Cheque/Wire'){
+            console.log('Checking Payment Account:', c.get('v.payment.ERP7__Payment_Account__c'));
+
+            if($A.util.isUndefinedOrNull(c.get('v.payment.ERP7__Payment_Account__c')) || $A.util.isEmpty(c.get('v.payment.ERP7__Payment_Account__c')))
+            {
+                console.warn('⚠ Payment Account missing');
+                validation = false;
+            }
+        }   
+
+        console.log('Checking Refund Payment Amount');
+
+        if($A.util.isUndefinedOrNull(c.find("RpaymentAmount").get("v.value")) || $A.util.isEmpty(c.find("RpaymentAmount").get("v.value"))){
+            console.warn('⚠ Payment Amount missing');
+            c.find("RpaymentAmount").showHelpMessageIfInvalid();
+            validation = false;
+        }
+
+        console.log('Checking Check Reference field');
+
+        if(!$A.util.isUndefinedOrNull(c.find("RcheckReference")) && ($A.util.isUndefinedOrNull(c.find("RcheckReference").get("v.value")) || $A.util.isEmpty(c.find("RcheckReference").get("v.value")))){
+            console.warn('⚠ Check Reference missing');
+            c.find("RcheckReference").showHelpMessageIfInvalid();
+            validation = false;
+        }
+        
+        console.log('Bank Charges:', c.get('v.payment.ERP7__Bank_Charges__c'));
+        console.log('Bank Fee COA:', c.get('v.payment.ERP7__Bank_Fee_COA__c'));
+
+        if(c.get('v.payment.ERP7__Bank_Charges__c') > 0 && c.get('v.payment.ERP7__Bank_Charges__c') !='' && c.get('v.payment.ERP7__Bank_Charges__c') != undefined ){
+            if($A.util.isUndefinedOrNull(c.get('v.payment.ERP7__Bank_Fee_COA__c')) || $A.util.isEmpty(c.get('v.payment.ERP7__Bank_Fee_COA__c')))
+            {
+                console.warn('⚠ Bank Fee COA missing while Bank Charges present');
+                validation = false;
+            }
+        }
+        
+        console.log('Validation result:', validation);
+
+        if(!validation){
+            console.error('❌ Validation failed');
+            h.hideSpinner(c,e);
+            h.showToast('error',$A.get('$Label.c.Error_UsersShiftMatch'), msg); 
+            return;
+        } 
+        
+        console.log('Calling Apex Method saveRefundPay');
+
+        var a = c.get("c.saveRefundPay");
+
+        console.log('Payment Data:', c.get("v.payment"));
+        console.log('Account Id:', c.get("v.payment.ERP7__Accounts__c"));
+        console.log('Record Type:', c.get('v.setRT'));
+        console.log('Payment Mode:', c.get('v.paymentMode'));
+        console.log('Post flag:', c.get('v.post'));
+
+        a.setParams({
+            payment:JSON.stringify(c.get("v.payment")),
+            accId : c.get("v.payment.ERP7__Accounts__c"),
+            RType:c.get('v.setRT'),
+            PM:c.get('v.paymentMode'),
+            post:c.get('v.post')
+        });
+
+        a.setCallback(this,function(res){
+
+            console.log('Apex response received');
+            console.log('Response State:', res.getState());
+
+            if(res.getState()==='SUCCESS'){
+
+                console.log('✅ Apex Success');
+
+                h.hideSpinner(c,e);
+
+                var result = res.getReturnValue();
+                console.log('Return Value:', result);
+
+                var paymentName = res.getReturnValue().pay;
+                console.log('Payment Object:', paymentName);
+
+                c.set('v.PayName', paymentName.Name);
+                c.set('v.RefundPaymentId', paymentName.Id);
+
+                console.log('Payment Name:', paymentName.Name);
+                console.log('Refund Payment Id:', paymentName.Id);
+
+                h.showToast('Success',$A.get('$Label.c.Success'),c.get('v.PayName')+$A.get('$Label.c.Is_Created'));
+
+                console.log('Credit Note Amount:', c.get("v.cnAmount"));
+
+                if(c.get("v.cnAmount")>0){
+                    console.log('Applying refund credit');
+                    h.applyRefundCredit(c, e);
+                }
+                else{
+                    console.log('Redirecting to Payment Record Page');
+
+                    var url = '/'+c.get("v.RefundPaymentId");
+                    console.log('Redirect URL:', url);
+
+                    window.location.replace(url);
+                }
+            }
+            else{
+                console.error('❌ Apex call failed');
+                console.error('Response:', res);
+            }
+        });
+
+        console.log('Enqueueing Apex Action');
         $A.enqueueAction(a);
     },
     
