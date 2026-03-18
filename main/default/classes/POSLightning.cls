@@ -75,6 +75,7 @@ global Without Sharing Class POSLightning {
         son = sony;
         cust = custy;
         con = cony;
+        system.debug('son - '+son +'cust - '+cust+'con - '+con);
         String exceptionError;
         Date todayDate = system.today();
         try {
