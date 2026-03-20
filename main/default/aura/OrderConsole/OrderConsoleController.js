@@ -4775,50 +4775,46 @@
         $A.enqueueAction(action);
     },   */
     
-    
-    openCashModal : function(component, event, helper) {
-    console.log("🚀 openCashModal triggered");
+    openCardModal : function(component, event, helper) {
+    console.log("openCardModal triggered");
 
     var invoice = component.get("v.Invoiced");
-    console.log("📦 Raw Invoice value:", JSON.stringify(invoice));
+    console.log("Raw Invoice value:", JSON.stringify(invoice));
 
-    // ✅ Safe extraction of invoiceId
     var invoiceId = null;
 
     if(invoice){
         if(typeof invoice === 'object'){
             if(invoice.Id && typeof invoice.Id === 'string'){
                 invoiceId = invoice.Id;
-                console.log("✅ Invoice is object with valid Id");
+                console.log("Invoice is object with valid Id");
             } else {
-                console.warn("⚠️ Invoice object present but Id missing/invalid");
+                console.warn("Invoice object present but Id missing/invalid");
             }
         } 
         else if(typeof invoice === 'string'){
             invoiceId = invoice;
-            console.log("✅ Invoice is direct string Id");
+            console.log("Invoice is direct string Id");
         } 
         else {
-            console.warn("⚠️ Invoice is neither object nor string");
+            console.warn("Invoice is neither object nor string");
         }
     } else {
-        console.warn("⚠️ Invoice is null/undefined");
+        console.warn(" Invoice is null/undefined");
     }
 
-    console.log("🔎 Final Resolved Invoice Id:", invoiceId, "| Type:", typeof invoiceId);
+    console.log(" Final Resolved Invoice Id:", invoiceId, "| Type:", typeof invoiceId);
 
-    // ✅ STRICT VALIDATION (no Apex call if invalid)
     if(!invoiceId || typeof invoiceId !== 'string' || (invoiceId.length !== 15 && invoiceId.length !== 18)){
-        console.error("🚫 Invalid Invoice Id. Skipping Apex call.");
+        console.error("Invalid Invoice Id. Skipping Apex call.");
 
-        // 👉 Keep your existing behavior (open modal directly)
-        $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
-        $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
+        $A.util.addClass(component.find("myModalCard"),"slds-fade-in-open");
+        $A.util.addClass(component.find("myModalCardBackdrop"),"slds-backdrop_open");
 
         return;
     }
 
-    console.log("📡 Calling Apex isInvoicePosted with Id:", invoiceId);
+    console.log(" Calling Apex isInvoicePosted with Id:", invoiceId);
 
     var action = component.get("c.isInvoicePosted");
     action.setParams({
@@ -4827,16 +4823,16 @@
 
     action.setCallback(this, function(response){
         var state = response.getState();
-        console.log("📬 Apex response state:", state);
+        console.log(" Apex response state:", state);
 
         if(state === "SUCCESS"){
             var isPosted = response.getReturnValue();
-            console.log("📊 Is Invoice Posted:", isPosted);
+            console.log("Is Invoice Posted:", isPosted);
 
             var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
 
             if(!isPosted){
-                console.warn("⚠️ Invoice NOT posted. Blocking payment.");
+                console.warn(" Invoice NOT posted. Blocking payment.");
                 helper.showToast(
                     "Error",
                     "Invoice " + invoiceName + " is not posted. Payment cannot be processed.",
@@ -4845,23 +4841,109 @@
                 return;
             }
 
-            console.log("✅ Invoice posted. Opening Cash Modal");
+            console.log("Invoice posted. Opening Card modal");
+
+            $A.util.addClass(component.find("myModalCard"),"slds-fade-in-open");
+            $A.util.addClass(component.find("myModalCardBackdrop"),"slds-backdrop_open");
+        } 
+        else if(state === "ERROR"){
+            var errors = response.getError();
+            console.error("Apex Error:", JSON.stringify(errors));
+
+            helper.showToast("Error","Error validating invoice","error");
+        }
+        else{
+            console.warn("Unexpected Apex state:", state);
+        }
+    });
+
+    console.log("Enqueueing Apex action");
+    $A.enqueueAction(action);
+},
+    
+    openCashModal : function(component, event, helper) {
+    console.log("openCashModal triggered");
+
+    var invoice = component.get("v.Invoiced");
+    console.log("Raw Invoice value:", JSON.stringify(invoice));
+
+    var invoiceId = null;
+
+    if(invoice){
+        if(typeof invoice === 'object'){
+            if(invoice.Id && typeof invoice.Id === 'string'){
+                invoiceId = invoice.Id;
+                console.log("Invoice is object with valid Id");
+            } else {
+                console.warn("Invoice object present but Id missing/invalid");
+            }
+        } 
+        else if(typeof invoice === 'string'){
+            invoiceId = invoice;
+            console.log("Invoice is direct string Id");
+        } 
+        else {
+            console.warn("Invoice is neither object nor string");
+        }
+    } else {
+        console.warn("Invoice is null/undefined");
+    }
+
+    console.log("🔎 Final Resolved Invoice Id:", invoiceId, "| Type:", typeof invoiceId);
+
+    if(!invoiceId || typeof invoiceId !== 'string' || (invoiceId.length !== 15 && invoiceId.length !== 18)){
+        console.error("Invalid Invoice Id. Skipping Apex call.");
+
+        $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
+        $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
+
+        return;
+    }
+
+    console.log("Calling Apex isInvoicePosted with Id:", invoiceId);
+
+    var action = component.get("c.isInvoicePosted");
+    action.setParams({
+        invoiceId : invoiceId
+    });
+
+    action.setCallback(this, function(response){
+        var state = response.getState();
+        console.log("Apex response state:", state);
+
+        if(state === "SUCCESS"){
+            var isPosted = response.getReturnValue();
+            console.log("Is Invoice Posted:", isPosted);
+
+            var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+
+            if(!isPosted){
+                console.warn("️ Invoice NOT posted. Blocking payment.");
+                helper.showToast(
+                    "Error",
+                    "Invoice " + invoiceName + " is not posted. Payment cannot be processed.",
+                    "error"
+                );
+                return;
+            }
+
+            console.log(" Invoice posted. Opening Cash Modal");
 
             $A.util.addClass(component.find("myModalCash"),"slds-fade-in-open");
             $A.util.addClass(component.find("myModalCashBackdrop"),"slds-backdrop_open");
         } 
         else if(state === "ERROR"){
             var errors = response.getError();
-            console.error("❌ Apex Error:", JSON.stringify(errors));
+            console.error("Apex Error:", JSON.stringify(errors));
 
             helper.showToast("Error","Error validating invoice","error");
         }
         else{
-            console.warn("⚠️ Unexpected Apex state:", state);
+            console.warn("Unexpected Apex state:", state);
         }
     });
 
-    console.log("📨 Enqueueing Apex action");
+    console.log(" Enqueueing Apex action");
     $A.enqueueAction(action);
 },
     
@@ -4891,50 +4973,91 @@
         $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
     },  */
     
-    openBankModal : function(component, event, helper) {
-        console.log("openBankModal triggered");
-        var invoice = component.get("v.Invoiced");
-        console.log("Invoice value:", invoice);
-        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
-        console.log("Resolved Invoice Id:", invoiceId);
-        if(!invoiceId){
-            console.log("No invoice selected");
+   openBankModal : function(component, event, helper) {
+    console.log(" openBankModal triggered");
+
+    var invoice = component.get("v.Invoiced");
+    console.log(" Raw Invoice value:", JSON.stringify(invoice));
+
+    var invoiceId = null;
+
+    if(invoice){
+        if(typeof invoice === 'object'){
+            if(invoice.Id && typeof invoice.Id === 'string'){
+                invoiceId = invoice.Id;
+                console.log(" Invoice is object with valid Id");
+            } else {
+                console.warn("️ Invoice object present but Id missing/invalid");
+            }
+        } 
+        else if(typeof invoice === 'string'){
+            invoiceId = invoice;
+            console.log(" Invoice is direct string Id");
+        } 
+        else {
+            console.warn("️ Invoice is neither object nor string");
+        }
+    } else {
+        console.warn(" Invoice is null/undefined");
+    }
+
+    console.log("🔎 Final Resolved Invoice Id:", invoiceId, "| Type:", typeof invoiceId);
+
+    if(!invoiceId || typeof invoiceId !== 'string' || (invoiceId.length !== 15 && invoiceId.length !== 18)){
+        console.error(" Invalid Invoice Id. Skipping Apex call.");
+
+        $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
+        $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
+
+        return;
+    }
+
+    console.log(" Calling Apex isInvoicePosted with Id:", invoiceId);
+
+    var action = component.get("c.isInvoicePosted");
+    action.setParams({
+        invoiceId : invoiceId
+    });
+
+    action.setCallback(this, function(response){
+        var state = response.getState();
+        console.log(" Apex response state:", state);
+
+        if(state === "SUCCESS"){
+            var isPosted = response.getReturnValue();
+            console.log(" Is Invoice Posted:", isPosted);
+
+            var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+
+            if(!isPosted){
+                console.warn("️ Invoice NOT posted. Blocking payment.");
+                helper.showToast(
+                    "Error",
+                    "Invoice " + invoiceName + " is not posted. Payment cannot be processed.",
+                    "error"
+                );
+                return;
+            }
+
+            console.log(" Invoice posted. Opening Bank Modal");
+
             $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
             $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
-            return;
+        } 
+        else if(state === "ERROR"){
+            var errors = response.getError();
+            console.error(" Apex Error:", JSON.stringify(errors));
+
+            helper.showToast("Error","Error validating invoice","error");
         }
-        console.log("Calling Apex isInvoicePosted");
-        var action = component.get("c.isInvoicePosted");
-        action.setParams({
-            invoiceId : invoiceId
-        });
-        action.setCallback(this, function(response){
-            var state = response.getState();
-            console.log("Apex response state:", state);
-            if(state === "SUCCESS"){
-                var isPosted = response.getReturnValue();
-                console.log("Is Invoice Posted:", isPosted);
-                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
-                if(!isPosted){
-                    console.log("Invoice is NOT posted");
-                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
-                    return;
-                }
-                console.log("Invoice is posted. Opening Bank modal");
-                console.log("Bank Modal element:", component.find("myModalBank"));
-                console.log("Bank Backdrop element:", component.find("myModalBankBackdrop"));
-                $A.util.addClass(component.find("myModalBank"),"slds-fade-in-open");
-                $A.util.addClass(component.find("myModalBankBackdrop"),"slds-backdrop_open");
-            }
-            else if(state === "ERROR"){
-                var errors = response.getError();
-                console.log("Apex Error:", errors);
-                helper.showToast("Error","Error validating invoice","error");
-            }
-        });
-        console.log("Enqueueing Apex action");
-        $A.enqueueAction(action);
-    },
+        else{
+            console.warn("️ Unexpected Apex state:", state);
+        }
+    });
+
+    console.log("📨 Enqueueing Apex action");
+    $A.enqueueAction(action);
+},
     
     closeBankModal : function(component, event, helper) {
         $A.util.removeClass(component.find("myModalBank"),"slds-fade-in-open");
@@ -5037,49 +5160,90 @@
     },  */
     
     openApplyCredModal : function(component, event, helper) {
-        console.log("openApplyCredModal triggered");
-        var invoice = component.get("v.Invoiced");
-        console.log("Invoice value:", invoice);
-        var invoiceId = (invoice && invoice.Id) ? invoice.Id : invoice;
-        console.log("Resolved Invoice Id:", invoiceId);
-        if(!invoiceId){
-            console.log("No invoice selected");
-           $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
-           $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
-            return;
+    console.log(" openApplyCredModal triggered");
+
+    var invoice = component.get("v.Invoiced");
+    console.log(" Raw Invoice value:", JSON.stringify(invoice));
+
+    var invoiceId = null;
+
+    if(invoice){
+        if(typeof invoice === 'object'){
+            if(invoice.Id && typeof invoice.Id === 'string'){
+                invoiceId = invoice.Id;
+                console.log(" Invoice is object with valid Id");
+            } else {
+                console.warn("️ Invoice object present but Id missing/invalid");
+            }
+        } 
+        else if(typeof invoice === 'string'){
+            invoiceId = invoice;
+            console.log(" Invoice is direct string Id");
+        } 
+        else {
+            console.warn("Invoice is neither object nor string");
         }
-        console.log("Calling Apex isInvoicePosted");
-        var action = component.get("c.isInvoicePosted");
-        action.setParams({
-            invoiceId : invoiceId
-        });
-        action.setCallback(this, function(response){
-            var state = response.getState();
-            console.log("Apex response state:", state);
-            if(state === "SUCCESS"){
-                var isPosted = response.getReturnValue();
-                console.log("Is Invoice Posted:", isPosted);
-                var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
-                if(!isPosted){
-                    console.log("Invoice is NOT posted");
-                    helper.showToast("Error","Invoice " + invoiceName + " is not posted. Payment cannot be processed.","error");
-                    return;
-                }
-                console.log("Invoice is posted. Opening Apply Credit modal");
-                console.log("ApplyCred Modal element:", component.find("myModalApplyCred"));
-                console.log("ApplyCred Backdrop element:", component.find("myModalApplyBackdrop"));
-                $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
-                $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
+    } else {
+        console.warn("Invoice is null/undefined");
+    }
+
+    console.log("🔎 Final Resolved Invoice Id:", invoiceId, "| Type:", typeof invoiceId);
+
+    if(!invoiceId || typeof invoiceId !== 'string' || (invoiceId.length !== 15 && invoiceId.length !== 18)){
+        console.error("Invalid Invoice Id. Skipping Apex call.");
+
+        $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
+        $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
+
+        return;
+    }
+
+    console.log("Calling Apex isInvoicePosted with Id:", invoiceId);
+
+    var action = component.get("c.isInvoicePosted");
+    action.setParams({
+        invoiceId : invoiceId
+    });
+
+    action.setCallback(this, function(response){
+        var state = response.getState();
+        console.log(" Apex response state:", state);
+
+        if(state === "SUCCESS"){
+            var isPosted = response.getReturnValue();
+            console.log("Is Invoice Posted:", isPosted);
+
+            var invoiceName = (invoice && invoice.Name) ? invoice.Name : '';
+
+            if(!isPosted){
+                console.warn("️ Invoice NOT posted. Blocking credit apply.");
+                helper.showToast(
+                    "Error",
+                    "Invoice " + invoiceName + " is not posted. Credit cannot be applied.",
+                    "error"
+                );
+                return;
             }
-            else if(state === "ERROR"){
-                var errors = response.getError();
-                console.log("Apex Error:", errors);
-                helper.showToast("Error","Error validating invoice","error");
-            }
-        });
-        console.log("Enqueueing Apex action");
-        $A.enqueueAction(action);
-    },
+
+            console.log("Invoice posted. Opening Apply Credit modal");
+
+            $A.util.addClass(component.find("myModalApplyCred"),"slds-fade-in-open");
+            $A.util.addClass(component.find("myModalApplyBackdrop"),"slds-backdrop_open");
+        } 
+        else if(state === "ERROR"){
+            var errors = response.getError();
+            console.error(" Apex Error:", JSON.stringify(errors));
+
+            helper.showToast("Error","Error validating invoice","error");
+        }
+        else{
+            console.warn("️ Unexpected Apex state:", state);
+        }
+    });
+
+    console.log(" Enqueueing Apex action");
+    $A.enqueueAction(action);
+},
         
     closeApplyCredModal : function(component, event, helper) {
         $A.util.removeClass(component.find("myModalApplyCred"),"slds-fade-in-open");
