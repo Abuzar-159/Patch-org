@@ -8301,18 +8301,40 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
     //========================Product Configuration end=====================
     
     
-    @AuraEnabled
-    public static Boolean isInvoicePosted(Id invoiceId){
-        ERP7__Invoice__c inv = [
-            SELECT Id, ERP7__Posted__c, RecordType.DeveloperName
-            FROM ERP7__Invoice__c WHERE Id = :invoiceId LIMIT 1
-        ];
-        
-        if(inv.RecordType.DeveloperName == 'Sales'){
-            return inv.ERP7__Posted__c;
-        } else {
-            return true;
-        }
+  @AuraEnabled
+public static Boolean isInvoicePosted(Id invoiceId){
+    System.debug('isInvoicePosted called with invoiceId: ' + invoiceId);
+
+    if(invoiceId == null){
+        System.debug('InvoiceId is null. Returning TRUE (bypass validation).');
+        return true;
     }
+
+    ERP7__Invoice__c inv = [
+        SELECT Id, ERP7__Posted__c, RecordType.DeveloperName
+        FROM ERP7__Invoice__c 
+        WHERE Id = :invoiceId 
+        LIMIT 1
+    ];
+
+    System.debug('Fetched Invoice: ' + inv);
+    System.debug('RecordType: ' + inv.RecordType.DeveloperName);
+    System.debug('Posted Status: ' + inv.ERP7__Posted__c);
+
+    if(inv.RecordType.DeveloperName == 'Sale'){
+        System.debug('Invoice is SALES type');
+
+        if(inv.ERP7__Posted__c){
+            System.debug('Invoice is POSTED → returning TRUE');
+        } else {
+            System.debug('Invoice is NOT POSTED → returning FALSE');
+        }
+
+        return inv.ERP7__Posted__c;
+    } else {
+        System.debug('Invoice is NOT Sales type → bypassing check, returning TRUE');
+        return true;
+    }
+}
  
 }
