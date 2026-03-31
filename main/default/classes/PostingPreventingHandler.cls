@@ -642,7 +642,7 @@ public class PostingPreventingHandler {
                 }
             }
 
-            if(ExpIds.size()>0){		List<ERP7__COA_Mapping__c> coaMap = new List<ERP7__COA_Mapping__c>();			coaMap  = [select Id, Name from ERP7__COA_Mapping__c where Name = 'Expenses'];			if(coaMap.size()<1){	newExpenseMap.get(ExpIds[0]).addError('Please set up the Coa Mapping of Type Expenses in2');
+            if(ExpIds.size()>0){		List<ERP7__COA_Mapping__c> coaMap = new List<ERP7__COA_Mapping__c>();			coaMap  = [select Id, Name from ERP7__COA_Mapping__c where Name = 'Expenses'];			if(coaMap.size()<1){	newExpenseMap.get(ExpIds[0]).addError('Please set up the Coa Mapping of Type Expenses');
                 }
 
 

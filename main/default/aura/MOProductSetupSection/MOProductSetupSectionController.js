@@ -946,50 +946,65 @@
         $A.enqueueAction(action);
         
     },
-    openBOMModal :function(component,event,helper){
-        try{
-            component.set('v.disableAddProductsButton',false);
-            console.log('inside openBOMModal');
-            component.set('v.editErrorMsg','');
-            component.set('v.exceptionError', '');
-            component.set('v.showspinner',true);
-            component.set('v.addProductsMsg','');
-            component.set('v.searchItem','');
-            component.set('v.seachItemFmily','');
-            component.set('v.subItemFmily','');
-            var currentPr = event.currentTarget.dataset.recordId; 
-            if(!$A.util.isEmpty(currentPr)){
-                 var obj = component.get('v.ProcessCycles');
-                var currOp = component.get('v.NewBOM');
-                currOp.ERP7__Process_Cycle__c = currentPr;
-                currOp.Name ='';
-                currOp.ERP7__BOM_Component__c = '';
-                currOp.ERP7__Quantity__c = 0;
-                currOp.ERP7__Unit_of_Measure__c = '';
-                currOp.ERP7__Maximum_Variance__c = 0;
-                currOp.ERP7__Minimum_Variance__c = 0;
-                currOp.ERP7__For_Multiples__c = 0;
-                currOp.ERP7__Cost_Price__c = 0;
-                currOp.ERP7__Cost_Card__c = '';
-                component.set('v.NewBOM',currOp);
-                   // $A.util.addClass(component.find("NewBOMModalshow"), 'slds-fade-in-open');
-              //  $A.util.addClass(component.find("NewBOMModalBackdrop"),"slds-backdrop_open"); 
-              
-                component.set('v.showAddProducts',true);
-                component.set('v.BOMCreation',true);
-                // component.set('v.Header','Bill Of Materials(BOMs)');
-                component.set('v.Header',$A.get("$Label.c.Bill_of_Materials_BOM"));
-                console.log("how is value printed ",component.get('v.Header'));
-                component.set("v.ProcessCycleId",currentPr);
-                component.set('v.selectedListOfProducts',[]);
-                component.set("v.currentPage", 1);
-                helper.getProducts(component);
-                setTimeout(function() {
-                    component.set('v.showspinner', false);
-                }, 10000);
+    openBOMModal: function(component, event, helper) {
+    try {
+        component.set('v.disableAddProductsButton', false);
+        component.set('v.editErrorMsg', '');
+        component.set('v.exceptionError', '');
+        component.set('v.showspinner', true);
+        component.set('v.addProductsMsg', '');
+        component.set('v.searchItem', '');
+        component.set('v.seachItemFmily', '');
+        component.set('v.subItemFmily', '');
+        var currentPr = event.currentTarget.dataset.recordId;
+        if (!$A.util.isEmpty(currentPr)) {
+
+            // ── NEW VALIDATION ──────────────────────────────────────────
+            var processCycles = component.get('v.ProcessCycles');
+            var hasOperation = false;
+            for (var x in processCycles) {
+                if (processCycles[x].prcscycl.Id === currentPr) {
+                    var oprlst = processCycles[x].allRelateddetails.oprlst;
+                    if (oprlst && oprlst.length > 0) {
+                        hasOperation = true;
+                    }
+                    break;
+                }
             }
-        }catch(e){console.log(e);}   
-    },
+           if (!hasOperation) {
+    helper.helpershowToastss(
+        'Warning!',
+        'warning',
+        { en: 'Please add at least one operation before adding a BOM.', fr: 'Veuillez ajouter au moins une opération avant d\'ajouter une nomenclature.' }
+    );
+    component.set('v.showspinner', false);
+    return;
+}
+
+            var currOp = component.get('v.NewBOM');
+            currOp.ERP7__Process_Cycle__c = currentPr;
+            currOp.Name = '';
+            currOp.ERP7__BOM_Component__c = '';
+            currOp.ERP7__Quantity__c = 0;
+            currOp.ERP7__Unit_of_Measure__c = '';
+            currOp.ERP7__Maximum_Variance__c = 0;
+            currOp.ERP7__Minimum_Variance__c = 0;
+            currOp.ERP7__For_Multiples__c = 0;
+            currOp.ERP7__Cost_Price__c = 0;
+            currOp.ERP7__Cost_Card__c = '';
+            component.set('v.NewBOM', currOp);
+            component.set('v.showAddProducts', true);
+            component.set('v.BOMCreation', true);
+            component.set('v.Header', $A.get("$Label.c.Bill_of_Materials_BOM"));
+            component.set("v.ProcessCycleId", currentPr);
+            component.set('v.selectedListOfProducts', []);
+            helper.getProducts(component);
+            setTimeout(function() {
+                component.set('v.showspinner', false);
+            }, 10000);
+        }
+    } catch (e) { console.log(e); }
+},
    /* deleteBillofM : function(component,event,helper){
         var result = confirm("Are you sure?");
         var verId = component.get('v.SelectedVersion.Id');

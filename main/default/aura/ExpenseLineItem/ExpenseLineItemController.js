@@ -1046,13 +1046,17 @@ console.log('FileList : ', JSON.stringify(FileList));
             }
         }
         if(AmountValidate && COAValidate){
-            var actualAmount = component.get("v.splitExpense.ERP7__Claimed_Amount__c");
+            var actualAmount = parseFloat(component.get("v.splitExpense.ERP7__Claimed_Amount__c"));//Added parseFloat by asra 31/3
             var TotalAmount = 0.00;
             for(var i=0;i<expList.length;i++){
                 TotalAmount = parseFloat(TotalAmount) + parseFloat(expList[i].ERP7__Claimed_Amount__c);
                 
             }
-            if(actualAmount != TotalAmount){
+            var roundedActual = Math.round(actualAmount * 100) / 100;//Added by asra 31/3
+            var roundedTotal  = Math.round(TotalAmount  * 100) / 100;//Added by asra 31/3
+            if(roundedActual !== roundedTotal){//actualAmount != TotalAmount){//Changed by asra 31/3
+                console.log('here1 roundedActual->',roundedActual);
+                console.log('here1 roundedTotal->',roundedTotal);
                 helper.showToast('Error!','error','Split Amount does not match the Total Amount');
             }else{
                 var action=component.get("c.CreateSplitItem");
@@ -1065,6 +1069,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                     else{
                         var errors = response.getError();
                         console.log("err -> ", errors);
+                        helper.showToast('Error!','error',errors.message);
                     }
                 });
                 $A.enqueueAction(action);
