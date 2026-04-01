@@ -71,7 +71,7 @@
         $A.enqueueAction(action);
     },
     
-  /*  helpershowToastss : function(title, type, message) {
+   helpershowToastss : function(title, type, message) {
         console.log('insde toast');
         var toastEvent = $A.get("e.force:showToast");
         if(toastEvent != undefined){
@@ -84,8 +84,8 @@
             //component.set("v.showMainSpin",false);
             toastEvent.fire();
         }
-    },*/
-    helpershowToastss : function(title, type, messageMap) {
+    },
+    helpershowToastss1 : function(title, type, messageMap) {
     var toastEvent = $A.get("e.force:showToast");
     if (toastEvent) {
         var lang = $A.get("$Locale.language"); 
@@ -210,122 +210,44 @@
         });
         $A.enqueueAction(getFCresult);
     },
-    // getProducts : function(component){
-    //     component.set('v.showspinner',true);
-    //     component.set("v.listOfProducts",[]);
-    //     var ProcessId = component.get('v.Process.Id');
-    //     console.log('ProcessId : ',ProcessId);
-    //     var ProdId = component.get('v.Productdetails.Id');
-    //     console.log('ProdId : ',ProdId);
-    //     let searchfamily = component.get('v.seachItemFmily');
-    //     if(searchfamily == '--None--') searchfamily = '';
-    //     let searchsubfamily = component.get('v.subItemFmily');
-    //     if(searchsubfamily == '--None--') searchsubfamily = '';
-    //     let getProducts = component.get("c.getAllProds");
-    //     getProducts.setParams({
-    //         "processId":ProcessId,
-    //         "ProductId" : ProdId,
-    //         "search" : component.get('v.searchItem'),
-    //         "Family" : searchfamily,
-    //         "SubFamily" : searchsubfamily,
-    //     });
-    //     getProducts.setCallback(this,function(response){
-    //         if(response.getState() === 'SUCCESS'){
-    //             console.log('getAllProds response : ',response.getReturnValue());
-    //             let resList = response.getReturnValue();
-    //             if(resList != null){
-    //                 component.set("v.listOfProducts",resList);  
-    //             }
-    //             else {
-    //                 // component.set("v.addProductsMsg",'No Products avaialble to view'); 
-    //                 component.set("v.listOfProducts",[]); 
-    //             }
-    //         }
-    //         else{
-    //             console.log('getAllProds error : ',response.getError());
-    //         }
-    //         component.set('v.showspinner',false);
-    //     });
-    //     $A.enqueueAction(getProducts); 
-    // },
-
-
     getProducts : function(component){
         component.set('v.showspinner',true);
         component.set("v.listOfProducts",[]);
-        
         var ProcessId = component.get('v.Process.Id');
+        console.log('ProcessId : ',ProcessId);
         var ProdId = component.get('v.Productdetails.Id');
-        let searchfamily = component.get('v.seachItemFmily') == '--None--' ? '' : component.get('v.seachItemFmily');
-        let searchsubfamily = component.get('v.subItemFmily') == '--None--' ? '' : component.get('v.subItemFmily');
-        
-        let currentPage = component.get("v.currentPage");
-        let pageSize = component.get("v.pageSize");
-        let offset = (currentPage - 1) * pageSize;
-
-        let getProducts = component.get("c.getPaginatedProds");
+        console.log('ProdId : ',ProdId);
+        let searchfamily = component.get('v.seachItemFmily');
+        if(searchfamily == '--None--') searchfamily = '';
+        let searchsubfamily = component.get('v.subItemFmily');
+        if(searchsubfamily == '--None--') searchsubfamily = '';
+        let getProducts = component.get("c.getAllProds");
         getProducts.setParams({
-            "processId": ProcessId,
+            "processId":ProcessId,
             "ProductId" : ProdId,
             "search" : component.get('v.searchItem'),
             "Family" : searchfamily,
             "SubFamily" : searchsubfamily,
-            "lim": pageSize,
-            "off": offset
-            
         });
-        
         getProducts.setCallback(this,function(response){
             if(response.getState() === 'SUCCESS'){
-                let result = response.getReturnValue();
-                component.set("v.totalRecords", result.totalRecords);
-                component.set("v.totalPages", Math.ceil(result.totalRecords / pageSize) || 1);
-                
-                let fetchedProds = result.products || [];
-                let selectedProds = component.get("v.selectedListOfProducts") || [];
-                
-                // RESTORE STATE: If they previously checked this item, restore the checkbox AND the quantities they typed!
-                for(let i = 0; i < fetchedProds.length; i++) {
-                    let found = selectedProds.find(item => item.prod.Id === fetchedProds[i].prod.Id);
-                    if(found) {
-                        fetchedProds[i].isChecked = true;
-                        fetchedProds[i].quantity = found.quantity;
-                        fetchedProds[i].MaxVariance = found.MaxVariance;
-                        fetchedProds[i].MinVariance = found.MinVariance;
-                        fetchedProds[i].Multiples = found.Multiples;
-                        fetchedProds[i].UOM = found.UOM;
-                    } else {
-                        fetchedProds[i].isChecked = false;
-                    }
+                console.log('getAllProds response : ',response.getReturnValue());
+                let resList = response.getReturnValue();
+                if(resList != null){
+                    component.set("v.listOfProducts",resList);  
                 }
-                
-                component.set("v.listOfProducts", fetchedProds);  
-            } else {
-                console.log('getPaginatedProds error : ',response.getError());
+                else {
+                    // component.set("v.addProductsMsg",'No Products avaialble to view'); 
+                    component.set("v.listOfProducts",[]); 
+                }
+            }
+            else{
+                console.log('getAllProds error : ',response.getError());
             }
             component.set('v.showspinner',false);
         });
         $A.enqueueAction(getProducts); 
     },
-
-    // NEW: Safely saves the current page's typed inputs to memory before navigating away
-    syncCurrentPageToSelected : function(component) {
-        let currentProds = component.get("v.listOfProducts");
-        let selectedProds = component.get("v.selectedListOfProducts") || [];
-        if (!currentProds || currentProds.length === 0) return;
-        
-        for(let i=0; i<currentProds.length; i++) {
-            if(currentProds[i].isChecked) {
-                let index = selectedProds.findIndex(item => item.prod.Id === currentProds[i].prod.Id);
-                if(index !== -1) {
-                    // Update memory with whatever is currently typed in the UI
-                    selectedProds[index] = currentProds[i]; 
-                }
-            }
-        }
-        component.set("v.selectedListOfProducts", selectedProds);
-    },
-    
     getDependentPicklists : function(component, event, helper) {
         console.log('getDependentPicklists called');
         try{

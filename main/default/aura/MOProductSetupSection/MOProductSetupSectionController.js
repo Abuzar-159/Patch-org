@@ -946,6 +946,49 @@
         $A.enqueueAction(action);
         
     },
+   /* openBOMModal :function(component,event,helper){
+        try{
+            component.set('v.disableAddProductsButton',false);
+            console.log('inside openBOMModal');
+            component.set('v.editErrorMsg','');
+            component.set('v.exceptionError', '');
+            component.set('v.showspinner',true);
+            component.set('v.addProductsMsg','');
+            component.set('v.searchItem','');
+            component.set('v.seachItemFmily','');
+            component.set('v.subItemFmily','');
+            var currentPr = event.currentTarget.dataset.recordId; 
+            if(!$A.util.isEmpty(currentPr)){
+                 var obj = component.get('v.ProcessCycles');
+                var currOp = component.get('v.NewBOM');
+                currOp.ERP7__Process_Cycle__c = currentPr;
+                currOp.Name ='';
+                currOp.ERP7__BOM_Component__c = '';
+                currOp.ERP7__Quantity__c = 0;
+                currOp.ERP7__Unit_of_Measure__c = '';
+                currOp.ERP7__Maximum_Variance__c = 0;
+                currOp.ERP7__Minimum_Variance__c = 0;
+                currOp.ERP7__For_Multiples__c = 0;
+                currOp.ERP7__Cost_Price__c = 0;
+                currOp.ERP7__Cost_Card__c = '';
+                component.set('v.NewBOM',currOp);
+                   // $A.util.addClass(component.find("NewBOMModalshow"), 'slds-fade-in-open');
+              //  $A.util.addClass(component.find("NewBOMModalBackdrop"),"slds-backdrop_open"); 
+              
+                component.set('v.showAddProducts',true);
+                component.set('v.BOMCreation',true);
+                // component.set('v.Header','Bill Of Materials(BOMs)');
+                component.set('v.Header',$A.get("$Label.c.Bill_of_Materials_BOM"));
+                console.log("how is value printed ",component.get('v.Header'));
+                component.set("v.ProcessCycleId",currentPr);
+                component.set('v.selectedListOfProducts',[]);
+                helper.getProducts(component);
+                setTimeout(function() {
+                    component.set('v.showspinner', false);
+                }, 10000);
+            }
+        }catch(e){console.log(e);}   
+    },*/
     openBOMModal: function(component, event, helper) {
     try {
         component.set('v.disableAddProductsButton', false);
@@ -972,7 +1015,7 @@
                 }
             }
            if (!hasOperation) {
-    helper.helpershowToastss(
+    helper.helpershowToastss1(
         'Warning!',
         'warning',
         { en: 'Please add at least one operation before adding a BOM.', fr: 'Veuillez ajouter au moins une opération avant d\'ajouter une nomenclature.' }
@@ -980,6 +1023,7 @@
     component.set('v.showspinner', false);
     return;
 }
+            // ── END NEW VALIDATION ──────────────────────────────────────
 
             var currOp = component.get('v.NewBOM');
             currOp.ERP7__Process_Cycle__c = currentPr;
@@ -1048,7 +1092,7 @@
                 if (moExists) {
                     component.set('v.showspinner', false);
                   //  helper.helpershowToastss('Error', 'error', 'Cannot delete BOM: Existing Manufacturing Orders in Draft or In Progress status found for this version.');
-                   helper.helpershowToastss(
+                   helper.helpershowToastss1(
         ( $A.get("$Locale.language") === 'fr' ? 'Erreur' : 'Error'),
         'error',
         {
@@ -1233,7 +1277,6 @@
             component.set('v.Header',$A.get("$Label.c.Work_in_Progress_WIPs"));
             component.set("v.ProcessCycleId",currentPr);
             component.set('v.selectedListOfProducts',[]);
-            component.set("v.currentPage", 1);
             helper.getProducts(component);
             setTimeout(function() {
                 component.set('v.showspinner', false);
@@ -1333,7 +1376,7 @@
                 var moExists = response.getReturnValue();
                 if (moExists) {
                     component.set('v.showspinner', false);
-                    helper.helpershowToastss(
+                    helper.helpershowToastss1(
         ( $A.get("$Locale.language") === 'fr' ? 'Erreur' : 'Error'),
         'error',
         {
@@ -2483,7 +2526,6 @@
     
     addProducts : function(component, event, helper) { 
         try{
-            helper.syncCurrentPageToSelected(component); // ADD THIS LINE FIRST
             let selectedProds = component.get('v.selectedListOfProducts');
             if(selectedProds != undefined && selectedProds != null && selectedProds.length > 0){
                 component.set('v.showspinner',true);
@@ -2623,8 +2665,7 @@
                     }
                 }
             }
-                component.set("v.currentPage", 1);
-                component.set('v.showspinner',true);
+            component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {
                 component.set('v.showspinner', false);
@@ -2649,7 +2690,6 @@
                     }
                 }
             }
-            component.set("v.currentPage", 1);
             component.set('v.showspinner',true);
             helper.getProducts(component);
             helper.parentFieldChange(component, event, helper);
@@ -2676,7 +2716,6 @@
                     }
                 }
             }
-            component.set("v.currentPage", 1);
             component.set('v.showspinner',true);
             helper.getProducts(component);
             setTimeout(function() {
@@ -2699,7 +2738,6 @@
             if(selectedProds == null && selectedProds == undefined && selectedProds.length == 0) selectedProds = [];
             for(var x in allprods){
                 if(allprods[x].prod.Id == prodId){
-                    allprods[x].isChecked = valcheck; // ADD THIS LINE
                     var index = selectedProds.findIndex(item => item.prod.Id === prodId);
                     console.log('index : ',index);
                     if (valcheck) {
@@ -2821,62 +2859,5 @@
         }catch(e){
             console.log('error : ',e);
         }
-    },
-
-   // --- START PAGINATION LOGIC --- //
-
-    firstProdPage : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        component.set("v.currentPage", 1);
-        helper.getProducts(component);
-    },
-
-    prevProdPage : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        component.set("v.currentPage", component.get("v.currentPage") - 1);
-        helper.getProducts(component); 
-    },
-
-    nextProdPage : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        component.set("v.currentPage", component.get("v.currentPage") + 1);
-        helper.getProducts(component); 
-    },
-
-    lastProdPage : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        component.set("v.currentPage", component.get("v.totalPages"));
-        helper.getProducts(component);
-    },
-
-    handlePageSizeChange : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        
-        // Ensure pageSize is treated as an Integer
-        let newSize = parseInt(component.get("v.pageSize"), 10);
-        component.set("v.pageSize", newSize);
-        
-        // Whenever page size changes, safely bounce the user back to page 1
-        component.set("v.currentPage", 1);
-        helper.getProducts(component);
-    },
-
-    handlePageJump : function(component, event, helper) {
-        helper.syncCurrentPageToSelected(component); // Save current work
-        
-        let pageNum = parseInt(component.get("v.currentPage"), 10);
-        let totalPages = parseInt(component.get("v.totalPages"), 10);
-        
-        // Validation: Prevent users from typing invalid page numbers (like 0, -5, or 9999)
-        if (!pageNum || pageNum < 1) {
-            pageNum = 1;
-        } else if (pageNum > totalPages) {
-            pageNum = totalPages;
-        }
-        
-        component.set("v.currentPage", pageNum);
-        helper.getProducts(component);
-    },
-
-    // --- END PAGINATION LOGIC --- //
+    }
 })
