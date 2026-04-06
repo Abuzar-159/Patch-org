@@ -52,6 +52,7 @@
 	},
     
     deleteCurExpli : function(component, event, xpensLI) {
+        console.log('in here');
         $A.util.removeClass(component.find('mainSpin'), "slds-hide");
         var delAction = component.get("c.delCurExpli");
         var curExpLI = JSON.stringify(xpensLI);
@@ -61,6 +62,7 @@
         delAction.setCallback(this, function(response) {
             var state = delAction.getState();
             if(state === "SUCCESS") {
+                console.log('in success');
                 component.set("v.showexpli", false);
                 var e = $A.get("e.c:IndexingEvent");
                 e.setParams({

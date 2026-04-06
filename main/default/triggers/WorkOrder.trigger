@@ -29,7 +29,9 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
             if(WO2Update.ERP7__Is_Signature_Required__c) WOIds.add(WO2Update.Id);
             if(WO2Update.ERP7__MO__c != Null) moIds.add(WO2Update.ERP7__MO__c); 
         }
-        if(WOIds.size() > 0){List<Attachment> Attachments = [Select Id, Name, ParentId, Owner.Name, CreatedDate From Attachment Where ParentId In: WOIds And Name = 'Signature' Order By CreatedDate Asc];  for(Attachment A : Attachments) WOSignatures.add(A.ParentId);
+        if(WOIds.size() > 0){
+            List<Attachment> Attachments = [Select Id, Name, ParentId, Owner.Name, CreatedDate From Attachment Where ParentId In: WOIds And Name = 'Signature' Order By CreatedDate Asc];
+            for(Attachment A : Attachments) WOSignatures.add(A.ParentId);
         }
        /* for(ERP7__WO__c WO2Update : System.Trigger.New){
             if(WO2Update.ERP7__Quantity_Ordered__c > 0 && WO2Update.ERP7__Quantity_Ordered__c == (WO2Update.ERP7__Quantity_Built__c + WO2Update.ERP7__Quantity_Scrapped__c) && (!WO2Update.ERP7__Is_Signature_Required__c || (WO2Update.ERP7__Is_Signature_Required__c && WOSignatures.contains(WO2Update.Id)))){
@@ -45,7 +47,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
             Map<Id, List<ERP7__WO__c>> MOWOS = new Map<Id, List<ERP7__WO__c>>(); 
             for(Id moId : moIds) MOWOS.put(moId,new List<ERP7__WO__c>());
             for(ERP7__WO__c WO : MOWOs2Rollup){
-                if(MOWOS.containsKey(WO.ERP7__MO__c)) MOWOS.get(WO.ERP7__MO__c).add(WO);  else MOWOS.put(WO.ERP7__MO__c, new List<ERP7__WO__c>{WO});
+                if(MOWOS.containsKey(WO.ERP7__MO__c)) MOWOS.get(WO.ERP7__MO__c).add(WO);
+                else MOWOS.put(WO.ERP7__MO__c, new List<ERP7__WO__c>{WO});
             }
             List<ERP7__Manufacturing_Order__c> Mos = [Select Id,Name,ERP7__Labour_Cost__c,ERP7__Material_Cost__c,ERP7__Overhead_Cost__c from ERP7__Manufacturing_Order__c where Id In :moIds];                    
             for(ERP7__Manufacturing_Order__c MO : Mos){
@@ -92,7 +95,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
             }
             List<ERP7__Actions_Tasks__c> ATs = [Select Id, Name, ERP7__Work_Order__c From ERP7__Actions_Tasks__c Where ERP7__Work_Order__c In : WOIds]; 
             for (ERP7__Actions_Tasks__c AT: ATs) {
-                if (AT.ERP7__Work_Order__c != Null && woATs.containskey(AT.ERP7__Work_Order__c)) {   woATs.get(AT.ERP7__Work_Order__c).add(AT);
+                if (AT.ERP7__Work_Order__c != Null && woATs.containskey(AT.ERP7__Work_Order__c)) {
+                    woATs.get(AT.ERP7__Work_Order__c).add(AT);
                 } else if (AT.ERP7__Work_Order__c != Null && !woATs.containskey(AT.ERP7__Work_Order__c)) {
                     List < ERP7__Actions_Tasks__c > myList = new List < ERP7__Actions_Tasks__c > ();
                     myList.add(AT);
@@ -106,7 +110,9 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                                                       From ERP7__Operation__c Where ERP7__Routing__c In: RoutingIds Order By ERP7__Sort__c, ERP7__Process_Cycle__r.CreatedDate, ERP7__Operation_No__c ASC
                                                      ];
             for (ERP7__Operation__c Operation: Operations) {
-                if (Operation.ERP7__Routing__c != Null && Routing_Operations.containskey(Operation.ERP7__Routing__c)) {   RoutingLinkWC.put(Operation.ERP7__Process_Cycle__c, Operation.ERP7__Routing_Link__c); Routing_Operations.get(Operation.ERP7__Routing__c).add(Operation);
+                if (Operation.ERP7__Routing__c != Null && Routing_Operations.containskey(Operation.ERP7__Routing__c)) {
+                    RoutingLinkWC.put(Operation.ERP7__Process_Cycle__c, Operation.ERP7__Routing_Link__c);
+                    Routing_Operations.get(Operation.ERP7__Routing__c).add(Operation);
                 } else if (Operation.ERP7__Routing__c != Null && !Routing_Operations.containskey(Operation.ERP7__Routing__c)) {
                     List < ERP7__Operation__c > myList = new List < ERP7__Operation__c > ();
                     myList.add(Operation);
@@ -131,7 +137,10 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                         if((WO.ERP7__Process_Cycle__c != Null && Operation.ERP7__Process_Cycle__c == WO.ERP7__Process_Cycle__c) || WO.ERP7__Process_Cycle__c == Null) actions2Create.add(action2Create);
                     }
                 }
-                if (woATs.containsKey(WO.Id) && WO.ERP7__Status__c == 'Complete') { for(ERP7__Actions_Tasks__c task : woATs.get(WO.Id)) {   if(Schema.sObjectType.ERP7__Actions_Tasks__c.fields.ERP7__Status__c.isCreateable() && Schema.sObjectType.ERP7__Actions_Tasks__c.fields.ERP7__Status__c.isUpdateable()){task.ERP7__Status__c = 'Completed';} else{/* no access*/}  actions2Create.add(task);
+                if (woATs.containsKey(WO.Id) && WO.ERP7__Status__c == 'Complete') {
+                    for(ERP7__Actions_Tasks__c task : woATs.get(WO.Id)) { 
+                        if(Schema.sObjectType.ERP7__Actions_Tasks__c.fields.ERP7__Status__c.isCreateable() && Schema.sObjectType.ERP7__Actions_Tasks__c.fields.ERP7__Status__c.isUpdateable()){task.ERP7__Status__c = 'Completed';} else{/* no access*/}
+                        actions2Create.add(task);
                     }
                 }
             }
@@ -182,7 +191,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                                              ];
                 for (ERP7__WO__c woli: System.Trigger.New) {
                     List < ERP7__MRP__c > myMRPS = new List < ERP7__MRP__c > ();
-                    for (ERP7__MRP__c mrp: MRPS) {   if (woli.Id == mrp.ERP7__Work_Order__c) myMRPS.add(mrp);
+                    for (ERP7__MRP__c mrp: MRPS) {
+                        if (woli.Id == mrp.ERP7__Work_Order__c) myMRPS.add(mrp);
                     }
                     woliMrps.put(woli.Id, myMRPS);
                     List < ERP7__BOM__c > myBOMS = new List < ERP7__BOM__c > ();
@@ -190,7 +200,9 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                     for (ERP7__BOM__c bom: BOMS) {
                         if (woli.Product__c == bom.ERP7__BOM_Product__c && woli.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c  && woli.Version__c != Null && woli.Version__c == bom.BOM_Version__c) {
                             myBOMS.add(bom);
-                            system.debug('if');    } else if (woli.Product__c == bom.ERP7__BOM_Product__c && woli.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c  && woli.Version__c == Null && bom.BOM_Version__c != Null && bom.BOM_Version__r.Default__c == true) {  myBOMS.add(bom);
+                            system.debug('if');
+                        } else if (woli.Product__c == bom.ERP7__BOM_Product__c && woli.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c  && woli.Version__c == Null && bom.BOM_Version__c != Null && bom.BOM_Version__r.Default__c == true) {
+                            myBOMS.add(bom);
                         }
                         
                         //Added by Parveez on 06-sept-24 to get All boms for MRP Creation from the Order product version instead product defualt version.
@@ -206,15 +218,19 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                         boolean allowGetBomsProdVersion = customList != null && customList.ERP7__Order_Product_Version_for_manufacturing__c;
                         
                         if (allowGetBomsProdVersion) {
-                            for (ERP7__WO__c wom : WOMO) {   if (wom.Product__c == bom.ERP7__BOM_Product__c &&
-                                    wom.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c &&  wom.Version__c != null &&  bom.BOM_Version__c == wom.ERP7__MO__r.ERP7__Order_Product__r.ERP7__Version__c) {
+                            for (ERP7__WO__c wom : WOMO) {
+                                if (wom.Product__c == bom.ERP7__BOM_Product__c &&
+                                    wom.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c &&
+                                    wom.Version__c != null &&
+                                    bom.BOM_Version__c == wom.ERP7__MO__r.ERP7__Order_Product__r.ERP7__Version__c) {
                                         
                                         myBOMS.add(bom);
                                     }
                             }
                         }
                         
-                        if (woli.Product__c == bom.ERP7__BOM_Product__c && woli.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c  && woli.Version__c == Null && bom.BOM_Version__c == Null) {  myAllBOMS.add(bom);
+                        if (woli.Product__c == bom.ERP7__BOM_Product__c && woli.ERP7__Process_Cycle__c == bom.ERP7__Routing_Link__r.ERP7__Process_Cycle__c  && woli.Version__c == Null && bom.BOM_Version__c == Null) {
+                            myAllBOMS.add(bom);
                         }
                     }
                      system.debug('myBOMS : '+myBOMS.size());
@@ -233,7 +249,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                 if (Trigger.IsUpdate) {
                     for (ERP7__WO__c woli: System.Trigger.Old) {
                         moliOldQuantity.put(woli.Id, woli.ERP7__Quantity_Ordered__c);
-                        if (woli.ERP7__Quantity_Ordered__c >= 0) woliOldQuantityManu.put(woli.Id, woli.ERP7__Quantity_Ordered__c);     else woliOldQuantityManu.put(woli.Id, 0);
+                        if (woli.ERP7__Quantity_Ordered__c >= 0) woliOldQuantityManu.put(woli.Id, woli.ERP7__Quantity_Ordered__c);
+                        else woliOldQuantityManu.put(woli.Id, 0);
                         if (woli.ERP7__Version__c != Null) moliOldVersion.put(woli.Id, woli.ERP7__Version__c);
                         //else moliOldVersion.put(woli.Id,'');
                     }
@@ -242,7 +259,9 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                     /*
                         Handles the deletion of MRPs if BOM version on soli is changed..
                         */
-                    if (((moliOldVersion.containsKey(woli.Id) && String.valueof(woli.ERP7__Version__c) != moliOldVersion.get(woli.Id)) || moliOldQuantity.get(woli.Id) != woli.ERP7__Quantity_Ordered__c) && woliMrps.containsKey(woli.Id) && woliMrps.get(woli.Id).size() > 0) {  mrps2delete.addAll(woliMrps.get(woli.Id));  woliMrps.get(woli.Id).clear();   
+                    if (((moliOldVersion.containsKey(woli.Id) && String.valueof(woli.ERP7__Version__c) != moliOldVersion.get(woli.Id)) || moliOldQuantity.get(woli.Id) != woli.ERP7__Quantity_Ordered__c) && woliMrps.containsKey(woli.Id) && woliMrps.get(woli.Id).size() > 0) {
+                        mrps2delete.addAll(woliMrps.get(woli.Id));
+                        woliMrps.get(woli.Id).clear();   
                     }
                     if (woliMrps.get(woli.Id).size() == 0 && woliBOMS.containsKey(woli.Id)) {
                         for (ERP7__BOM__c bom: woliBOMS.get(woli.Id)) {
@@ -250,8 +269,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                             if(Schema.sObjectType.ERP7__MRP__c.fields.Name.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.Name.isUpdateable()){MRP.Name = BOM.Name; } else{/* no access*/}
                             //('BOM.ERP7__For_Multiples__c : '+BOM.ERP7__For_Multiples__c);
                             if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Total_Amount_Required__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Total_Amount_Required__c.isUpdateable()){
-                                if(BOM.ERP7__For_Multiples__c > 0 && BOM.ERP7__For_Multiples__c != null) MRP.ERP7__Total_Amount_Required__c = (BOM.Quantity__c * (Math.ceil(woli.ERP7__Quantity_Ordered__c/bom.ERP7__For_Multiples__c))).setscale(4);
-                                else MRP.ERP7__Total_Amount_Required__c = (BOM.ERP7__Quantity__c != Null && woli.ERP7__Quantity_Ordered__c != Null)? (BOM.ERP7__Quantity__c * woli.ERP7__Quantity_Ordered__c).setscale(4) : 0;  
+                                if(BOM.ERP7__For_Multiples__c > 0 && BOM.ERP7__For_Multiples__c != null) MRP.ERP7__Total_Amount_Required__c = (BOM.Quantity__c * (Math.ceil(woli.ERP7__Quantity_Ordered__c/bom.ERP7__For_Multiples__c))).setscale(6);
+                                else MRP.ERP7__Total_Amount_Required__c = (BOM.ERP7__Quantity__c != Null && woli.ERP7__Quantity_Ordered__c != Null)? (BOM.ERP7__Quantity__c * woli.ERP7__Quantity_Ordered__c).setscale(6) : 0;  
                             } else{/* no access*/}
                             if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__BOM__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__BOM__c.isUpdateable()){MRP.ERP7__BOM__c = BOM.Id; } else{/* no access*/}
                             if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__MRP_Product__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__MRP_Product__c.isUpdateable()){MRP.ERP7__MRP_Product__c = BOM.ERP7__BOM_Component__c; } else{/* no access*/}
@@ -261,14 +280,15 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                             if(BOM.ERP7__Process_Cycle__r.ERP7__Process__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Process__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Process__c.isUpdateable()){MRP.ERP7__Process__c = BOM.ERP7__Process_Cycle__r.ERP7__Process__c; } else{/* no access*/}
                             if(BOM.ERP7__Process_Cycle__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Process_Cycle__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Process_Cycle__c.isUpdateable()){MRP.ERP7__Process_Cycle__c = BOM.ERP7__Process_Cycle__c;} else{/* no access*/}
                             if(BOM.ERP7__Minimum_Variance__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isUpdateable()){system.debug('Inside WorkOrder 282 BOM.ERP7__Minimum_Variance__c :'+BOM.ERP7__Minimum_Variance__c+'woli.ERP7__Quantity_Ordered__c'+woli.ERP7__Quantity_Ordered__c);} else{/* no access*/}
-                            if(BOM.ERP7__Minimum_Variance__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isUpdateable()){MRP.ERP7__Minimum_Variance__c = (BOM.ERP7__Minimum_Variance__c * woli.ERP7__Quantity_Ordered__c).setscale(4);} else{/* no access*/}
-                            if(BOM.ERP7__Maximum_Variance__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Maximum_Variance__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Maximum_Variance__c.isUpdateable()){MRP.ERP7__Maximum_Variance__c = (BOM.ERP7__Maximum_Variance__c * woli.ERP7__Quantity_Ordered__c).setscale(4);} else{/* no access*/}
+                            if(BOM.ERP7__Minimum_Variance__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Minimum_Variance__c.isUpdateable()){MRP.ERP7__Minimum_Variance__c = (BOM.ERP7__Minimum_Variance__c * woli.ERP7__Quantity_Ordered__c).setscale(6);} else{/* no access*/}
+                            if(BOM.ERP7__Maximum_Variance__c != Null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Maximum_Variance__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Maximum_Variance__c.isUpdateable()){MRP.ERP7__Maximum_Variance__c = (BOM.ERP7__Maximum_Variance__c * woli.ERP7__Quantity_Ordered__c).setscale(6);} else{/* no access*/}
                             if(BOM.ERP7__Routing_Link__c != null) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Routing_Link__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Routing_Link__c.isUpdateable()){MRP.ERP7__Routing_Link__c = BOM.ERP7__Routing_Link__c;} else{/* no access*/}
                             if(BOM.ERP7__Operation__c != null && opATs.containsKey(BOM.ERP7__Operation__c)) if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Action_Task__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Action_Task__c.isUpdateable()){MRP.ERP7__Action_Task__c = opATs.get(BOM.ERP7__Operation__c);} else{/* no access*/}
                             
                             if(woli.MO__c != null)if(Schema.sObjectType.ERP7__MRP__c.fields.MO__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.MO__c.isUpdateable()){MRP.MO__c = woli.MO__c;} else{/* no access*/}
                             if(Schema.sObjectType.ERP7__MRP__c.fields.RecordTypeId.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.RecordTypeId.isUpdateable()){
-                                if (bom.RecordType.Name == 'Manufacturing BOM' && rTpe_MRPMAN != null){ MRP.RecordTypeId = rTpe_MRPMAN;}  else if (bom.RecordType.Name == 'Manufacturing BOM' && rTpe_MRPMAN != null){ MRP.RecordTypeId = rTpe_MRPMAN;}
+                                if (bom.RecordType.Name == 'Manufacturing BOM' && rTpe_MRPMAN != null){ MRP.RecordTypeId = rTpe_MRPMAN;}
+                                else if (bom.RecordType.Name == 'Manufacturing BOM' && rTpe_MRPMAN != null){ MRP.RecordTypeId = rTpe_MRPMAN;}
                             } else{/* no access*/}
                             MRPS2Insert.add(MRP);
                         }
@@ -338,7 +358,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                         createWIPFLowsInFuture=customList.ERP7__Create_WIPFlows_In_Future__c;
                     }
                     
-                    if(!System.isFuture() && !System.isBatch() && createWIPFLowsInFuture) {   MaintainBatchStocks.CreateWIPFlows(Trigger.newMap.KeySet());
+                    if(!System.isFuture() && !System.isBatch() && createWIPFLowsInFuture) {
+                        MaintainBatchStocks.CreateWIPFlows(Trigger.newMap.KeySet());
                         /* calling future method based on custom settings - imran 11Sep23 */
                     }
                     else{
@@ -361,7 +382,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                                                    From ERP7__WIP__c 
                                                    Where ERP7__MO__c In : ManuIds]; 
                         for(ERP7__WIP__c WIP : WIPs){
-                            if (MOWIP.containskey(WIP.ERP7__MO__c)) {  MOWIP.get(WIP.ERP7__MO__c).add(WIP);
+                            if (MOWIP.containskey(WIP.ERP7__MO__c)) {
+                                MOWIP.get(WIP.ERP7__MO__c).add(WIP);
                             } else {
                                 List < ERP7__WIP__c > myList = new List < ERP7__WIP__c > ();
                                 myList.add(WIP);
@@ -378,7 +400,8 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                         List<ERP7__WIP_Flow__c> ExistingWIPflows = [Select Id,Name from ERP7__WIP_Flow__c where ERP7__WIP__r.ERP7__MO__c In : ManuIds and ERP7__WIP__c IN :WIPs];
                         if(ExistingWIPflows.size() == 0){
                             for (ERP7__WIP_Link__c WL: WIPLinks) {
-                                if (PCLinks.containskey(WL.ERP7__Process_Cycle__c)) {   PCLinks.get(WL.ERP7__Process_Cycle__c).add(WL);
+                                if (PCLinks.containskey(WL.ERP7__Process_Cycle__c)) {
+                                    PCLinks.get(WL.ERP7__Process_Cycle__c).add(WL);
                                 } else {
                                     List < ERP7__WIP_Link__c > myList = new List < ERP7__WIP_Link__c > ();
                                     myList.add(WL);
@@ -466,7 +489,9 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                     };
                         if (Trigger.IsAfter && (Trigger.IsInsert || Trigger.IsUpdate || Trigger.IsUndelete)) {
                             RollUpSummaryUtility.rollUpTrigger(WOfieldDefinitionsLC, System.Trigger.New, 'ERP7__WO__c','ERP7__Sales_Order_Line_Item__c', 'ERP7__Sales_Order_Line_Item__c', ' And ERP7__Sales_Order_Line_Item__r.ERP7__Issue_Work_Order__c = true ');
-                        } else if (Trigger.IsAfter) {  if (Trigger.IsDelete) { RollUpSummaryUtility.rollUpTrigger(WOfieldDefinitionsLC, System.Trigger.Old, 'ERP7__WO__c','ERP7__Sales_Order_Line_Item__c', 'ERP7__Sales_Order_Line_Item__c', ' And ERP7__Sales_Order_Line_Item__r.ERP7__Issue_Work_Order__c = true ');
+                        } else if (Trigger.IsAfter) {
+                            if (Trigger.IsDelete) {
+                                RollUpSummaryUtility.rollUpTrigger(WOfieldDefinitionsLC, System.Trigger.Old, 'ERP7__WO__c','ERP7__Sales_Order_Line_Item__c', 'ERP7__Sales_Order_Line_Item__c', ' And ERP7__Sales_Order_Line_Item__r.ERP7__Issue_Work_Order__c = true ');
                             }
                         }
             // Custom Roll up End

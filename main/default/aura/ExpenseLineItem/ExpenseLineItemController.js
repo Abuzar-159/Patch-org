@@ -974,19 +974,28 @@ console.log('FileList : ', JSON.stringify(FileList));
     },
     
     deleteSplitExpense : function(component, event, helper) {
-        var splitExpense = event.currentTarget.dataset.record;
-        var indexed = event.currentTarget.dataset.index;
-        var expli1 = component.get("v.splittedExpLine");
-        if(expli1[i]!=undefined){
-            for(var i=0; i<expli1.length; i++){
-                if(expli1[i].Id == splitExpense){
-                    helper.deleteSplitExpli(component, event, expli1[i]);
+        var canproceed=confirm('Are you sure you want to delete this split expense?')
+        if(canproceed){
+            var splitExpense = event.currentTarget.dataset.record;
+            var indexed = event.currentTarget.dataset.index;
+            var expli1 = component.get("v.splittedExpLine");
+            console.log('splitExpense'+splitExpense);
+            console.log('indexed'+indexed);
+            console.log('expli1: '+ JSON.stringify(expli1));
+            //if(expli1[i]!=undefined){
+            if(splitExpense != undefined){
+                for(var i=0; i<expli1.length; i++){
+                    if(splitExpense !=undefined && expli1[i].Id == splitExpense){
+                        console.log('going to helper for delete');
+                        helper.deleteSplitExpli(component, event, expli1[i]);
+                    }
                 }
+            }else{
+                console.log('going to helper else for delete');
+                var Expline = component.get("v.splittedExpLine");
+                Expline.splice(indexed,1);
+                component.set("v.splittedExpLine", Expline);
             }
-        }else{
-            var Expline = component.get("v.splittedExpLine");
-            Expline.splice(indexed,1);
-            component.set("v.splittedExpLine", Expline);
         }
     },
     
@@ -1059,6 +1068,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                 console.log('here1 roundedTotal->',roundedTotal);
                 helper.showToast('Error!','error','Split Amount does not match the Total Amount');
             }else{
+                console.log('splittedExpLine->',JSON.stringify(component.get("v.splittedExpLine")));
+                console.log('splitExpense->',JSON.stringify(component.get("v.splitExpense")));
                 var action=component.get("c.CreateSplitItem");
                 action.setParams({'Expline':JSON.stringify(component.get("v.splittedExpLine")), 'ExpRecord':JSON.stringify(component.get("v.splitExpense"))})
                 action.setCallback(this,function(response){

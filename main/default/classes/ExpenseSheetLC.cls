@@ -1075,7 +1075,8 @@ public static ExpenseWrapper DeleteAT(String RAId, String ObjName) {
         update expR;
         for(ERP7__Expense_Line_Item__c exp :expList){
             exp.ERP7__Expense_Line_Item__c = RecordId;
-            if(exp.ERP7__Expense__c==null) exp.ERP7__Expense__c = expR.ERP7__Expense__c;
+            System.debug('exp.ERP7__Expense__c:'+exp.ERP7__Expense__c);
+            if(exp.ERP7__Expense__c==null && exp.Name==null) exp.ERP7__Expense__c = expR.ERP7__Expense__c;
         }
         upsert expList;
         return null;    
