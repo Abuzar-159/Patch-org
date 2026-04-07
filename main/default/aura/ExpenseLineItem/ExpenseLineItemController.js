@@ -1036,6 +1036,7 @@ console.log('FileList : ', JSON.stringify(FileList));
     },
     
     saveRecords : function(component, event, helper) {
+        $A.util.removeClass(component.find('mainSpin'), "slds-hide");
         var expList = component.get("v.splittedExpLine");
         var AmountValidate = true;
         var COAValidate = true;
@@ -1043,6 +1044,7 @@ console.log('FileList : ', JSON.stringify(FileList));
         for(var i=0;i<expList.length;i++){
             if(expList[i].ERP7__Claimed_Amount__c == null || expList[i].ERP7__Claimed_Amount__c == '' || expList[i].ERP7__Claimed_Amount__c == undefined){
                 AmountValidate = false;
+                $A.util.addClass(component.find('mainSpin'), "slds-hide");
                 helper.showToast('Error!','error','Please Enter the Amount');
             }
         }
@@ -1050,6 +1052,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             for(var i=0;i<expList.length;i++){
                 if(expList[i].ERP7__Chart_Of_Account__c == null || expList[i].ERP7__Chart_Of_Account__c == '' || expList[i].ERP7__Chart_Of_Account__c == undefined){
                     COAValidate = false;
+                    $A.util.addClass(component.find('mainSpin'), "slds-hide");
                     helper.showToast('Error!','error','Please Select the Chart of Account');
                 }
             }
@@ -1066,6 +1069,7 @@ console.log('FileList : ', JSON.stringify(FileList));
             if(roundedActual !== roundedTotal){//actualAmount != TotalAmount){//Changed by asra 31/3
                 console.log('here1 roundedActual->',roundedActual);
                 console.log('here1 roundedTotal->',roundedTotal);
+                $A.util.addClass(component.find('mainSpin'), "slds-hide");
                 helper.showToast('Error!','error','Split Amount does not match the Total Amount');
             }else{
                 console.log('splittedExpLine->',JSON.stringify(component.get("v.splittedExpLine")));
@@ -1074,10 +1078,12 @@ console.log('FileList : ', JSON.stringify(FileList));
                 action.setParams({'Expline':JSON.stringify(component.get("v.splittedExpLine")), 'ExpRecord':JSON.stringify(component.get("v.splitExpense"))})
                 action.setCallback(this,function(response){
                     if(response.getState() === "SUCCESS"){
+                        $A.util.addClass(component.find('mainSpin'), "slds-hide");
                         helper.showToast('Success!','success','Expense Split Successfully');
                         component.set("v.SplitExpensePopup", false);
                     }
                     else{
+                        $A.util.addClass(component.find('mainSpin'), "slds-hide");
                         var errors = response.getError();
                         console.log("err -> ", errors);
                         helper.showToast('Error!','error',errors.message);
