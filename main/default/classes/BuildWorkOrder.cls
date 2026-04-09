@@ -1349,11 +1349,11 @@ return comW;
                                     //conversionFound = true;
                                     comW.errorMsg = '';
                                     if(allUOMCs[k].ERP7__From_UOM__c == prodUOM && allUOMCs[k].ERP7__To_UOM__c == bomUOM){
-                                        stock2Consume = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Consume).setScale(4);            stock2Scrap = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Scrap).setScale(4);
+                                        stock2Consume = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Consume).setScale(6);            stock2Scrap = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Scrap).setScale(6);
                                     }
                                     else if(allUOMCs[k].ERP7__From_UOM__c == bomUOM && allUOMCs[k].ERP7__To_UOM__c == prodUOM){
                                         //stock2insert = allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2insert;
-                                        stock2Consume = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Consume).setScale(4);      stock2Scrap = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Scrap).setScale(4);
+                                        stock2Consume = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Consume).setScale(6);      stock2Scrap = (allUOMCs[k].ERP7__From_Value__c/allUOMCs[k].ERP7__To_Value__c*stock2Scrap).setScale(6);
                                     }
                                     else comW.errorMsg = 'UOM Conversion not found.';
                                     break;
@@ -2064,7 +2064,7 @@ return comW;
                                         ERP7__Stock_Outward_Line_Item__c SDLI = new ERP7__Stock_Outward_Line_Item__c(Name = mrpWrapper.MRP.Name, ERP7__Active__c = true, ERP7__Process__c = mrpWrapper.MRP.ERP7__Process__c, ERP7__Schedule__c = mrpWrapper.MRP.ERP7__Schedule__c, ERP7__MRP_Material_Requirements_Planning__c = mrpWrapper.MRP.Id, ERP7__BoM__c = mrpWrapper.MRP.ERP7__BOM__c, ERP7__Status__c = 'Reserved', ERP7__Product__c = mrpWrapper.MRP.ERP7__MRP_Product__c, ERP7__Site_Product_Service_Inventory_Stock__c = WIIS.Id, ERP7__Version__c = WIIS.ERP7__Version__c);
                                         //if(Mapexistingstock.containsKey(mrpWrapper.MRP.Id)) SDLI.ERP7__Quantity__c = mrpWrapper.MRP.ERP7__Total_Amount_Required__c - Mapexistingstock.get(mrpWrapper.MRP.Id) ;
                                         //else SDLI.ERP7__Quantity__c = mrpWrapper.MRP.ERP7__Total_Amount_Required__c;
-                                        SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__BOM__r.ERP7__Quantity__c/WM).setScale(4);
+                                        SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__BOM__r.ERP7__Quantity__c/WM).setScale(6);
                                         stockAllocated += SDLI.ERP7__Quantity__c;
                                         SDLI.ERP7__MO_WO_Serial__c = SN.Id;
                                         if(SN.ERP7__Material_Batch_Lot__c != Null) SDLI.ERP7__MO_WO_Material_Batch_Lot__c = SN.ERP7__Material_Batch_Lot__c;
@@ -2087,7 +2087,7 @@ return comW;
                                 system.debug('*** SNS out One: ');
                                 ERP7__Stock_Outward_Line_Item__c SDLI = new ERP7__Stock_Outward_Line_Item__c(Name = mrpWrapper.MRP.Name, ERP7__Active__c = true, ERP7__Process__c = mrpWrapper.MRP.ERP7__Process__c, ERP7__Schedule__c = mrpWrapper.MRP.ERP7__Schedule__c, ERP7__MRP_Material_Requirements_Planning__c = mrpWrapper.MRP.Id, ERP7__BoM__c = mrpWrapper.MRP.ERP7__BOM__c, ERP7__Status__c = 'Reserved', ERP7__Product__c = mrpWrapper.MRP.ERP7__MRP_Product__c, ERP7__Site_Product_Service_Inventory_Stock__c = WIIS.Id, ERP7__Version__c = WIIS.ERP7__Version__c);
                                 if(Mapexistingstock.containsKey(mrpWrapper.MRP.Id)) SDLI.ERP7__Quantity__c = mrpWrapper.MRP.ERP7__Total_Amount_Required__c/WM - Mapexistingstock.get(mrpWrapper.MRP.Id) ;
-                                else SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__Total_Amount_Required__c/WM).setScale(4);
+                                else SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__Total_Amount_Required__c/WM).setScale(6);
                                 stockAllocated += SDLI.ERP7__Quantity__c;
                                 if(WIIS.ERP7__Batch_Lot__c != null) SDLI.ERP7__Material_Batch_Lot__c = WIIS.ERP7__Batch_Lot__c;
                                 if(WIIS.ERP7__Serial__c != null) SDLI.ERP7__Serial__c = WIIS.ERP7__Serial__c;
@@ -2133,7 +2133,7 @@ return comW;
                                                 //if(((mrpWrapper.MRP.ERP7__Total_Amount_Required__c == stk.ERP7__Number_of_Item_In_Stock__c) || (mrpWrapper.MRP.ERP7__Total_Amount_Required__c > (stk.ERP7__Number_of_Item_In_Stock__c + mrpWrapper.MRP.ERP7__Fulfilled_Amount__c))) || remainingqty >= stk.ERP7__Number_of_Item_In_Stock__c || remainingqty == 0) { SDLI.ERP7__Quantity__c = stk.ERP7__Number_of_Item_In_Stock__c; system.debug('stk.ERP7__Number_of_Item_In_Stock__c 1 ***: '+stk.ERP7__Number_of_Item_In_Stock__c); }
                                                 //else if(Mapexistingstock.containsKey(mrpWrapper.MRP.Id) && remainingqty > Mapexistingstock.get(mrpWrapper.MRP.Id)) { SDLI.ERP7__Quantity__c = remainingqty - Mapexistingstock.get(mrpWrapper.MRP.Id); system.debug('SDLI.ERP7__Quantity__c  1 ***: '+SDLI.ERP7__Quantity__c ); }
                                                 //else { SDLI.ERP7__Quantity__c = remainingqty;  system.debug('remainingqty  1 ***: '+remainingqty );}//stk.ERP7__Number_of_Item_In_Stock__c -  mrpWrapper.MRP.ERP7__Fulfilled_Amount__c;
-                                                SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__BOM__r.ERP7__Quantity__c/WM).setScale(4);
+                                                SDLI.ERP7__Quantity__c = (mrpWrapper.MRP.ERP7__BOM__r.ERP7__Quantity__c/WM).setScale(6);
                                                 stockAllocated += SDLI.ERP7__Quantity__c;
                                                 SDLI.ERP7__MO_WO_Serial__c = SN.Id;
                                                 if(SN.ERP7__Material_Batch_Lot__c != Null) SDLI.ERP7__MO_WO_Material_Batch_Lot__c = SN.ERP7__Material_Batch_Lot__c;
@@ -2162,8 +2162,8 @@ return comW;
                                         ERP7__Stock_Outward_Line_Item__c SDLI = new ERP7__Stock_Outward_Line_Item__c(Name = mrpWrapper.MRP.Name, ERP7__Active__c = true, ERP7__Process__c = mrpWrapper.MRP.ERP7__Process__c, ERP7__Schedule__c = mrpWrapper.MRP.ERP7__Schedule__c, ERP7__MRP_Material_Requirements_Planning__c = mrpWrapper.MRP.Id, ERP7__BoM__c = mrpWrapper.MRP.ERP7__BOM__c, ERP7__Status__c = 'Reserved', ERP7__Product__c = mrpWrapper.MRP.ERP7__MRP_Product__c, ERP7__Site_Product_Service_Inventory_Stock__c = stk.Id, ERP7__Version__c = stk.ERP7__Version__c);
                                         //totalAllocatedQty += stk.ERP7__Number_of_Item_In_Stock__c;
                                         if(((mrpWrapper.MRP.ERP7__Total_Amount_Required__c/WM == stk.ERP7__Number_of_Item_In_Stock__c) || (mrpWrapper.MRP.ERP7__Total_Amount_Required__c/WM > (stk.ERP7__Number_of_Item_In_Stock__c + mrpWrapper.MRP.ERP7__Fulfilled_Amount__c/WM))) || remainingqty >= stk.ERP7__Number_of_Item_In_Stock__c || remainingqty == 0) { SDLI.ERP7__Quantity__c = stk.ERP7__Number_of_Item_In_Stock__c; system.debug('stk.ERP7__Number_of_Item_In_Stock__c 1 ***: '+stk.ERP7__Number_of_Item_In_Stock__c); }
-                                        else if(Mapexistingstock.containsKey(mrpWrapper.MRP.Id) && remainingqty > Mapexistingstock.get(mrpWrapper.MRP.Id)) { SDLI.ERP7__Quantity__c = (remainingqty - Mapexistingstock.get(mrpWrapper.MRP.Id)).setScale(4); system.debug('SDLI.ERP7__Quantity__c  1 ***: '+SDLI.ERP7__Quantity__c ); }
-                                        else { SDLI.ERP7__Quantity__c = (remainingqty).setScale(4);  system.debug('remainingqty  1 ***: '+remainingqty);}//stk.ERP7__Number_of_Item_In_Stock__c -  mrpWrapper.MRP.ERP7__Fulfilled_Amount__c;
+                                        else if(Mapexistingstock.containsKey(mrpWrapper.MRP.Id) && remainingqty > Mapexistingstock.get(mrpWrapper.MRP.Id)) { SDLI.ERP7__Quantity__c = (remainingqty - Mapexistingstock.get(mrpWrapper.MRP.Id)).setScale(6); system.debug('SDLI.ERP7__Quantity__c  1 ***: '+SDLI.ERP7__Quantity__c ); }
+                                        else { SDLI.ERP7__Quantity__c = (remainingqty).setScale(6);  system.debug('remainingqty  1 ***: '+remainingqty);}//stk.ERP7__Number_of_Item_In_Stock__c -  mrpWrapper.MRP.ERP7__Fulfilled_Amount__c;
                                         stockAllocated += SDLI.ERP7__Quantity__c;
                                         if(stk.ERP7__Batch_Lot__c != null) SDLI.ERP7__Material_Batch_Lot__c = stk.ERP7__Batch_Lot__c;
                                         if(stk.ERP7__Serial__c != null) SDLI.ERP7__Serial__c = stk.ERP7__Serial__c;
@@ -2180,7 +2180,7 @@ return comW;
                                     }
 
                                     //mrpWrapper.Stock = mrpWrapper.Stock - mrpWrapper.MRP.ERP7__Fulfilled_Amount__c;
-                                    remainingqty = ((mrpWrapper.MRP.ERP7__Total_Amount_Required__c - mrpWrapper.MRP.ERP7__Fulfilled_Amount__c)/WM).setScale(4);
+                                    remainingqty = ((mrpWrapper.MRP.ERP7__Total_Amount_Required__c - mrpWrapper.MRP.ERP7__Fulfilled_Amount__c)/WM).setScale(6);
                                     if(remainingqty < 0) remainingqty = 0;
 
                                     if(mrpWrapper.MRP.ERP7__Fulfilled_Amount__c >= mrpWrapper.MRP.ERP7__Total_Amount_Required__c){
@@ -2188,7 +2188,7 @@ return comW;
                                         for(ERP7__Stock_Outward_Line_Item__c ss : SDLIs2Upsert){
                                             if(ss.ERP7__MRP_Material_Requirements_Planning__c == mrpWrapper.MRP.Id) totalFulfilled += ss.ERP7__Quantity__c;
                                         }
-                                        mrpWrapper.MRP.ERP7__Fulfilled_Amount__c = (totalFulfilled*WM).setScale(4);
+                                        mrpWrapper.MRP.ERP7__Fulfilled_Amount__c = (totalFulfilled*WM).setScale(6);
                                         system.debug('totalFulfilled else if 2 after: '+totalFulfilled+' MRP QTy : '+mrpWrapper.MRP.ERP7__Fulfilled_Amount__c );
                                         if(mrpWrapper.MRP.ERP7__Fulfilled_Amount__c == mrpWrapper.MRP.ERP7__Total_Amount_Required__c) mrpWrapper.MRP.ERP7__Status__c = 'Reserved';
                                         system.debug('mrpWrapper.Stock  : '+mrpWrapper.Stock);
@@ -2371,12 +2371,12 @@ return comW;
                 }
                 Decimal myStock = 0;
                 for(Inventory_Stock__c stock : WIISLists){  myStock += stock.Number_of_Item_In_Stock__c; }
-                mySOLI.ERP7__Quantity__c = mySOLI.ERP7__Quantity__c.setScale(4);
+                mySOLI.ERP7__Quantity__c = mySOLI.ERP7__Quantity__c.setScale(6);
 
                 Decimal totalQuantity = (moSerialNos.size() > 0)? mySOLI.ERP7__Quantity__c * moSerialNos.size() : mySOLI.ERP7__Quantity__c;
 
                 if(Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Fulfilled_Amount__c.isCreateable() && Schema.sObjectType.ERP7__MRP__c.fields.ERP7__Fulfilled_Amount__c.isUpdateable()){
-                    mrp.MRP.ERP7__Fulfilled_Amount__c = (mrp.MRP.ERP7__Fulfilled_Amount__c != null) ? mrp.MRP.ERP7__Fulfilled_Amount__c.setScale(4) : 0; //.setScale(4)
+                    mrp.MRP.ERP7__Fulfilled_Amount__c = (mrp.MRP.ERP7__Fulfilled_Amount__c != null) ? mrp.MRP.ERP7__Fulfilled_Amount__c.setScale(6) : 0; //.setScale(4)
                 }else{/*No access*/}
                 if(myStock >= totalQuantity){
                     Decimal AllocatedStock = 0;

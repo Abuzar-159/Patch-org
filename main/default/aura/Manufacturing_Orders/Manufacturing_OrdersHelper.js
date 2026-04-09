@@ -39,7 +39,7 @@
         
         
     },
-    getSerials : function(cmp,stockAssignedSerialIds){
+   /* getSerials : function(cmp,stockAssignedSerialIds){
         var action1 = cmp.get("c.getSerialNumbers");
         var MOId = cmp.get("v.manuOrder.Id");
         action1.setParams({"offsetVal" : 0,"Mo" : MOId,"limitSer" : 500,'SerialIds' : stockAssignedSerialIds});
@@ -61,6 +61,8 @@
                 }
                 if(NewSerialsForAllocation.length > 0){
                     newSOL.ERP7__MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
+                }else {
+                    newSOL.MO_WO_Serial__c = null;
                 }
                 if(moBatchNos.length == 1){
                     newSOL.ERP7__MO_WO_Material_Batch_Lot__c = moBatchNos[0].Id;
@@ -74,7 +76,73 @@
             }
         });
         $A.enqueueAction(action1);
-    },
+    },*/
+    getSerials : function(cmp, stockAssignedSerialIds) {
+    var action1 = cmp.get("c.getSerialNumbers");
+    var MOId = cmp.get("v.manuOrder.Id");
+
+    action1.setParams({
+        offsetVal: 0,
+        Mo: MOId,
+        limitSer: 500,
+        SerialIds: stockAssignedSerialIds
+    });
+
+    action1.setCallback(this, function(response1) {
+        try {
+            if (response1.getState() === "SUCCESS") {
+                var NewSerialsForAllocation = [];
+                var moSerialNos = response1.getReturnValue() || [];
+                cmp.set("v.moSerialNos", moSerialNos);
+
+                var moBatchNos = cmp.get("v.moBatchNos") || [];
+                var newSOL = cmp.get("v.NewSOLI") || {};
+
+                for (var y = 0; y < moSerialNos.length; y++) {
+                    if (!stockAssignedSerialIds.includes(moSerialNos[y].Id)) {
+                        moSerialNos[y].SelectItem = false;
+                        NewSerialsForAllocation.push(moSerialNos[y]);
+                    }
+                }
+
+                // keep field blank if no MO serials exist added by bushra
+                if (NewSerialsForAllocation.length > 0) {
+                    newSOL.MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
+                } else {
+                    newSOL.MO_WO_Serial__c = null;
+                }
+
+                if (moBatchNos.length === 1) {
+                    newSOL.MO_WO_Material_Batch_Lot__c = moBatchNos[0].Id;
+                }
+
+                cmp.set("v.NewSOLI", newSOL);
+                cmp.set("v.SerialsForAllocation", NewSerialsForAllocation);
+
+                // IMPORTANT: always stop loading and show page
+                cmp.set("v.saPage", true);
+                cmp.set("v.showSpinner", false);
+                $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                $A.util.addClass(cmp.find('mainSpinLoad'), "slds-hide");
+            } else {
+                cmp.set("v.SerialsForAllocation", []);
+                cmp.set("v.showSpinner", false);
+                cmp.set("v.saPage", true);
+                $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                $A.util.addClass(cmp.find('mainSpinLoad'), "slds-hide");
+            }
+        } catch (e) {
+            console.log('getSerials error', e);
+            cmp.set("v.SerialsForAllocation", []);
+            cmp.set("v.showSpinner", false);
+            cmp.set("v.saPage", true);
+            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+            $A.util.addClass(cmp.find('mainSpinLoad'), "slds-hide");
+        }
+    });
+
+    $A.enqueueAction(action1);
+},
     
     getSolis: function(cmp, event, helper) {
         var msoliId = cmp.get("v.mosoliId");

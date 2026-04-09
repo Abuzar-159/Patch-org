@@ -400,8 +400,8 @@ console.log('byPassWOComplete:', cmp.get('v.byPassWOComplete'));
                         if(obj[y].wipFlow.ERP7__Quantity_Scrapped__c > 0)
                             scrapQty += obj[y].wipFlow.ERP7__Quantity_Scrapped__c;
                     }
-                    producedQty = Number.parseFloat(producedQty).toFixed(4);
-                    scrapQty = Number.parseFloat(scrapQty).toFixed(4);
+                    producedQty = Number.parseFloat(producedQty).toFixed(6);
+                    scrapQty = Number.parseFloat(scrapQty).toFixed(6);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Scrapped__c", scrapQty);
 
@@ -426,5 +426,23 @@ console.log('byPassWOComplete:', cmp.get('v.byPassWOComplete'));
                 //$A.util.addClass(cmp.find("newTaskModalBackdrop"),"slds-backdrop_open");
             });
             $A.enqueueAction(action);
+        },
+    rollbackSelectedSerialFlags: function(cmp) {
+        console.log('was i even called ');
+    var serials = cmp.get('v.moSerialForProduction') || [];
+
+    for (var i = 0; i < serials.length; i++) {
+        if (serials[i].selected) {
+            console.log('in ifffffffffffff');
+            serials[i].ERP7__Available__c = false;
+            serials[i].ERP7__Scrap__c = false;
+            // optional, only if you were setting these before validation
+            // serials[i].ERP7__Date_of_Manufacture__c = null;
+            // serials[i].ERP7__Production_Version__c = null;
         }
+    }
+
+    cmp.set('v.moSerialForProduction', serials);
+    cmp.set('v.AllmoSerialNos', serials);
+}
 })

@@ -241,11 +241,9 @@
             var vrd = cmp.get("v.RD");
             var checkWOId = cmp.get("v.agentWOId");
             console.log('checkWOId : ',checkWOId);
-            // Only override WO if passed via param
             if (checkWOId) {
                 woId = checkWOId;
 
-                // If toBuild is explicitly passed and true, trigger build logic
                 if (toBuild === true) {
                     console.log('Triggering build logic for WO: ', woId);
                     helper.agentGetMOData(cmp, event, helper);
@@ -423,8 +421,8 @@
                                                // else if(soli[y].ERP7__MO_WO_Serial__c == null && obj[x].MRP.Id == soli[y].ERP7__MRP_Material_Requirements_Planning__c) countFulfilled += soliQty; // added by shaguftha
                                             }
                                         }
-                                        countFulfilled = parseFloat(countFulfilled).toFixed(4);
-                                        bomQuantity = parseFloat(bomQuantity).toFixed(4);
+                                        countFulfilled = parseFloat(countFulfilled).toFixed(6);
+                                        bomQuantity = parseFloat(bomQuantity).toFixed(6);
                                        console.log('countFulfilled : ',countFulfilled);
                                         console.log('bomQuantity : ',bomQuantity);
                                         if(countFulfilled > 0 && countFulfilled >= bomQuantity) mrpCount++; //changed from == to >= by shaguftha
@@ -2222,18 +2220,18 @@ console.log('FileList : ', JSON.stringify(FileList));
                         finish = false;
                     }
                     var consume =0; var scrap =0;
-                    console.log('Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) : ',Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4));
-                    console.log('Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4) : ',Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4));
-                    consume=  (parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c) + parseFloat(MRPSS[x].quantityToConsume)).toFixed(4)
-                    // Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) +  Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4);
+                    console.log('Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(6) : ',Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(6));
+                    console.log('Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(6) : ',Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(6));
+                    consume=  (parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c) + parseFloat(MRPSS[x].quantityToConsume)).toFixed(6)
+                    // Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(6) +  Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(6);
                     console.log('consume : ',consume);
-                    MRPSS[x].MRP.ERP7__Consumed_Quantity__c  = Number.parseFloat(consume).toFixed(4);
+                    MRPSS[x].MRP.ERP7__Consumed_Quantity__c  = Number.parseFloat(consume).toFixed(6);
 
                     console.log('MRPSS[x].MRP.ERP7__Consumed_Quantity__c CommitTaskonFinsh: ',MRPSS[x].MRP.ERP7__Consumed_Quantity__c);
-                    scrap = (parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) + parseFloat(MRPSS[x].quantityToScrap)).toFixed(4)
-                    // Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(4) + Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(4);
+                    scrap = (parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) + parseFloat(MRPSS[x].quantityToScrap)).toFixed(6)
+                    // Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(6) + Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(6);
                     console.log('scrap : ',scrap);
-                    MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(scrap).toFixed(4);
+                    MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(scrap).toFixed(6);
                     console.log('MRPSS[x].MRP.ERP7__Scrapped_Quantity__c CommitTaskonFinsh: ',MRPSS[x].MRP.ERP7__Scrapped_Quantity__c);
 
                 }
@@ -2281,9 +2279,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                             WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
                             //WO.ERP7__Quantity_Built__c = Math.round((WO.ERP7__Quantity_Built__c + Number.EPSILON) * 100) / 100;
                             for(var x in MRPSS){
-                                MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) - Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4);
+                                MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(6) - Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(6);
                                 //MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + Number.EPSILON) * 100) / 100;
-                                MRPSS[x].MRP.ERP7__Scrapped_Quantity__c =  Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(4) - Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(4);
+                                MRPSS[x].MRP.ERP7__Scrapped_Quantity__c =  Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(6) - Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(6);
                                 //MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + Number.EPSILON) * 100) / 100;
                             }
                             cmp.set("v.MRPSS", MRPSS);
@@ -2304,9 +2302,9 @@ console.log('FileList : ', JSON.stringify(FileList));
                         //WO.ERP7__Quantity_Built__c = Math.round((WO.ERP7__Quantity_Built__c + Number.EPSILON) * 100) / 100;
 
                         for(var x in MRPSS){
-                            MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(4) - Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(4);
+                            MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(MRPSS[x].MRP.ERP7__Consumed_Quantity__c).toFixed(6) - Number.parseFloat(MRPSS[x].quantityToConsume).toFixed(6);
                             //MRPSS[x].MRP.ERP7__Consumed_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + Number.EPSILON) * 100) / 100;
-                            MRPSS[x].MRP.ERP7__Scrapped_Quantity__c =  Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(4) - Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(4);
+                            MRPSS[x].MRP.ERP7__Scrapped_Quantity__c =  Number.parseFloat(MRPSS[x].MRP.ERP7__Scrapped_Quantity__c).toFixed(6) - Number.parseFloat(MRPSS[x].quantityToScrap).toFixed(6);
                             //MRPSS[x].MRP.ERP7__Scrapped_Quantity__c = Math.round((MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + Number.EPSILON) * 100) / 100;
                         }
                         cmp.set("v.MRPSS", MRPSS);
@@ -3203,8 +3201,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                         quant1 = quant1/obj[x].WeightMultiplier;
                         if((quantin1 + onlyweight) > quant1) error = true;
                     }
-                    var weightCheck = weight.toFixed(4);
-                    var onlyweightCheck = onlyweight.toFixed(4);
+                    var weightCheck = weight.toFixed(6);
+                    var onlyweightCheck = onlyweight.toFixed(6);
 
                     if((obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == false && onlyweightCheck > 0 && weightCheck <= max) || (obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == true && onlyweightCheck > 0 && onlyweightCheck <= imax && onlyweightCheck >= imin && weightCheck <= max)){
                         if((obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && NewSOLI.ERP7__Serial__c == undefined) || (obj[x].MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c && NewSOLI.ERP7__Material_Batch_Lot__c == undefined) || (WO.ERP7__Product__r.ERP7__Serialise__c && NewSOLI.ERP7__MO_WO_Serial__c == undefined) || (WO.ERP7__Product__r.ERP7__Lot_Tracked__c && NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == undefined)){
@@ -3388,7 +3386,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                         console.log('obj[x].ActualWeight here2~>'+obj[x].ActualWeight);
                         console.log('obj[x].WeightMultiplier here2~>'+obj[x].WeightMultiplier);
 
-                        if(obj[x].ActualWeight != undefined) weight = parseFloat(parseFloat(parseFloat(weight) + parseFloat(obj[x].ActualWeight))/obj[x].WeightMultiplier).toFixed(4); //parseFloat(weight) + parseFloat(obj[x].ActualWeight);
+                        if(obj[x].ActualWeight != undefined) weight = parseFloat(parseFloat(parseFloat(weight) + parseFloat(obj[x].ActualWeight))/obj[x].WeightMultiplier).toFixed(6); //parseFloat(weight) + parseFloat(obj[x].ActualWeight);
 
                         console.log('weight here3~>'+weight);
 
@@ -3426,7 +3424,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                             if((quantin1 + onlyweight) > quant1) error = true;
                         }
                         //var weightCheck = ((weight + Number.EPSILON) * 100) / 100;
-                        //var onlyweightCheck = ((onlyweight + Number.EPSILON) * 100) / 100;  //parseFloat(onlyweight);  //.toFixed(4);
+                        //var onlyweightCheck = ((onlyweight + Number.EPSILON) * 100) / 100;  //parseFloat(onlyweight);  //.toFixed(6);
 
                         var weightCheck = weight
                         var onlyweightCheck = onlyweight;
@@ -3989,8 +3987,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 scrapQty += obj[y].wipFlow.ERP7__Quantity_Scrapped__c;
                        // }
                     }
-                    producedQty = Number.parseFloat(producedQty).toFixed(4);
-                    scrapQty = Number.parseFloat(scrapQty).toFixed(4);
+                    producedQty = Number.parseFloat(producedQty).toFixed(6);
+                    scrapQty = Number.parseFloat(scrapQty).toFixed(6);
                     console.log('scrapQty : ',scrapQty);
                     console.log('producedQty : ',producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", producedQty);
@@ -4167,8 +4165,8 @@ console.log('FileList : ', JSON.stringify(FileList));
                         if(obj[y].wipFlow.ERP7__Quantity_Scrapped__c > 0)
                             scrapQty += obj[y].wipFlow.ERP7__Quantity_Scrapped__c;
                     }
-                    producedQty = Number.parseFloat(producedQty).toFixed(4);
-                    scrapQty = Number.parseFloat(scrapQty).toFixed(4);
+                    producedQty = Number.parseFloat(producedQty).toFixed(6);
+                    scrapQty = Number.parseFloat(scrapQty).toFixed(6);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Built__c", producedQty);
                     cmp.set("v.WO2Fin.ERP7__Quantity_Scrapped__c", scrapQty);
 
@@ -4214,20 +4212,20 @@ console.log('FileList : ', JSON.stringify(FileList));
                 if(ToProduce >= 0){
                    /* if(WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) && MRPSS[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c) {
                         if(ToProduce == 0) MRPSS[x].quantityToConsume = 0;
-                        else MRPSS[x].quantityToConsume = Number.parseFloat(MRPSS[x].MRP.ERP7__BOM__r.ERP7__Quantity__c).toFixed(4); // it was 1 - imran change
+                        else MRPSS[x].quantityToConsume = Number.parseFloat(MRPSS[x].MRP.ERP7__BOM__r.ERP7__Quantity__c).toFixed(6); // it was 1 - imran change
                     }
                     else {*/
                         /* if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Total_Amount_Required__c > MRPSS[x].MRP.ERP7__Fulfilled_Amount__c) //&& (Number.parseFloat(MRPSS[x].MRP.ERP7__BOM__r.ERP7__For_Multiples__c) * Number.parseFloat(WO.ERP7__Quantity_Ordered__c)) == MRPSS[x].MRP.ERP7__Fulfilled_Amount__c){
                         {
                             console.log('If condition satisfies');
-                            MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Fulfilled_Amount__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
+                            MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Fulfilled_Amount__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(6) : 0;
                         } */
                         // Commented to get the qty based on total amount required not based on the fulfilled amount for example if total MO Qty is 5 and fulfillied is 3 then the Consume will be (3 * 3)/5 = 1.8 which is not correct
                         // else
-                        MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
+                        MRPSS[x].quantityToConsume = (WO.ERP7__Quantity_Ordered__c >=0 && ToProduce >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToProduce)/WO.ERP7__Quantity_Ordered__c).toFixed(6) : 0;
                         /*if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c < (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap))
                         {
-                         if(ToProduce > 0)  MRPSS[x].quantityToConsume = Number.parseFloat(((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap +  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) - MRPSS[x].MRP.ERP7__Fulfilled_Amount__c)).toFixed(4); }*/
+                         if(ToProduce > 0)  MRPSS[x].quantityToConsume = Number.parseFloat(((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap +  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) - MRPSS[x].MRP.ERP7__Fulfilled_Amount__c)).toFixed(6); }*/
                     //}
                     console.log('MRPSS[x].quantityToConsume after :',MRPSS[x].quantityToConsume);
 
@@ -4236,10 +4234,10 @@ console.log('FileList : ', JSON.stringify(FileList));
                     //ToScrap >= 0 is removed on 10/04/23 from below if condition as it was making both the scrap and consume qty as 1 for serialise prod
                    /* if(WO.ERP7__Quantity_Ordered__c >=0 && ToScrap >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) && MRPSS[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c) {
                         if(ToScrap == 0) MRPSS[x].quantityToScrap = 0;
-                        else MRPSS[x].quantityToScrap = Number.parseFloat(MRPSS[x].MRP.ERP7__BOM__r.ERP7__Quantity__c).toFixed(4);// it was 1 - imran change
+                        else MRPSS[x].quantityToScrap = Number.parseFloat(MRPSS[x].MRP.ERP7__BOM__r.ERP7__Quantity__c).toFixed(6);// it was 1 - imran change
                     }
                     else {*/
-                        MRPSS[x].quantityToScrap = (WO.ERP7__Quantity_Ordered__c >=0 && ToScrap >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToScrap)/WO.ERP7__Quantity_Ordered__c).toFixed(4) : 0;
+                        MRPSS[x].quantityToScrap = (WO.ERP7__Quantity_Ordered__c >=0 && ToScrap >= 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c > 0 && MRPSS[x].MRP.ERP7__Fulfilled_Amount__c != (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c ))? Number.parseFloat((MRPSS[x].MRP.ERP7__Total_Amount_Required__c*ToScrap)/WO.ERP7__Quantity_Ordered__c).toFixed(6) : 0;
                         /* if(MRPSS[x].MRP.ERP7__Fulfilled_Amount__c < (MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].MRP.ERP7__Scrapped_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap))
                         {
                          if(ToScrap > 0)  MRPSS[x].quantityToScrap = ((MRPSS[x].MRP.ERP7__Consumed_Quantity__c + MRPSS[x].quantityToConsume + MRPSS[x].quantityToScrap +  MRPSS[x].MRP.ERP7__Scrapped_Quantity__c) - MRPSS[x].MRP.ERP7__Fulfilled_Amount__c); }*/
@@ -4553,7 +4551,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                 cmp.set("v.exceptionError", $A.get('$Label.c.Required_fields_missing'));
                                 error = true;
                             }
-                            const sumofall = Number.parseFloat((Number(AllMRPs[x].MRP.ERP7__Consumed_Quantity__c) + Number(AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c) + Number(AllMRPs[x].quantityToConsume) + Number(AllMRPs[x].quantityToScrap))).toFixed(4);
+                            const sumofall = Number.parseFloat((Number(AllMRPs[x].MRP.ERP7__Consumed_Quantity__c) + Number(AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c) + Number(AllMRPs[x].quantityToConsume) + Number(AllMRPs[x].quantityToScrap))).toFixed(6);
                             if(sumofall > Number(AllMRPs[x].MRP.ERP7__Fulfilled_Amount__c)){
                                 cmp.set("v.exceptionError", $A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot') +AllMRPs[x].MRP.ERP7__MRP_Product__r.Name);
                                 error = true;
@@ -4573,9 +4571,9 @@ console.log('FileList : ', JSON.stringify(FileList));
 
                     if(!error){
                         for(var x in AllMRPs){
-                            AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToConsume))).toFixed(4);
+                            AllMRPs[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToConsume))).toFixed(6);
                             console.log('consumed Qty 5: ',AllMRPs[x].MRP.ERP7__Consumed_Quantity__c);
-                            AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToScrap))).toFixed(4);
+                            AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((AllMRPs[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((AllMRPs[x].quantityToScrap))).toFixed(6);
                         }
                         var count = 0;
                         var currentWIPflow = cmp.get('v.SelectedWIPflow');
@@ -4681,6 +4679,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                         //$A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                     }
                                     else {
+                                        
                                         cmp.set("v.exceptionError", response.getReturnValue().errorMsg);
                                         WO.ERP7__Quantity_Built__c = WO.ERP7__Quantity_Built__c - ToProduce;
                                         console.log('else WO Qty : ',WO.ERP7__Quantity_Built__c);
@@ -4763,32 +4762,35 @@ console.log('FileList : ', JSON.stringify(FileList));
                         for(var x in mrps){
                             console.log('mrps[x] : ',JSON.stringify(mrps[x]));
                             console.log('consumed Qty 1: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
-                            const sumofall = Number.parseFloat((Number(mrps[x].MRP.ERP7__Consumed_Quantity__c) + Number(mrps[x].MRP.ERP7__Scrapped_Quantity__c) + Number(mrps[x].quantityToConsume) + Number(mrps[x].quantityToScrap))).toFixed(4);
+                            const sumofall = Number.parseFloat((Number(mrps[x].MRP.ERP7__Consumed_Quantity__c) + Number(mrps[x].MRP.ERP7__Scrapped_Quantity__c) + Number(mrps[x].quantityToConsume) + Number(mrps[x].quantityToScrap))).toFixed(6);
                             console.log('sumofall : ',sumofall);
                             let mrp1 = mrps[x].MRP;
                             if(mrp1.ERP7__Total_Amount_Required__c > 0 && mrp1.ERP7__Fulfilled_Amount__c == 0){
+                                 helper.rollbackSelectedSerialFlags(cmp);
                                 cmp.set('v.exceptionError',$A.get('$Label.c.Please_allocate_stock_to_consume'));
                                 return;
                             } else if((parseFloat(mrps[x].quantityToConsume) + parseFloat(mrps[x].quantityToScrap)) > mrps[x].MRP.ERP7__Fulfilled_Amount__c){
+                                 helper.rollbackSelectedSerialFlags(cmp);
                                 cmp.set('v.exceptionError',$A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot_be_greater_than_fulfilled_quantity'));
                                 return;
                             }
 
                                 else   if(sumofall > Number(mrps[x].MRP.ERP7__Fulfilled_Amount__c)){
+                                     helper.rollbackSelectedSerialFlags(cmp);
                                     cmp.set("v.exceptionError", $A.get('$Label.c.Sum_of_consumed_and_scrapped_quantity_cannot') +mrps[x].MRP.ERP7__MRP_Product__r.Name);
                                     return;
                                 }
                                     /* commented  on 09_01_2023 to fix the issue of updating MRP with wrong qty when error encountered in the other MRPs
                                      * else{
-                                        mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4);
-                                        mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(4);
+                                        mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(6);
+                                        mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(6);
                                         console.log('consumed Qty 2: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
                                     }*/
                         }
 
                         for(var x in mrps){
-                            mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(4);
-                            mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(4);
+                            mrps[x].MRP.ERP7__Consumed_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Consumed_Quantity__c)) + Number.parseFloat((mrps[x].quantityToConsume))).toFixed(6);
+                            mrps[x].MRP.ERP7__Scrapped_Quantity__c = Number.parseFloat(Number.parseFloat((mrps[x].MRP.ERP7__Scrapped_Quantity__c)) + Number.parseFloat((mrps[x].quantityToScrap))).toFixed(6);
                             console.log('consumed Qty 2: ',mrps[x].MRP.ERP7__Consumed_Quantity__c);
                         }
                         /*  var wipflows = cmp.get('v.WIPFlows');
@@ -4895,7 +4897,7 @@ console.log('FileList : ', JSON.stringify(FileList));
                                     cmp.set('v.TypeOfWIP', 'Produced'); // added to default back to the old list 08_01_24
                                     cmp.set('v.moSerialForProduction',serialstoset);
 
-                                    $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                                  //  $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                                 }
                                 else {
                                     cmp.set("v.exceptionError", response.getReturnValue().errorMsg);

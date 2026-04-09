@@ -564,6 +564,9 @@ getAllDetails : function(cmp, event, helper) {
                                 }
                                 cmp.set("v.MRPs",obj);
                                 cmp.set("v.WOWS",wows);
+                                      if (cmp.get("v.NewSOLI.ERP7__Location__c")) {
+        $A.enqueueAction(cmp.get("c.getSOLILocationStock"));
+    }
                             }
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
 
@@ -2361,7 +2364,9 @@ action.setCallback(this, function(response) {
             // Set the updated MRPs
             cmp.set("v.MRPs", updatedMRPs);
             cmp.set("v.moSerialNos",response.getReturnValue().moSerialNos);
-            
+            if (cmp.get("v.NewSOLI.ERP7__Location__c")) {
+    $A.enqueueAction(cmp.get("c.getSOLILocationStock"));
+}
             var ik = response.getReturnValue().MRPs;
             var TW = 0;
             var Fulfilled = true;
@@ -2620,6 +2625,10 @@ action.setCallback(this, function(response) {
                         }
                         // Set the updated MRPs back to component
                         cmp.set("v.MRPs", updatedMRPs);
+                        // Refresh Location Stock after deletion
+if (cmp.get("v.NewSOLI.ERP7__Location__c")) {
+    $A.enqueueAction(cmp.get("c.getSOLILocationStock"));
+}
                         cmp.set("v.NewSOLI", response.getReturnValue().NewSOLI);
 
                         var ik = updatedMRPs;
@@ -3941,7 +3950,7 @@ changePageSize: function(cmp, event, helper) {
         console.error('=== EXCEPTION HANDLING COMPLETE ===');
     }
 }*/
-getSOLILocationStock: function(cmp, event, helper) {
+/*getSOLILocationStock: function(cmp, event, helper) {
     var locationId = cmp.get("v.NewSOLI.ERP7__Location__c");
     if(!locationId) {
         cmp.set("v.SOLI_LocationStock", 0);
@@ -3973,8 +3982,42 @@ getSOLILocationStock: function(cmp, event, helper) {
         }
     });
     $A.enqueueAction(action);
+},*/
+  getSOLILocationStock: function(cmp, event, helper) {
+    var locationId = cmp.get("v.NewSOLI.ERP7__Location__c");
+    if (!$A.util.isEmpty(locationId)) {
+        var selectedMRP = null;
+        var mrps = cmp.get("v.MRPs");
+        
+        for (var i = 0; i < mrps.length; i++) {
+            if (mrps[i].isSelect) {
+                selectedMRP = mrps[i];
+                break;
+            }
+        }
+        
+        if (selectedMRP) {
+            var productId = selectedMRP.MRP.ERP7__MRP_Product__c;
+            var siteId = cmp.get("v.manuOrder.ERP7__Routing__r.ERP7__Raw_Materials_Site__c") || '';
+
+            var action = cmp.get("c.getLocationStock");
+            action.setParams({
+                locationId: locationId,
+                productId: productId,
+                siteId: siteId
+            });
+            action.setCallback(this, function(response) {
+                if (response.getState() === "SUCCESS") {
+                    cmp.set("v.SOLI_LocationStock", response.getReturnValue() || 0);
+                }
+            });
+            $A.enqueueAction(action);
+        }
+    } else {
+        cmp.set("v.SOLI_LocationStock", 0);
+    }
 },
-  lookupClickLocation: function(cmp, event, helper) {
+    lookupClickLocation: function(cmp, event, helper) {
     var mrps = cmp.get("v.MRPs");
     var selectedMRP = null;
     for(var i = 0; i < mrps.length; i++) {
