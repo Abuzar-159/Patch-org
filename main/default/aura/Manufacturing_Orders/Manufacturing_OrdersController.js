@@ -2195,6 +2195,17 @@ if (soli && soli.length > 0) {
                     var error = false;
                     var NewSOLI = cmp.get("v.NewSOLI");
                     console.log('NewSOLI : ',JSON.stringify(NewSOLI));
+                    console.log('=== CaptureWeight Debug Start ===');
+console.log('NewSOLI before any changes:', JSON.stringify(NewSOLI, null, 2));
+console.log('MO object:', JSON.stringify(MO, null, 2));
+console.log('Weight input:', WeightStr, '→ parsed doubleWeight:', doubleWeight);
+console.log('Selected MRP:', JSON.stringify(obj[x], null, 2));
+                    console.log('=== SERIAL VALIDATION DEBUG ===');
+console.log('MO.ERP7__Product__r.ERP7__Serialise__c =', MO.ERP7__Product__r.ERP7__Serialise__c);
+console.log('NewSOLI full object =', JSON.stringify(NewSOLI, null, 2));
+console.log('NewSOLI.ERP7__MO_WO_Serial__c =', NewSOLI.ERP7__MO_WO_Serial__c);
+console.log('NewSOLI.MO_WO_Serial__c =', NewSOLI.MO_WO_Serial__c);
+                    
                     if(NewSOLI.ERP7__MO_WO_Serial__c != "" && NewSOLI.ERP7__MO_WO_Serial__c != undefined){
                         var quant1 = 0;
                         var quantin1 = 0;
@@ -2213,7 +2224,9 @@ if (soli && soli.length > 0) {
                         // New Values quant1
                         quant1 = quant1/obj[x].WeightMultiplier;
                         //alert("already in after :"+quantin1);
-                        if((quantin1 + onlyweight) > quant1) error = true;
+                      //  if((quantin1 + onlyweight) > quant1) error = true;
+                        if((quantin1 + onlyweight) > quant1 && obj[x].StockQty <= 0) error = true;
+
                         //}
                     }
 
@@ -2230,6 +2243,7 @@ if (soli && soli.length > 0) {
 
                     if((obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == false && onlyweightCheck > 0 && weightCheck <= max) || (obj[x].MRP.ERP7__BOM__r.ERP7__Exact_Quantity__c == true && onlyweightCheck > 0 && onlyweightCheck <= imax && onlyweightCheck >= imin && weightCheck <= max)){
                         if((obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && (NewSOLI.ERP7__Serial__c == undefined || NewSOLI.ERP7__Serial__c == null || NewSOLI.ERP7__Serial__c == '')) || (obj[x].MRP.ERP7__MRP_Product__r.ERP7__Lot_Tracked__c && (NewSOLI.ERP7__Material_Batch_Lot__c == undefined || NewSOLI.ERP7__Material_Batch_Lot__c == null || NewSOLI.ERP7__Material_Batch_Lot__c == '')) || (MO.ERP7__Product__r.ERP7__Serialise__c && (NewSOLI.ERP7__MO_WO_Serial__c == undefined || NewSOLI.ERP7__MO_WO_Serial__c ==  null || NewSOLI.ERP7__MO_WO_Serial__c == '')) || (MO.ERP7__Product__r.ERP7__Lot_Tracked__c && (NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == undefined || NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == null || NewSOLI.ERP7__MO_WO_Material_Batch_Lot__c == ''))){
+                            console.log('im missing ');
                             cmp.set("v.exceptionError","Required fields missing");
                         }else if(obj[x].MRP.ERP7__MRP_Product__r.ERP7__Serialise__c && NewSOLI.ERP7__Serial__c != undefined && ((weight - obj[x].ActualWeight) > 1)){
                             cmp.set("v.exceptionError",$A.get('$Label.c.Serialised_product_invalid_quantity'));
@@ -2527,7 +2541,7 @@ action.setCallback(this, function(response) {
         window.open(RecUrl,'_blank');
     },
 
-    NavWO : function (component, event) {
+    NavWO2 : function (component, event) {
         if(component.get("v.allowNav")){
             var WOId = event.currentTarget.dataset.recordId;
             if(component.get("v.mosoliId") != null && component.get("v.mosoliId") != '' && component.get("v.mosoliId") != undefined){
@@ -2571,7 +2585,69 @@ action.setCallback(this, function(response) {
 
         }
     },
+  NavWO: function (component, event) {
+    console.log("NavWO function called");
+ component.set("v.allowNav", true);
+    let allowNav = component.get("v.allowNav");
+    console.log("allowNav value received on component load:", allowNav);
 
+    // Ensure allowNav is set correctly
+    if (allowNav === undefined) {
+        console.warn("allowNav is undefined, setting to false");
+        allowNav = false;
+        component.set("v.allowNav", false);
+    }
+
+    if (allowNav) {
+        console.log('The if block executed for NavWO');
+
+        var WOId = event.currentTarget.dataset.recordId;
+        console.log("WOId:", WOId);
+
+        let mosoliId = component.get("v.mosoliId");
+        console.log("mosoliId value:", mosoliId);
+
+        if (mosoliId) {
+            console.log('The inner if block executed for NavWO (mosoliId exists)');
+
+            $A.createComponent("c:BuildSchedule_M", {
+                "WO": WOId,
+                "NAV": 'mosoliId',
+                "RD": 'yes',
+                "isFromMO": true
+            }, function (newCmp, status, errorMessage) {
+                if (status === "SUCCESS") {
+                    console.log("Component created successfully for mosoliId");
+                    var body = component.find("body");
+                    body.set("v.body", newCmp);
+                } else {
+                    console.error("Error creating component:", errorMessage);
+                }
+            });
+        } else {
+            console.log('The inner else block executed for NavWO (mosoliId does not exist)');
+
+            $A.createComponent("c:BuildSchedule_M", {
+                "WO": WOId,
+                "NAV": 'mo',
+                "RD": 'yes',
+                "isFromMO": true
+            }, function (newCmp, status, errorMessage) {
+                if (status === "SUCCESS") {
+                    console.log("Component created successfully for mo");
+                    var body = component.find("body");
+                    body.set("v.body", newCmp);
+                } else {
+                    console.error("Error creating component:", errorMessage);
+                }
+            });
+        }
+    } else {
+        console.warn("Navigation is disabled. Setting allowNav to true.");
+        component.set("v.allowNav", true);
+        console.log("Updated allowNav to true");
+    }
+},
     /*NavScheduler : function (component, event) {
 
         var RecUrl = "/apex/ERP7__ManufacturingSchedule";

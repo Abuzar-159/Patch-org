@@ -485,29 +485,49 @@ comW.moSerialNos = limitedWipflows;
         } catch(Exception e) { comW.errorMsg = e.getMessage() +' Line Number @ : '+ e.getLineNumber(); }
         return comW;
     }
-    @AuraEnabled
-    public static List<String> getAllreservedSerials(String productId) {
-        List<String> list2return = new List<String>();
-        system.debug('productId : '+productId);
-        if (productId != null && productId != '') {
-            // Query to get the serials
-            List<ERP7__Stock_Outward_Line_Item__c> soutlist = [
-                SELECT ERP7__Serial__c 
-                FROM ERP7__Stock_Outward_Line_Item__c 
-                WHERE ERP7__Product__c = :productId 
-                AND ERP7__Serial__c != null 
-                AND ERP7__Status__c = 'Reserved'   limit 1000
-            ];
-            
-            // Extracting serials into the list
-            for (ERP7__Stock_Outward_Line_Item__c sout : soutlist) {
-                list2return.add(sout.ERP7__Serial__c);
+  @AuraEnabled
+public static List<String> getAllreservedSerials(String productId) {
+    List<String> list2return = new List<String>();
+    system.debug('productId : ' + productId);
+    
+    if (productId != null && productId != '') {
+
+        // Step 1: Get serials that have at least one Reserved SOLI for this product
+        Set<String> serialsWithReservation = new Set<String>();
+
+        for (AggregateResult ar : [
+            SELECT ERP7__Serial__c
+            FROM ERP7__Stock_Outward_Line_Item__c
+            WHERE ERP7__Product__c = :productId
+            AND ERP7__Serial__c != null
+            AND ERP7__Status__c = 'Reserved'
+            GROUP BY ERP7__Serial__c
+            LIMIT 1000
+        ]) {
+            serialsWithReservation.add((String) ar.get('ERP7__Serial__c'));
+        }
+
+        system.debug('serialsWithReservation : ' + serialsWithReservation);
+
+        if (!serialsWithReservation.isEmpty()) {
+
+            // Step 2: From those serials, only exclude the ones where stock is 0
+            for (ERP7__Inventory_Stock__c invStock : [
+                SELECT ERP7__Serial__c
+                FROM ERP7__Inventory_Stock__c
+                WHERE ERP7__Serial__c IN :serialsWithReservation
+                AND ERP7__Number_of_Item_In_Stock__c = 0
+            ]) {
+                if (invStock.ERP7__Serial__c != null) {
+                    list2return.add(invStock.ERP7__Serial__c);
+                }
             }
         }
-        system.debug('list2return : '+list2return);
-        if(list2return.size() > 0) return list2return;
-        else return null;
     }
+
+    system.debug('Serials to exclude (reserved + zero stock): ' + list2return);
+    return list2return.size() > 0 ? list2return : null;
+}
     
     
     @AuraEnabled

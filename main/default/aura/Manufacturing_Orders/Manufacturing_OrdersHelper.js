@@ -39,7 +39,7 @@
         
         
     },
-   /* getSerials : function(cmp,stockAssignedSerialIds){
+ /*   getSerials : function(cmp,stockAssignedSerialIds){
         var action1 = cmp.get("c.getSerialNumbers");
         var MOId = cmp.get("v.manuOrder.Id");
         action1.setParams({"offsetVal" : 0,"Mo" : MOId,"limitSer" : 500,'SerialIds' : stockAssignedSerialIds});
@@ -77,7 +77,7 @@
         });
         $A.enqueueAction(action1);
     },*/
-    getSerials : function(cmp, stockAssignedSerialIds) {
+   getSerials : function(cmp, stockAssignedSerialIds) {
     var action1 = cmp.get("c.getSerialNumbers");
     var MOId = cmp.get("v.manuOrder.Id");
 
@@ -105,15 +105,14 @@
                     }
                 }
 
-                // keep field blank if no MO serials exist added by bushra
                 if (NewSerialsForAllocation.length > 0) {
-                    newSOL.MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
+                    newSOL.ERP7__MO_WO_Serial__c = NewSerialsForAllocation[0].Id;
                 } else {
                     newSOL.MO_WO_Serial__c = null;
                 }
 
                 if (moBatchNos.length === 1) {
-                    newSOL.MO_WO_Material_Batch_Lot__c = moBatchNos[0].Id;
+                    newSOL.ERP7__MO_WO_Material_Batch_Lot__c = moBatchNos[0].Id;
                 }
 
                 cmp.set("v.NewSOLI", newSOL);
