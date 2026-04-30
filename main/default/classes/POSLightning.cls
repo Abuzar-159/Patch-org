@@ -4684,7 +4684,7 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
             
             
             ERP7__Credentials__c paypalSetup;
-            if(Schema.sObjectType.Credentials__c.isAccessible()) {
+            //if(Schema.sObjectType.Credentials__c.isAccessible()) { commented by Raqeeb on 30-4-2026 as it was not accessible by non-admin users
                 for(ERP7__Credentials__c crd:[Select Id, Name, ERP7__Active__c, ERP7__Password_Transkey__c, ERP7__Signature__c, ERP7__URL__c, ERP7__Username_Login__c, ERP7__Encrypted_Key__c,ERP7__Channel_Id__c
                                               From ERP7__Credentials__c
                                               Where ERP7__Active__c =: true And
@@ -4705,7 +4705,8 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                                (Name = 'Authorize.Net' or Name = 'Paypal' or Name = 'Authorize')
                                Limit 1];
                 }
-            }
+            //}
+            
             String TransId = '', Status = '', AVSCode = '', CVV2 = '', sErrMsg = '', ErrMsg = '', ErrCode = '', rawResponse = '', CorrID  = '', Id  = '', pgId  = '', userAgent = '', FirstName = '', LastName = '', Email = '', City = '', State = '', Country = '', Zipcode = '', CardType = '', Expiry_Month = '', Card_Number = '', Expiry_Year = '', Amount = '', Card_Type = '', CVVV = '', myCurrency = '', Address_Line1 = '', Address_Line2 = '', AccId = '', ObuId = '', Orderid = '', methodId = '', comAppend = '', ipstring = '';
             if(Schema.sObjectType.ERP7__Payment__c.Fields.First_Name__c.isAccessible() && payment.First_Name__c != Null) FirstName = payment.First_Name__c;
             if(Schema.sObjectType.ERP7__Payment__c.Fields.Last_Name__c.isAccessible() && payment.Last_Name__c != Null) LastName = payment.Last_Name__c;

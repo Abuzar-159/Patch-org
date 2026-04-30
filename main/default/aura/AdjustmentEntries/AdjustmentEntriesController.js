@@ -129,6 +129,7 @@
             var btn = event.getSource();
             var label= btn.get('v.label');
             var action;
+            console.log('Currency before save: ', component.get('v.Instance.adjEntries.Trans.CurrencyIsoCode'));
             if(label == 'Save and Close' ){
                 action = component.get('c.saveandClose');
             }else{

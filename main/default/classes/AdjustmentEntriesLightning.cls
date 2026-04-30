@@ -18,6 +18,11 @@
  * LastModifiedBy - Arshad 23/01/2023
  * Reason - Adjustment Entries not showing up even when dates changes Issue,
  *          In method getAdjTransactions,fetchDetails
+ * 
+ * 
+ * LastModifiedBy - Saqlain Khan 30/04/2026
+ * Reason - Adjustment Entries was setting the currency from the org insted of selected currency
+ *          Added a fix for that in both save method.
  *
  * 
  ********************************************************************************************/
@@ -257,9 +262,30 @@ public with sharing class AdjustmentEntriesLightning {
    
     @AuraEnabled
     public static AdjustmentEntriesLightning saveandNew(String Offset, integer RecordLimit, String searchString, String ins) {
+           Boolean isMC = Schema.getGlobalDescribe().containsKey('CurrencyType'); 
         AdjustmentEntriesLightning instance = ( AdjustmentEntriesLightning )JSON.deserialize( ins, AdjustmentEntriesLightning.class );
         instance = saveandClose(Offset,  RecordLimit,  searchString,  ins);
         //instance.adjEntries = new Adjust_Wrapper((instance.DefaultOrg != null && instance.DefaultOrg.Organisation__c !=null)? instance.DefaultOrg.Organisation__c:null);
+        // 🔥 preserve currency from saved transaction
+        String curr = null;
+        if(isMC && instance.adjEntries != null && instance.adjEntries.Trans != null){
+            curr = (String)instance.adjEntries.Trans.get('CurrencyIsoCode');
+        }
+       System.debug('=== DEBUG START ===');
+System.debug('Is MultiCurrency Enabled => ' + isMC);
+
+String debugCurr = 'NULL';
+
+if(isMC 
+   && Schema.sObjectType.ERP7__Transaction__c.fields.getMap().containsKey('CurrencyIsoCode')
+   && instance.adjEntries != null 
+   && instance.adjEntries.Trans != null){
+
+    debugCurr = String.valueOf(instance.adjEntries.Trans.get('CurrencyIsoCode'));
+}
+
+System.debug('Transaction Currency => ' + debugCurr);
+System.debug('FULL INSTANCE => ' + JSON.serialize(instance));
         
         Integer ikOffset = Integer.valueof(Offset);
         Integer ikRecordLimit = Integer.valueof(RecordLimit);
@@ -284,13 +310,16 @@ public with sharing class AdjustmentEntriesLightning {
         query += '  order by Name limit :ikRecordLimit Offset :ikOffset ';
         instance.adjustmentList = Database.query(query);
         instance.dummyadjEntries = new Adjust_Wrapper(( instance.DefaultOrg != null && instance.DefaultOrg.Organisation__c !=null )? instance.DefaultOrg.Organisation__c:null);
-        
+        // 🔥 restore currency into new wrapper
+       
         system.debug('saveandNew before returning instance.adjEntries.FGLEs~>'+instance.adjEntries.FGLEs.size());
         return instance;
     }
      
     @AuraEnabled
     public static AdjustmentEntriesLightning saveandClose(String Offset, integer RecordLimit, String searchString, String ins) {
+        Boolean isMC = Schema.getGlobalDescribe().containsKey('CurrencyType');
+
         AdjustmentEntriesLightning instance = ( AdjustmentEntriesLightning ) JSON.deserialize( ins, AdjustmentEntriesLightning.Class);
         Map<String, Decimal> accountCreditToUpdate = new Map<String, Decimal>();
         Map<String, Decimal> accountDebitToUpdate = new Map<String, Decimal>();
@@ -298,6 +327,22 @@ public with sharing class AdjustmentEntriesLightning {
         Map<String, String> checkCredit = new Map<String, String>();
         Map<String, String> checkDebit = new Map<String, String>();
         List<ERP7__Accounting_Period__c> ap = new List<ERP7__Accounting_Period__c>();
+        
+      	System.debug('=== DEBUG START ===');
+System.debug('Is MultiCurrency Enabled => ' + isMC);
+
+String debugCurr = 'NULL';
+
+if(isMC 
+   && Schema.sObjectType.ERP7__Transaction__c.fields.getMap().containsKey('CurrencyIsoCode')
+   && instance.adjEntries != null 
+   && instance.adjEntries.Trans != null){
+
+    debugCurr = String.valueOf(instance.adjEntries.Trans.get('CurrencyIsoCode'));
+}
+
+System.debug('Transaction Currency => ' + debugCurr);
+System.debug('FULL INSTANCE => ' + JSON.serialize(instance));
         try{
             String getAPName; 
             Datetime CurrentDateTime=system.now();
@@ -314,20 +359,20 @@ public with sharing class AdjustmentEntriesLightning {
         if(instance.adjEntries != null){
             try{
                 if(instance.adjEntries.FGLEs!=null){
-                    instance.adjEntries.trans.Amount__c=0.00;
+                    instance.adjEntries.Trans.Amount__c=0.00;
                     for(Integer i=0;i<instance.adjEntries.FGLEs.size();i++){
-                        if(instance.adjEntries.FGLEs[i].GEntries.Credit_Entry__c != NULL) if(Schema.sObjectType.ERP7__Transaction__c.fields.Amount__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Amount__c.isUpdateable()) instance.adjEntries.trans.Amount__c  += instance.adjEntries.FGLEs[i].GEntries.Credit_Entry__c;
+                        if(instance.adjEntries.FGLEs[i].GEntries.Credit_Entry__c != NULL) if(Schema.sObjectType.ERP7__Transaction__c.fields.Amount__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Amount__c.isUpdateable()) instance.adjEntries.Trans.Amount__c  += instance.adjEntries.FGLEs[i].GEntries.Credit_Entry__c;
                     }
                 }
             }catch(Exception e){ }
         }
         // Ending of Setting the total amount for the transaction 
         if(Schema.sObjectType.Finance_General_Ledger__c.fields.ERP7__Organisation__c.isCreateable() && Schema.sObjectType.Finance_General_Ledger__c.fields.ERP7__Organisation__c.isUpdateable()) instance.Gledger.ERP7__Organisation__c = instance.DefaultOrg.Organisation__c;  
-        if(instance.adjEntries.trans.Organisation__c == null) if(Schema.sObjectType.ERP7__Transaction__c.fields.Organisation__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Organisation__c.isUpdateable())instance.adjEntries.trans.Organisation__c =  instance.DefaultOrg.Organisation__c;   
+        if(instance.adjEntries.Trans.Organisation__c == null) if(Schema.sObjectType.ERP7__Transaction__c.fields.Organisation__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Organisation__c.isUpdateable())instance.adjEntries.Trans.Organisation__c =  instance.DefaultOrg.Organisation__c;   
         List<ERP7__Finance_General_Ledger__c> ledger = [select id from ERP7__Finance_General_Ledger__c where ERP7__Organisation__c=:instance.DefaultOrg.ERP7__Organisation__c];    
         if(instance.Gledger.id == null && ledger.size()==0 && instance.Gledger.ERP7__Organisation__c != null && Schema.sObjectType.Finance_General_Ledger__c.isCreateable() && Schema.sObjectType.Finance_General_Ledger__c.isUpdateable()){ upsert instance.Gledger;} else{/*not allowed to upsert*/}
-        if(instance.adjEntries != null && instance.adjEntries.trans != null && instance.adjEntries.trans.Organisation__c !=null){
-           if(Schema.sObjectType.ERP7__Transaction__c.fields.Transaction_Date__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Transaction_Date__c.isUpdateable()) instance.adjEntries.trans.Transaction_Date__c = Date.parse(instance.adjDate);
+        if(instance.adjEntries != null && instance.adjEntries.Trans != null && instance.adjEntries.Trans.Organisation__c !=null){
+           if(Schema.sObjectType.ERP7__Transaction__c.fields.Transaction_Date__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.fields.Transaction_Date__c.isUpdateable()) instance.adjEntries.Trans.Transaction_Date__c = Date.parse(instance.adjDate);
             //Moin added this on 20th October 2023
             if(instance.adjEntries.FGLEs.size()>0){
                 for(Entries entry : instance.adjEntries.FGLEs){
@@ -335,15 +380,28 @@ public with sharing class AdjustmentEntriesLightning {
                     List<ERP7__Chart_of_Accounts__c> coa = new List<ERP7__Chart_of_Accounts__c>();
                     coa =[select Id, Name from ERP7__Chart_of_Accounts__c where Id=:entry.GEntries.ERP7__Chart_of_Account__c and ERP7__Payment_Account__c=true];
                     if(coa!=null && entry.GEntries.ERP7__General_Ledger_Entry_Type__c == 'Credit' && coa.size()>0){
-                        instance.adjEntries.trans.ERP7__Finance_Category_Type__c= 'Credit';
+                        instance.adjEntries.Trans.ERP7__Finance_Category_Type__c= 'Credit';
                         break;
                     }
                     
                 }
             }
-            if(Schema.sObjectType.ERP7__Transaction__c.isCreateable() && Schema.sObjectType.Transaction__c.isUpdateable()) upsert instance.adjEntries.trans; else{ }
-            if(instance.adjEntries.trans.id != null){
-                instance.transName = [Select id,Name,Organisation__c,Transaction_Summary__c,Amount__c,is_Adjustment__c,Transaction_Status__c,Transaction_date__c from ERP7__Transaction__c where id =:instance.adjEntries.trans.id  ][0].Name;
+               
+if(isMC 
+   && Schema.sObjectType.ERP7__Transaction__c.fields.getMap().containsKey('CurrencyIsoCode')
+   && instance.adjEntries != null 
+   && instance.adjEntries.Trans != null){
+
+    String curr = (String)instance.adjEntries.Trans.get('CurrencyIsoCode');
+
+    if(String.isBlank(curr)){
+        instance.adjEntries.Trans.put('CurrencyIsoCode', UserInfo.getDefaultCurrency());
+    }
+}
+    		
+            if(Schema.sObjectType.ERP7__Transaction__c.isCreateable() && Schema.sObjectType.ERP7__Transaction__c.isUpdateable()) upsert instance.adjEntries.Trans; else{ }
+            if(instance.adjEntries.Trans.id != null){
+                instance.transName = [Select id,Name,ERP7__Organisation__c,ERP7__Transaction_Summary__c,ERP7__Amount__c,ERP7__is_Adjustment__c,ERP7__Transaction_Status__c,ERP7__Transaction_date__c from ERP7__Transaction__c where id =:instance.adjEntries.Trans.id  ][0].Name;
             }
         }
         if(instance.adjEntries.FGLEs.size()>0){
@@ -364,8 +422,14 @@ public with sharing class AdjustmentEntriesLightning {
                         accountDebitToUpdate.put(entry.GEntries.ERP7__CustomerVendor__c, accountDebitToUpdate.get(entry.GEntries.ERP7__CustomerVendor__c) + entry.GEntries.ERP7__Debit_Entry__c);
                     }
                 }
-                entry.GEntries.Entry_Description__c=instance.adjEntries.trans.Transaction_Summary__c;
-                entry.GEntries.Transactions__c = instance.adjEntries.trans.id;
+                entry.GEntries.Entry_Description__c=instance.adjEntries.Trans.Transaction_Summary__c;
+                if(isMC){
+                    String curr = (String)instance.adjEntries.Trans.get('CurrencyIsoCode');
+                    if(String.isNotBlank(curr)){
+                        entry.GEntries.put('CurrencyIsoCode', curr);
+                    }
+                }
+                entry.GEntries.Transactions__c = instance.adjEntries.Trans.id;
                 if(ledger.size()==0)entry.GEntries.Finance_general_ledger__c = instance.Gledger.id;
                 else entry.GEntries.Finance_general_ledger__c = ledger[0].id;
                 if(entry.GEntries.ERP7__General_Ledger_Entry_Type__c == 'Credit')entry.GEntries.RecordTypeId = instance.rTypeCredit;

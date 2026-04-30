@@ -10,7 +10,17 @@
                     var wrapper = [];
                     if(component.get('v.newInstanceFGLEs') != undefined && component.get('v.newInstanceFGLEs') != null) wrapper = component.get('v.newInstanceFGLEs');
                     console.log('addDebits before wrapper~>'+wrapper.length);
-                    wrapper.push(response.getReturnValue());
+                  //  wrapper.push(response.getReturnValue());
+                  
+                    var newEntry = response.getReturnValue();
+
+var curr = component.get('v.Instance.adjEntries.Trans.CurrencyIsoCode');
+
+if(curr && newEntry && newEntry.GEntries){
+    newEntry.GEntries.CurrencyIsoCode = curr;
+}
+
+wrapper.push(newEntry);
                     component.set('v.newInstanceFGLEs',wrapper);
                     console.log('addDebits after wrapper~>'+wrapper.length);
                     component.set('v.showSpinner', false);
@@ -35,7 +45,16 @@
                 var wrapper = [];
                 if(component.get('v.newInstanceFGLEs') != undefined && component.get('v.newInstanceFGLEs') != null) wrapper = component.get('v.newInstanceFGLEs');
                 console.log('addCredits before wrapper~>'+wrapper.length);
-                wrapper.push(response.getReturnValue());
+              //  wrapper.push(response.getReturnValue());
+              var newEntry = response.getReturnValue();
+
+var curr = component.get('v.Instance.adjEntries.Trans.CurrencyIsoCode');
+
+if(curr && newEntry && newEntry.GEntries){
+    newEntry.GEntries.CurrencyIsoCode = curr;
+}
+
+wrapper.push(newEntry);
                 component.set('v.newInstanceFGLEs',wrapper);
                 console.log('addCredits after wrapper~>'+wrapper.length);
                 component.set('v.showSpinner', false);
