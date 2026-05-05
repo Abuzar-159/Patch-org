@@ -5371,7 +5371,8 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
             if(isMultiCurrency){  
                 //Moin commented this 26th April 2024 to get the currency based of invoice instead of account currency
                 //String acc='Select CurrencyIsoCode from Account '; acc+='where Id=:orgId'; String Currency_Code=(String)Database.Query(acc)[0].get('CurrencyIsoCode'); myCur = Currency_Code;
-                String SOId=currentSalesorder.Id;String inv='Select CurrencyIsoCode from ERP7__Invoice__c '; inv+='where ERP7__Order__c=:SOId';String Currency_Code=(String)Database.Query(inv)[0].get('CurrencyIsoCode');  myCur = Currency_Code;                
+                //String SOId=currentSalesorder.Id;String inv='Select CurrencyIsoCode from ERP7__Invoice__c '; inv+='where ERP7__Order__c=:SOId';String Currency_Code=(String)Database.Query(inv)[0].get('CurrencyIsoCode');  myCur = Currency_Code;                
+                List<sObject> invs = Database.query('SELECT CurrencyIsoCode FROM ERP7__Invoice__c WHERE ERP7__Order__c = \'' + currentSalesorder.Id + '\' LIMIT 1'); myCur = !invs.isEmpty() ? (String)invs[0].get('CurrencyIsoCode') : (String)Database.query('SELECT CurrencyIsoCode FROM Sales_Order__c WHERE Id = \'' + currentSalesorder.Id + '\'')[0].get('CurrencyIsoCode');
             }else{ myCur = UserInfo.getDefaultCurrency();}
                         
             myCurrency = myCur; 
