@@ -5307,7 +5307,7 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
             ERP7__Credentials__c paypalSetup;
             String paymentGate = '%'+payGate+'%';
             system.debug('paymentGate-->'+paymentGate);
-            if(Schema.sObjectType.Credentials__c.isAccessible()) {
+            //if(Schema.sObjectType.Credentials__c.isAccessible()) {
                 if(orgId != '' && orgId != null){
                     for(ERP7__Credentials__c crd:[Select Id, Name, ERP7__Active__c, ERP7__Password_Transkey__c, ERP7__Signature__c, ERP7__URL__c, ERP7__Username_Login__c, ERP7__Encrypted_Key__c,ERP7__Channel_Id__c,ERP7__Bank_COA_ID__c
                                               From ERP7__Credentials__c
@@ -5347,8 +5347,9 @@ pageSubscription.Bill_To_Address__c = billingPrimaryAddress[0].Address_Line1__c 
                 }
                 if(paypalSetup == null){ ErrorMsgPayment='Paymnet Credential Setup is not completed.';return ErrorMsgPayment;}
                 
-            }
-            if(paypalSetup.ERP7__Bank_COA_ID__c != null ){ if(Schema.sObjectType.Payment__c.Fields.ERP7__Payment_Account__c.isAccessible()) payment.ERP7__Payment_Account__c  = paypalSetup.ERP7__Bank_COA_ID__c; }
+            //}
+            //if(paypalSetup.ERP7__Bank_COA_ID__c != null ){ if(Schema.sObjectType.Payment__c.Fields.ERP7__Payment_Account__c.isAccessible()) payment.ERP7__Payment_Account__c  = paypalSetup.ERP7__Bank_COA_ID__c; }
+            if(paypalSetup.ERP7__Bank_COA_ID__c != null ){ /*if(Schema.sObjectType.Payment__c.Fields.ERP7__Payment_Account__c.isAccessible())*/ payment.ERP7__Payment_Account__c  = paypalSetup.ERP7__Bank_COA_ID__c; }
             String TransId = '', Status = '', AVSCode = '', CVV2 = '', sErrMsg = '', ErrMsg = '', ErrCode = '', rawResponse = '', CorrID  = '', Id  = '', pgId  = '', userAgent = '', FirstName = '', LastName = '', Email = '', City = '', State = '', Country = '', Zipcode = '', CardType = '', Expiry_Month = '', Card_Number = '', Expiry_Year = '', Amount = '', Card_Type = '', CVVV = '', myCurrency = '', Address_Line1 = '', Address_Line2 = '', AccId = '', ObuId = '', Orderid = '', methodId = '', comAppend = '', ipstring = '';
             if(Schema.sObjectType.Payment__c.Fields.First_Name__c.isAccessible() && payment.First_Name__c != Null) FirstName = payment.First_Name__c;
             if(Schema.sObjectType.Payment__c.Fields.Last_Name__c.isAccessible() && payment.Last_Name__c != Null) LastName = payment.Last_Name__c;
