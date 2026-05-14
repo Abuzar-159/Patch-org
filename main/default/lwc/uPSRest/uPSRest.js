@@ -223,7 +223,8 @@ export default class UPSRest extends NavigationMixin(LightningElement) {
                         // console.log('10');
                         this.packageList = result.packList;
                         this.packageItems = result.packItems;
-                        //console.log('11');
+                        console.log('11',this.packageList);
+                        console.log("ww",JSON.stringify(this.packageItems));
                         var today = new Date();
                         if (!this.shipmentIds) this.shipment.ERP7__Shipment_Date__c = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
                         if (this.shipmentIds) {
@@ -238,10 +239,11 @@ export default class UPSRest extends NavigationMixin(LightningElement) {
                             this.returnShipment = result.returnShip;
                         }
                         else this.returnShipmentDate = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
-                        //console.log('12');
+                        console.log('12');
                         this.disableBillingOption = result.disableBillingDetails;
-
+                        console.log('13');
                         this.isLoading = false;
+                        console.log('14');
                     }
                 }
             }).

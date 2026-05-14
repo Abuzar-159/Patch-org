@@ -98,7 +98,41 @@ trigger ManufacturingOrder on Manufacturing_Order__c(after insert, after update,
                         //if(stockIntoAddinv.size() > 0 && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Active__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Manufacturing_Order__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Quantity__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Site_ProductService_InventoryStock__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Product__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Serial__c.isCreateable()) { insert  stockIntoAddinv;  } else{ //('no access'); }
                         
                     }
-                    
+                   // Zero out MO_Remaining_Quantity__c on SOLI for Cancelled MOs
+Set<Id> cancelledOrderProductIds = new Set<Id>();
+for(Manufacturing_Order__c MO : System.Trigger.New){
+    if(MO.ERP7__Status__c == 'Cancelled' && MO.ERP7__Order_Product__c != null){
+        cancelledOrderProductIds.add(MO.ERP7__Order_Product__c);
+    }
+}
+if(!cancelledOrderProductIds.isEmpty()){
+    // Sum Quantity_Produced across ALL MOs for each Order Product regardless of status
+    Map<Id, Decimal> orderProductProducedMap = new Map<Id, Decimal>();
+    for(Manufacturing_Order__c mo : [
+        SELECT ERP7__Order_Product__c, ERP7__Quantity_Produced__c
+        FROM Manufacturing_Order__c
+        WHERE ERP7__Order_Product__c IN :cancelledOrderProductIds
+    ]){
+        Decimal existing = orderProductProducedMap.get(mo.ERP7__Order_Product__c) != null 
+                           ? orderProductProducedMap.get(mo.ERP7__Order_Product__c) : 0;
+        orderProductProducedMap.put(
+            mo.ERP7__Order_Product__c, 
+            existing + (mo.ERP7__Quantity_Produced__c != null ? mo.ERP7__Quantity_Produced__c : 0)
+        );
+    }
+    List<OrderItem> soliToUpdate = [
+        SELECT Id, ERP7__MO_Quantity__c
+        FROM OrderItem
+        WHERE Id IN :cancelledOrderProductIds
+    ];
+    for(OrderItem oi : soliToUpdate){
+        oi.ERP7__MO_Quantity__c = orderProductProducedMap.get(oi.Id) != null 
+                                  ? orderProductProducedMap.get(oi.Id) : 0;
+    }
+    if(soliToUpdate.size() > 0 && Schema.sObjectType.OrderItem.isUpdateable()){
+        update soliToUpdate;
+    }
+}
                 }
                 /* 
                     Start ==> Create and WIPs, Batches and Serials
@@ -547,12 +581,34 @@ trigger ManufacturingOrder on Manufacturing_Order__c(after insert, after update,
                 
             }
             
-            if (Trigger.IsBefore) {
-                if (Trigger.IsDelete) {
-                    List < Stock_Outward_Line_Item__c > SDLIs = [Select Id From Stock_Outward_Line_Item__c Where ERP7__Manufacturing_Order__c In: System.Trigger.Old];
-                    if (SDLIs.size() > 0&& Stock_Outward_Line_Item__c.sObjectType.getDescribe().isDeletable()) delete SDLIs; else{ }
-                }
-            }
+         if (Trigger.IsBefore) {
+    if (Trigger.IsDelete) {
+        List<Stock_Outward_Line_Item__c> SDLIs = [
+            Select Id From Stock_Outward_Line_Item__c 
+            Where ERP7__Manufacturing_Order__c In: System.Trigger.Old
+        ];
+        if(SDLIs.size() > 0 && Stock_Outward_Line_Item__c.sObjectType.getDescribe().isDeletable()) 
+            delete SDLIs;
+
+        // Zero out MO_Remaining_Quantity__c on SOLI for deleted MOs
+        List<OrderItem> soliToUpdate = [
+            SELECT Id, ERP7__MO_Quantity__c 
+            FROM OrderItem 
+            WHERE Id IN (
+                SELECT ERP7__Order_Product__c 
+                FROM Manufacturing_Order__c 
+                WHERE Id IN :System.Trigger.OldMap.KeySet()
+                AND ERP7__Order_Product__c != null
+            )
+        ];
+        for(OrderItem soli : soliToUpdate){
+            soli.ERP7__MO_Quantity__c = 0;
+        }
+        if(soliToUpdate.size() > 0 && Schema.sObjectType.OrderItem.isUpdateable()){
+            update soliToUpdate;
+        }
+    }
+}
             
             // Custom Roll up Start
             list<RollUpSummaryUtility.fieldDefinition> WOfieldDefinitionsLC = new list<RollUpSummaryUtility.fieldDefinition> {

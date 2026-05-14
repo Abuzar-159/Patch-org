@@ -1782,7 +1782,7 @@ public With Sharing class UPSRestAPI {
                     wrap.toAddress = Database.query('select ' + addressFields + ' ,Contact__r.Name, Contact__r.Email, Contact__r.Phone, Contact__r.Company__c from Address__c where Id =\'' + wrap.packList[0].Logistic__r.ERP7__To_Address__c + '\' Limit 1');                  
                 }
                 if(wrap.packList[0].Logistic__r.ERP7__From_Contact__c != null){
-                    wrap.fromContact = Database.query('select Id,Name,accountId,Account.Name,Account.Phone,Account.ERP7__Email__c, Email, Phone, Company__c from contact where Id =\'' + wrap.packList[0].Logistic__r.ERP7__From_Contact__c  + '\' Limit 1');                 
+                    wrap.fromContact = Database.query('select Id,Name,accountId,Account.Name,Account.Phone,Account.ERP7__Email__c, Email, Phone, ERP7__Company__c from contact where Id =\'' + wrap.packList[0].Logistic__r.ERP7__From_Contact__c  + '\' Limit 1');                 
                 }
                 if(wrap.packList[0].Logistic__r.ERP7__Contact__c != null){
                     wrap.toContact = Database.query('select Id,Name,accountId, Account.Name, Account.Phone,Email, Account.ERP7__Email__c,Phone, Company__c from contact where Id =\'' + wrap.packList[0].Logistic__r.ERP7__Contact__c + '\' Limit 1');                 
