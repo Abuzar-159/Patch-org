@@ -106,19 +106,24 @@ for(Manufacturing_Order__c MO : System.Trigger.New){
     }
 }
 if(!cancelledOrderProductIds.isEmpty()){
-    // Sum Quantity_Produced across ALL MOs for each Order Product regardless of status
-    Map<Id, Decimal> orderProductProducedMap = new Map<Id, Decimal>();
+    Map<Id, Decimal> orderProductMOQtyMap = new Map<Id, Decimal>();
     for(Manufacturing_Order__c mo : [
-        SELECT ERP7__Order_Product__c, ERP7__Quantity_Produced__c
+        SELECT ERP7__Order_Product__c, ERP7__Status__c,
+               ERP7__Quantity__c, ERP7__Quantity_Produced__c
         FROM Manufacturing_Order__c
         WHERE ERP7__Order_Product__c IN :cancelledOrderProductIds
     ]){
-        Decimal existing = orderProductProducedMap.get(mo.ERP7__Order_Product__c) != null 
-                           ? orderProductProducedMap.get(mo.ERP7__Order_Product__c) : 0;
-        orderProductProducedMap.put(
-            mo.ERP7__Order_Product__c, 
-            existing + (mo.ERP7__Quantity_Produced__c != null ? mo.ERP7__Quantity_Produced__c : 0)
-        );
+        Decimal contrib = 0;
+        if(mo.ERP7__Status__c != 'Cancelled'){
+            // Active MO — count full scheduled qty
+            contrib = mo.ERP7__Quantity__c != null ? mo.ERP7__Quantity__c : 0;
+        } else {
+            // Cancelled MO — only count what was actually produced (inventory already exists)
+            contrib = mo.ERP7__Quantity_Produced__c != null ? mo.ERP7__Quantity_Produced__c : 0;
+        }
+        Decimal existing = orderProductMOQtyMap.get(mo.ERP7__Order_Product__c) != null
+                           ? orderProductMOQtyMap.get(mo.ERP7__Order_Product__c) : 0;
+        orderProductMOQtyMap.put(mo.ERP7__Order_Product__c, existing + contrib);
     }
     List<OrderItem> soliToUpdate = [
         SELECT Id, ERP7__MO_Quantity__c
@@ -126,8 +131,8 @@ if(!cancelledOrderProductIds.isEmpty()){
         WHERE Id IN :cancelledOrderProductIds
     ];
     for(OrderItem oi : soliToUpdate){
-        oi.ERP7__MO_Quantity__c = orderProductProducedMap.get(oi.Id) != null 
-                                  ? orderProductProducedMap.get(oi.Id) : 0;
+        oi.ERP7__MO_Quantity__c = orderProductMOQtyMap.get(oi.Id) != null
+                                  ? orderProductMOQtyMap.get(oi.Id) : 0;
     }
     if(soliToUpdate.size() > 0 && Schema.sObjectType.OrderItem.isUpdateable()){
         update soliToUpdate;
