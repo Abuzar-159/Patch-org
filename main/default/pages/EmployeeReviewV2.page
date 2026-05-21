@@ -1,0 +1,742 @@
+<apex:page controller="EmployeeReviewV2" sidebar="false" action="{!loadEmpOrgGoalObjective}">
+    
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+    <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}" />
+   
+    <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.Accordions,'Src/jquery-ui.js')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.Accordions,'Src/jquery-ui.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.Accordions,'Src/style.css')}" />
+
+    <script>
+        $(function() {
+            $("#accordion").accordion({
+                active: 0,
+                collapsible: true,
+                heightStyle: "content"
+            });
+        });
+    </script>
+    <style>
+        a:link {
+            text-decoration: none;
+        } //the original link with no underline
+        a:visited {
+            text-decoration: none;
+        } //the visited link with no underline
+        a:hover {
+            text-decoration: underline;
+        } //mouseover link and an underline appears
+        .button {
+            width: 130px;
+            height: 30px;
+            border: none;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            color: #27a8df;
+            background-color: #ff6767;
+            background-image: -webkit-gradient(linear, left top, left bottom, from(#ff6767), to(#ff0d0d));
+            background-image: -webkit-linear-gradient(top, #ff6767, #ff0d0d);
+            background-image: -moz-linear-gradient(top, #ff6767, #ff0d0d);
+            background-image: -ms-linear-gradient(top, #ff6767, #ff0d0d);
+            background-image: -o-linear-gradient(top, #ff6767, #ff0d0d);
+            background-image: linear-gradient(to bottom, #ff6767, #ff0d0d);
+            filter: progid: DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr=#ff6767, endColorstr=#ff0d0d);
+            border-radius: 7px;
+        }
+        
+        .button:hover {
+            width: 130px;
+            height: 30px;
+            border: none;
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            color: #ffffff;
+            font-weight: bold;
+            background-color: #ff9a9a;
+            background-image: -webkit-gradient(linear, left top, left bottom, from(#ff9a9a), to(#ff4040));
+            background-image: -webkit-linear-gradient(top, #ff9a9a, #ff4040);
+            background-image: -moz-linear-gradient(top, #ff9a9a, #ff4040);
+            background-image: -ms-linear-gradient(top, #ff9a9a, #ff4040);
+            background-image: -o-linear-gradient(top, #ff9a9a, #ff4040);
+            background-image: linear-gradient(to bottom, #ff9a9a, #ff4040);
+            filter: progid: DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr=#ff9a9a, endColorstr=#ff4040);
+            border-radius: 7px;
+        }
+        
+        .status {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+            color: red;
+        }
+    </style>
+    <style>
+        .epr_Mark7 .navbar-default .navbar-nav > .active > a,
+        .epr_Mark7 .navbar-default .navbar-nav > .active > a:hover,
+        .epr_Mark7 .navbar-default .navbar-nav > .active > a:focus {
+            color: #555;
+            background-color: #ffffff;
+        }
+        
+        .epr_Mark7 .active {
+            background: #3A6690;
+        }
+        
+        input {
+            padding-top: 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
+        .slds .slds-table--bordered td {
+            border-top: 1px solid #f7f7f7;
+        }
+        
+        /*#accordion .ui-accordion-content {
+                    max-height: 300px;
+        }*/
+    </style>
+    <div class="slds slds-container--fluid">
+    <apex:form id="form1">
+        <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                
+                    <tr>
+                     <div class="epr_Mark7">
+                         <apex:outputPanel rendered="{!if(revId == null, true, false)}">
+                               
+                                   <nav class="navbar  slds-theme--alt-inverse slds-m-bottom--x-small slds-m-top--small" style="margin-bottom: 0px;">
+                                        <div class="container-fluid">
+                                            <ul class="nav navbar-nav navbar-left">
+                                              <li><a href="#"  style="text-decoration:none;"><i class="fa fa-star-half-o" aria-hidden="true" style="color:#fe8f60;"></i>
+                                                   {!$Label.EmployeeReviewV2_My_Reviews_Add_New_Review}</a></li>
+                                
+                                            </ul>
+                                            
+                                            <ul class="nav navbar-nav navbar-right">
+                                        <li>
+                                            <apex:commandLink value="" action="{!backToReviewPageRedirect}" immediate="true">
+                                                <i class="fa fa-chevron-left" aria-hidden="true" style="color:#fe8f60;">
+                                                  {!$Label.EmployeeReviewV2_Back}  
+                                                </i>
+                                            </apex:commandLink> 
+                                        </li>
+                                        
+                                        <li>
+                                            <apex:commandLink action="{!saveReview}" value="" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                                <apex:param name="param1" assignto="{!saveAndStay}" value="true" />
+                                            <i class="fa fa-floppy-o" aria-hidden="true" style="color:#0dc2d9;">
+                                             {!$Label.ERP7__EmployeeReviewV2_Save}
+                                            </i>
+                                            </apex:commandLink>
+                                        </li>
+                                    </ul>
+                                       </div>
+                                    </nav>
+                           </apex:outputPanel>
+                           
+                           <apex:outputPanel rendered="{!if(revId != null, true, false)}">
+                           
+                                
+                                    <nav class="navbar  slds-theme--alt-inverse slds-m-bottom--x-small slds-m-top--small" style="margin-bottom: 0px;">
+                                        <div class="container-fluid">
+                                            <ul class="nav navbar-nav navbar-left">
+                                              <li><a href="#"  style="text-decoration:none;"><i class="fa fa-star-half-o" aria-hidden="true" style="color:#fe8f60;"></i>
+                               {!$Label.EmployeeReviewV2_My_Reviews} - {!review.Name}</a></li>
+                               </ul>
+                               
+                               <ul class="nav navbar-nav navbar-right">
+                              <li>
+                                            <apex:commandLink value="" action="{!backToReviewPageRedirect}" immediate="true" rendered="{!$ObjectType.Review__c.Accessible}">
+                                                <i class="fa fa-chevron-left" aria-hidden="true" style="color:#fe8f60;">
+                                                  {!$Label.EmployeeReviewV2_Back}  
+                                                </i>
+                                            </apex:commandLink> 
+                                        </li>
+                                        
+                                        <li>
+                                            <apex:commandLink action="{!saveReview}" value="" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                                <apex:param name="param1" assignto="{!saveAndStay}" value="true" />
+                                            <i class="fa fa-floppy-o" aria-hidden="true" style="color:#0dc2d9;">
+                                             {!$Label.ERP7__EmployeeReviewV2_Save}
+                                            </i>
+                                            </apex:commandLink>
+                                        </li>
+                          </ul>
+                               
+                               
+                                        </div>
+                                    </nav>
+                               
+                           </apex:outputPanel>
+                            
+                            </div>
+                    </tr>
+               
+            </table>
+               
+                <div style=" background:#ffffff; border:3px solid #ffffff; min-height:530px;">
+                    <apex:outputPanel id="wholeContent">
+                        <script>
+                            $(function() {
+                                $("#accordion").accordion({
+                                    collapsible: true,
+                                    heightStyle: "content"
+                                });
+                            });
+                        </script>
+                        <apex:pageMessages ></apex:pageMessages>
+                       <div id="accordion">
+                            <span>{!$Label.ERP7__EmployeeReviewV2_Review_Details}</span>
+                                
+                                <div class="ui-accordion-content">
+                                <apex:outputPanel id="review">
+                                    <div class="slds-card">
+                                        <div class="slds-card__body">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Review_Name}<span style="color:red;"> *</span></th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Review_Type}<span style="color:red;"> *</span></th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_of_Objectives_Achieved}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Manager}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Start_Date}<span style="color:red;"> *</span></th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Target_End_Date}<span style="color:red;"> *</span></th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-7" scope="col">{!$Label.ERP7__EmployeeReviewV2_Submition_Date}</th>
+
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr class="slds-hint-parent">
+                                                        <td class="slds-size--1-of-7" data-label="Review Name">
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputfield value="{!review.Name}" required="true" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="Review Type">
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputfield value="{!review.Review_Type__c}" required="true" style="height:27px; border-radius:4px;"/>
+                                                                </div>
+                                                            </div>
+
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="% of Objectives Achieved">
+                                                            <apex:outputfield value="{!review.of_Over_All_Goals_Achieved__c}" style="width:97%;" />
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="Manager">
+                                                            <apex:outputText >{!employee.Employee_User__r.Manager.Name}</apex:outputText>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="Start Date">
+                                                            <div class="slds-form-element">
+
+                                                                <div class="slds-form-element">
+                                                                    <apex:inputfield value="{!review.Start_Date__c}" required="true" />
+                                                                    <span class="glyphicon glyphicon-calendar form-control-feedback"></span>
+                                                                </div>
+
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="Target End Date">
+                                                            <div class="slds-form-element">
+
+                                                                <div class="slds-form-element">
+                                                                    <apex:inputfield value="{!review.Target_Completion_Date__c}" required="true" />
+                                                                    <span class="glyphicon glyphicon-calendar form-control-feedback"></span>
+                                                                </div>
+
+                                                            </div>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="Submition Date">
+                                                            <div class="slds-form-element">
+
+                                                                <div class="slds-form-element">
+                                                                    <apex:inputfield value="{!review.Date_Submitted_to_Manager__c}" />
+                                                                    <span class="glyphicon glyphicon-calendar form-control-feedback"></span>
+                                                                </div>
+
+                                                            </div>
+
+                                                        </td>
+
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+
+                                        </div>
+                                    </div>
+                                </apex:outputPanel>
+                                </div>
+                                
+                            <span>{!$Label.ERP7__EmployeeReviewV2_Goals_amp_Objectives}</span>
+                            <div class="slds slds-container--fluid">
+                                <apex:outputPanel id="goalObjWrapList">
+                                    <div class="epr_Mark7">
+                                        <div class="container-fluid"> 
+                                        <div class="slds row slds-p-top--xx-small">
+                                            <div class="col-md-4 slds-p-top--xx-small">
+                                                <apex:commandLink value="{!$Label.ERP7__EmployeeReviewV2_New_Goal}" action="{!addNewGoalRow}" reRender="goalObjWrapList, review" immediate="true" status="status" styleClass="slds-button--neutral" style="border-radius:5px; color:#005fb2;font-size:14px;padding:4px;font-weight:bold;text-transform:none;" rendered="{!$ObjectType.Goal__c.Accessible}">
+                                                        <i class="fa fa-plus" aria-hidden="true"></i>
+                                                    </apex:commandLink>
+                                            </div>
+                                            <div class="col-md-4 slds-p-top--xx-small">
+                                                <apex:actionStatus id="status">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.ERP_Emp,'ERP_Emp/images/slds_spinner_brand.gif')}" height="28px;" width="27px;" />
+                                                        </apex:facet>
+                                                    </apex:actionStatus>
+                                               </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <br/>
+                                    
+                                    <apex:variable value="{!0}" var="GoalListCounter" />
+                                    <apex:repeat value="{!GoalObjectiveWrapperList}" var="goal">
+                                        <div class="slds-card">
+                                            <div class="slds-card__body">
+
+                                               <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                Remove Goal
+                                                            </th>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                {!$Label.ERP7__EmployeeReviewV2_Goal_Name}
+                                                                <apex:outputPanel rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, false, true)}">
+                                                                    <span style="color:red">*</span>
+                                                                </apex:outputPanel>
+                                                            </th>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                {!$Label.ERP7__EmployeeReviewV2_Objectives_Comment}
+                                                            </th>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                {!$Label.ERP7__EmployeeReviewV2_of_Overall_Objectives}
+                                                            </th>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                {!$Label.ERP7__EmployeeReviewV2_Due_Date}
+                                                            </th>
+                                                            <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                {!$Label.ERP7__EmployeeReviewV2_Outcome}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <td class="slds-size--1-of-6" data-label="Remove Goal">
+                                                            <apex:outputPanel rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, false, true)}">
+                                                                <apex:commandLink reRender="goalObjWrapList" styleClass="toptext2" action="{!delGoalRow}" immediate="true" rendered="{!$ObjectType.Goal__c.Accessible}">
+                                                                   <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="20" height="20" title="{!$Label.ERP7__EmployeeReviewV2_Delete}" style="cursor:pointer;" />
+                                                                    <apex:param name="param1" assignto="{!currentGoalIndex}" value="{!ROUND(GoalListCounter ,0)}" />
+                                                                    <apex:param name="param2" assignto="{!goalToDeleteId}" value="{!goal.wrapGoal.Id}" />
+                                                                </apex:commandLink>
+                                                            </apex:outputPanel>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Goal_Name}">
+                                                            <apex:inputfield value="{!goal.wrapGoal.Name}" rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == false, true, false)}" required="true" />
+                                                            <apex:outputfield value="{!goal.wrapGoal.Name}" rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, true, false)}" />
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Objectives_Comment}">
+                                                            <apex:inputTextarea value="{!goal.wgObjComment}" rendered="{!$ObjectType.Goal__c.fields.Objective_Comment__c.Accessible}"/>
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_of_Overall_Objectives}">
+                                                            <apex:inputfield value="{!goal.wrapGoal.Of_Over_All_Objectives__c}" />
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Due_Date}">
+                                                            <apex:inputfield value="{!goal.wrapGoal.DueDate__c}" />
+                                                        </td>
+                                                        <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Outcome}">
+                                                            <apex:inputfield value="{!goal.wrapGoal.Outcome__c}" rendered="{!showMngrTable}" style="height:27px; border-radius:4px;"/>
+                                                            <apex:outputfield value="{!goal.wrapGoal.Outcome__c}" rendered="{!showEmpTable}" />
+                                                        </td>
+                                                    </tbody>
+                                                </table>
+                                                
+                                                <div style="padding:0px 50px;">
+                                                    <apex:outputPanel rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, false, true)}">
+                                                        
+                                                        <div class="epr_Mark7">
+                                                            <div class="container-fluid"> 
+                                                                <div class="slds row slds-p-top--xx-small">
+                                                                    <div class="col-md-4 slds-p-top--xx-small">
+                                                                        <apex:commandLink value="{!$Label.ERP7__EmployeeReviewV2_New_Objective}" action="{!addNewObjectiveRow}" reRender="goalObjWrapList, review" immediate="true" status="status1" styleClass="slds-button--neutral" style="border-radius:5px; color:#005fb2;font-size:14px;padding:4px;font-weight:bold;text-transform:none;" rendered="{!$ObjectType.Objective__c.Accessible}">
+                                                                                <i class="fa fa-plus" aria-hidden="true"></i>
+                                                                                <apex:param name="param1" assignto="{!currentGoalIndex}" value="{!GoalListCounter}" />
+                                                                            </apex:commandLink>
+                                                                    </div>
+                                                                    <div class="col-md-4 slds-p-top--xx-small">
+                                                                        <apex:actionStatus id="status1">
+                                                                            <apex:facet name="start">
+                                                                                <apex:image url="{!URLFOR($Resource.ERP_Emp,'ERP_Emp/images/slds_spinner_brand.gif')}" height="28px;" width="27px;" />
+                                                                            </apex:facet>
+                                                                        </apex:actionStatus>
+                                                                    </div>
+                                                                   </div>
+                                                                  </div>
+                                                                 </div>
+                                                                 <br/>         
+                                                        
+                                                    </apex:outputPanel>
+                                                    <table class="slds-table slds-table--condensed slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                        <thead>
+                                                            <apex:variable value="{!0}" var="ObjectiveListCounter" />
+                                                            <tr>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    Remove Objective
+                                                                </th>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    {!$Label.ERP7__EmployeeReviewV2_Objective_Task_Name}
+                                                                    <apex:outputPanel rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, false, true)}">
+                                                                        <span style="color:red">*</span>
+                                                                    </apex:outputPanel>
+                                                                </th>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    {!$Label.ERP7__EmployeeReviewV2_Score}
+                                                                </th>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    {!$Label.ERP7__EmployeeReviewV2_Complete}
+                                                                </th>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    {!$Label.ERP7__EmployeeReviewV2_Due_Date}
+                                                                </th>
+                                                                <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                                    {!$Label.ERP7__EmployeeReviewV2_Comment}
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <apex:repeat value="{!goal.wrapObjectiveList}" var="obj">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td class="slds-size--1-of-6" data-label="Remove Objective">
+                                                                        <apex:outputPanel rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, false, true) && $ObjectType.Goal__c.fields.Employee_Organisation_Goal__c.Accessible}">
+                                                                            <apex:commandLink reRender="goalObjWrapList" immediate="true" styleClass="toptext2" action="{!delObjectiveRow}" rendered="{!$ObjectType.Objective__c.Accessible}">
+                                                                                <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="20" height="20" title="{!$Label.ERP7__EmployeeReviewV2_Delete}" style="cursor:pointer;" />
+                                                                                <apex:param name="param1" assignto="{!currentObjectiveIndex}" value="{!ROUND(ObjectiveListCounter ,0)}" />
+                                                                                <apex:param name="param2" assignto="{!objectiveToDeleteId}" value="{!obj.Id}" />
+                                                                                <apex:param name="param3" assignto="{!currentGoalIndex}" value="{!ROUND(GoalListCounter ,0)}" />
+                                                                            </apex:commandLink>
+
+                                                                        </apex:outputPanel>
+                                                                    </td>
+                                                                    <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Objective_Task_Name}">
+                                                                        <apex:inputfield value="{!obj.Name}" rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == false, true, false)}" required="true" />
+                                                                        <apex:outputfield value="{!obj.Name}" rendered="{!if(goal.wrapGoal.Employee_Organisation_Goal__c == true, true, false)}" />
+                                                                    </td>
+                                                                    <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Score}">
+                                                                        <apex:inputfield value="{!obj.Score__c}" rendered="{!showMngrTable}" />
+                                                                        <apex:outputfield value="{!obj.Score__c}" rendered="{!showEmpTable}" />
+                                                                    </td>
+                                                                    <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Complete}">
+                                                                        <apex:inputfield value="{!obj.Percentage_Complete__c}" />
+                                                                    </td>
+                                                                    <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Due_Date}">
+                                                                        <apex:inputfield value="{!goal.wrapGoal.DueDate__c}" />
+                                                                    </td>
+                                                                    <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Comment}">
+                                                                        <apex:inputTextarea value="{!obj.Task_Comment__c}"  rendered="{!$ObjectType.Objective__c.fields.Task_Comment__c.Accessible}"/>
+                                                                    </td>
+                                                                </tr>
+                                                                <apex:variable var="ObjectiveListCounter" value="{!ROUND(ObjectiveListCounter+1 ,0)}" />
+                                                            </apex:repeat>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <apex:variable var="GoalListCounter" value="{!ROUND(GoalListCounter+1 ,0)}" />
+                                    </apex:repeat>
+                                </apex:outputPanel>
+                            </div>
+                            
+                            <span>Learning Plans</span>
+                            <div class="slds slds-container--fluid">
+                                <apex:outputPanel id="learningPlanWrapList">
+                                
+                                <div class="epr_Mark7">
+                                      <div class="container-fluid"> 
+                                              <div class="slds row slds-p-top--xx-small">
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                     <apex:commandLink value="{!$Label.ERP7__EmployeeReviewV2_New_Learning_Plan}" action="{!addNewLearningPlanRow}" immediate="true" reRender="learningPlanWrapList, review" status="status2" styleClass="slds-button--neutral" style="border-radius:5px; color:#005fb2;font-size:14px;padding:4px;font-weight:bold;text-transform:none;" rendered="{!$ObjectType.Learning_Plan__c.Accessible}">
+                                                            <i class="fa fa-plus" aria-hidden="true"></i>
+                                                        </apex:commandLink>
+                                                     </div>
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                         <apex:actionStatus id="status2">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.ERP_Emp,'ERP_Emp/images/slds_spinner_brand.gif')}" height="28px;" width="27px;" />
+                                                        </apex:facet>
+                                                    </apex:actionStatus>
+                                                     </div>
+                                                </div>
+                                         </div>
+                                  </div>
+                                  <br/>       
+                                   
+                                    <div class="slds-card">
+                                        <div class="slds-card__body">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            Remove Plans
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Learning_Plan_Name} <span style="color:red">*</span>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Course}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <apex:variable value="{!0}" var="LearningPlanListCounter" />
+                                                    <apex:repeat value="{!ReviewLearningPlanWrapperList}" var="plan">
+                                                        <tr class="slds-hint-parent">
+                                                            <td class="slds-size--1-of-3" data-label="Remove Plans">
+                                                                <apex:commandLink reRender="learningPlanWrapList" styleClass="toptext2" status="status2" immediate="true" action="{!delLearningPlanRow}" rendered="{!$ObjectType.Learning_Plan__c.Accessible}">
+                                                                 
+                                                                    <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="20" height="20" title="{!$Label.ERP7__EmployeeReviewV2_Delete}" style="cursor:pointer;" />
+                                                                    <apex:param name="param1" assignto="{!currentLearningPlanIndex}" value="{!ROUND(LearningPlanListCounter ,0)}" />
+                                                                    <apex:param name="param2" assignto="{!LearningPlanToDeleteId}" value="{!plan.wrapLearningPlan.Id}" />
+
+                                                                </apex:commandLink>
+                                                              
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__EmployeeReviewV2_Learning_Plan_Name}">
+                                                                <apex:inputfield value="{!plan.wrapLearningPlan.Name}" required="true" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__EmployeeReviewV2_Course}">
+                                                                <apex:inputfield value="{!plan.wrapLearningPlan.Course__c}" />
+                                                            </td>
+                                                        </tr>
+                                                        <apex:variable var="LearningPlanListCounter" value="{!ROUND(LearningPlanListCounter+1 ,0)}" />
+                                                    </apex:repeat>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </apex:outputPanel>
+                            </div>
+
+                            <span>Intiatives</span>
+                            <div class="slds slds-container--fluid">
+                                <apex:outputPanel id="initiativeWrapList">
+                                    <div class="epr_Mark7">
+                                      <div class="container-fluid"> 
+                                              <div class="slds row slds-p-top--xx-small">
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                     <apex:commandLink value="{!$Label.ERP7__EmployeeReviewV2_New_Initiative}" action="{!addNewInitiativeRow}" reRender="initiativeWrapList, review" immediate="true" status="status3" styleClass="slds-button--neutral" style="border-radius:5px; color:#005fb2;font-size:14px;padding:4px;font-weight:bold;text-transform:none;" rendered="{!$ObjectType.Employee_Initiative__c.Accessible}">
+                                                            <i class="fa fa-plus" aria-hidden="true"></i>
+                                                        </apex:commandLink>
+                                                     </div>
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                        <apex:actionStatus id="status3">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.ERP_Emp,'ERP_Emp/images/slds_spinner_brand.gif')}" height="28px;" width="27px;" />
+                                                        </apex:facet>
+                                                    </apex:actionStatus> 
+                                                     </div>
+                                                </div>
+                                            </div>
+                                        </div> 
+                                        <br/>  
+                                    
+                                    <div class="slds-card">
+                                        <div class="slds-card__body">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            Remove Initiatives
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Initiative_Name} <span style="color:red">*</span>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Project}
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            {!$Label.ERP7__Employee_ReviewV2_Objective_Task_Name}
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Status}
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Initiatives_notes}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    <apex:variable value="{!0}" var="InitiativeListCounter" />
+                                                    <apex:repeat value="{!ReviewInitiativeWrapperList}" var="initiative">
+                                                        <tr class="slds-hint-parent">
+                                                            <td class="slds-size--1-of-6" data-label="Remove Initiatives">
+                                                                <apex:commandLink reRender="initiativeWrapList" styleClass="toptext2" status="status3" action="{!delInitiativeRow}" immediate="true" rendered="{!$ObjectType.Employee_Initiative__c.Accessible}">
+                                                                
+                                                                    <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="20" height="20" title="{!$Label.ERP7__EmployeeReviewV2_Delete}" style="cursor:pointer;" />
+                                                                    <apex:param name="param1" assignto="{!currentInitiativeIndex}" value="{!ROUND(InitiativeListCounter ,0)}" />
+                                                                    <apex:param name="param2" assignto="{!InitiativeToDeleteId}" value="{!initiative.wrapInitiative.Id}" />
+                                                                </apex:commandLink>
+                                                             
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Initiative_Name}">
+                                                                <apex:inputfield value="{!initiative.wrapInitiative.Name}" required="true" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Project}">
+                                                                <apex:inputfield value="{!initiative.wrapInitiative.Project__c}" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__Employee_ReviewV2_Objective_Task_Name}">
+                                                                <apex:inputfield value="{!initiative.wrapInitiative.Objective__r.Name}" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Status}">
+                                                                <apex:inputfield value="{!initiative.wrapInitiative.Status__c}" style="height:27px; border-radius:4px;"/>
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="{!$Label.ERP7__EmployeeReviewV2_Initiatives_notes}">
+                                                                <apex:inputTextarea value="{!initiative.wrapInitiative.Initiative_Notes__c}" rendered="{!$ObjectType.Employee_Initiative__c.fields.Initiative_Notes__c.Accessible}"/>
+                                                            </td>
+                                                        </tr>
+                                                        <apex:variable var="InitiativeListCounter" value="{!ROUND(InitiativeListCounter+1 ,0)}" />
+                                                    </apex:repeat>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </apex:outputPanel>
+                            </div>
+
+                            <span>{!$Label.ERP7__EmployeeReviewV2_Recommendations}</span>
+                            <div class="slds slds-container--fluid">
+                                <apex:outputPanel id="recommendationWrapList">
+                                    <div class="epr_Mark7">
+                                      <div class="container-fluid"> 
+                                              <div class="slds row slds-p-top--xx-small">
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                         <apex:commandLink value="{!$Label.ERP7__EmployeeReviewV2_New_Recommendation}" action="{!addNewRecommendationRow}" reRender="recommendationWrapList, review" immediate="true" status="status4" styleClass="slds-button--neutral" style="border-radius:5px; color:#005fb2;font-size:14px;padding:4px;font-weight:bold;text-transform:none;" rendered="{!$ObjectType.Employee_Review_Recommendation__c.Accessible}">
+                                                            <i class="fa fa-plus" aria-hidden="true"></i>
+                                                        </apex:commandLink>
+                                                     </div>
+                                                     <div class="col-md-4 slds-p-top--xx-small">
+                                                         <apex:actionStatus id="status4">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.ERP_Emp,'ERP_Emp/images/slds_spinner_brand.gif')}" height="28px;" width="27px;" />
+                                                        </apex:facet>
+                                                    </apex:actionStatus>
+                                                     </div>
+                                                </div>
+                                          </div>
+                                      </div>
+                                      <br/>        
+                                    
+                                    <div class="slds-card">
+                                        <div class="slds-card__body">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            Remove Recommendations
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Recommendation_Name} <span style="color:red">*</span>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">
+                                                            {!$Label.ERP7__EmployeeReviewV2_Status}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <apex:variable value="{!0}" var="RecommendationListCounter" />
+                                                    <apex:repeat value="{!ReviewRecommendationWrapperList}" var="recommendation">
+                                                        <tr class="slds-hint-parent">
+                                                            <td class="slds-size--1-of-3" data-label="Remove Recommendations">
+                                                                <apex:commandLink reRender="recommendationWrapList" styleClass="toptext2" status="status4" action="{!delRecommendationRow}" immediate="true" rendered="{!$ObjectType.Employee_Review_Recommendation__c.Accessible}">
+                                                                
+                                                                    <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="20" height="20" title="{!$Label.ERP7__EmployeeReviewV2_Delete}" style="cursor:pointer;" />
+                                                                    <apex:param name="param1" assignto="{!currentRecommendationIndex}" value="{!ROUND(RecommendationListCounter ,0)}" />
+                                                                    <apex:param name="param2" assignto="{!RecommendationToDeleteId}" value="{!recommendation.wrapRecommendation.Id}" />
+                                                                </apex:commandLink>
+                                                             
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__EmployeeReviewV2_Recommendation_Name}">
+                                                                <apex:inputfield value="{!recommendation.wrapRecommendation.Name}" required="true" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__EmployeeReviewV2_Status}">
+                                                                <apex:inputfield value="{!recommendation.wrapRecommendation.Status__c}" style="height:27px; border-radius:4px;"/>
+                                                            </td>
+                                                        </tr>
+                                                        <apex:variable var="RecommendationListCounter" value="{!ROUND(RecommendationListCounter+1 ,0)}" />
+                                                    </apex:repeat>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </apex:outputPanel>
+                            </div>
+
+
+                        </div>
+                    </apex:outputPanel>
+                </div>
+               
+               <div class="slds slds-form--inline slds-m-top--small" style="text-align:center;">
+                <apex:outputPanel rendered="{!showEmpTable}">
+                <div class="slds-form-element">    
+                    <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Submit_to_Manager}" action="{!saveReview}" rerender="hiddenBlock, review, goalObjWrapList, learningPlanWrapList, initiativeWrapList, recommendationWrapList, wholeContent" styleClass="slds-button slds-button--brand" style="width:160px;height:36px;font-size:14px;display:{!if(employee.ReportingManager__c != Null,'','none')}" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                        <apex:param name="param1" assignto="{!submittedForApproval}" value="true" />
+                    </apex:commandButton>
+                    <apex:pageBlock id="hiddenBlock" rendered="false"></apex:pageBlock>
+                    </div>
+                    <div class="slds-form-element">   
+                    <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Save}" action="{!saveReview}" rerender="hiddenBlock, review, goalObjWrapList, learningPlanWrapList, initiativeWrapList, recommendationWrapList, wholeContent" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                        <apex:param name="param1" assignto="{!saveAndStay}" value="true" />
+                    </apex:commandButton>
+                   </div>
+                   <div class="slds-form-element">
+                    <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Save_Return}" action="{!saveReview}" styleClass="slds-button slds-button--brand" style="width:130px;height:36px;font-size:14px;" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                        <apex:param name="param1" assignto="{!saveAndReturn}" value="true" />
+                    
+                    </apex:commandButton>
+                    </div>
+                    
+                </apex:outputPanel>
+                </div>
+                <div class="slds slds-form--inline slds-m-top--small" style="text-align:center;">
+                <apex:outputPanel rendered="{!showMngrTable}">
+                    
+
+                                <div class="slds-form-element">
+                                <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Request_for_Amendment}" action="{!saveReview}" rerender="hiddenBlock, review, goalObjWrapList, learningPlanWrapList, initiativeWrapList, recommendationWrapList, wholeContent" styleClass="slds-button slds-button--brand" style="width:200px;height:35px;font-size:14px;" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                    <apex:param name="param1" assignto="{!manageReviewRejection}" value="true" />
+                                </apex:commandButton>
+                                </div>
+                                
+                                <div class="slds-form-element">
+                                <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Save_Complete}" action="{!saveReview}" rerender="hiddenBlock, review, goalObjWrapList, learningPlanWrapList, initiativeWrapList, recommendationWrapList, wholeContent" styleClass="slds-button slds-button--brand" style="width:149px;height:35px;font-size:14px;" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                    <apex:param name="param1" assignto="{!manageReviewApproval}" value="true" />
+                                </apex:commandButton>
+                                </div>
+
+                                <div class="slds-form-element">
+                                <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Save}" action="{!saveReview}" rerender="hiddenBlock, review, goalObjWrapList, learningPlanWrapList, initiativeWrapList, recommendationWrapList, wholeContent" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                    <apex:param name="param1" assignto="{!saveAndStay}" value="true" />
+                                </apex:commandButton>
+                               </div>
+
+                                <div class="slds-form-element">
+                                <apex:commandButton value="{!$Label.ERP7__EmployeeReviewV2_Save_Return}" action="{!saveReview}" styleClass="slds-button slds-button--brand" style="width:130px;height:35px;font-size:14px;" rendered="{!$ObjectType.Review__c.Createable && $ObjectType.Review__c.Updateable && $ObjectType.Objective__c.Createable && $ObjectType.Objective__c.Updateable && $ObjectType.Goal__c.Createable && $ObjectType.Goal__c.Updateable && $ObjectType.Learning_Plan__c.Createable && $ObjectType.Learning_Plan__c.Updateable && $ObjectType.Employee_Initiative__c.Createable && $ObjectType.Employee_Initiative__c.Updateable && $ObjectType.Employee_Review_Recommendation__c.Createable && $ObjectType.Employee_Review_Recommendation__c.Updateable}">
+                                    <apex:param name="param1" assignto="{!saveAndReturn}" value="true" />
+                                   
+                                </apex:commandButton>
+                                </div>
+                </apex:outputPanel>
+                </div>
+    </apex:form>
+    </div>
+</apex:page>

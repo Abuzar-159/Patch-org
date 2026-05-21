@@ -1,0 +1,1272 @@
+<apex:component controller="USPS" allowDML="true" access="public" id="fedexComp">
+ 
+    <apex:attribute access="public" assignTo="{!shipId}" name="shipmentId" type="String" description="Shipment ID" id="shipIds"/>
+    <apex:attribute access="public" assignTo="{!packIds}" name="packageIds" type="Id[]" description="Multiple packae Id" id="pkgIds"/>
+    <apex:attribute access="public" assignTo="{!retValue}" name="returnValue" type="String" description="Return value for navigation"/>    
+    
+    <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">    
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+            <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.bootStrap,'/js/bootstrap.min.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.Order_Console,'assets/js/jquery.metisMenu.js')}" />
+            <apex:includeScript value="{!URLFOR($Resource.Order_Console,'assets/js/custom.js')}" />
+            <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+            <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.Order_Console, '/assets/styles/custom.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.Order_Console, '/assets/styles/font-awesome.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design.css')}" /> 
+        </head>
+        
+        <style>
+        body {
+    margin: 0;
+    overflow-x: hidden;
+}
+        .slds .slds-table th, .slds .slds-table td {
+    padding: 4px;
+    white-space: nowrap;
+}
+        .slds .slds-table tr > th:last-child, .slds .slds-table tr > td:last-child {
+    padding-right: 5px;
+}
+        .slds .slds-table tr > th:first-child, .slds .slds-table tr > td:first-child {
+    padding-left: 10px;
+}
+   .slds .slds-table .slds-truncate2 {
+    min-width: 52px;
+    width: 67px;
+    white-space: normal;
+    word-break: break-all;
+}
+    .slds .slds-button--brand:hover, .slds.slds-button--brand:focus {
+        background-color: #31d0e5;
+        color: white;
+    }
+        .epr_Mark7 h1, .epr_Mark7 .h1, .epr_Mark7 h2, .epr_Mark7 .h2, .epr_Mark7 h3, .epr_Mark7 .h3 {
+        margin-top: 0px;
+        margin-bottom: 10px;
+    }
+       
+    
+    .epr_Mark7 .table-bordered > thead > tr > th, .epr_Mark7 .table-bordered > tbody > tr > th, .epr_Mark7 .table-bordered > tfoot > tr > th, .epr_Mark7 .table-bordered > thead > tr > td, .epr_Mark7 .table-bordered > tbody > tr > td, .epr_Mark7 .table-bordered > tfoot > tr > td{
+        border:1px solid #ffffff;
+    }
+    .epr_Mark7 .table-bordered {
+        border: 1px solid #ffffff;
+    }
+    .epr_Mark7 .nav-tabs > li > a {
+    margin-right: 12px;
+    line-height: 1.42857143;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+    color:#60cdde;
+    text-transform:uppercase;
+    font-size: 12px;
+}
+     .epr_Mark7 .nav>li>a:hover,
+    .epr_Mark7 .nav>li>a:focus {        
+        text-decoration: none;
+        background-color: #fff;
+        border-bottom: 2px solid #0070d2!important;
+    }   
+    .epr_Mark7 .nav-tabs > li.active > a, .epr_Mark7 .nav-tabs > li.active > a:hover, .epr_Mark7 .nav-tabs > li.active > a:focus {
+        color: #7cdbff;
+        cursor: default!important;
+        background-color: #fff!important;
+        border: 0;
+        border-bottom: 3px solid #2196f3!important;
+    }        
+    .epr_Mark7 .nav-tabs > li > a:hover {
+        border-color: #fff #fff #fff;    
+    }
+        
+         .slds .slds-button:hover,
+    .slds .slds-button:focus,
+    .slds .slds-button:active,
+    .slds .slds-button:visited {
+      text-decoration: none; }
+    .slds .slds-button:hover,
+    .slds .slds-button:focus {
+      color: #31d0e5; }
+    .slds .slds-button:focus {
+      outline: 0;
+      box-shadow: 0 0 3px #0070D2; }
+    .slds .slds-button:active {
+      color: #31d0e5; }
+        .slds .slds-button {
+  
+    color: #31d0e5;
+   
+}
+        .slds .slds-button--brand {
+    padding-left: 16px;
+    padding-right: 16px;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #0070d2;
+    background-color: #31d0e5;
+    border: 1px solid #31d0e5;
+    : 5px 7px;
+}
+        .epr_Mark7 .popover.top>.arrow {
+            bottom: -11px;
+            left: 50%;
+        }    
+        .epr_Mark7 .popover {
+            position: absolute;
+            top: 0;
+            left: -8px !important;
+            z-index: 1060;
+            display: none;
+            max-width: 376px;
+            padding: 1px;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: normal;
+            line-height: 1.42857143;
+            text-align: left;
+            white-space: normal;
+            background-color: #fff;
+            -webkit-background-clip: padding-box;
+            background-clip: padding-box;
+            border: 1px solid #ccc;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+        /* Css For Switch */    
+        .erp_mark7.switch {
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            width: 56px;
+            height: 20px;
+            padding: 3px;
+            background-color: white;
+            border-radius: 18px;
+            box-shadow: inset 0 -1px white, inset 0 1px 1px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            background-image: -webkit-linear-gradient(top, #eeeeee, white 25px);
+            background-image: -moz-linear-gradient(top, #eeeeee, white 25px);
+            background-image: -o-linear-gradient(top, #eeeeee, white 25px);
+            background-image: linear-gradient(to bottom, #eeeeee, white 25px);
+        }    
+        .erp_mark7.switch-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+        }    
+        .erp_mark7.switch-label {
+            position: relative;
+            display: block;
+            height: inherit;
+            font-size: 10px;
+            text-transform: uppercase;
+            background: #eceeef;
+            border-radius: inherit;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 0 2px rgba(0, 0, 0, 0.15);
+            -webkit-transition: 0.15s ease-out;
+            -moz-transition: 0.15s ease-out;
+            -o-transition: 0.15s ease-out;
+            transition: 0.15s ease-out;
+            -webkit-transition-property: opacity background;
+            -moz-transition-property: opacity background;
+            -o-transition-property: opacity background;
+            transition-property: opacity background;
+        }    
+        .erp_mark7.switch-label:before,
+        .switch-label:after {
+            position: absolute;
+            top: 50%;
+            margin-top: -.5em;
+            line-height: 1;
+            -webkit-transition: inherit;
+            -moz-transition: inherit;
+            -o-transition: inherit;
+            transition: inherit;
+        }        
+        .erp_mark7.switch-label:before {
+            content: attr(data-off);
+            right: 11px;
+            color: #aaa;
+            text-shadow: 0 1px rgba(255, 255, 255, 0.5);
+        }    
+        .erp_mark7.switch-label:after {
+            content: attr(data-on);
+            left: 11px;
+            color: white;
+            text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+        }        
+        .erp_mark7.switch-input:checked~.switch-label {
+            background: #4fb845;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 0 3px rgba(0, 0, 0, 0.2);
+        }    
+        .erp_mark7.switch-input:checked~.switch-label:before {
+            opacity: 0;
+        }        
+        .erp_mark7.switch-input:checked~.switch-label:after {
+            opacity: 1;
+        }    
+        .erp_mark7.switch-handle {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+            background-image: -webkit-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: -moz-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: -o-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: linear-gradient(to bottom, white 40%, #f0f0f0);
+            -webkit-transition: left 0.15s ease-out;
+            -moz-transition: left 0.15s ease-out;
+            -o-transition: left 0.15s ease-out;
+            transition: left 0.15s ease-out;
+        }    
+        .erp_mark7.switch-handle:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -6px 0 0 -6px;
+            width: 12px;
+            height: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            box-shadow: inset 0 1px rgba(0, 0, 0, 0.02);
+            background-image: -webkit-linear-gradient(top, #eeeeee, white);
+            background-image: -moz-linear-gradient(top, #eeeeee, white);
+            background-image: -o-linear-gradient(top, #eeeeee, white);
+            background-image: linear-gradient(to bottom, #eeeeee, white);
+        }    
+        .erp_mark7.switch-input:checked~.switch-handle {
+            left: 40px;
+            box-shadow: -1px 1px 5px rgba(0, 0, 0, 0.2);
+        }    
+        .erp_mark7.switch-green>.switch-input:checked~.erp_mark7.switch-label {
+            background: #4fb845;
+        }
+        /* ENds here */    
+        .epr_Mark7 .nav>li>a {
+            position: relative;
+            display: block;
+            padding: 7px 7px;
+        }    
+        .epr_Mark7 .panel-default>.panel-heading {
+            color: #fff;
+            border-color: #333366;
+            background-color:#333366;
+            /*background-color: #4d148c;
+            background: -moz-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -webkit-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -o-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -ms-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);*/
+        }        
+        .slds .slds-theme--alt-inverse {
+            background-color: #3d1900;
+            color: white;
+            border-color: #3d1900;
+        }    
+       
+        .slds a {
+            color: #4d148c;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+        }        
+        
+        .slds a:hover {
+           <!--  color: #ffffff; -->
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+        }
+        .slds maq {
+            color: #3d1900;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+            cursor: pointer;
+            font-family: "Salesforce Sans", Arial, sans-serif;
+        }        
+        .slds maq:hover {
+            color: #3d1900;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+            cursor: pointer;
+            font-family: "Salesforce Sans", Arial, sans-serif;
+        }
+        input {
+            padding-top: 0;
+            border: 1px solid #ddd;
+            border-radius : 5px;
+            padding: 5px;
+        }
+        .dateFormat {
+            padding: 0 2px;
+            display: none;
+        }
+        .slds .slds-table .slds-truncate {
+            min-width: 52px;
+            max-width: 300px;
+        }
+        </style>
+        
+        <body>
+        
+            <apex:actionFunction name="getAddressT" action="{!fetchAddress}" reRender="toAddressPnl,ratePnl,processShipPnl,trackPnl,messagePnl" status="spinnerT"/>        
+            <apex:actionFunction name="getAddressF" action="{!fetchAddress}" reRender="fromAddressPnl,ratePnl,processShipPnl,trackPnl,messagePnl" status="spinnerF"/>
+            <apex:actionFunction name="passStringToController" action="{!Shipping_Rate}" reRender=";"/> 
+            <apex:actionFunction name="tracking" action="{!Track_Request}" status="spinnerPR" reRender="trackPnl,ratePnl,processShipPnl,messagePnl"/>
+            
+            <div class="slds">
+                <div class="epr_Mark7">
+                    <div>
+                        <div>                        
+                            <div style="width:100%;padding-left: 0px;padding-right: 0px;float:left">
+                                <div class="slds-page-header" style="padding:4px;" role="header"> 
+                                       <img src="{!URLFOR($Resource.PickPackShipResource,'/assets/images/logo-header-usps.png')}" width="180" height="35" alt="USPS"  style="margin:10px;"/> 
+                                
+                                    <ul class="nav navbar-nav navbar-right">
+                                        <li> <apex:commandLink value="Back" action="{!back}" styleClass="slds-button slds-button--brand" style="background-color: #31d0e5;color:#ffffff;padding: 5px 5px;margin-top: 5px;  margin-right: 5px;"/> </li>
+                                        <li>&nbsp;</li> <li>&nbsp;</li> <li>&nbsp;</li>
+                                    </ul>                                      
+                                </div>                                
+                            </div>                            
+                        </div>
+                        
+                        <apex:pageMessages id="messagePnl"/>
+                        
+                        <!-- left section -->
+                        <div class="container-fluid row">
+                            <div class="col-sm-6 col-md-6 slds-m-top--small">
+                                <div class="panel-group" id="accordion">
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title ">                                            
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse1" style="text-decoration:none; color:#fff;">1. Where is this shipment going?</a>
+                                                <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: -4.4%; margin-left: 90.6%;">
+                                                    <apex:actionStatus id="spinnerT">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="30px;" width="30px;"/>
+                                                        </apex:facet>
+                                                    </apex:actionStatus> 
+                                                </div>
+                                            </h4>
+                                        </div>
+                                        
+                                        <!-- Shipto Address -->
+                                        <div id="collapse1" class="panel-collapse collapse in">
+                                            <apex:outputPanel id="toAddressPnl">
+                                                <div class="panel-body">
+                                                    <!-- Shipto Row1 -->
+                                                    <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">To Address:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!toAddr.Ship_To_Address__c}" style="width:100%; height:36px;" onchange="getAddressT();"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                        
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Company:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Company__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Contact:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Name}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                    </div>
+                                                    <!-- @end of Shipto Row1 -->
+                                                    
+                                                    <!-- Shipto Row2 -->
+                                                    <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Email}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Phone:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Phone}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 1:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Address_Line1__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                    </div>                                            
+                                                    <!-- @end of Shipto Row2 -->
+                                                    
+                                                    <!-- Shipto Row3 -->
+                                                    <div class="row">                                                
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 2:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Address_Line2__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">City/town:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.City__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">State/County:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!shippingAddress.State__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                  
+                                                    </div>                                            
+                                                    <!-- @edn of Shipto Row3 -->
+                                                    
+                                                    <!-- Shipto Row4 -->
+                                                    <div class="row">                                                
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip/Post code:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Postal_Code__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip 4:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Zip_4__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Country:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!shippingAddress.Country__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>      
+                                                        <!-- 
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Is Residential</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone1" value="{!toShipmentType}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>                                                        
+                                                        </div> -->
+                                                    </div>
+                                                    <!-- @end of Shipto Row4 -->
+                                                </div>                                                
+                                            </apex:outputPanel>
+                                        </div>
+                                        <!-- @end of Shipto Address -->                                          
+                                    </div>
+                                    
+                                    <!-- Shipfrom Address -->
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse2" style="text-decoration:none; color:#fff;">2. Where is this shipment coming from?</a>
+                                                <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: -4.4%; margin-left: 90.6%;">
+                                                    <apex:actionStatus id="spinnerF">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="30px;" width="30px;"/>
+                                                        </apex:facet>
+                                                    </apex:actionStatus> 
+                                                </div>
+                                            </h4>                                                
+                                        </div>
+                                        
+                                        <div id="collapse2" class="panel-collapse collapse in">
+                                            <apex:outputPanel id="fromAddressPnl">
+                                                <div class="panel-body">
+                                                    <!-- Shipfrom Row1 -->
+                                                    <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">From Address:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddr.Bill_To_Address__c}" style="width:100%; height:36px;" onchange="getAddressF();"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Company:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Company__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Contact:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Name}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- @end of Shipfrom Row1 -->
+                                                    
+                                                     <!-- Shipfrom Row2 -->
+                                                    <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Email}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>       
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Phone:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Phone}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 1:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Address_Line1__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                 
+                                                    </div>                                            
+                                                    <!-- @end of Shipfrom Row2 -->
+                                                    
+                                                    <!-- Shipfrom Row3 -->                                                
+                                                    <div class="row">                                                
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 2:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Address_Line2__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">City/town:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.City__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">State/County:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.State__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                   
+                                                    </div>
+                                                    <!-- @end of Shipfrom Row3 -->
+                                                    
+                                                    <!-- Shipfrom Row4 -->
+                                                    <div class="row">                                                    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip/Post code:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.Postal_Code__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip 4:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.Zip_4__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Country:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.Country__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>    
+                                                        <!--
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Is Residential</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone2" value="{!fromShipmentType}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>                                                        
+                                                        </div> 
+                                                        -->
+                                                    </div>
+                                                    <!-- @end of Shipfrom Row4 -->                                                
+                                                </div>                                                
+                                            </apex:outputPanel>                                            
+                                        </div>                                        
+                                    </div>                                    
+                                    <!-- @end of Shipfrom Address -->
+                                    
+                                    <!-- package details -->
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse3" style="text-decoration:none; color:#fff;">3. What are you shipping?</a>
+                                            </h4>
+                                        </div>
+                                        
+                                        <div id="collapse3" class="panel-collapse collapse in">
+                                            <div class="panel-body" style="padding: 15px 2px;">
+                                                <div class="col-sm-12 slds-m-top--small" style="overflow-y:hidden; overflow-x:auto;">
+                                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                                                        <thead>
+                                                            <tr class="slds-text-title--caps">
+                                                                <!--<th scope="col"> <div class="slds-truncate2" title="Sl.no">Sl.no</div> </th>-->
+                                                                <th scope="col"> <div class="slds-truncate2" title="Package Name">Package</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Order">Order</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Weight">Weight</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Length">Length</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Width">Width</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Height">Height</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Declared Value">Declared Value</div> </th>
+                                                            </tr>
+                                                        </thead>
+                                                        
+                                                        <tbody>
+                                                            <apex:variable value="{!1}" var="pkgCounter"/>
+                                                            <apex:repeat value="{!packages}" var="pkg">
+                                                                <tr>
+                                                                    <!--<td data-label="Serial No.">
+                                                                        <div class="slds-truncate2" title="Serial No"> <apex:outputText value="{!pkgCounter}."/> </div>
+                                                                    </td>-->
+                                                                    <td data-label="Package Name">
+                                                                        <div class="slds-truncate2" title="Package Name"> <apex:outputField value="{!pkg.Name__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Order">
+                                                                        <div class="slds-truncate2" title="Order"> <apex:outputField value="{!pkg.Logistic__r.Order__c}" style="color:black;" /> </div>
+                                                                    </td>
+                                                                    <td data-label="Weight">
+                                                                        <div class="slds-truncate2" title="Weight"> <apex:outputText value="{!pkg.Weight__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Length">
+                                                                        <div class="slds-truncate2" title="Length"> <apex:outputText value="{!pkg.Length__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Width">
+                                                                        <div class="slds-truncate" title="Width"> <apex:outputText value="{!pkg.Width__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Height">
+                                                                        <div class="slds-truncate2" title="Height"> <apex:outputText value="{!pkg.Height__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Declared Value">
+                                                                        <div class="slds-truncate2" title="Declared Value"> <apex:inputText styleClass="slds-input" style="width: 100%;" value="{!pkg.Declared_Value__c}"/> </div>
+                                                                    </td>                                                    
+                                                                </tr>    
+                                                            <apex:variable value="{!pkgCounter + 1}" var="pkgCounter"/>
+                                                            </apex:repeat>
+                                                        </tbody>                                                        
+                                                    </table>                                                    
+                                                </div>                                                
+                                            </div>                                            
+                                        </div>                                        
+                                    </div>                                    
+                                    <!-- @end of package details -->
+                                    
+                                    <!-- invoice details
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse6" style="text-decoration:none; color:#fff;">4. Invoice Details</a>
+                                            </h4>
+                                        </div>
+                                        <div id="collapse6" class="panel-collapse collapse in">
+                                            <div class="panel-body">
+                                                <div class="row">
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Invoice Number:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputText id="invNo" value="{!Shipment.Invoice_Number__c}" styleClass="slds-input"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Purchase Order Number:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputText id="poNo" value="{!Shipment.Purchase_Order_Number__c}" styleClass="slds-input"/>
+                                                            </div>
+                                                        </div>
+                                                    </div> 
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Terms Of Shipment</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <div class="slds-select_container">
+                                                                        <apex:inputField id="tos" value="{!Shipment.Terms_Of_Shipment__c}" styleClass="slds-select"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>                                                
+                                                </div>                                                
+                                                
+                                                <div class="row">                                                    
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Reason For Export</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <div class="slds-select_container">
+                                                                        <apex:inputField id="rfe" value="{!Shipment.Reason_For_Export__c}" styleClass="slds-select"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Declaration Statement:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputTextarea id="decStmt" value="{!Shipment.Declaration_Statement__c}" styleClass="slds-input" style="width: 168px;"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>                    
+                                                </div>
+                                            </div>                                        
+                                        </div>                                        
+                                    </div>
+                                    @end of invoice details -->                                                                    
+                                </div>                                                                
+                            </div>                                                    
+                        <!-- @end of left section -->
+                        
+                        <!-- right section -->
+                        <div class="col-xs-12 col-sm-12 col-md-6 slds-m-top--small">
+                            <div id="collapse8" class="panel-collapse collapse in">
+                                <div class="panel-body" style="padding:0px;">
+                                    <!-- Nav tabs --> 
+                                    <ul class="nav nav-tabs " role="tablist">
+                                        <li class="nav-item active">
+                                            <a class="nav-link" data-toggle="tab" href="#home" role="tab">
+                                            <i class="fa fa-file-text" aria-hidden="true"></i>&nbsp;Shipping Services / Cost </a>
+                                        </li>    
+                                        <li class="nav-item ">
+                                            <a class="nav-link" data-toggle="tab" href="#ups" role="tab">
+                                            <i class="fa fa-th-large" aria-hidden="true"></i>&nbsp;Process Shipment </a>
+                                        </li>    
+                                        <li class="nav-item"> 
+                                            <a class="nav-link" data-toggle="tab" href="#trackshipment" role="tab" onclick="tracking();">
+                                            <i class="fa fa-truck fa-1x"></i>&nbsp;Track Shipment </a>
+                                        </li>
+                                    </ul>
+                                    <!-- @end of Nav tabs --> 
+                                    
+                                    <!-- Tab panels -->
+                                    <div class="tab-content">
+                                        <!-- tab 1 -->
+                                        <div class="tab-pane active" id="home" role="tabpanel">
+                                            <apex:outputPanel id="ratePnl">
+                                                <div class="panel-body">
+                                                    <!-- Row 1 -->
+                                                    <div class="row">    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Shipment Date</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!Shipment.Shipment_Date__c}" id="shipdate" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Description</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputTextarea id="desp" value="{!Shipment.Description__c}" styleClass="slds-input" style="width: 180px;"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!--
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Signature Services</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!Shipment.Signature_Services__c}"  id="sigservice" styleClass="slds-select"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        -->
+                                                    </div>
+                                                    <!-- @end of Row 1 -->
+                                                    
+                                                    <!-- Row 2 --> 
+                                                    <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4" style="display:{!if(retValue == 'SR', '','none')}">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email from Third Party</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone3" value="{!shipment.Email_from_Third_Party__c}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4" style="display:{!if(retValue == 'SR', '','none')}">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Message</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputTextarea id="mess" value="{!Shipment.Message__c}" styleClass="slds-input" style="width: 180px;"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                       
+                                                    </div>
+                                                    <div class="row">
+                                                         <div class="col-md-12">
+                                                           <div class="col-xs-12 col-sm-4 col-md-3" style="margin-top: 3.4%;"> 
+                                                                <apex:commandLink value="Get Rates" action="{!Shipping_Rate}" styleClass="slds-button slds-button--neutral" style="padding:0px 22px 0px 23px;" reRender="ratePnl,messagePnl" status="spinnerSR"/>
+                                                            </div>
+                                                            <div class="col-xs-12 col-sm-4 col-md-9" style="margin-top: 3.4%;text-align:right;">
+                                                                <apex:actionStatus id="spinnerSR">
+                                                                    <apex:facet name="start">
+                                                                        <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                    </apex:facet>
+                                                                </apex:actionStatus>
+                                                            </div>
+                                                        </div> 
+                                                    </div>
+                                                    <!-- @end of Row 2 -->
+                                                    
+                                                    <div class="row">&nbsp;</div>
+                                                    <!--
+                                                    <apex:outputPanel style="display : {!if(tab1_Message != null && tab1_Message != '', '', 'none')}">
+                                                        <div class="row" style="text-align: center;">
+                                                            <apex:outputText value="{!tab1_Message}" style="color:red;"/>
+                                                        </div>
+                                                    </apex:outputPanel>  
+                                                    -->
+                                                    <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel> 
+                                                    <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel style="display : {!if(result != null && result != '', true, false)}">
+                                                        <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                    </apex:outputPanel> 
+                                                    
+                                                    
+                                                    Request : <br/><apex:outputText value="{!request_1}"></apex:outputText><br/><br/>
+                                                    Response : <br/><apex:outputText value="{!response_1}"></apex:outputText>
+                                            
+                                                    
+                                                    <div class="row">
+                                                        <apex:outputPanel rendered="{!time_in_cost_tab}">
+                                                            <!--<apex:pageMessage title="Info:" summary="All rate quotes are estimates only and may differ from the actual invoiced amount." severity="info" strength="3"/>-->
+                                                        <!-- </apex:outputPanel> -->
+                                                            <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                                                <thead>
+                                                                    <tr class="slds-text-title--caps">
+                                                                        <th scope="col"> <div class="slds-truncate" title="Select">Select</div> </th>
+                                                                        <th scope="col"> <div class="slds-truncate" title="Service Type">Service Type</div> </th>
+                                                                        <th scope="col"> <div class="slds-truncate" title="Total Charges">Total Charges</div> </th>
+                                                                        <th scope="col"> <div class="slds-truncate" title="Commitment Date">Commitment Date</div> </th>
+                                                                        <th>&nbsp; </th>
+                                                                        <!-- <th scope="col"> <div class="slds-truncate" title="Total Charges">Delivery Date</div> </th> -->
+                                                                    </tr>
+                                                                </thead>
+                                                            
+                                                                <tbody>                                                                    
+                                                                    <apex:variable var="cnt" value="{!0}"/>
+                                                                    <apex:repeat value="{!rateWrapperList}" var="twl">
+                                                                    <tr>
+                                                                        <th scope="row" data-label="Select">
+                                                                            <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                                <label class="slds-radio">
+                                                                                    <input type="radio" id="test" name="test" value="{!twl.service}" onclick="call(this.value,{!cnt})"/>         
+                                                                                    <span class="slds-radio--faux"></span>
+                                                                                </label>
+                                                                            </div>                                                                            
+                                                                        </th>
+                                                                        <td data-label="Service Type">
+                                                                            <div class="slds-truncate" title="Service">
+                                                                                <apex:outputText value="{!twl.service}" escape="false"/> 
+                                                                            </div>
+                                                                        </td> 
+                                                                        <td data-label="Total Charges">
+                                                                            <div class="slds-truncate" title="Total Charges"> 
+                                                                                <apex:outputText value="{!twl.totalCharges}"/>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td data-label="Commitment Date">
+                                                                            <div class="slds-truncate" title="Commitment Date"> 
+                                                                                <apex:outputText value="{!twl.CommitmentDate}"/>
+                                                                            </div>
+                                                                        </td>
+                                                                       <td>
+                                                                            <apex:inputText id="rad1" value="{!service}" style="display: none"/> 
+                                                                        </td>
+                                                                    </tr>                                                
+                                                                    <apex:variable var="cnt" value="{!cnt+1}"/>
+                                                                    </apex:repeat>
+                                                                </tbody>   
+                                                            </table>
+                                                        </apex:outputPanel>
+                                                        
+                                                        <apex:outputPanel rendered="{!time_in_cost_tab}">
+                                                            <div class="col-sm-12 slds-m-top--small slds-m-bottom--xxx-small" style="text-align:center;" >
+                                                                <apex:commandLink value="Initiate Shipment" action="{!Shipping_Request}" style="padding:0px 15px 0px 12px;" styleClass="slds-button slds-button--neutral" status="spinnerSR" reRender="ShipRes,processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[1] == true, true, false)}"/>
+                                                            </div>
+                                                        </apex:outputPanel>
+                                                        
+                                                        
+                                                        
+                                                    </div>                                                
+                                                </div>                                                 
+                                            </apex:outputPanel>
+                                            
+                                            <apex:outputPanel id="ShipRes">
+                                                <apex:outputPanel style="display : {!if(result != null && result != '' && result != 'Available FedEx Services For The Selected Location', true, false)}" >
+                                                    <div class="row" style="text-align: center;"> <b><apex:outputText value="{!Result}" style="color:green;"/></b> </div>
+                                                </apex:outputPanel>
+                                                <apex:outputPanel style="display : {!if(response_Message != null && response_Message != '',true, false)}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!response_Message}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel> 
+                                                <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>
+                                                <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>
+                                            </apex:outputPanel>
+                                                                               
+                                        </div>                                        
+                                        <!-- @end of tab 1 -->
+                                        
+                                        <!-- tab 2 -->
+                                        <div class="tab-pane" id="ups" role="tabpanel"> 
+                                            <apex:outputPanel id="processShipPnl">
+                                                <div class="panel-body">
+                                                    <!-- Row 1 -->
+                                                    <div class="row">
+                                                        <div class="col-md-8">
+                                                            <div class="row">
+                                                                <div class="col-sm-6">
+                                                                    <div class="slds-form-element">
+                                                                        <label class="slds-form-element__label" for="text-input-01">Shipment</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <apex:inputText value="{!Shipment.Name}" id="shipname" styleClass="slds-input" disabled="true" style="background: #ffffff;"/>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-sm-6"> 
+                                                                    <div class="slds-form-element"> 
+                                                                        <label class="slds-form-element__label" for="text-input-01">Shipment Status</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <div class="slds-select_container">
+                                                                                <apex:inputField value="{!Shipment.Status__c}" id="shipstatus" styleClass="slds-select"/>                                                                                      
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>                                                                 
+                                                            </div>                                                        
+                                                        </div>
+                                                        
+                                                        <div class="col-md-4">
+                                                            <!--
+                                                            <div class="col-sm-12 slds-m-top--xxx-small">
+                                                                <apex:commandLink value="Initiate Shipment" action="{!Shipping_Request}" style="padding:0px 15px 0px 12px;" styleClass="slds-button slds-button--neutral" status="spinnerS" reRender="processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[1] == true, true, false)}"/>
+                                                            </div>
+                                                            --> 
+                                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                <apex:commandLink value="Fedex Label" action="{!CreateUSPSLabel}" styleClass="slds-button slds-button--neutral" style="padding:0px 15px 0px 15px;" target="_blank" rendered="{!if(showAndHideMap[2] == true, true, false)}"/>
+                                                            </div>
+                                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                <apex:commandLink value="Cancel Shipment" action="{!Cancel_Request}" styleClass="slds-button slds-button--neutral" status="spinnerS" reRender="processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[3] == true, true, false)}"/>
+                                                            </div>
+                                                            <div class="col-sm-12 slds-m-top--xxx-small" style="margin-left: 28%;">
+                                                                <apex:actionStatus id="spinnerS">
+                                                                    <apex:facet name="start">
+                                                                        <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                    </apex:facet>
+                                                                </apex:actionStatus>
+                                                            </div>
+                                                        </div>                                                    
+                                                    </div>
+                                                    <!-- @end of Row 1 -->
+                                                                        
+                                                 
+                                                   <!-- Request UD : <br/><apex:outputText value="{!request_UD}"></apex:outputText><br/>
+                                                    Response UD : <br/><apex:outputText value="{!response_UD}"></apex:outputText>                                                     
+                                                    <br/><br/>-->
+                                                    
+                                                    Request 1 : <br/><apex:outputText value="{!request_1}"></apex:outputText><br/>
+                                                    Response 1 : <br/><apex:outputText value="{!response_1}"></apex:outputText> 
+                                                    <br/><br/>
+                                                    <!--Request 2 : <br/><apex:outputText value="{!request_2}"></apex:outputText><br/>
+                                                    Response 2 : <br/><apex:outputText value="{!response_2}"></apex:outputText> -->
+                                                     
+                                                     
+                                                    <div class="row">&nbsp;</div>
+                                                    <apex:outputPanel style="display : {!if(response_Message != null && response_Message != '',true, false)}"> 
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!response_Message}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel> 
+                                                    <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel style="display : {!if(result != null && result != '', true, false)}">
+                                                        <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                    </apex:outputPanel>
+                                                    
+                                                    <!-- pickup section -->
+                                                    <apex:outputPanel rendered="{!if(showAndHideMap[4] == true, true, false)}">
+                                                        <div class="panel panel-default slds-m-top--small">
+                                                            <div class="panel-heading">
+                                                                <h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#collapse4" style="text-decoration:none; color:#fff;">Pickup Details</a> </h4>
+                                                            </div>
+                                                            <div id="collapse4" class="panel-collapse collapse in">
+                                                                <div class="panel-body">
+                                                                    <div class="col-md-8">                                                                        
+                                                                        <div class="row">
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Ready Time</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="packrt" value="{!Shipment.Package_Ready_Time__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>                                                                            
+                                                                            <!--
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Customer Close Time</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="Custcltime" value="{!Shipment.Customer_Close_Time__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            -->                                                                            
+                                                                        </div>                                                                        
+                                                                        <div class="row slds-m-top--xxx-small">
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Reference no.</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="pcn" value="{!Shipment.Pickup_Confirmation_Number__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>                                                                       
+                                                                            </div>
+                                                                        </div>                                                                          
+                                                                    </div> 
+                                                                    
+                                                                    <div class="col-md-4">
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Pickup Availability" action="{!PickupAvailability}" styleClass="slds-button slds-button--neutral" style="padding: 0px 3px 0px 4px;" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[5] == true, true, false)}"/>
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Create Pickup" action="{!CreatePickup}" styleClass="slds-button slds-button--neutral" style="padding: 0px 17px 0px 17px;" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[6] == true, true, false)}"/>
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Cancel Pickup" action="{!CancelPickup}" styleClass="slds-button slds-button--neutral" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[7] == true, true, false)}"/> 
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small">
+                                                                            <apex:actionStatus id="spinnerP">
+                                                                                <apex:facet name="start">
+                                                                                    <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                                </apex:facet>
+                                                                            </apex:actionStatus>
+                                                                        </div>
+                                                                    </div>                                                                    
+                                                                </div>                                                                
+                                                            </div>                                                            
+                                                        </div>                                                        
+                                                    </apex:outputPanel>                                                    
+                                                    <!-- @end of pickup section -->                                                
+                                                </div>                                                
+                                            </apex:outputPanel>                                            
+                                        </div>                                        
+                                        <!-- @end of tab 2 -->
+                                        
+                                        <!-- tab 3 -->
+                                        <div class="tab-pane" id="trackshipment" role="tabpanel">
+                                            <apex:outputPanel id="trackPnl">
+                                                <div class="panel-body"> 
+                                                    <div class="col-md-8">
+                                                        <div class="row">                                                            
+                                                            <div class="col-md-6 col-sm-6 col-xs-12">
+                                                                <div class="slds-form-element">
+                                                                    <label class="slds-form-element__label" for="text-input-01">Tracking no.</label>
+                                                                    <div class="slds-form-element__control">
+                                                                        <apex:inputTextarea value="{!Shipment.Tracking_Number__c}" id="shiptrck" styleClass="slds-input" disabled="true" style="width: 188px; background: #ffffff;"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>  
+                                                            <div class="col-md-6 col-sm-6 col-xs-12"> &nbsp; </div>     
+                                                        </div>                                                    
+                                                    </div>                                                
+                                                    <div class="col-md-4">
+                                                        <div class="col-sm-12 slds-m-top--xxx-small">
+                                                            <apex:commandLink value="Proof of Delivery" action="{!Signature_Proof}" status="spinnerPR" reRender="trackPnl,messagePnl" styleClass="slds-button slds-button--neutral" style="padding:0px 14px 0px 12px;" rendered="{!if(showAndHideMap[8] == true, true, false)}"/>
+                                                        </div>
+                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                            <apex:outputLink value="{!URLFOR($Action.Attachment.Download,spodLetter.id)}" styleClass="slds-button slds-button--neutral" style="padding:0px 31px 0px 31px;" rendered="{!if(spodLetter.id != null && showAndHideMap[9] == true, true, false)}">POD Letter</apex:outputLink> 
+                                                        </div>
+                                                        <div class="col-sm-12 slds-m-top--xxx-small" style="margin-left: 28%;">
+                                                            <apex:actionStatus id="spinnerPR">
+                                                                <apex:facet name="start">
+                                                                    <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                </apex:facet>
+                                                            </apex:actionStatus>
+                                                        </div>
+                                                    </div>                                                    
+                                                </div>                                            
+                                                <!--
+                                                Request : <br/><apex:outputText value="{!request_1}"></apex:outputText>
+                                                Response : <br/><apex:outputText value="{!response_1}"></apex:outputText> 
+                                                -->
+                                                <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>   
+                                                <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>
+                                                </apex:outputPanel>
+                                                <apex:outputPanel style="display : {!if(result != null && result != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                </apex:outputPanel>
+                                                    
+                                                <div style="max-height: 400px; width: 640px; overflow-x:auto;">    
+                                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                                        <thead>
+                                                            <tr class="slds-text-title--caps">
+                                                                <th scope="col"> <div class="slds-truncate" title="Location">Location</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate" title="Date/Time">Date/Time</div> </th>                                                            
+                                                                <th scope="col"> <div class="slds-truncate" title="Arrival Location">Arrival Location</div> </th> 
+                                                                <th scope="col"> <div class="slds-truncate" title="Activity">Activity</div> </th>
+                                                            </tr>
+                                                        </thead>
+    
+                                                        <tbody>
+                                                            <apex:variable var="cnt" value="{!0}"/>
+                                                            <apex:repeat value="{!trackWrapperList}" var="twl">
+                                                            <tr>
+                                                                <td data-label="Location" style="min-width:124px;">
+                                                                    <div class="slds-truncate" title="Location"> 
+                                                                        <apex:outputText value="{!twl.eventCity}"/> 
+                                                                    </div>
+                                                                </td>                                                                                                                               
+                                                                <td data-label="Date" style="min-width:156px;">
+                                                                    <div class="slds-truncate" title="Date/Time">
+                                                                        <apex:outputText value="{0,date, dd/MM/yyyy HH:mm}"> 
+                                                                            <apex:param value="{!twl.dtValue}"/>
+                                                                        </apex:outputText>
+                                                                    </div>
+                                                                </td>                                                            
+                                                                <td data-label="Received By">
+                                                                    <div class="slds-truncate" title="Arrival Location"> 
+                                                                        <apex:outputText value="{!if(twl.arrivalLocation != null, twl.ArrivalLocation, '-')}"/>
+                                                                    </div>
+                                                                </td> 
+                                                                <td data-label="Activity">
+                                                                    <div class="slds-truncate" title="Activity"> 
+                                                                        <apex:outputText value="{!twl.Event}"/> 
+                                                                    </div>
+                                                                </td> 
+                                                            </tr>                                                
+                                                            <apex:variable var="cnt" value="{!cnt+1}"/>
+                                                            </apex:repeat>
+                                                        </tbody> 
+                                                    </table>
+                                                 </div>                                                
+                                            </apex:outputPanel>                                        
+                                        </div>
+                                        <!-- @end of tab 3 -->
+                                    </div>                                    
+                                    <!-- @end of Tab panels -->                                    
+                                </div>                                
+                            </div>                           
+                        </div>
+                        <!-- @end of right section -->
+                        
+                        </div>    
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- <h4 style="color: #4d148c;">FedEx service marks are owned by Federal Express Corporation and are used by permission.</h4> -->
+                            </div>
+                        </div>
+                        
+                    </div> 
+                </div>  
+            </div> 
+            
+        </body>
+        
+    </html> 
+    
+    <script>
+        function setFocus() {}
+        
+        function call(e,f) { 
+            alert('e value : = ' + e);
+          
+            var details = [];
+            details = e.split(',');                    
+            if(details[0] != null && details[0] != '') jQuery('[id$=rad1]').val(details[0]);   
+            passStringToController();            
+        }                        
+    </script>
+      
+</apex:component>

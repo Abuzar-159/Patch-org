@@ -1,0 +1,400 @@
+<aura:component controller="CreatePO" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" access="global">
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <aura:attribute name="item" type="Object" default="{ERP7__Cost_Card__c:'',ERP7__Product__c:'','ERP7__Unit_Price__c':0.00,ERP7__Product__r:{'Id':'','Name':''}, Accounts:{sObjectType :'ERP7__Dimension__c',ERP7__Allocation_Percentage__c:0.00,ERP7__Allocation_Amount__c:0.00, ERP7__Chart_of_Account__c : '', ERP7__Project__c : '' }}"/>
+    <aura:attribute name="checkValidation" type="Boolean" default="false"/>
+    <aura:attribute name="versionAccess" type="Boolean" default="false"/>
+    <aura:attribute name="ProjectAccess" type="Boolean" default="false"/>
+    <aura:attribute name="DepartmentAccess" type="Boolean" default="false"/>
+    <aura:attribute name="displayAccount" type="Boolean" default="true"/>
+    <aura:attribute name="index" type="Integer"/>
+    <aura:attribute name="vendorId" type="String"/>
+    <aura:attribute name="coaId" type="String"/>
+    <aura:attribute name="projId" type="String"/>
+    <aura:attribute name="projectId" type="String"/>
+    <aura:attribute name="qry" type="String" default=""/>
+    <aura:attribute name="Tax" type="Currency"/>
+    <aura:attribute name="TotalPrice" type="Currency"/>
+    <aura:attribute name="prodqry" type="String" default=""/>
+    <aura:attribute name="venqry" type="String" default=""/>
+    <aura:attribute name="deleteIndex" type="Integer" />
+    <aura:attribute name="row" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.getCategory}"/>
+    <aura:handler name="change" value="{!v.checkValidation}" action="{!c.validate}"/>
+    <aura:method name="callValidate" action="{!c.validate}"/>
+    <aura:attribute name="poli" type="Object" default="[]"/>
+    <aura:attribute name="showVendor" type="Boolean" default="false"/>
+    <aura:attribute name="AutoAccountAllocation" type="Boolean" default="false"/>
+    <aura:attribute name="showAllocation" type="Boolean" default="false"/>
+    <aura:attribute name="POLINameAcc" type="Boolean" default="false"/>
+    <aura:attribute name="showTax" type="Boolean" default="false"/> 
+    <aura:attribute name="showTaxRate" type="Boolean" default="false"/> 
+    <aura:attribute name="dCId" type="String" default=""/>
+    <aura:attribute name="defaultProdAccA" type="String" default=""/>
+    <aura:attribute name="defaultProdAnalA" type="String" default=""/>
+    <aura:attribute name="recId" type="String" default=""/>
+    <!--<aura:attribute name="approvedVendor" type="ERP7__Approved_Vendor__c" default="{sObjectType : 'ERP7__Approved_Vendor__c'}"/>-->
+    
+    <aura:handler name="change" value="{!v.item.ERP7__Product__c}" action="{!c.getProductCC}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Cost_Card__c}" action="{!c.getPrice}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Chart_of_Account__c}" action="{!c.getprojectBudgetdetails}"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Organisation_Business_Unit__c}" action="{!c.getprojectBudgetdetails}"/>
+    <!-- <aura:handler name="change" value="{!v.approvedVendor}" action="{!c.getvencostcard}"/>-->
+    <aura:attribute name="getPriceBool" type="Boolean" default="true"/>
+    <aura:attribute name="alloweditPrice" type="Boolean" default="false"/>
+    <aura:attribute name="isDelete"  type="Boolean" default="false"/>
+    <aura:attribute name="received"  type="Boolean" default="false"/>
+    <aura:attribute name="deleteIndexPreviousAction" type="Integer" />
+    <aura:attribute name="defaultCCval" type="object" />
+    <aura:attribute name="PoliCategoryList" type="List" /> 
+    <aura:registerEvent name="RequisitionToPurchaseOrderEvent" type="c:RequisitionToPurchaseOrderEvent"/> 
+    <aura:registerEvent name="AccountDeleteEvent" type="c:AccountDeleteEvent"/>
+    <aura:handler event="c:AccountDeleteEvent" action="{!c.deleteAnalyAcc}"/>
+    <aura:attribute name="TotalAAPercentage" type="Decimal" default="0"/>
+    <aura:attribute name="DefTaxRate" type="Decimal" default="0"/>
+    <aura:attribute name="isAccCategoryChanged" type="Boolean" default="false"/>
+    
+    <tr class="slds-hint-parent"><!--cursor-pointer      draggable='true' ondragstart='{!c.start}' ondragover='{!c.dragover}'-->
+        <td  class="valigntop"  data-label="Action">
+            <center>
+                <div >
+                    <lightning:buttonIcon alternativeText="{!$Label.c.Delete_UserAvailabilities}" onclick='{!c.deletePoli}' iconName="utility:delete"  variant="destructive" title="{!v.item.Id}" class="{!if(v.received,'delete-icon-disable','delete-icon')}" disabled="{!v.received}"/>
+                </div>
+            </center>
+            <!-- <center><a onclick="{!c.deletePoli}" data-POLIId="{!v.item.Id}"> iconName="utility:delete"  iconPosition="left"
+                <img src="/resource/ERP7__SLDS0121/assets/icons/action/delete_60_red.png" height="18" width="18" />
+            </a></center>-->
+            
+        </td>
+        <!--<td data-label="Name">
+            <lightning:input type="text" variant="label-hidden" value="{!v.item.ERP7__Sort_Order__c}"  aura:id="poli_Name"/>
+        </td>-->
+        
+        <td  class="valigntop"  data-label="Product">
+            <aura:if isTrue="{!and(!v.item.CustomProd,and(v.item.ERP7__Product__c != null,v.item.ERP7__Product__c != ''))}">
+                <div class="slds-truncate-custom" onmouseover="{!c.lookupClickProduct}" ><!--onclick="{!c.getstockdetails}"-->
+                    <c:CustomInputProduct objectAPIName="Product2" IconName="standard:product" selectedRecordId="{!v.item.ERP7__Product__c}" aura:id="product" qry="{!v.prodqry}"/><!--'AND ERP7__Issue_Purchase_Order__c = true'-->
+                </div>
+                <aura:set attribute="else">
+                	<lightning:input type="text" variant="label-hidden" value="{!v.item.Name}"  aura:id="poli_Name"/>
+                </aura:set>
+            </aura:if>
+        </td>
+        <aura:if isTrue="{!v.versionAccess}">
+            <td  class="valigntop"  data-label="Product">
+                <div class="slds-truncate-custom" >
+                    <c:CustomInputLookUp objectAPIName="ERP7__Version__c" IconName="standard:product" selectedRecordId="{!v.item.ERP7__Version__c}" aura:id="product" qry="{!'And ERP7__Product__c = \''+v.item.ERP7__Product__c+'\''}"/><!--'AND ERP7__Issue_Purchase_Order__c = true'-->
+                </div>
+            </td>
+        </aura:if>
+        <aura:if isTrue="{!and(v.POLINameAcc)}">
+            <td  class="valigntop"  data-label="Name">
+                <lightning:input type="text" variant="label-hidden" value="{!v.item.ERP7__Product__r.ProductCode}"  disabled="true" aura:id="poli_Name"/>
+            </td>
+        </aura:if> 
+        <aura:if isTrue="{!v.showVendor}">
+            <td  class="valigntop"  data-label="VName">
+                <lightning:input type="text" variant="label-hidden" value="{!v.item.ERP7__Vendor_product_Name__c}"  aura:id="Vpoli_Name" maxlength="120"/>
+            </td>
+            <!-- <td>
+                <div class="" onmouseover="{!c.lookupClickApprover}"> 
+                    <c:CustomInputLookUp objectAPIName="ERP7__Approved_Vendor__c" IconName="standard:account" selectedRecordId="{!v.approvedVendor}" 
+                                         aura:id="ven" qry="{!v.venqry}" />
+                </div>
+            </td>-->
+        </aura:if>
+        <td  class="valigntop"  data-label="Cost Card">
+            <div class="slds-truncate-custom" onmouseover="{!c.lookupClickCostCard}">
+                <aura:if isTrue="{!and(and(v.item.ERP7__Product__c != null,v.item.ERP7__Product__c != ''),or(v.recId == null,v.recId == ''))}">
+                    <c:CustomInputLookUp objectAPIName="ERP7__Cost_Card__c" IconName="standard:scan_card" selectedRecordId="{!v.item.ERP7__Cost_Card__c}" 
+                                         aura:id="costCard" qry="{!v.qry}" /><!-- ShowNew="true" defaultvalues="{!v.defaultCCval}" cmpName="ERP7:CreatePurchaseOrder" objName="Cost Card" APIName="ERP7__Cost_Card__c" -->
+                    <aura:set attribute="else">
+                        <c:CustomInputLookUp objectAPIName="ERP7__Cost_Card__c" IconName="standard:scan_card" selectedRecordId="{!v.item.ERP7__Cost_Card__c}"  
+                                             aura:id="costCard" qry="{!v.qry}" />
+                    </aura:set>
+                </aura:if>
+            </div> 
+        </td> 
+        <td  class="valigntop"  data-label="Quantity"> <!-- qty -->
+            <lightning:input type="number" aura:id="qty" variant="label-hidden" value="{!v.item.ERP7__Quantity__c}" onchange="{!c.updateTotalPrice}" maxlength="10" step="{!$Label.c.DecimalplacesinPOScreen}"/> <!-- change="{!c.updateTotalPrice}"  -->
+        </td> 
+        <td  class="valigntop"  data-label="Unit Price" title="">
+            <lightning:input type="number" variant="label-hidden" aura:id="amount" value="{!v.item.ERP7__Unit_Price__c}" onchange="{!c.updateTotalPrice}" step="{!$Label.c.DecimalplacesinPOScreen}"/><!--  disabled="{!and(v.item.ERP7__Cost_Card__c!='',!v.alloweditPrice)}" -->
+        </td> 
+        <aura:if isTrue="{!v.showTaxRate}">
+            <td  class="valigntop"  data-label="Tax Rate" title="">
+                <lightning:input type="number" variant="label-hidden" aura:id="Taxrate" value="{!v.item.ERP7__Tax_Rate__c}" onchange="{!c.UpdateTax}" step="{!$Label.c.DecimalplacesinPOScreen}"/>
+            </td> 
+        </aura:if>
+        <aura:if isTrue="{!v.showTax}">
+            <td class="valigntop" data-label="Tax Amount" title="">
+                <lightning:input type="number" variant="label-hidden" aura:id="Taxamount" value="{!v.item.ERP7__Tax__c}" step="{!$Label.c.DecimalplacesinPOScreen}" disabled="true"/>
+            </td>
+        </aura:if>
+        <td class="valigntop" data-label="Total Price"  title="">
+            <lightning:input type="number" variant="label-hidden" aura:id="Totalamount" value="{!v.item.ERP7__Total_Price__c}"  step="{!$Label.c.DecimalplacesinPOScreen}" messageWhenStepMismatch="" disabled="{!and(and(v.item.ERP7__Cost_Card__c != '',v.item.ERP7__Cost_Card__c != undefined),v.item.ERP7__Cost_Card__c != null)}"/>
+        </td>
+        <aura:if isTrue="{!and(v.ProjectAccess, !v.showAllocation)}">
+            <td class="valigntop" data-label="Total Price"  title="">
+    		<c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" selectedRecordId="{!v.item.ERP7__Chart_of_Account__c}"  IconName="standard:product" placeholder="{!$Label.c.Search_Account}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true"/>
+            </td>
+        </aura:if>
+        <aura:if isTrue="{!and(v.ProjectAccess, v.DepartmentAccess)}">
+            <aura:if isTrue="{!and(v.projectId!=null, v.projectId!='')}">
+                <td class="valigntop" data-label="Department"  title="">
+                    <c:CustomInputLookUp objectAPIName="ERP7__Business_Unit__c" selectedRecordId="{!v.item.ERP7__Organisation_Business_Unit__c}"  IconName="standard:product" placeholder="{!$Label.c.Search_Account}"/>
+                </td>
+            </aura:if>
+        </aura:if>
+        <aura:if isTrue="{!v.versionAccess}">
+            <td width="15%" class="valigntop no-label-cust2" data-label="Description">
+                <lightning:textarea placeholder="{!$Label.c.Enter_Description}" value="{!v.item.ERP7__Description__c}" maxlength="4000" messageWhenTooLong="A maximum of 4000 characters are allowed." class="customwidth200"/>
+            </td>
+            <aura:set attribute="else">
+                <td width="20%" class="valigntop no-label-cust2" data-label="Description">
+                    <lightning:textarea placeholder="{!$Label.c.Enter_Description}" value="{!v.item.ERP7__Description__c}" maxlength="4000" messageWhenTooLong="A maximum of 4000 characters are allowed." class="customwidth400"/>
+                </td>
+            </aura:set>
+        </aura:if>
+        
+        <aura:if isTrue="{!and(v.item.ERP7__Total_Price__c>0.00,v.showAllocation)}">
+            <aura:if isTrue="{!(100 - v.TotalAAPercentage) > 0}">
+                <td  class="valigntop" data-label="">
+                    <i class="fa fa-cogs createbill-class3 createbill-class4" title="{!$Label.c.Add_Analytical_Account}" onclick="{!c.displayAccounts}"/>  
+                </td>
+                <aura:set attribute="else">
+                    <td  class="valigntop" data-label="">
+                        <i class="fa fa-cogs AAnotallowed createbill-class4" title="{!$Label.c.Add_Analytical_Account}" />   
+                    </td>
+                </aura:set>
+            </aura:if>
+        </aura:if>
+    </tr>
+    <!--<aura:if isTrue="{!and(v.item.ERP7__Chart_of_Account__c != '',v.item.ERP7__Chart_of_Account__c != null)}">
+        <aura:if isTrue="{!and(v.projectId != '',v.projectId != null)}">
+            <tr>
+                <td colspan="12" >
+                    <div class="erp_Mark7">
+                        <div class="row m-0">
+                            <div class="col-md-3">
+                                <div class="card mb-2 border1">
+                                    <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col">
+                                                <lightning:icon iconName="utility:money" size="x-small" alternativeText="{!$Label.c.clock}" title=""/><!-/-title="clock"-/->
+                                            </div>
+                                            <div class="slds-col pt-1">
+                                                <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                    &nbsp;Budget Amount</h6>
+                                            </div>
+                                            <div class="slds-col">
+                                                <div class="manageLeave-newClass18">{!v.item.projBudget}</div>
+                                            </div>    
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card mb-2 border1">
+                                    <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col">
+                                                <lightning:icon iconName="utility:budget_category_value" size="x-small" alternativeText="{!$Label.c.clock}" title="" /><!-/-title="clock"-/->
+                                            </div>
+                                            <div class="slds-col pt-1">
+                                                <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                    &nbsp;Committed</h6>
+                                            </div>
+                                            <div class="slds-col">
+                                                <div class="manageLeave-newClass18">{!v.item.projCommittedBudget}</div>
+                                            </div>    
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card mb-2 border1">
+                                    <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col">
+                                                <lightning:icon iconName="utility:budget_category_value" size="x-small" alternativeText="{!$Label.c.clock}" title="" /><!-/-title="clock"-/->
+                                            </div>
+                                            <div class="slds-col pt-1">
+                                                <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                    &nbsp;Consumed</h6>
+                                            </div>
+                                            <div class="slds-col">
+                                                <div class="manageLeave-newClass18">{!v.item.projConsumedBudget}</div>
+                                            </div>    
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card mb-2 border1">
+                                    <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col">
+                                                <lightning:icon iconName="utility:capacity_plan" size="x-small" alternativeText="{!$Label.c.clock}" title=""/><!-/-title="clock"-/->
+                                            </div>
+                                            <div class="slds-col pt-1">
+                                                <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                    &nbsp;Remaining</h6>
+                                            </div>
+                                            <div class="slds-col">
+                                                <div class="manageLeave-newClass18">{!v.item.projRemainingBudget}</div>
+                                            </div>    
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </aura:if>
+    </aura:if>-->
+    <aura:if isTrue="{!and(v.item.ERP7__Product__c != '',v.item.ERP7__Product__c != null)}">
+        <tr>
+            <td colspan="10" >
+                <div class="erp_Mark7">
+                    <div class="row m-0">
+                        <div class="col-md-2">
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card background-success">
+                                <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                    <div class="slds-grid">
+                                        <div class="slds-col">
+                                            <lightning:icon iconName="utility:ad_set" size="x-small" alternativeText="{!$Label.c.clock}" title="" variant="inverse"/><!--title="clock"-->
+                                        </div>
+                                        <div class="slds-col pt-1">
+                                            <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                &nbsp;{!$Label.c.InventoryConsole_Items_in_Stock}</h6>
+                                        </div>
+                                        <div class="slds-col">
+                                            <div class="manageLeave-newClass18">{!v.item.ItemsinStock}</div>
+                                        </div>    
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card background-new">
+                                <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                    <div class="slds-grid">
+                                        <div class="slds-col">
+                                            <lightning:icon iconName="utility:high_velocity_sales" size="x-small" alternativeText="{!$Label.c.clock}" title="" variant="inverse"/><!--title="clock"-->
+                                        </div>
+                                        <div class="slds-col pt-1">
+                                            <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                &nbsp;{!$Label.c.POLI_Awaiting_Stock}: </h6>
+                                        </div>
+                                        <div class="slds-col">
+                                            <div class="manageLeave-newClass18">{!v.item.AwaitingStock}</div>
+                                        </div>    
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card background-inprogress">
+                                <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                    <div class="slds-grid">
+                                        <div class="slds-col">
+                                            <lightning:icon iconName="utility:capacity_plan" size="x-small" alternativeText="{!$Label.c.clock}" title="" variant="inverse"/><!--title="clock"-->
+                                        </div>
+                                        <div class="slds-col pt-1">
+                                            <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                                &nbsp;{!$Label.c.Demand_UsersShiftMatch}:</h6>
+                                        </div>
+                                        <div class="slds-col">
+                                            <div class="manageLeave-newClass18">{!v.item.demand}</div>
+                                        </div>    
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </td>
+        </tr>
+        </aura:if>
+    	
+        <aura:if isTrue="{!and(v.item.Accounts != undefined,v.item.Accounts != null)}">
+            <aura:if isTrue="{!and(v.displayAccount, v.item.Accounts.length>0)}">
+                <tr>
+                    <td colspan="10" >
+                        <div class="erp_Mark7">
+                            <div class="row m-0">
+                                <div class="col-md-2">
+                                </div>
+                                <div class="col-md-3">
+                                    <lightning:select name="poStatus"  label="{!$Label.c.Account_Category}" aura:id="poStatus" value="{!v.item.ERP7__Account_Category__c}" onchange="{!c.resetAA}">
+                                        <aura:iteration items="{!v.PoliCategoryList}" var="item">
+                                            <option text="{!item}" value="{!item}" selected="{!v.item.ERP7__Account_Category__c == item}"/>
+                                        </aura:iteration>
+                                    </lightning:select> 
+                                </div>
+                                <div class="col-md-3">
+                                    <c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" selectedRecordId="{!v.item.ERP7__Chart_of_Account__c}"  IconName="standard:product" label="{!$Label.c.Accounting_Account}" placeholder="{!$Label.c.Search_Account}" qry="{!'And ERP7__Account_Category__c = \''+v.item.ERP7__Account_Category__c+'\''}"/>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </aura:if>
+        </aura:if>
+    
+    
+    <aura:if isTrue="{!v.item.ERP7__Total_Price__c>0.00}">
+        <aura:if isTrue="{!and(v.item.Accounts != undefined,v.item.Accounts != null)}">
+            <aura:if isTrue="{!and(v.displayAccount, v.item.Accounts.length>0)}">
+                <aura:iteration items="{!v.item.Accounts}" var="pitem" indexVar="ind">
+                    <tr>
+                        <td colspan="10" >
+                            <div class="erp_Mark7">
+                                <div class="row m-0 pb-4">
+                                    <div class="col-md-1">
+                                    </div>
+                                    <div class="col-md-1 text-right">
+                                        <div >
+                                            <lightning:buttonIcon alternativeText="{!$Label.c.Delete_UserAvailabilities}" onclick='{!c.deleteAnalyAcc}' iconName="utility:delete" variant="destructive" name="{!ind}" title="{!pitem.Id}" class="delete-icon" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_11-of-12">
+                                                <lightning:input variant="label-hidden" placeholder="{!$Label.c.Analytical_Account_Percent}" formatter="percent" aura:id="Taxrate" value="{!pitem.ERP7__Allocation_Percentage__c}"  step="{!$Label.c.DecimalplacesinPOScreen}" onchange="{!c.updateACTaxAmount}"/>
+                                            </div>
+                                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-12 slds-p-top_xx-small">
+                                                &nbsp;<lightning:icon iconName="utility:percent" size="xx-small"></lightning:icon>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <lightning:input type="number" placeholder="{!$Label.c.Analytical_Account_Amount}"  variant="label-hidden" value="{!pitem.ERP7__Allocation_Amount__c}"  aura:id="Taxamount" step="{!$Label.c.DecimalplacesinPOScreen}" onchange="{!c.updateACTaxPerentage}"/>
+                                    </div>
+                                    <!--aura:if isTrue="{!and(and(v.item.ERP7__Account_Category__c != undefined,v.item.ERP7__Account_Category__c != null),v.item.ERP7__Account_Category__c != '')}"-->
+                                    <div class="col-md-3">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Project__c" selectedRecordId="{!pitem.ERP7__Project__c}"  IconName="standard:product" aura:id="product" placeholder="{!$Label.c.Search_Account}" qry="{!'And ERP7__Account_Category__c = \''+v.item.ERP7__Account_Category__c+'\''}"/>
+                                    </div>
+                                    <!--/aura:if-->
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                    	<td height="20" colspan="12" class="br-bottom"></td>
+                    </tr>
+                </aura:iteration>
+            </aura:if>
+        </aura:if>
+    </aura:if>
+</aura:component>

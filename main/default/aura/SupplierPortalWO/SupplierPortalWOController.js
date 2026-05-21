@@ -1,0 +1,197 @@
+({
+    doInit : function(component, event, helper) {
+        //component.set("v.AccId",event.getParam("AccId"));
+        if(event.getParam("viewHome")){
+            component.set("v.revert",false);
+            $A.createComponent("c:SupplierPortalCommHome",{
+                AccId:component.get("v.AccId")
+            },function(newCmp, status, errorMessage){
+                if (status === "SUCCESS") {
+                    var body = component.find("body");
+                    body.set("v.body", newCmp);
+                }
+            });
+            return;
+        }
+        helper.getworkOrder(component,event);
+    },
+    
+    home :function(component, event, helper){
+        component.set("v.revert",false);
+        $A.createComponent("c:SupplierPortalCommHome",{
+            AccId:component.get("v.AccId")
+        },function(newCmp, status, errorMessage){
+            if (status === "SUCCESS") {
+                var body = component.find("body");
+                body.set("v.body", newCmp);
+            }
+        });
+        
+        
+    },
+    getBills : function(component, event, helper){
+        component.set("v.revert",false);
+         $A.createComponent( "c:SupplierPortalBills", {
+            "AccId":component.get("v.AccId"),               
+        },
+                           function(newCmp) {
+                               if (component.isValid()) {
+                                   var body = component.find("body");
+                                   body.set("v.body", newCmp);        
+                               }
+                           }
+                          );
+    },
+    getPayments : function(component, event, helper){
+        component.set("v.revert",false);
+        $A.createComponent( "c:SupplierPortalPayments", {
+            "AccId":component.get("v.AccId"),               
+        },
+                           function(newCmp) {
+                               if (component.isValid()) {
+                                   var body = component.find("body");
+                                   body.set("v.body", newCmp);        
+                               }
+                           }
+                          );
+    },
+    getRFPs : function(component, event, helper){
+        component.set("v.revert",false);
+        $A.createComponent("c:SupplierRequests",{
+            currentSupplier : component.get("v.AccId")
+        },function(newCmp, status, errorMessage){
+            if (component.isValid() && status === "SUCCESS") {
+                var body = component.find("sldshide");
+                body.set("v.body", newCmp);
+            }
+            else{
+               
+            }
+        });
+    },
+    getExpenses : function(component, event, helper){
+        component.set("v.revert",false);
+         $A.createComponent( "c:SupplierPortalExpense", {
+            "AccId":component.get("v.AccId"),               
+        },
+                           function(newCmp) {
+                               if (component.isValid()) {
+                                   var body = component.find("body");
+                                   body.set("v.body", newCmp);        
+                               }
+                           }
+                          );
+        
+    },
+   getSortedRecords : function(component,event,helper){
+        component.set("v.sortVar",false);  
+        component.set("v.OrderBy",event.currentTarget.id);
+        if(component.get("v.Order")=='DESC') component.set("v.Order",'ASC'); 
+        else if(component.get("v.Order")=='ASC') component.set("v.Order",'DESC');   
+		helper.getworkOrder(component,event);
+    }, 
+    
+    searchUserRecord : function(cmp,event,helper){
+        try{      
+            cmp.set("v.NoSlotsMessage",'');
+            var SearchString = cmp.get("v.SearchString");
+            if(SearchString!='' && SearchString!=undefined){   
+                SearchString=SearchString.toString();
+                var bankStmtlist =[]; bankStmtlist=cmp.get("v.WOListDup");
+                bankStmtlist = bankStmtlist.filter(function (el) {    
+                    return ((el.Name).toString().toLowerCase().indexOf(SearchString.toLowerCase()) != -1);
+                });
+                cmp.set("v.WOList",bankStmtlist);  if(bankStmtlist.length<=0)  cmp.set("v.NoSlotsMessage",'No Data available');                     
+            }else{  //cmp.set("v.WOList",cmp.get("v.WOListDup"));
+                cmp.doInit();
+            }
+            
+        }catch(ex){
+            console.log('searchUser exception=>'+ex);
+        }    
+    }, 
+    
+    setShow : function(cmp,event,helper){
+        cmp.set("v.startCount", 0);
+        cmp.set("v.endCount", 0);
+        cmp.set("v.Offset", 0);
+        cmp.set("v.PageNum", 1);
+        helper.getworkOrder(cmp,event);
+        
+    },
+    
+    Next : function(component,event,helper){
+        if(component.get("v.endCount") != component.get("v.recSize")){
+            var Offsetval = component.get("v.Offset") + parseInt(component.get('v.show'));
+            //alert(Offsetval);    
+            component.set("v.Offset", Offsetval);
+            component.set("v.CheckOffset",true);
+            component.set("v.PageNum",(component.get("v.PageNum")+1));
+            helper.getworkOrder(component,event);
+        }
+    },
+    NextLast : function(component,event,helper){
+        var show = parseInt(component.get("v.show"));
+        if(component.get("v.endCount") != component.get("v.recSize")){ 
+            var Offsetval = (component.get("v.PNS").length-1)*show;
+            //alert(Offsetval);
+            component.set("v.Offset", Offsetval);
+            component.set("v.CheckOffset",true);
+            component.set("v.PageNum",((component.get("v.Offset")+show)/show));
+            var currentTab = component.get("v.selectedTab"); 
+            helper.getworkOrder(component,event);
+        }
+    },
+    Previous : function(component,event,helper){
+        if(component.get("v.startCount") > 1){
+            var Offsetval = component.get("v.Offset") - parseInt(component.get('v.show'));
+            //alert(Offsetval);    
+            component.set("v.Offset", Offsetval);
+            component.set("v.CheckOffset",true);
+            component.set("v.PageNum",(component.get("v.PageNum")-1));
+            helper.getworkOrder(component,event);}
+    },
+    PreviousFirst : function(component,event,helper){
+        var show = parseInt(component.get("v.show"));
+        if(component.get("v.startCount") > 1){
+            var Offsetval = 0;
+            //alert(Offsetval);
+            component.set("v.Offset", Offsetval);
+            component.set("v.CheckOffset",true);
+            component.set("v.PageNum",((component.get("v.Offset")+show)/show));
+            helper.getworkOrder(component,event);}
+    },
+    navigate: function(component, event, helper) {
+        var sobjectId = event.target.dataset.record;
+        //if (sobjectId.indexOf("500") >-1) { //Note 500 is prefix for Case Record
+        var urlEvent = $A.get("e.force:navigateToURL");
+        urlEvent.setParams({
+            "url": '/detail/'+sobjectId,
+            "isredirect" :false
+        });
+        //urlEvent.fire();
+        // $A.get('e.force:refreshView').fire();
+        //window.location.reload();
+        //}
+        /*var sobjectId = event.target.dataset.record;
+        var url='https://erp-mark7-community-developer-edition.eu14.force.com/SupplierPortal/s/detail/'+sobjectId;
+         window.open(url,"_blank");*/
+    
+},
+    getRecord : function(component, event, helper){
+        component.set("v.revert",false);
+        var RecId=event.currentTarget.dataset.recordId;
+        var PageAPI=event.currentTarget.dataset.record;
+        $A.createComponent("c:SupplierFieldSet",{
+            RecordId : RecId, AccId :component.get("v.AccId"), ObName : "Work Orders", PageLayoutName : "ERP7__WO__c"
+        },function(newCmp, status, errorMessage){
+            if (component.isValid() && status === "SUCCESS") {
+                var body = component.find("body");
+                body.set("v.body", newCmp);
+            }
+            else{
+               
+            }
+        }); 
+    }
+})

@@ -1,0 +1,96 @@
+<aura:component access="global" controller="GoogleDriveController" implements="force:appHostable,force:hasRecordId,flexipage:availableForAllPageTypes" >
+    
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>  
+    <aura:attribute name="profile" type="Object"/>
+    <aura:attribute name="isLoggedIn" type="Boolean" default="false"/>
+    <aura:attribute name="showDelete" type="Boolean" default="false"/>
+    <aura:attribute name="SyncSalesforce" type="boolean" default='false'/>
+    <aura:attribute name="SyncGDrive" type="boolean" default='true'/>
+    <aura:attribute name="isFileUploadDisabled" type="Boolean" default="false" />
+    <aura:attribute name="errorMessage" type="String"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="objectApiName" type="String"/>
+    <aura:attribute name="fileRecord" type="Object"/>
+    <aura:attribute name="FileList" type="object"/>
+    <aura:attribute name="fillList" type="String[]" default="[]"/>
+    <aura:attribute name="fileName" type="String" default=""/>
+    
+    <aura:attribute name="recordId" type="Id"/>
+    
+    <aura:attribute name="hasAccess" type="Boolean" default="false" />
+    <aura:if isTrue="{!v.hasAccess}">
+        
+        <aura:if isTrue="{!v.recordId == null}">
+            <div class="slds-grid slds-grid_align-center slds-p-around_x-large" style="margin-top:125px;">
+                <div class="slds-box slds-theme_default">
+                    <h2 class="slds-text-heading_large">Google Drive Authorize</h2><br/>
+                    <aura:if isTrue="{!and(v.profile.userName != null, v.profile.userName != '')}">
+                        <div class="user-profile txtCenter">
+                            <p class="fs20">Welcome, {!v.profile.userName}!</p>
+                            <p>Email: {!v.profile.Email}</p><br/>
+                        </div>
+                        <div class="txtCenter">
+                            <div class="slds-button slds-button_neutral">                        
+                                <img src="/resource/1681827408000/ERP7__PickPackShipResource/assets/images/googledrive.png" class="imgheight" alt="Google Drive Logo"/>
+                                &nbsp;<lightning:button class="btnoverride" onclick="{!c.GoogleLogin}">Switch Google Drive</lightning:button>
+                            </div>
+                        </div>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!or(v.profile.userName == null, v.profile.userName == '')}">
+                        <div class="txtCenter">
+                            <div class="slds-button slds-button_neutral">
+                                <img src="/resource/1681827408000/ERP7__PickPackShipResource/assets/images/googledrive.png" class="imgheight" alt="Google Drive Logo"/>
+                                &nbsp;<lightning:button class="btnoverride" onclick="{!c.GoogleLogin}">Login to Google Drive</lightning:button>
+                            </div>
+                        </div>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!v.errorMessage}">
+                        <div class="error-message">{!v.errorMessage}</div>
+                    </aura:if>
+                </div>
+            </div>
+        </aura:if>
+        
+        <aura:if isTrue="{!v.recordId != null}">
+            <div class="slds-grid slds-grid_align-center">
+                <div class="AbTop" aura:id="mainSpin">
+                    <div class="slds-spinner_container">
+                        <div role="status" class="slds-spinner slds-spinner_medium slds-spinner_brand">
+                            <span class="slds-assistive-text">Loading</span>
+                            <div class="slds-spinner__dot-a"></div>
+                            <div class="slds-spinner__dot-b"></div>
+                        </div>
+                    </div>
+                    <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+                </div>
+                <div class="slds-box slds-theme_default widcss">
+                    <h3 class="slds-text-heading_medium">
+                        <img src="/resource/1681827408000/ERP7__PickPackShipResource/assets/images/googledrive.png" class="imgheight" alt="Google Drive Logo"/>
+                                &nbsp;Google Drive</h3><br/>
+                    <aura:if isTrue="{!or(v.profile.userName == null, v.profile.userName == '')}">
+                        <div class="txtCenter">
+                            <div class="slds-button slds-button_neutral">
+                                <img src="/resource/1681827408000/ERP7__PickPackShipResource/assets/images/googledrive.png" class="imgheight" alt="Google Drive Logo"/>
+                                &nbsp;<lightning:button class="btnoverride" onclick="{!c.GoogleLogin}">Login to Google Drive</lightning:button>
+                            </div>
+                        </div>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!and(v.profile.userName != null, v.profile.userName != '')}">
+                        <!--<b>Note: File size should be less than 6MB.</b> -->
+                        <lightning:fileUpload
+                                              multiple="true"                                              
+                                              recordId="{!v.recordId}"
+                                              disabled="{!v.isFileUploadDisabled}"
+                                              onuploadfinished="{!c.uploadFile}" />
+                        <lightning:input aura:id="SyncSalesforce" type="checkbox" label="Sync to Salesforce" name="SalesforceCheck" checked="{!v.SyncSalesforce}" title="Sync to Salesforce" onchange="{!c.handleCheckSalesforce}"/>
+                            <lightning:input aura:id="SyncDrive" type="checkbox" label="Sync to Google Drive" name="GdriveCheck" title="Sync to Google Drive" checked="{!v.SyncGDrive}" onchange="{!c.handleCheckGDrive}"/> 
+                        <br/>
+                    </aura:if>
+                </div>
+            </div>
+        </aura:if>
+    </aura:if>
+</aura:component>

@@ -1,0 +1,555 @@
+<!--  <aura:component controller="MO_WO_Scheduler" access="global" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction">
+just adding the ,lightning:isUrlAddressable" to allow navigation
+-->
+<aura:component controller="MO_WO_Scheduler" access="global" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction,lightning:isUrlAddressable">
+   <head>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"/>
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom1.css', $Resource.BankReconcile + '/css/font-awesome.css')}" />
+        <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-ltng.css')}" />
+        <ltng:require styles="{!join(',',$Resource.ERPFonts + '/src/stylesheet.css')}" />
+        <ltng:require styles="{!join(',',$Resource.bootStrap + '/css/bootstrap-4.1.css')}"/>
+        
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Contact-Form-Clean.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Features-Boxed.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/styles.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/nouislider.css,
+                              /resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/range-slider.css"/>
+        <!--ltng:require scripts="/resource/ERP7__bootStrap/js/bootstrap.min.js" /-->
+        <ltng:require scripts="/resource/jQuery/js/jquery_3.5.0.min.js'" />
+        
+        <!--<ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" />-->
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/WorkCenterSchedule.css"/>
+    </head>
+    
+    <aura:attribute Name="prodRecordId" type="String" />
+    <aura:attribute Name="SuggestedQTY" type="Decimal"  default="0.0"/>
+    
+    <!-- for displaing Stock -->
+    
+    
+    <aura:attribute Name="ItemsInStock" type="Decimal" default="0.0"/>
+    <aura:attribute Name="demand" type="Decimal" default="0.0"/>
+    <aura:attribute Name="AwaitingStock" type="Decimal" default="0.0"/>
+    <aura:attribute Name="disableScheduleMO" type="Boolean" default="false"/>
+    <aura:attribute Name="Mtask" type="Actions_Tasks__c"/>
+    <aura:attribute name="projectId" type="String"/>
+    <aura:attribute name = "currentMilestones" type = "object"/>
+    <aura:attribute name = "currentProject" type = "Project__c"/>
+    <aura:attribute Name="MOId" type="String" default=""/> <!-- a1q1o000003F4uhAAC -->
+    <aura:attribute Name="WOId" type="String" default=""/> <!-- a1D1o00000St6oYEAR -->
+    <aura:attribute Name="VerId" type="String" default=""/>
+    <aura:attribute Name="RouId" type="String" default=""/>
+    <aura:attribute Name="ProId" type="String" default=""/>
+    <aura:attribute name="Prevent" type="Boolean" default="false" />
+    <aura:attribute name="isChanged" type="Boolean" default="true" />
+    <aura:attribute Name="UnderDevelopment" type="String" default="false"/>
+    <aura:attribute Name="fullScreen" type="Boolean" default="false"/>
+    <aura:attribute Name="RoutingId" type="String" default=""/>
+    <aura:attribute name="Routings" type="Object"/>
+    <aura:attribute name="MOS" type="Object"/>
+    <aura:attribute name="SelectedMO" type="Object"/>
+    <aura:attribute name="SelectedWO" type="Object"/>
+    <aura:attribute name="WorkOrders" type="Object"/>
+    <aura:attribute Name="VersionId" type="String" default=""/>
+    <aura:attribute name="Versions" type="Object"/>
+    <aura:attribute name="SelectedVersion" type="Object"/>
+    <aura:attribute name="Types" type="Object"/>
+    <aura:attribute name="Products" type="Object"/>
+    <aura:attribute name="Solis" type="Object"/>
+    <aura:attribute name="SelectedSoli" type="Object"/>
+    <aura:attribute name="SoliItems" type="Object"/>
+    <aura:attribute name="SelectedSoliItem" type="Object"/>
+    <aura:attribute name="SelectedProduct" type="Object"/>
+    <aura:attribute Name="QTY" type="Integer" default="1"/>
+    <aura:attribute Name="qtyMultiplier" type="Integer" default="1"/>
+    <aura:attribute name="SelectedRouting" type="Object"/>
+    <aura:attribute Name="Flow" type="String" default=""/>
+    <aura:attribute Name="qry" type="String" default=""/>
+    <aura:attribute Name="pId" type="String" default=""/>
+    <aura:attribute Name="sId" type="String" default=""/>
+    <aura:attribute Name="count" type="String" default=""/>
+    <aura:attribute name="Configure" type="Boolean" default="false" />
+    <aura:attribute name="RD" type="String" />
+    <aura:attribute name="NAV" type="String" />
+    <aura:attribute name="tabNavi" type="String" default="MOworkbench"/>
+    <aura:attribute Name="Type" type="String" default="Product"/>
+    <aura:attribute Name="searchStr" type="String" default=""/>
+    <aura:attribute Name="errorMsg" type="String" default=""/>
+    <aura:attribute name="manuOrder" type="Manufacturing_Order__c" default="{'sObjectType':'ERP7__Manufacturing_Order__c'}" />
+    <aura:attribute name="WorkOrder" type="WO__c" default="{'sObjectType':'ERP7__WO__c'}"/>
+    <aura:attribute name="WOS" type="Object"/>
+    <aura:attribute name="WOS2Upsert" type="Object"/>
+    <aura:attribute name="OrdItmId" type="String" default=""/>
+    <aura:attribute name="OrdId" type="String" default=""/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.fetchRoutingInfo}" />
+    <aura:handler name="change" value="{!v.SelectedVersion.Id}" action="{!c.VersionChange}"/>
+    <aura:handler name="change" value="{!v.SelectedRouting.Id}" action="{!c.RoutingChange}"/>
+    <aura:method name="fetchProducts" action="{!c.fetchProducts}"></aura:method>
+    <aura:method name="fetchWOInfo2" action="{!c.fetchWOInfo2}"></aura:method>
+    <aura:method name="fetchMOInfo2" action="{!c.fetchMOInfo2}"></aura:method>
+    <aura:method name="fetchProductRoutingInfo2" action="{!c.fetchProductRoutingInfo2}"></aura:method>
+    <aura:method name="fetchRoutingInfo" action="{!c.fetchRoutingInfo}"></aura:method>
+    <aura:method name="fetchSpecificRoutingInfo" action="{!c.fetchSpecificRoutingInfo}"></aura:method>
+    <aura:method name="fetchVersionRoutingInfo" action="{!c.fetchVersionRoutingInfo}"></aura:method>
+    <aura:handler name="cmpEvent" event="c:SchedulerEvent" action="{!c.handleSchedulerEvent}"/>
+    
+    <aura:attribute name="showPlanner" type="Boolean"/>       
+    <aura:attribute name="showSheduler" type="Boolean"/>
+    <aura:attribute name="showBuilder" type="Boolean"/> 
+    <aura:attribute Name="isStandardOrd" type="Boolean" default="false"/>
+    <aura:attribute name="setVerBasedOnOrdPod" type="Boolean" default="false" />
+    
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <body class="erp_mark7" aura:id="body" style="background:#f5f7fa;">
+        <span class="workcenter-cs2">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <div class="erp_Mark7">
+            <div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),' slds-notify_container slds-is-fixed workcenter-cs3','slds-notify_container slds-is-fixed workcenter-cs4')}" > 
+                <div class="slds-notify slds-notify_toast slds-theme_error workcenter-cs5-1" role="status" >
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_x-small workcenter-cs6" >{!v.errorMsg}
+                        </h2>
+                    </div>
+                    <div class="slds-notify__close workcenter-cs7" >
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}" />	
+                        
+                    </div>
+                </div>
+            </div>
+            <div class="panel-collapse maqsood  erp_Mark7 epr_Mark7">
+                
+                <div class="panel-body workcenter-cs8 pb-0">
+                    <div class="d-flex align-items-center mb-0 workcenter-cs9">
+                        <aura:if isTrue="{!v.tabNavi == 'MOworkbench'}">
+                            <ul class="nav nav-tabs col-6 cs10" role="tablist">
+                                <aura:if isTrue="{!v.showPlanner}">
+                                    <li class="nav-item " onclick="{!c.NavPlanner}"> 
+                                        <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab">
+                                            <i class="fa fa-list workcenter-cs12" aria-hidden="true" ></i>&nbsp;{!$Label.c.Planner_ManufacturingWB}
+                                        </a> 
+                                    </li>
+                                </aura:if>
+                                <aura:if isTrue="{!v.showSheduler}">
+                                    <li class="nav-item active" >  <!--onclick="{!c.NavScheduler}" -->
+                                        <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab" href="#timetracking">
+                                            <i class="fa fa-clock-o workcenter-cs12" aria-hidden="true" ></i>&nbsp;{!$Label.c.Scheduler_ProjectWB}
+                                        </a>
+                                    </li>
+                                </aura:if>
+                                <aura:if isTrue="{!v.showBuilder}">
+                                    <li class="nav-item" onclick="{!c.NavBuilder}">
+                                        <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab" href="#currentproduction" >
+                                            <i class="fa fa-gears workcenter-cs12" aria-hidden="true" ></i>&nbsp;{!$Label.c.Builder_UsersShiftMatch}
+                                        </a>
+                                    </li>
+                                </aura:if>
+                            </ul>
+                        </aura:if>
+                        <aura:if isTrue="{!v.tabNavi == 'WOworkbench'}">
+                            <ul class="nav nav-tabs col-6 workcenter-cs10" role="tablist" >
+                                <li class="nav-item " onclick="{!c.NavServicePlanner}"> 
+                                    <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab" >
+                                        <i class="fa fa-list workcenter-cs12" aria-hidden="true"  ></i>&nbsp;{!$Label.c.Planner_ManufacturingWB}
+                                    </a> 
+                                </li>
+                                <li class="nav-item active" > 
+                                    <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab">
+                                        <i class="fa fa-clock-o workcenter-cs12" aria-hidden="true" ></i>&nbsp;{!$Label.c.Scheduler_ProjectWB}
+                                    </a>
+                                </li>
+                                <li class="nav-item" onclick="{!c.NavServiceBuilder}">
+                                    <a class="nav-link workcenter-cs11" data-toggle="tab" role="tab">
+                                        <i class="fa fa-gears workcenter-cs12" aria-hidden="true" ></i>&nbsp;{!$Label.c.Builder_UsersShiftMatch}
+                                    </a>
+                                </li>
+                            </ul>
+                        </aura:if>
+                        <div class="col-6">
+                            
+                            <div class="card-header workcenter-cs13 pr-3">
+                                <div class="slds-grid slds-wrap">
+                                    
+                                    <div class="col-6 p-0 workcenter-cs14" >
+                                        <div class="slds-grid">
+                                            <div class="col-4 pl-0 pr-0 workcenter-cs15 slds-text-align_right">
+                                                <strong>Version </strong>
+                                            </div>
+                                            <aura:renderIf isTrue="{!(v.isChanged)}">
+                                                <div class="col-8 pl-0">
+                                                    <aura:renderIf isTrue="{!or(v.Type == 'Manufacturing Order', v.Type == 'Work Order')}">
+                                                        <input value="{!v.SelectedVersion.Name}" class="slds-input slds-truncate" disabled="true"/>
+                                                    </aura:renderIf>
+                                                    <aura:renderIf isTrue="{!and(v.Type != 'Manufacturing Order', v.Type != 'Work Order')}">
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="mvr" IconName="standard:flow" selectedRecord="{!v.SelectedVersion}"  qry="{!v.qry}"/>
+                                                    </aura:renderIf>
+                                                </div>
+                                            </aura:renderIf>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 p-0 workcenter-cs14">
+                                        <div class="slds-grid">
+                                            <div class="col-4 pl-0 pr-0 workcenter-cs15 slds-text-align_right"> 
+                                                <strong>{!$Label.c.Routing}</strong>
+                                            </div>
+                                            <div class="col-8 pl-0 pr-0">
+                                                <aura:if isTrue="{!and(v.Type != 'Manufacturing Order', v.Type != 'Work Order')}">
+                                                    <lightning:select  value="{!v.RoutingId}" variant="label-hidden" onchange="{!c.fetchSpecificRoutingInfo}" class="display-lable slds-truncate2">
+                                                        <aura:iteration items="{!v.Routings}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.RoutingId, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                    <aura:set Attribute="else"><input value="{!v.SelectedRouting.Name}" class="slds-input slds-truncate" disabled="true"/></aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <aura:renderIf isTrue="{!v.Configure}">
+                                        <div class="col-1 workcenter-cs16">
+                                            <div class="slds-grid">
+                                                <i class="fa fa-cogs workcenter-cs17" aria-hidden="true"  onclick="{!c.Configure}"></i>
+                                            </div>
+                                        </div>
+                                    </aura:renderIf>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="container-fluid pl-2 pr-2">
+                <div class="row m-0">
+                    <div class="{!if(v.fullScreen,'col-md-0 pl-1 pr-1 pt-2 transitionmaq displaynone','col-md-4 pl-1 pr-1 pt-2 transitionmaq displayblock')}" >
+                        <div class="card shadow-sm">
+                            <div class="text-center slds-grid  mt-0 workcenter-cs18" >
+                                <div class="col-7 pl-0 mb-2">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            
+                                            <lightning:select value="{!v.Type}" onchange="{!c.fetchProducts}" variant="label-hidden" class="display-lable">
+                                                <aura:iteration items="{!v.Types}" var="option">
+                                                    <option text="{!option.label}" value="{!option.value}"/>
+                                                </aura:iteration>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-5 pl-0 mb-2">
+                                    <div class="">
+                                        <span class="">
+                                            <!--<lightning:input oncommit= "{!c.fetchProductsonSearch}" type="Search" value="{!v.searchStr}" placeholder="Search..."/>-->
+                                            <lightning:input oncommit= "{!c.fetchProductsonSearch}" value="{!v.searchStr}" placeholder="{!$Label.c.SalesOrderConsole_Search}" variant="label-hidden"/>
+                                        </span>
+                                    </div> 
+                                </div>
+                                
+                            </div>
+                            <div class="container-fluid">
+                            </div>
+                            <div class="Service-Description maq workcenter-cs20">
+                                <div class="scroll-bar-wrap">
+                                    <div class="scroll-box workcenter-cs34 width99">
+                                        <aura:if isTrue="{!v.isStandardOrd}">
+                                            <aura:if isTrue="{!and((v.Type == 'Sales Order'),v.SoliItems.length > 0)}">
+                                                
+                                                <aura:iteration var="oli" indexVar="count" items="{!v.SoliItems}">
+                                                    <div class="{!if(oli.Id==v.SelectedSoliItem.Id,'card shadow-sm box mb-2 eventSelectedClass slds-truncate workcenter-cs22','card box shadow-sm mb-2 workcenter-cs23')}" data-pId="{!oli.Product2Id}" data-sId="{!oli.Id}" id="{!oli.Id}" data-count="{!count}" onclick="{!c.fetchProductRoutingInfo}">
+                                                        <div class="slds-grid workcenter-cs24">
+                                                            <div class="col-12" >
+                                                                
+                                                                <strong>
+                                                                    <div class="{!if(oli.Id==v.SelectedSoliItem.Id,'slds-truncate-maq uiOutputTextSelected','slds-truncate-maq uiOutputText')}" >
+                                                                        {!count+1}.&nbsp;&nbsp;
+                                                                        <lightning:formattedText value="{!(oli.Product2.Name)}" class="{!if(oli.Id==v.SelectedSoliItem.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                                        <aura:renderIf isTrue="{!(oli.Product2.ProductCode != undefined)}"> 
+                                                                            <lightning:formattedText value="{!('-'+oli.Product2.ProductCode)}" class="{!if(oli.Id==v.SelectedSoliItem.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                                        </aura:renderIf>
+                                                                    </div>
+                                                                </strong>
+                                                                <aura:renderIf isTrue="{!(oli.Product2.ERP7__Picture__c != undefined)}"><img src="{!oli.Product2.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                                <br/>
+                                                            </div>
+                                                        </div>
+                                                        <div class="{!if(oli.Id==v.SelectedSoliItem.Id,'slds-grid uiOutputTextSelected workcenter-cs26','slds-grid uiOutputText workcenter-cs26')}">
+                                                            <div class="col-8 workcenter-cs27" >
+                                                               <i class="fa fa-file-text" aria-hidden="true"></i>&nbsp;{!$Label.c.Order_Console_Sales_Order}&nbsp;<lightning:formattedUrl value="{!'/'+oli.OrderId}" label="{!oli.Order.Name}" target="_blank" class="fcolor"/>
+                                                            </div>
+                                                            <div class="col-4 workcenter-cs28">
+                                                                <i class="fa fa-archive" aria-hidden="true"></i>&nbsp;
+                                                                <aura:renderIf isTrue="{!oli.ERP7__Issue_Manufacturing_Order__c}">
+                                                                    &nbsp; &nbsp; ({!oli.ERP7__MO_Quantity__c} /
+                                                                    <aura:if isTrue="{!oli.Quantity > 0}">
+                                                                        {!oli.Quantity}
+                                                                        <aura:set Attribute="else">0</aura:set>
+                                                                    </aura:if>
+                                                                    )
+                                                                </aura:renderIf>
+                                                                
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </aura:iteration>
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!and((v.Type == 'Sales Order'), v.Solis.length > 0)}">
+                                                    
+                                                    <aura:iteration var="soli" indexVar="count" items="{!v.Solis}">
+                                                        <div class="{!if(soli.Id==v.SelectedSoli.Id,'box eventSelectedClass slds-truncate workcenter-cs22','workcenter-cs23')}" data-pId="{!soli.ERP7__Product__c}" data-sId="{!soli.Id}" id="{!soli.Id}" data-count="{!count}" onclick="{!c.fetchProductRoutingInfo}">
+                                                            <div class="slds-grid workcenter-cs24">
+                                                                <div class="col-12" >
+                                                                    
+                                                                    <strong>
+                                                                        <div class="{!if(soli.Id==v.SelectedSoli.Id,'slds-truncate-maq uiOutputTextSelected','slds-truncate-maq uiOutputText')}" >
+                                                                            {!count+1}.&nbsp;&nbsp;
+                                                                            <lightning:formattedText value="{!(soli.ERP7__Product__r.Name)}" class="{!if(soli.Id==v.SelectedSoli.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                                            <aura:renderIf isTrue="{!(soli.ERP7__Product__r.ProductCode != undefined)}"> 
+                                                                                <lightning:formattedText value="{!('-'+soli.ERP7__Product__r.ProductCode)}" class="{!if(soli.Id==v.SelectedSoli.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                                            </aura:renderIf>
+                                                                        </div>
+                                                                    </strong>
+                                                                    <aura:renderIf isTrue="{!(soli.ERP7__Product__r.ERP7__Picture__c != undefined)}"><img src="{!soli.ERP7__Product__r.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                                    <br/>
+                                                                </div>
+                                                            </div>
+                                                            <div class="{!if(soli.Id==v.SelectedSoli.Id,'slds-grid uiOutputTextSelected workcenter-cs26','slds-grid uiOutputText workcenter-cs26')}">
+                                                                <div class="col-8 workcenter-cs27" >
+                                                                    {!$Label.c.Order_Console_Sales_Order}: <lightning:formattedUrl value="{!'/'+soli.ERP7__Sales_Order__c}" label="{!soli.ERP7__Sales_Order__r.Name}" target="_blank" class="fcolor"/>
+                                                                </div>
+                                                                <div class="col-4 workcenter-cs28">
+                                                                    <aura:renderIf isTrue="{!soli.ERP7__Issue_Manufacturing_Order__c}">
+                                                                        &nbsp; &nbsp;({!soli.ERP7__MO_Quantity__c} <!--{!soli.ERP7__Quantity__c}-->/
+                                                                        <aura:if isTrue="{!soli.ERP7__Quantity__c > 0}">
+                                                                            {!soli.ERP7__Quantity__c}
+                                                                            <aura:set Attribute="else">0</aura:set>
+                                                                        </aura:if>
+                                                                        )
+                                                                    </aura:renderIf>
+                                                                    <aura:renderIf isTrue="{!soli.ERP7__Issue_Work_Order__c}">
+                                                                        &nbsp; &nbsp; ({!soli.ERP7__Quantity__c}/
+                                                                        <aura:if isTrue="{!soli.ERP7__WO_Quantity__c > 0}">
+                                                                            {!soli.ERP7__WO_Quantity__c}
+                                                                            <aura:set Attribute="else">0</aura:set>
+                                                                        </aura:if>
+                                                                        )
+                                                                    </aura:renderIf>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </aura:iteration>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!and(v.Type == 'Product', v.Products.length > 0)}">
+                                            <aura:iteration var="product" indexVar="count" items="{!v.Products}">
+                                                <div class="{!if(product.Product.Id==v.SelectedProduct.Id,'card shadow-sm mb-2 box eventSelectedClass slds-truncate workcenter-cs22','card mb-2 shadow-sm  box eventSelectedClass slds-truncate workcenter-cs23')}" data-pId="{!product.Product.Id}" id="{!product.Product.Id}" data-sId="" data-count="{!count}" onclick="{!c.fetchProductRoutingInfo}">
+                                                    <div class="course">
+                                                        <div class="course-preview">
+                                                            
+                                                            <h2>{!count+1}.&nbsp;
+                                                                <strong>
+                                                                    <lightning:formattedText value="{!(product.Product.Name)}" class="{!if(product.Product.Id==v.SelectedProduct.Id,'uiOutputTextSelected','uiOutputText')}"/> </strong>
+                                                            </h2>
+                                                            <aura:renderIf isTrue="{!(product.Product.ProductCode != undefined)}"> 
+                                                                <lightning:formattedText value="{!('-&nbsp;'+ product.Product.ProductCode)}" class="{!if(product.Product.Id==v.SelectedProduct.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                            </aura:renderIf>
+                                                            <aura:renderIf isTrue="{!(product.Product.ERP7__Picture__c != undefined)}"> &nbsp;&nbsp;<img src="{!product.Product.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                        </div>
+                                                        <div class="course-info">
+                                                            
+                                                            <h6 class="mb-2 slds-truncate" title="{!product.stock}">
+                                                               <i class="fa fa-sitemap text-success" aria-hidden="true"></i>&nbsp;<strong>{!$Label.c.InventoryConsole_Items_in_Stock}</strong>&nbsp; {!product.stock}
+                                                            </h6>
+                                                            <h6 class="mb-2 slds-truncate" title="{!product.AwaitingStock}">
+                                                                <i class="fa fa-archive text-secondary" aria-hidden="true"></i>&nbsp;<strong>{!$Label.c.Awaiting_Stock}</strong>&nbsp; {!product.AwaitingStock}
+                                                            </h6>
+                                                            <h6 class="mb-2 slds-truncate" title="{!product.demand}">
+                                                                <i class="fa fa-rss-square text-danger" aria-hidden="true"></i>&nbsp;<strong>{!$Label.c.Demand_UsersShiftMatch}</strong>&nbsp; {!product.demand}
+                                                            </h6>
+                                                            
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid slds-wrap slds-hide">
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                                            <div class="slds-grid workcenter-cs24">
+                                                                <strong>
+                                                                    <div class="{!if(product.Product.Id==v.SelectedProduct.Id,'slds-truncate-maq uiOutputTextSelected workcenter-cs29','slds-truncate-maq uiOutputText workcenter-cs29')}">
+                                                                        {!count+1}.&nbsp;&nbsp;
+                                                                        <lightning:formattedText value="{!product.Product.Name}" class="{!if(product.Product.Id==v.SelectedProduct.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                                    </div>
+                                                                </strong>
+                                                                <aura:renderIf isTrue="{!(product.Product.ERP7__Picture__c != undefined)}"> &nbsp;&nbsp;<img src="{!product.Product.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                                
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                                            <tr>
+                                                                {!$Label.c.InventoryConsole_Items_in_Stock} {!product.stock}
+                                                                {!$Label.c.Demand_UsersShiftMatch} : {!product.demand}
+                                                                {!$Label.c.Awaiting_Stock} {!product.AwaitingStock}
+                                                            </tr>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </aura:iteration>
+                                        </aura:if>
+                                        <aura:if isTrue="{!and(v.Type == 'Manufacturing Order', v.MOS.length > 0)}">
+                                            <aura:iteration var="MO" indexVar="count" items="{!v.MOS}">
+                                                <div class="{!if(MO.Id==v.SelectedMO.Id,'box eventSelectedClass slds-truncate workcenter-cs22','box eventSelectedClass slds-truncate workcenter-cs23')}" data-pId="{!MO.Id}" id="{!MO.Id}" data-sId="" data-count="{!count}" onclick="{!c.fetchMOInfo}">
+                                                    <div class="slds-grid workcenter-cs24">
+                                                        <strong>
+                                                            <div class="{!if(MO.Id==v.SelectedMO.Id,'slds-truncate-maq uiOutputTextSelected workcenter-cs29','slds-truncate-maq uiOutputText workcenter-cs29')}">
+                                                                {!count+1}.&nbsp;&nbsp;
+                                                                <lightning:formattedText value="{!MO.Name}" class="{!if(MO.Id==v.SelectedMO.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                            </div>
+                                                        </strong>
+                                                        <aura:renderIf isTrue="{!(MO.ERP7__Product__r.ERP7__Picture__c != undefined)}"> &nbsp;&nbsp;<img src="{!MO.ERP7__Product__r.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                    </div>
+                                                </div>
+                                            </aura:iteration>
+                                        </aura:if>
+                                        <aura:if isTrue="{!and(v.Type == 'Work Order', v.WorkOrders.length > 0)}">
+                                            <aura:iteration var="WO" indexVar="count" items="{!v.WorkOrders}">
+                                                <div class="{!if(WO.Id==v.SelectedWO.Id,'box eventSelectedClass slds-truncate workcenter-cs22','box eventSelectedClass slds-truncate workcenter-cs23')}" data-pId="{!WO.Id}" id="{!WO.Id}" data-sId="" data-count="{!count}" onclick="{!c.fetchWOInfo}">
+                                                    <div class="slds-grid workcenter-cs24">
+                                                        <strong>
+                                                            <div class="{!if(WO.Id==v.SelectedWO.Id,'slds-truncate-maq uiOutputTextSelected workcenter-cs29','slds-truncate-maq uiOutputText workcenter-cs29')}">
+                                                                {!count+1}.&nbsp;&nbsp;
+                                                                <lightning:formattedText value="{!WO.Name}" class="{!if(WO.Id==v.SelectedWO.Id,'uiOutputTextSelected','uiOutputText')}"/>
+                                                            </div>
+                                                        </strong>
+                                                        <aura:renderIf isTrue="{!(WO.ERP7__Product__r.ERP7__Picture__c != undefined)}"> &nbsp;&nbsp;<img src="{!WO.ERP7__Product__r.ERP7__Picture__c}" class="workcenter-cs25" /> </aura:renderIf>
+                                                    </div>
+                                                </div>
+                                            </aura:iteration>
+                                        </aura:if>
+                                    </div>
+                                    <div class="cover-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="{!if(v.fullScreen,'col-md-12 pl-1 pr-1 pt-2 transitionmaq','col-md-8 pl-1 pr-1 pt-2 transitionmaq')}" >
+                        <div class="card shadow-sm">
+                            <div class="container-fluid mt-0 mb-0 p-0">
+                                <div class="slds-grid">
+                                    <div class="maqqtynew workcenter-cs30">
+                                        <div class="slds-grid maqqty pl-0 pt-0" >
+                                            <div  onclick="{!c.fullScreen}">
+                                                <aura:if isTrue="{!v.fullScreen}">
+                                                    <i class="fa fa-expand fa-1x text-secondary cursor-pointer" aria-hidden="true" alternativeText="{!$Label.c.toggle}" title="{!$Label.c.toggle}"></i>
+                                                    <!--lightning:icon iconName="utility:toggle" variant="warning" size="x-small" alternativeText="{!$Label.c.toggle}" title="toggle"  class="fill-green"/-->	
+                                                    
+                                                    <aura:set Attribute="else"> 
+                                                        <i class="fa fa-expand fa-1x text-success cursor-pointer" aria-hidden="true" alternativeText="{!$Label.c.toggle}" title="{!$Label.c.toggle}"></i>
+                                                        <!--lightning:icon iconName="utility:toggle" variant="warning" size="x-small" alternativeText="{!$Label.c.toggle}" title="toggle" class="fill-green" /-->	
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                            &nbsp;&nbsp;{!$Label.c.Qty_Pick}
+                                        </div>
+                                    </div>
+                                    <aura:iteration items="[1,2,3,4,5,6,7,8,9,10]" var="item" indexVar="count">
+                                        <aura:if isTrue="{!(v.QTY - item*v.qtyMultiplier) == 0}">
+                                            <div class="col-1 maqdayselected" data-name="{!item}" onclick="{!c.QTY}"><strong>{!item*v.qtyMultiplier}</strong></div>
+                                            <aura:set Attribute="else">
+                                                <div class="col-1 maqday" data-name="{!item}" onclick="{!c.QTY}"><strong>{!item*v.qtyMultiplier}</strong></div>
+                                            </aura:set>
+                                        </aura:if>
+                                    </aura:iteration>
+                                    <div class="slds-col workcenter-cs33">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <aura:if isTrue="{!and(v.SelectedMO != null,v.Type == 'Manufacturing Order')}"> 
+                                                    <lightning:input type="text" variant="label-hidden" value="{!v.QTY}" placeholder="{!$Label.c.Enter_Qty}" class="maq-input" disabled="true"/>1st
+                                                    <aura:set Attribute="else">
+                                                        <lightning:input type="text" variant="label-hidden" value="{!v.QTY}" placeholder="{!$Label.c.Enter_Qty}" class="maq-input" />
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="Service-Description maq workcenter-cs20">
+                                <div class="scroll-bar-wrap">
+                                    <div class="scroll-box workcenter-cs34 ">
+                                        
+                                        <aura:renderIf isTrue="{!(v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Manufacturing Process' || v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Maintenance Process')}">
+                                            <aura:iteration items="{!v.WOS}" var="WO" indexVar="WOCount">
+                                                <div class="workcenter-cs35">
+                                                    <aura:iteration items="{!v.WOS2Upsert}" var="nWO" indexVar="nWOCount">
+                                                        <aura:renderIf isTrue="{!WOCount == nWOCount}">
+                                                            <div class="workcenter-cs36">{!WOCount+1}. &nbsp; {!WO.Name}</div>
+                                                            
+                                                        </aura:renderIf>
+                                                    </aura:iteration>
+                                                    <c:WCScheduler WCUniqueId="{!WOCount}" WCId="{!WO.ERP7__Work_Center__c}" WOId="{!WO.Id}" selDate="{!WO.ERP7__Start_Date__c}" aura:id="CallfetchWorkCenterInfo" disableScheduleMO="{!v.disableScheduleMO}" />
+                                                </div>
+                                            </aura:iteration>
+                                        </aura:renderIf>
+                                    </div>
+                                    <div class="slds-docked-form-footer slds-float_right"  >
+                                        <div class="text-center" >
+                                            <aura:if isTrue="{!and(v.OrdItmId != null,v.OrdItmId != '')}">
+                                                <lightning:button label="{!$Label.c.Cancel_ManageLeave}"  class="slds-button slds-button--neutral widthmaq200" onclick="{!c.navigatetoOrdItm}"/> &nbsp;
+                                            </aura:if>
+                                            <aura:if isTrue="{!and(v.prodRecordId != null,v.prodRecordId != '')}">
+                                                <lightning:formattedUrl value="/lightning/n/ERP7__Inventory_Management_Report" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                                            </aura:if>
+                                            <aura:if isTrue="{!v.Mtask}">
+                                                <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}"  class="slds-button slds-button--neutral" onclick="{!c.goBackTask}"/> &nbsp;
+                                                <aura:set attribute="else">
+                                                    <aura:renderIf isTrue="{!(v.RD == 'yes')}">
+                                                        <aura:renderIf isTrue="{!(v.NAV == 'WCCP')}">
+                                                            <lightning:formattedUrl value="/lightning/n/ERP7__Work_Center_Capacity_Planning" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                                                        </aura:renderIf>
+                                                        <aura:renderIf isTrue="{!(v.NAV == 'WCCPM')}">
+                                                            <lightning:formattedUrl value="/lightning/n/ERP7__MaintenanceSchedule" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                                                        </aura:renderIf>
+                                                        <aura:renderIf isTrue="{!(v.NAV == 'ManufacturingBuilder')}">
+                                                            <lightning:formattedUrl value="/lightning/n/ERP7__Manufacturing_Builder" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                                                        </aura:renderIf>
+                                                        <aura:renderIf isTrue="{!(v.NAV == 'MaintenanceBuilder')}">
+                                                            <lightning:formattedUrl value="/lightning/n/ERP7__Maintenance_Builder" label="{!$Label.c.QuotationConsole_Cancel}" class="slds-button slds-button--neutral" />
+                                                        </aura:renderIf>
+                                                    </aura:renderIf>
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:renderIf isTrue="{!and(v.Type != 'Manufacturing Order', v.Type != 'Work Order')}">
+                                                
+                                                <lightning:button 
+                                                                  label="{!if(v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Manufacturing Process', $Label.c.Schedule_MO,  $Label.c.Schedule_WO)}" 
+                                                                  onclick="{!c.Schedule}" 
+                                                                  class="{!(v.disableScheduleMO ? 'slds-button slds-is-disabled widthmaq200 colorgrey' : 'slds-button slds-button--brand widthmaq200')}" 
+                                                                  disabled="{!v.disableScheduleMO}" />
+
+                                               <!-- <lightning:button label="{!if(v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Manufacturing Process',$Label.c.Schedule_MO,'Schedule WO')}" onclick="{!c.Schedule}" class="slds-button slds-buttonb-brand widthmaq200" disabled="{!v.disableScheduleMO}"/> -->
+                                            </aura:renderIf>
+                                            <aura:renderIf isTrue="{!and(v.Type == 'Manufacturing Order', v.SelectedMO.Id != undefined)}">
+                                                
+                                                <lightning:button label="{!$Label.c.Update_Manufacturing_Order}" onclick="{!c.UpdateMO}" class="slds-button slds-button--brand widthmaq200"/>
+                                            </aura:renderIf>
+                                            <aura:renderIf isTrue="{!and(v.Type == 'Work Order', v.SelectedWO.Id != undefined)}">
+                                                <lightning:button label="{!$Label.c.Update_Work_Order}" onclick="{!c.UpdateWO}" class="slds-button slds-button--brand widthmaq200"/>
+                                            </aura:renderIf>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cover-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</aura:component>

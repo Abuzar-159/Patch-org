@@ -1,0 +1,1345 @@
+<apex:component access="public" id="fedexComp"><!--controller="FEDEXHandler" allowDML="true"-->
+
+   <!-- <apex:attribute access="public" assignTo="{!shipId}" name="shipmentId" type="String" description="Shipment ID" id="shipIds"/>
+    <apex:attribute access="public" assignTo="{!packIds}" name="packageIds" type="Id[]" description="Multiple packae Id" id="pkgIds"/>
+    <apex:attribute access="public" assignTo="{!retValue}" name="returnValue" type="String" description="Return value for navigation"/>  -->  
+    
+    <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">    
+        <head>
+            <meta charset="utf-8" /> 
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+            <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.bootStrap,'/js/bootstrap.min.js')}"/>
+            <apex:includeScript value="{!URLFOR($Resource.Order_Console,'assets/js/jquery.metisMenu.js')}" />
+            <apex:includeScript value="{!URLFOR($Resource.Order_Console,'assets/js/custom.js')}" />
+            <apex:includeScript value="{!URLFOR($Resource.Barcode_Scanner_JS)}" />
+            <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.Order_Console, '/assets/styles/custom.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.Order_Console, '/assets/styles/font-awesome.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+            <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design.css')}" /> 
+        </head>
+        
+        <style>
+        
+
+        .datePicker select {
+    vertical-align: middle;
+    border: 1px solid #ddd;
+    padding: 2px;
+    font-size: 12px;
+}
+
+.datePicker .dateBar {
+    padding: 0px 0 4px;
+}
+
+.datePicker .calDays .dayOfWeek {
+    color: #4a4a56;
+    font-size: 1rem;
+    font-weight: normal;
+    padding: 2px;
+}
+.datePicker .calDays .dayOfWeek, 
+.datePicker .calDays .weekday, 
+.datePicker .calDays .weekend {
+    background: none;
+    border: 0;
+    padding: 2px;
+}
+.datePicker .calDays td {
+    font-size: 1.15rem;
+}
+        .slds .slds-table th, .slds .slds-table td {
+    padding: 4px;
+    white-space: nowrap;
+}
+        .slds .slds-table tr > th:last-child, .slds .slds-table tr > td:last-child {
+    padding-right: 5px;
+}
+        .slds .slds-table tr > th:first-child, .slds .slds-table tr > td:first-child {
+    padding-left: 10px;
+}
+   .slds .slds-table .slds-truncate2 {
+    min-width: 52px;
+    width: 67px;
+    white-space: normal;
+    word-break: break-all;
+}
+    .slds .slds-button--brand:hover, .slds.slds-button--brand:focus {
+        background-color: #31d0e5;
+        color: white;
+    }
+        .epr_Mark7 h1, .epr_Mark7 .h1, .epr_Mark7 h2, .epr_Mark7 .h2, .epr_Mark7 h3, .epr_Mark7 .h3 {
+        margin-top: 0px;
+        margin-bottom: 10px;
+    }
+       
+    
+    .epr_Mark7 .table-bordered > thead > tr > th, .epr_Mark7 .table-bordered > tbody > tr > th, .epr_Mark7 .table-bordered > tfoot > tr > th, .epr_Mark7 .table-bordered > thead > tr > td, .epr_Mark7 .table-bordered > tbody > tr > td, .epr_Mark7 .table-bordered > tfoot > tr > td{
+        border:1px solid #ffffff;
+    }
+    .epr_Mark7 .table-bordered {
+        border: 1px solid #ffffff;
+    }
+    .epr_Mark7 .nav-tabs > li > a {
+    margin-right: 12px;
+    line-height: 1.42857143;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+    color:#60cdde;
+    text-transform:uppercase;
+    font-size: 12px;
+}
+     .epr_Mark7 .nav>li>a:hover,
+    .epr_Mark7 .nav>li>a:focus {        
+        text-decoration: none;
+        background-color: #fff;
+        border-bottom: 2px solid #0070d2!important;
+    }   
+    .epr_Mark7 .nav-tabs > li.active > a, .epr_Mark7 .nav-tabs > li.active > a:hover, .epr_Mark7 .nav-tabs > li.active > a:focus {
+        color: #7cdbff;
+        cursor: default!important;
+        background-color: #fff!important;
+        border: 0;
+        border-bottom: 3px solid #2196f3!important;
+    }        
+    .epr_Mark7 .nav-tabs > li > a:hover {
+        border-color: #fff #fff #fff;    
+    }
+        
+         .slds .slds-button:hover,
+    .slds .slds-button:focus,
+    .slds .slds-button:active,
+    .slds .slds-button:visited {
+      text-decoration: none; }
+    .slds .slds-button:hover,
+    .slds .slds-button:focus {
+      color: #31d0e5; }
+    .slds .slds-button:focus {
+      outline: 0;
+      box-shadow: 0 0 3px #0070D2; }
+    .slds .slds-button:active {
+      color: #31d0e5; }
+        .slds .slds-button {
+  
+    color: #31d0e5;
+   
+}
+        .slds .slds-button--brand {
+    padding-left: 16px;
+    padding-right: 16px;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #0070d2;
+    background-color: #31d0e5;
+    border: 1px solid #31d0e5;
+    : 5px 7px;
+}
+        .epr_Mark7 .popover.top>.arrow {
+            bottom: -11px;
+            left: 50%;
+        }    
+        .epr_Mark7 .popover {
+            position: absolute;
+            top: 0;
+            left: -8px !important;
+            z-index: 1060;
+            display: none;
+            max-width: 376px;
+            padding: 1px;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            font-weight: normal;
+            line-height: 1.42857143;
+            text-align: left;
+            white-space: normal;
+            background-color: #fff;
+            -webkit-background-clip: padding-box;
+            background-clip: padding-box;
+            border: 1px solid #ccc;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+        /* Css For Switch */    
+        .erp_mark7.switch {
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            width: 56px;
+            height: 20px;
+            padding: 3px;
+            background-color: white;
+            border-radius: 18px;
+            box-shadow: inset 0 -1px white, inset 0 1px 1px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            background-image: -webkit-linear-gradient(top, #eeeeee, white 25px);
+            background-image: -moz-linear-gradient(top, #eeeeee, white 25px);
+            background-image: -o-linear-gradient(top, #eeeeee, white 25px);
+            background-image: linear-gradient(to bottom, #eeeeee, white 25px);
+        }    
+        .erp_mark7.switch-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+        }    
+        .erp_mark7.switch-label {
+            position: relative;
+            display: block;
+            height: inherit;
+            font-size: 10px;
+            text-transform: uppercase;
+            background: #eceeef;
+            border-radius: inherit;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 0 2px rgba(0, 0, 0, 0.15);
+            -webkit-transition: 0.15s ease-out;
+            -moz-transition: 0.15s ease-out;
+            -o-transition: 0.15s ease-out;
+            transition: 0.15s ease-out;
+            -webkit-transition-property: opacity background;
+            -moz-transition-property: opacity background;
+            -o-transition-property: opacity background;
+            transition-property: opacity background;
+        }    
+        .erp_mark7.switch-label:before,
+        .switch-label:after {
+            position: absolute;
+            top: 50%;
+            margin-top: -.5em;
+            line-height: 1;
+            -webkit-transition: inherit;
+            -moz-transition: inherit;
+            -o-transition: inherit;
+            transition: inherit;
+        }        
+        .erp_mark7.switch-label:before {
+            content: attr(data-off);
+            right: 11px;
+            color: #aaa;
+            text-shadow: 0 1px rgba(255, 255, 255, 0.5);
+        }    
+        .erp_mark7.switch-label:after {
+            content: attr(data-on);
+            left: 11px;
+            color: white;
+            text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+        }        
+        .erp_mark7.switch-input:checked~.switch-label {
+            background: #4fb845;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 0 3px rgba(0, 0, 0, 0.2);
+        }    
+        .erp_mark7.switch-input:checked~.switch-label:before {
+            opacity: 0;
+        }        
+        .erp_mark7.switch-input:checked~.switch-label:after {
+            opacity: 1;
+        }    
+        .erp_mark7.switch-handle {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+            background-image: -webkit-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: -moz-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: -o-linear-gradient(top, white 40%, #f0f0f0);
+            background-image: linear-gradient(to bottom, white 40%, #f0f0f0);
+            -webkit-transition: left 0.15s ease-out;
+            -moz-transition: left 0.15s ease-out;
+            -o-transition: left 0.15s ease-out;
+            transition: left 0.15s ease-out;
+        }    
+        .erp_mark7.switch-handle:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin: -6px 0 0 -6px;
+            width: 12px;
+            height: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            box-shadow: inset 0 1px rgba(0, 0, 0, 0.02);
+            background-image: -webkit-linear-gradient(top, #eeeeee, white);
+            background-image: -moz-linear-gradient(top, #eeeeee, white);
+            background-image: -o-linear-gradient(top, #eeeeee, white);
+            background-image: linear-gradient(to bottom, #eeeeee, white);
+        }    
+        .erp_mark7.switch-input:checked~.switch-handle {
+            left: 40px;
+            box-shadow: -1px 1px 5px rgba(0, 0, 0, 0.2);
+        }    
+        .erp_mark7.switch-green>.switch-input:checked~.erp_mark7.switch-label {
+            background: #4fb845;
+        }
+        /* ENds here */    
+        .epr_Mark7 .nav>li>a {
+            position: relative;
+            display: block;
+            padding: 7px 7px;
+        }    
+        .epr_Mark7 .panel-default>.panel-heading {
+            color: #fff;
+            border-color: #3d1900;
+           background-color:#31d0e5;
+           /*background-color: #4d148c;
+            background: -moz-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -webkit-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -o-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: -ms-linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);
+            background: linear-gradient(top, rgba(149, 120, 186, 1) 2%, rgba(77, 20, 140, 1) 50%);*/
+        }        
+        .slds .slds-theme--alt-inverse {
+            background-color: #3d1900;
+            color: white;
+            border-color: #3d1900;
+        }    
+       
+        .slds a {
+            color: #4d148c;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+        }        
+        
+        .slds a:hover {
+           <!--  color: #ffffff; -->
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+        }
+        .slds maq {
+            color: #3d1900;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+            cursor: pointer;
+            font-family: "Salesforce Sans", Arial, sans-serif;
+        }        
+        .slds maq:hover {
+            color: #3d1900;
+            text-decoration: none;
+            -webkit-transition: color 0.1s linear;
+            transition: color 0.1s linear;
+            cursor: pointer;
+            font-family: "Salesforce Sans", Arial, sans-serif;
+        }
+        input {
+            padding-top: 0;
+            border: 1px solid #ddd;
+            border-radius : 5px;
+            padding: 5px;
+        }
+        .dateFormat {
+            padding: 0 2px;
+            display: none;
+        }
+        .slds .slds-table .slds-truncate {
+            min-width: 52px;
+            max-width: 300px;
+        }
+        </style>
+        
+        <body>
+        
+          <!--  <apex:actionFunction name="getAddressT" action="{!fetchAddress}" reRender="toAddressPnl,ratePnl,processShipPnl,trackPnl,messagePnl" status="spinnerT"/>        
+            <apex:actionFunction name="getAddressF" action="{!fetchAddress}" reRender="fromAddressPnl,ratePnl,processShipPnl,trackPnl,messagePnl" status="spinnerF"/>
+            <apex:actionFunction name="passStringToController" action="{!Shipping_Rate}" reRender=";"/> 
+            <apex:actionFunction name="tracking" action="{!Track_Request}" status="spinnerPR" reRender="trackPnl,ratePnl,processShipPnl,messagePnl"/>
+            <apex:actionFunction name="callUpsLabel" action="{!CreateFedexLabel}" />--> 
+            
+            <div class="slds">
+                <div class="epr_Mark7">
+                    <div class="container-fluid" style="overflow-y:hidden;">
+                       <!-- <div class="row">                        
+                            <div class="col-sm-12 col-md-12" style="padding-left: 0px;padding-right: 0px;">
+                                <div class="slds-page-header" style="padding:4px;"> 
+                                    <img src="https://erp-mark-7-dev-ed--c.eu37.content.force.com/servlet/servlet.FileDownload?file=01506000006xbVi" width="92" height="40" alt="Fedex"  style="margin-top:4px;margin-left:10px;"/>
+                                
+                                    <ul class="nav navbar-nav navbar-right">
+                                        <li> <apex:commandLink value="Back" action="{!back}" styleClass="slds-button slds-button--brand" style="background-color: #31d0e5;color:#ffffff;padding: 5px 5px;margin-top: 5px;  margin-right: 5px;"/> </li>
+                                        <li>&nbsp;</li> <li>&nbsp;</li> <li>&nbsp;</li>
+                                    </ul>                                      
+                                </div>                                
+                            </div>                            
+                        </div>-->
+                        
+                        <apex:pageMessages id="messagePnl"/>
+                        
+                        <!-- left section -->
+                        <div class="row">
+                         <!--   <apex:outputText value="{!shipperProvinceCode}" styleClass="slds-input"/>
+                            <apex:outputText value="{!shipperCountryCode}" styleClass="slds-input"/>
+                            <apex:outputText value="{!DestinationProvinceCode}" styleClass="slds-input"/>
+                            <apex:outputText value="{!DestinationCountryCode}" styleClass="slds-input"/>-->
+                            <div class="col-sm-12 col-md-6 slds-m-top--small">
+                                <div class="panel-group" id="accordion">
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title ">                                            
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse1" style="text-decoration:none; color:#fff;">1. Where is this shipment going?</a>
+                                                <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: -4.4%; margin-left: 90.6%;">
+                                                    <apex:actionStatus id="spinnerT">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="30px;" width="30px;"/>
+                                                        </apex:facet>
+                                                    </apex:actionStatus> 
+                                                </div>
+                                            </h4>
+                                        </div>
+                                        
+                                        <!-- Shipto Address -->
+                                        <div id="collapse1" class="panel-collapse collapse in">
+                                            <apex:outputPanel id="toAddressPnl">
+                                                <div class="panel-body">
+                                                    <!-- Shipto Row1 -->
+                                                    <!--<div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">To Address:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!toAddr.Ship_To_Address__c}" style="width:100%; height:36px;" onchange="getAddressT();"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                        
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Company:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Company__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Contact:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Name}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                    </div>-->
+                                                    <!-- @end of Shipto Row1 -->
+                                                    
+                                                    <!-- Shipto Row2 -->
+                                                  <!--  <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Email}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Phone:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Contact__r.Phone}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 1:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Address_Line1__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                    </div>   -->                                         
+                                                    <!-- @end of Shipto Row2 -->
+                                                    
+                                                    <!-- Shipto Row3 -->
+                                                   <!-- <div class="row">                                                
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 2:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Address_Line2__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">City/town:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.City__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">State/County:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!shippingAddress.State__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                  
+                                                    </div>  -->                                          
+                                                    <!-- @edn of Shipto Row3 -->
+                                                    
+                                                    <!-- Shipto Row4 -->
+                                                    <div class="row">                                                
+                                                       <!-- <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip/Post code:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!shippingAddress.Postal_Code__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Country:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!shippingAddress.Country__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>      
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Is Residential</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone1" value="{!toShipmentType}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>                                                        
+                                                        </div> -->                                                 
+                                                    </div>
+                                                    <!-- @end of Shipto Row4 -->
+                                                </div>                                                
+                                            </apex:outputPanel>
+                                        </div>
+                                        <!-- @end of Shipto Address -->                                          
+                                    </div>
+                                    
+                                    <!-- Shipfrom Address -->
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse2" style="text-decoration:none; color:#fff;">2. Where is this shipment coming from?</a>
+                                                <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: -4.4%; margin-left: 90.6%;">
+                                                    <apex:actionStatus id="spinnerF">
+                                                        <apex:facet name="start">
+                                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="30px;" width="30px;"/>
+                                                        </apex:facet>
+                                                    </apex:actionStatus> 
+                                                </div>
+                                            </h4>                                                
+                                        </div>
+                                        
+                                        <div id="collapse2" class="panel-collapse collapse in">
+                                            <apex:outputPanel id="fromAddressPnl">
+                                                <div class="panel-body">
+                                                    <!-- Shipfrom Row1 -->
+                                                    <div class="row">
+                                                      <!--  <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">From Address:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddr.Bill_To_Address__c}" style="width:100%; height:36px;" onchange="getAddressF();"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Company:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Company__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Contact:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Name}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>-->
+                                                    </div>
+                                                    <!-- @end of Shipfrom Row1 -->
+                                                    
+                                                     <!-- Shipfrom Row2 -->
+                                                    <div class="row">
+                                                      <!--  <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Email}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>       
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Phone:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Contact__r.Phone}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 1:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Address_Line1__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>   -->                                              
+                                                    </div>                                            
+                                                    <!-- @end of Shipfrom Row2 -->
+                                                    
+                                                    <!-- Shipfrom Row3 -->                                                
+                                                 <!--   <div class="row">                                                
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Address Line 2:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.Address_Line2__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">City/town:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!fromAddress.City__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">State/County:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.State__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>                                                   
+                                                    </div>-->
+                                                    <!-- @end of Shipfrom Row3 -->
+                                                    
+                                                    <!-- Shipfrom Row4 -->
+                                                    <!--<div class="row">                                                    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Zip/Post code:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.Postal_Code__c}" styleClass="slds-input"/>    
+                                                                </div>
+                                                            </div>
+                                                        </div>  
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Country:</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputText value="{!fromAddress.Country__c}" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Is Residential</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone2" value="{!fromShipmentType}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>                                                        
+                                                        </div>                                                                              
+                                                    </div>-->
+                                                    <!-- @end of Shipfrom Row4 -->                                                
+                                                </div>                                                
+                                            </apex:outputPanel>                                            
+                                        </div>                                        
+                                    </div>                                    
+                                    <!-- @end of Shipfrom Address -->
+                                    
+                                    <!-- package details -->
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse3" style="text-decoration:none; color:#fff;">3. What are you shipping?</a>
+                                            </h4>
+                                        </div>
+                                        
+                                        <div id="collapse3" class="panel-collapse collapse in">
+                                            <div class="panel-body" style="padding: 15px 2px;">
+                                                <div class="col-sm-12 slds-m-top--small" style="overflow-y:hidden; overflow-x:auto;">
+                                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                                                        <thead>
+                                                            <tr class="slds-text-title--caps">
+                                                                <!--<th scope="col"> <div class="slds-truncate2" title="Sl.no">Sl.no</div> </th>-->
+                                                                <th scope="col"> <div class="slds-truncate2" title="Package Name">Package</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Order">Order</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Weight">Weight</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Length">Length</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Width">Width</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Height">Height</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate2" title="Declared Value">Declared Value</div> </th>
+                                                            </tr>
+                                                        </thead>
+                                                        
+                                                        <tbody>
+                                                            <apex:variable value="{!1}" var="pkgCounter"/>
+                                                          <!--  <apex:repeat value="{!packages}" var="pkg">
+                                                                <tr>
+//<td data-label="Serial No.">
+                                                                        <div class="slds-truncate2" title="Serial No"> <apex:outputText value="{!pkgCounter}."/> </div>
+</td>// commented
+                                                                    <td data-label="Package Name">
+                                                                        <div class="slds-truncate2" title="Package Name"> <apex:outputField value="{!pkg.Name__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Order">
+                                                                        <div class="slds-truncate2" title="Order"> <apex:outputField value="{!pkg.Logistic__r.Order__c}" style="color:black;" /> </div>
+                                                                    </td>
+                                                                    <td data-label="Weight">
+                                                                        <div class="slds-truncate2" title="Weight"> <apex:outputText value="{!pkg.Weight__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Length">
+                                                                        <div class="slds-truncate2" title="Length"> <apex:outputText value="{!pkg.Length__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Width">
+                                                                        <div class="slds-truncate" title="Width"> <apex:outputText value="{!pkg.Width__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Height">
+                                                                        <div class="slds-truncate2" title="Height"> <apex:outputText value="{!pkg.Height__c}"/> </div>
+                                                                    </td>
+                                                                    <td data-label="Declared Value">
+                                                                        <div class="slds-truncate2" title="Declared Value"> <apex:inputText styleClass="slds-input" style="width: 100%;" value="{!pkg.Declared_Value__c}"/> </div>
+                                                                    </td>                                                    
+                                                                </tr>    
+                                                            <apex:variable value="{!pkgCounter + 1}" var="pkgCounter"/>
+                                                            </apex:repeat>-->
+                                                        </tbody>                                                        
+                                                    </table>                                                    
+                                                </div>                                                
+                                            </div>                                            
+                                        </div>                                        
+                                    </div>                                    
+                                    <!-- @end of package details -->
+                                    
+                                    <!-- invoice details -->
+                                    <div class="panel panel-default">
+                                        <div class="panel-heading">
+                                            <h4 class="panel-title">
+                                                <a data-toggle="collapse" data-parent="#accordion" href="#collapse6" style="text-decoration:none; color:#fff;">4. Invoice Details</a>
+                                            </h4>
+                                        </div>
+                                        <div id="collapse6" class="panel-collapse collapse in">
+                                            <div class="panel-body">
+                                                <!-- invoice row1 -->
+                                              <!--  <div class="row">
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Invoice Number:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputText id="invNo" value="{!Shipment.Invoice_Number__c}" styleClass="slds-input"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Purchase Order Number:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputText id="poNo" value="{!Shipment.Purchase_Order_Number__c}" styleClass="slds-input"/>
+                                                            </div>
+                                                        </div>
+                                                    </div> 
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Terms Of Shipment</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <div class="slds-select_container">
+                                                                        <apex:inputField id="tos" value="{!Shipment.Terms_Of_Shipment__c}" styleClass="slds-select"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>                                                
+                                                </div> -->                                               
+                                                <!-- @end of invoice row1 -->
+                                                
+                                                <!-- invoice row2 -->
+                                                <!--<div class="row">                                                    
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Reason For Export</label>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <div class="slds-select_container">
+                                                                        <apex:inputField id="rfe" value="{!Shipment.Reason_For_Export__c}" styleClass="slds-select"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-12 col-sm-4 col-md-4">
+                                                        <div class="slds-form-element">
+                                                            <label class="slds-form-element__label" for="text-input-01">Declaration Statement:</label>
+                                                            <div class="slds-form-element__control">
+                                                                <apex:inputTextarea id="decStmt" value="{!Shipment.Declaration_Statement__c}" styleClass="slds-input" style="width: 168px;"/>
+                                                            </div>
+                                                        </div>
+                                                    </div>                    
+                                                </div>-->
+                                                <!-- @end of invoice row2 -->                                            
+                                            </div>                                        
+                                        </div>                                        
+                                    </div>
+                                    <!-- @end of invoice details -->                                                                    
+                                </div>                                                                
+                            </div>                                                    
+                        <!-- @end of left section -->
+                        
+                        <!-- right section -->
+                        <div class="col-xs-12 col-sm-12 col-md-6 slds-m-top--small">
+                            <div id="collapse8" class="panel-collapse collapse in">
+                                <div class="panel-body" style="padding:0px;">
+                                    <!-- Nav tabs --> 
+                                    <ul class="nav nav-tabs " role="tablist">
+                                        <li class="nav-item active">
+                                            <a class="nav-link" data-toggle="tab" href="#home" role="tab">
+                                            <i class="fa fa-file-text" aria-hidden="true"></i>&nbsp;Shipping Services / Cost </a>
+                                        </li>    
+                                        <li class="nav-item ">
+                                            <a class="nav-link" data-toggle="tab" href="#ups" role="tab">
+                                            <i class="fa fa-th-large" aria-hidden="true"></i>&nbsp;Process Shipment </a>
+                                        </li>    
+                                        <li class="nav-item"> 
+                                            <a class="nav-link" data-toggle="tab" href="#trackshipment" role="tab" onclick="tracking();">
+                                            <i class="fa fa-truck fa-1x"></i>&nbsp;Track Shipment </a>
+                                        </li>
+                                    </ul>
+                                    <!-- @end of Nav tabs --> 
+                                    
+                                    <!-- Tab panels -->
+                                    <div class="tab-content">
+                                        <!-- tab 1 -->
+                                        <div class="tab-pane active" id="home" role="tabpanel">
+                                           <apex:outputPanel id="ratePnl">
+                                                <div class="panel-body">
+                                                    <!-- Row 1 -->
+                                                  <!--  <div class="row">    
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Shipment Date</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!Shipment.Shipment_Date__c}" id="shipdate" styleClass="slds-input"/>
+                                                                </div>
+                                                            </div>
+                                                        </div> 
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Description</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputTextarea id="desp" value="{!Shipment.Description__c}" styleClass="slds-input" style="width: 100%;"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Signature Services</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputField value="{!Shipment.Signature_Services__c}"  id="sigservice" styleClass="slds-select"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                    </div>-->
+                                                    <!-- @end of Row 1 -->
+                                                    
+                                                    <!-- Row 2 --> 
+                                                   <!-- <div class="row">
+                                                        <div class="col-xs-12 col-sm-4 col-md-4" style="display:{!if(retValue == 'SR', '','none')}">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Email from Third Party</label>
+                                                                <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                    <label class="slds-checkbox">
+                                                                        <apex:inputCheckbox id="checkedone3" value="{!shipment.Email_from_Third_Party__c}"/>
+                                                                        <span class="slds-checkbox--faux"></span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xs-12 col-sm-4 col-md-4" style="display:{!if(retValue == 'SR', '','none')}">
+                                                            <div class="slds-form-element">
+                                                                <label class="slds-form-element__label" for="text-input-01">Message</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:inputTextarea id="mess" value="{!Shipment.Message__c}" styleClass="slds-input" style="width: 180px;"/>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="col-md-12">
+                                                            <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: 3.4%;"> 
+                                                                <apex:commandLink value="Get Rates" action="{!Shipping_Rate}" rendered="{!if(Result == 'Package Shipped Successfully', false, true)}" reRender="ratePnl,messagePnl" styleClass="slds-button slds-button--neutral" style="padding:0px 22px 0px 23px;" status="spinnerSR"/>
+                                                                <br/> 
+                                                                Request 1 : <br/><apex:outputText value="{!request_1}"></apex:outputText><br/>
+                                                                Response 1 : <br/><apex:outputText value="{!response_1}"></apex:outputText> 
+                                                                <br/><br/>
+                                                            </div>
+                                                            <div class="col-xs-12 col-sm-4 col-md-4" style="margin-top: -5.6%; margin-left: 84.6%;">
+                                                                <apex:actionStatus id="spinnerSR">
+                                                                    <apex:facet name="start">
+                                                                        <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                    </apex:facet>
+                                                                </apex:actionStatus>
+                                                            </div>
+                                                        </div> 
+                                                    </div> -->
+                                                    <!-- @end of Row 2 -->
+                                                    <div class="row">&nbsp;</div>
+                                                    <apex:outputPanel id="RateRes">
+                                                        <!--
+                                                        <apex:outputPanel style="display : {!if(tab1_Message != null && tab1_Message != '', '', 'none')}">
+                                                            <div class="row" style="text-align: center;">
+                                                                <apex:outputText value="{!tab1_Message}" style="color:red;"/>
+                                                            </div> 
+                                                        </apex:outputPanel>  
+                                                        -->
+                                                      <!--  <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                            <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                        </apex:outputPanel> 
+                                                        <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '' && errorMsg1 != 'The Shipment Is Unavailable', '', 'none')}">
+                                                            <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel style="display : {!if(result != null && result != '' && result != 'Package Shipped Successfully', true, false)}">
+                                                            <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                        </apex:outputPanel> -->
+                                                     </apex:outputPanel>
+                                                    
+                                                    <!-- 
+                                                    Request : <br/><apex:outputText value="{!request_1}"></apex:outputText><br/><br/>
+                                                    Response : <br/><apex:outputText value="{!response_1}"></apex:outputText>
+                                                    -->
+                                                    
+                                                    <div class="row">
+                                                        <!--<apex:outputPanel rendered="{!time_in_cost_tab}">
+                                                            <apex:pageMessage title="Info:" summary="All rate quotes are estimates only and may differ from the actual invoiced amount." severity="info" strength="3"/>
+                                                       
+                                                            <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                                                <thead>
+                                                                    <tr class="slds-text-title--caps">
+                                                                        <th scope="col"> <div class="slds-truncate" title="Select">Select</div> </th>
+                                                                        <th scope="col"> <div class="slds-truncate" title="Available Service Type">Service Type</div> </th>
+                                                                        <th scope="col"> <div class="slds-truncate" title="Total Charges">Total Charges</div> </th>
+                                                                        <th>&nbsp; </th>
+// <th scope="col"> <div class="slds-truncate" title="Total Charges">Delivery Date</div> </th> //
+                                                                    </tr>
+                                                                </thead>
+                                                            
+                                                                <tbody>                                                                    
+                                                                    <apex:variable var="cnt" value="{!0}"/>
+                                                                    <apex:repeat value="{!rateWrapperList}" var="twl">
+                                                                    <tr>
+                                                                        <th scope="row" data-label="Select">
+                                                                            <div class="slds-form-element__control" style="margin-top: 5%;">
+                                                                                <label class="slds-radio">
+                                                                                    <input type="radio" id="test" name="test" value="{!twl.service}" onclick="call(this.value,{!cnt})"/>         
+                                                                                    <span class="slds-radio--faux"></span>
+                                                                                </label>
+                                                                            </div>                                                                            
+                                                                        </th>
+                                                                        <td data-label="Service Type">
+                                                                            <div class="slds-truncate" title="Service">
+                                                                                <apex:outputText value="{!twl.service}" escape="true"/> 
+                                                                            </div>
+                                                                        </td> 
+                                                                        <td data-label="Total Charges">
+                                                                            <div class="slds-truncate" title="Total Charges"> 
+                                                                                <apex:outputText value="{!twl.totalCharges}"/>
+                                                                            </div>
+                                                                        </td>
+                                                                       <td>
+                                                                            <apex:inputText id="rad1" value="{!service}" style="display: none"/> 
+                                                                        </td>
+                                                                    </tr>                                                
+                                                                    <apex:variable var="cnt" value="{!cnt+1}"/>
+                                                                    </apex:repeat>
+                                                                </tbody>   
+                                                            </table>
+                                                        </apex:outputPanel>
+                                                        
+                                                        <apex:outputPanel rendered="{!time_in_cost_tab}">
+                                                            <div class="col-sm-12 slds-m-top--small slds-m-bottom--xxx-small" style="text-align:center;" >
+                                                                <apex:commandLink value="Initiate Shipment" action="{!Shipping_Request}" oncomplete="if('{!Result}' == 'Package Shipped Successfully') viewLabel('{!Shipment.id}');" style="padding:0px 15px 0px 12px;" styleClass="slds-button slds-button--neutral" status="spinnerSR" reRender="ratePnl,RateRes,ShipRes,processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[1] == true, true, false)}"/>
+                                                            </div>
+                                                        </apex:outputPanel>
+                                                        <div class="col-sm-12 slds-m-top--small slds-m-bottom--xxx-small" style="text-align:center;"> 
+                                                            <apex:commandLink value="Cancel Shipment" action="{!Cancel_Request}" style="padding:0px 15px 0px 12px;" styleClass="slds-button slds-button--neutral" status="spinnerSR" reRender="ratePnl,RateRes,processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[3] == true, true, false)}"/>
+                                                        </div>
+                                                        
+                                                        
+                                                    </div>                                                
+                                                </div>                                                 
+                                            </apex:outputPanel>-->
+                                            
+                                            <apex:outputPanel id="ShipRes">
+                                                <!--
+                                                <apex:outputPanel style="display : {!if(result != null && result != '' && result != 'Available FedEx Services For The Selected Location', true, false)}" >
+                                                    <div class="row" style="text-align: center;"> <b><apex:outputText value="{!Result}" style="color:green;"/></b> </div>
+                                                </apex:outputPanel>
+                                                -->
+                                             <!--   <apex:outputPanel style="display : {!if(response_Message != null && response_Message != '',true, false)}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!response_Message}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel> 
+                                                <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>
+                                                <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>-->
+                                            </apex:outputPanel>
+                                            
+                                              <div class="container slds-p-top--small slds-m-top--medium" style="height:444px;width:100%; overflow:auto;background: #f4f6f9;">
+                        <h1 style="font-size:16px; font-weight:bold;"> End-User License Agreement (ASP Agreement) </h1>
+                        <h3> Appendix A-1 </h3>
+                         <p style="font-size: 14px;">
+                            If Your Developer Agreement is a FedEx ASP Agreement, this EULA is to be included in Your FedEx ® Compatible solution, subject to and in accordance with Your Developer Agreement: To use the Application (as defined below), you must agree to abide by this Agreement. This Agreement gives each of us certain rights and responsibilities. You will be assuming full and sole responsibility for all use of the Application occurring under your Account Number and registration information (e.g., meter number(s), credentials, etc.); you will be limiting your remedies. Please read this Agreement carefully.<br/><br/> You will be required to accept this Agreement in order to complete the registration process. By clicking the "I accept" button, you accept and agree to be bound by all of the provisions of this Agreement, including those incorporated by reference, without modification, limitation or qualification. You will be binding yourself or your company to this Agreement. You represent that you have the authority to bind your company, if done on behalf of a company, to this Agreement. If you do not have such authority, you must click the "I decline" button. You must also click the "I decline" button if you do not agree with this Agreement. If you decline, you will not be authorized to access or use the Application and/or the FedEx services available through such Application.
+
+                        </p>
+                        <h3> FedEx End-User License Agreement </h3>
+                        <p style="font-size: 14px;">
+                            This license agreement (“Agreement”) is entered by and between FedEx Corporate Services, Inc. (“FedEx”) and you (“Licensee”).<br/><br/> In consideration of the mutual promises and obligations set out below, the sufficiency of which the Parties acknowledge, FedEx and Licensee acknowledge and agree as follows: Section 1. Application, License, Restrictions.<br/><br/> (a) Grant. Subject to the terms and conditions of this Agreement, FedEx grants Licensee a personal, non-exclusive, royalty-free, non-assignable, non-transferable, limited, revocable license, without the right to grant sublicenses, solely within the United States, to: (i) access and use the FedEx shipping services application (“Application”), (a) only as the Application is integrated into and made accessible to Licensee as a part of Licensee’s licensed remote access to those application hosting services (“Services”) provided by_________________________ (“System Supplier”) to Licensee, and (b) only through the means provided by the System Supplier, all solely for the purposes of accessing and using those shipping and shipping related services offered, from time to time, by FedEx or its Affiliates through the Application (“FedEx Services”); (ii) access and use Documentation (as defined below) solely for the purposes of accessing and using the Application and obtaining FedEx Services; and, (iii) to the extent that Licensee incorporates shipping functionality into its public web page in connection with Licensee’s retail operations in order to facilitate shipments to its retail customers, Licensee may allow retail customers to access and use the Application, solely as part of the Service and through the means provided by the System Suppler, for the sole purpose of conducting e-commerce transactions with Licensee that request FedEx Services by (and through) Licensee; provided, however, in no event does such access by retail customers extend to third party shippers or resellers or consolidators of shipping or shipping related services except as may be expressly permitted by a separate written agreement between FedEx and Licensee. Licensee may not access or use the Application or Documentation for any other purposes.
+                            <br/><br/>(b) Restrictions.<br/><br/> (i) The license does not permit, and Licensee will not (and will not permit any employee or other third party to):<br/><br/> 1. Reverse engineer, decompile, disassemble, or translate the Application;<br/><br/> 2. Apply any procedure or process to the Application in order to ascertain, derive, and/or appropriate for any reason or purpose, the source code or source listings for the Application or any trade secret or confidential information or process contained in the Application;<br/><br/> 3. Remove, obscure, modify or otherwise change any product identification, copyright or other notices or legends contained in or on, or available through, the Application or Documentation;<br/><br/> 4. Transfer the Application, Documentation or the license, all whether in whole or in part, or grant any rights in the Application, Documentation or the license, all whether in whole or in part by sublicense or otherwise;<br/><br/> 5. Except as expressly permitted under Section 1(a) herein, provide, lease, lend, or otherwise use or allow others to use or have access to the Application, the Documentation or any portion thereof;<br/><br/> 6. Disseminate or disclose performance information or analysis (including, without limitation, benchmarks) relating to the Application without the prior written consent of FedEx;<br/><br/> 7. Use or display (including, doing either on a stand-alone basis (i.e., not as integrated with the Services)) the Application or Documentation, or any portion of either, except as expressly authorized in and in accordance with Section 1(a) above;<br/><br/> 8. Reproduce or distribute the Application or Documentation;<br/><br/> 9. Modify or create derivative works of the Application or Documentation; or,<br/><br/> 10. Use the Application to perform or order FedEx Services by or for the benefit of third parties. For the avoidance of doubt, the functionality available through the Application (e.g., that which enables Licensee to label, rate, route, record, track and invoice) may only be used by Licensee for shipments tendered to FedEx for carriage on behalf of Licensee unless expressly permitted by a separate written agreement between FedEx and Licensee.<br/><br/> (ii) Licensee shall promptly notify FedEx in writing upon its discovery of any unauthorized use of the Application or Documentation. FedEx may prevent access to or use of the Application or FedEx systems if FedEx has reason to believe that (a) Licensee or third party using the Application licensed to Licensee may be involved in potential unauthorized use of or other infringement of FedEx proprietary rights or (b) Licensee or its use of the Application is in violation of this Agreement.
+                            <br/><br/>(iii) Licensee acknowledges and agrees that the Application and Documentation are subject to export restrictions and controls imposed by various statutes and regulations, (collectively, "the Acts"), including the Export Administration Act and the Export Administration Regulations. Licensee shall not use, export or re-export the Application or Documentation except as authorized by and in compliance with the Acts and all laws and regulations of the jurisdiction in which FedEx made the Application available to Licensee. Without limiting the foregoing, Licensee shall not export or re-export the Application or Documentation (i) into or to a national or resident of any embargoed countries under the Acts which include as of the date hereof, Cuba, Iran, Iraq, Libya, North Korea, Sudan or Syria or (ii) to a Denied Party listed on U.S. Department of Commerce's list of U.S. Denied Persons or a Special Designated National on the U.S. Treasury Department's list of Specially Designated Nationals. By entering into this Agreement, Licensee represents and warrants that Licensee is not located in, under control of, or a national or resident of any such country or on any such list.
+                            <br/><br/>(iv) Licensee acknowledges that the Services and other services provided by System Supplier are not provided by or on behalf of FedEx. LICENSEE HEREBY WAIVES ANY AND ALL CLAIMS AGAINST FEDEX ARISING FROM OR RELATING TO LICENSEE’S USE OF THE SERVICES OR THE OTHER SERVICES PROVIDED BY SYSTEM SUPPLIER.
+                            <br/><br/>(v) In addition to the provisions of this Agreement, if Licensee is an agency, department, or other entity of the United States Government (“Government”), pursuant to 48 C.F.R. 12.212 or 48 C.F.R. 227.7202, as applicable, the (a) Application and (b) any related materials, specifications, technical data, and documentation (collectively, “Documentation”) are Commercial Items as defined in 48 C.F.R. 2.101 and are licensed to Government end users only as Commercial Items and only with the rights granted to all other end users as provided in this Agreement. Manufacturer is FedEx Corporate Services, Inc., 30 FedEx Parkway, Collierville, TN 38017.
+                            <br/><br/>(c) Modifications. To the extent FedEx or the System Supplier makes available to Licensee any updates, upgrades, enhancements, bug-fixes or other modifications to the Application (collectively, “Modifications”), such Modifications shall be considered a part of the Application and subject to the terms and conditions of this Agreement; provided, however, a Modification may come with its own imbedded license agreement and in the event of a conflict between this Agreement and any imbedded license agreement, the terms of the imbedded license agreement control. For the avoidance of doubt, except as otherwise stated, “Application” includes “Modification.”
+                            <br/><br/>(d) Ownership and Reservation of Rights. All right, title and interest, including all intellectual property rights, in and to the Application, Modifications (if any), and Documentation, are owned exclusively by FedEx and/or its licensors. The Application, Modification and Documentation are licensed, not sold, and are and shall at all times remain the property of FedEx. Except for the limited, revocable license granted in Section 1(a), Licensee shall have no right, title or interest in any the Application, Modification or Documentation, and shall not allow any lien or encumbrance to exist on any of the foregoing. Except for the express license granted in Section 1(a), all rights in and to the Application and Documentation are reserved.
+                            <br/><br/>(e) FedEx affiliates. Licensee hereby acknowledges that, unless otherwise specified, when used in this Agreement, the name “FedEx” shall include FedEx Corporate Services, Inc., its parent company and any and all of its affiliate companies, including without limitation Federal Express Corporation and FedEx Ground Package System, Inc.; provided, however, Licensee acknowledges that the sole obligor under this Agreement is FedEx Corporate Services, Inc. alone. Licensee further acknowledges that the contract of carriage for shipments made by Licensee using the Application (and not the terms governing use of such Application) is between Licensee and the FedEx company to which Licensee tenders the package within the United States.
+                            <br/><br/>Section 2. Licensee Obligations.
+                            <br/><br/>(a) <u>Systems and Access.</u> This Agreement governs Licensee’s access and use of the Application as provided above and under the FedEx account numbers and/or registration information (e.g., meter numbers, credentials, etc.) provided to Licensee by FedEx. Licensee will follow instructions of FedEx, including those in the Application and/or Documentation, provided from time to time, for access and use of the Application. Licensee is solely responsible for providing and maintaining all hardware necessary to access and use the Application. In addition, Licensee acknowledges that use of certain Applications or Services may require Licensee to modify its internal computer systems from time to time, and Licensee will make such modifications at its expense pursuant to the instructions provided by FedEx or System Supplier. Licensee is solely responsible, for obtaining access to the Internet or World Wide Web. Such access is required to utilize the Application. FedEx may, and may require the System Supplier, to modify the Application at any time for any reason and Licensee hereby consents to all such Modifications. If required, when instructed by FedEx (and on an ongoing basis thereafter), Licensee will complete an End of Day Close Process as required by FedEx to ensure FedEx shipping transactions are uploaded to FedEx at the close of each business day.
+                            <br/><br/><u>Maintenance.</u> Licensee agrees to look solely to the System Supplier for all technical support and maintenance of the Services and Application, unless otherwise instructed by FedEx. Notwithstanding the foregoing, FedEx in its sole discretion may (i) repair, modify, replace, disable, monitor, or remove the Application; and (ii) provide installation and integration assistance or technical support with respect to Licensee’s access to and use of the Application (collectively (i) and (ii) referred to herein “Limited Support Services”). Notwithstanding the foregoing, FedEx is under no obligation to provide Limited Support Services, or any other services, or Modifications hereunder.
+                            <br/>(c) <u>Information and Data.</u> Licensee is advised and encouraged to maintain back-up copies of any data or information (including, names, addresses, reports, etc.) that it uses or stores with, through or in the Services or the Application (collectively, “Data”). FedEx is and will not be responsible for the loss of or damage to any Data. Licensee will not load process or store Data on or through the Application not required or related to the conduct of business with FedEx. FedEx shall have access to and use of the Data used or processed on, though, in or with the Application. FedEx reserves the right to access, use, delete or remove any Data in connection with the provision of any FedEx Services or in connection with this Agreement. In addition, Licensee consents to the collection, use or disclosure by FedEx or its designee of limited personally identifiable information about Licensee or its users for the purposes contemplated by this Agreement and for marketing, sales, testing, development and other FedEx business purposes.
+                            <br/><br/>(d) <u>Supplies .</u> Licensee acknowledges that it is responsible for the purchase of any supplies necessary to use the Application or Service and will contact the System Supplier to determine what, if any, supplies it must purchase for use of any Application or Service.
+                            <br/><br/><u>Section 3. Termination.</u> This Agreement is effective until terminated by either party. This Agreement will terminate independently without notice if Licensee fails to comply with any provision of this Agreement or any instructions regarding the Application provided by FedEx. Upon termination for any reason, Licensee must cease all use of the Application. FedEx reserves the right to unilaterally terminate this Agreement and the use of the Application at any time, for any reason, and by whatever means.
+                            <br/><br/><u>Section 4. Payment.</u> With respect to FedEx Services, Licensee will follow all of payment terms and instructions of FedEx. Licensee will remit payment, in accordance with the terms and conditions contained in the applicable FedEx transportation agreement, applicable FedEx Service Guide ("Service Guide"), or as otherwise instructed by FedEx. Licensee is responsible for payment of all charges generated through use of the Application under Licensee’s account number and registration information (e.g., meter numbers, credentials, etc.). Any rates reflected in or published by the Application or Service, if shown, are offered for information purposes only and may be different from the actual charges for FedEx Services incurred by Licensee.
+                            <br/><br/><u>Section 5. Adjustments and Refunds.</u> With respect to FedEx Services, Licensee may bill shipping charges for transactions conducted through the Application only to valid account numbers (e.g., bill sender, bill recipient or bill third party). Shipments tendered to FedEx with incorrect or incomplete routing, labeling, commitment date, service designation or other errors will not be eligible for refunds under money-back guarantees of FedEx. Refunds requested by Licensee with respect to any shipment must be made in accordance with the applicable Service Guide or Licensee’s transportation agreement with FedEx. Licensee will not be entitled to any refund or credit under money-back guarantees of FedEx if FedEx determines that the claim resulted from improper use of the Application. FedEx, in its sole discretion, may suspend its money-back guarantees in the event Application or Service fails or is inoperable for any reason.
+                            <br/><br/><u>Section 6. Disclaimer of Warranty.</u> Licensee expressly acknowledges and agrees that access to and use of the Application is provided to Licensee by the System Supplier and that FedEx is neither providing the Services nor charging Licensee a fee for access to or use of the Application or for providing the Limited Support Services, if any.
+                            <br/><br/>The Application and Limited Support Services are provided “AS-IS” WITHOUT representation or warranty of any kind.
+                            <br/><br/>To the extent permitted by applicable law, FedEx and its Representatives (as defined in Section 8 below), disclaim and exclude all warranties, whether, express, statutory, or implied, including the implied warranties of Merchantability and Fitness for a Particular Purpose, and the warranties of Non-Infringement or Quiet Enjoyment. FedEx does not represent or warrant that the Application will meet any or all of Licensee’s requirements or that its operations will be uninterrupted or error free or that any defect within the Application will be corrected. FedEx does not represent or warrant that the Limited Support Services will meet any or all of Licensee’s requirements or that it will correct any defect within the Application. FedEx does not represent or warrant that the Application, Limited Support Services or any other related services or content is free from bugs, viruses, errors or other program limitations. FedEx does not represent or warrant access to the Internet or to any other service or content through the Application. Furthermore, FedEx does not warrant or make any representation regarding the results of Licensee’s installation or use of the Application or the Limited Support Services in terms of capability, correctness, accuracy, reliability or otherwise.
+                            <br/><br/>No oral or written information, representation or advice given by FedEx, the System Supplier or an authorized representative of either shall create any warranty.
+                            <br/><br/>Some states do not allow the exclusion of implied warranties, so the above exclusions may not apply to Licensee. In that event, any implied warranties are limited in duration to sixty (60) days from the date of purchase of the Services. However, some states do not allow limitations on how long an implied warranty lasts, so the above limitation may not apply to Licensee. This warranty gives Licensee specific legal rights and Licensee may have other rights as well which vary from state to state.
+                            <br/><br/><u>Section 7. Remedies.</u> YOUR SOLE REMEDY FOR ANY DISSATISFACTION WITH THE APPLICATION OR LIMITED SUPPORT SERVICES IS TO STOP USING THE APPLICATION. Licensee agrees to look to the System Supplier for all issues relating to Your access, use or inability to access or use the Application and/or Services. Licensee acknowledges and agrees that it is Licensee’s sole responsibility to arrange with the System Supplier for any and all warranties, maintenance/support requirements, and remedies, if any, arising out of Licensee’s access to and use of the Application and/or Services. Licensee agrees that the remedy set forth in this Section is Licensee’s exclusive remedy under this Agreement for any dissatisfaction with its access to or use of (or inability to do either) the Application, the Services or Limited Support Services.
+                            <br/><br/><u>Section 8. Limitation of Liability.</u> Licensee acknowledges that FedEx is providing the Application and Limited Support Services, if any, to Licensee free of charge.
+                            <br/><br/>The entire liability of FedEx and its Representatives (as defined below) for any reason shall be limited to $100.00. whether based on breach of contract, breach of warranty, tort (including, negligence), product liability, statutory or strict liability or otherwise even if FedEx or its Representatives have been advised of the possibility of such damages and even if a remedy set forth herein is found to have failed of its essential purpose.
+                            <br/><br/>To the maximum extent permitted by applicable law, FedEx and its parent company and subsidiaries and affiliates, direct and indirect, of its Parent company, licensors, or any of the foregoing’s respective employees, officers, directors and/or agents (collectively, “Representatives”) are not and shall not be liable for any special, incidental, exemplary, punitive, consequential or other indirect damages (including: damages for loss of business, loss of data, loss of profits, damages to Licensee’s computer systems or the like), whether based on breach of contract, breach of warranty, tort (including, negligence), product liability, statutory or strict liability or otherwise even if FedEx or its Representatives have been advised of the possibility of such damages and even if a remedy set forth herein is found to have failed of its essential purpose.
+                            <br/><br/>Some states do not allow the limitation and/or exclusion of liability for incidental or consequential damages, so the above limitation or exclusion may not apply to You.
+                            <br/><br/>The limitations of damages set forth above are fundamental elements of the basis of the bargain between FedEx and Licensee. FedEx would not be able to provide the Application without such limitations.
+                            <br/><br/><u>Section 9. Controlling Law and Severability.</u> This Agreement shall be governed by and construed in accordance with the laws of the United States and the State of Tennessee, excluding its conflicts of law provisions. If for any reason a court of competent jurisdiction finds any provision of this Agreement, or a portion thereof, to be unenforceable, that provision shall be enforced to the maximum extent permissible so as to effect the intent of the parties and the remainder of this Agreement shall remain in full force and effect. Any cause of action with respect to Application must be instituted within one (1) year after the claim or cause of action has arisen in Shelby County, Tennessee or be barred.
+                            <br/><br/><u>Section 10. Terms and Conditions of Carriage.</u>
+                            <br/><br/>(a) It is understood and agreed by Licensee that the Application and/or Service may contain functionality which may be used by Licensee to make shipments through carriers other than FedEx. Licensee should contact the System Supplier to determine if the Service has multi-carrier capability. If so, Licensee agrees that it will look solely to such third party carriers for the terms under which Licensee may tender shipments to and have its shipments carried by such third party carriers and that, as between FedEx and Licensee, Licensee is solely responsible for its compliance with such third party carriers' terms of shipping and will look solely to such third party carriers for all remedies attributable to claims arising out of the third party carriers’ carriage of Licensee’s shipments. LICENSEE WILL DEFEND, INDEMNIFY AND HOLD HARMLESS FEDEX FROM ALL CLAIMS, DEMANDS AND JUDGMENTS, INCLUDING THE PAYMENT OF ATTORNEY’S FEES, FROM THIRD PARTY CARRIERS ARISING OUT OF LICENSEE’S USE OF THE SERVICES TO PROCESS SHIPMENTS TENDERED TO SUCH CARRIERS.
+                            <br/><br/>(b) With respect to FedEx Services, Licensee agrees that domestic and international carriage by FedEx of any shipments tendered to FedEx pursuant to this Agreement or using the Application shall be in accordance with the terms, conditions and limitations of liability set out on the NONNEGOTIABLE Air Waybill, Label, Manifest, or Pick-Up Record (collectively “Shipping Documentation”) and as appropriate any transportation agreement between Licensee and FedEx covering such shipment and in any applicable tariff, Service Guide or Standard Conditions of Carriage, copies of which are available upon request, and which are incorporated into this Agreement by reference. If there is a conflict between the Shipping Documentation and any such document then in effect or this Agreement, the transportation agreement, tariff, Service Guide, Standard Conditions of Carriage, or this Agreement will control, in that order of priority. If a shipment originates outside the United States, the contract of carriage is with the FedEx subsidiary, branch, or independent contractor who originally accepts the shipment.
+                            <br/><br/>(c) In the event Licensee uses the Application and/or Service to process shipments tendered to FedEx for delivery to locations outside the United States or country of shipment origin, Licensee will, at Licensee’s sole expense, assure that the terms and conditions of international carriage supplied by FedEx from time to time (and which may be amended or modified from time to time at the sole discretion of FedEx) are placed on the Shipping Documentation, as instructed by FedEx, for all such international shipments. LICENSEE WILL DEFEND, INDEMNIFY AND HOLD HARMLESS FEDEX AND ITS REPRESENTATIVES FROM AND AGAINST ANY AND ALL LOSSES, DAMAGES, CLAIMS AND OTHER ITEMS OF COST AND EXPENSE ARISING OUT OF LICENSEE’S FAILURE TO APPLY THE INTERNATIONAL CARRIAGE TERMS TO THE SHIPPING DOCUMENTATION FOR SUCH INTERNATIONAL SHIPMENTS, INCLUDING WITHOUT LIMITATION CLAIMS FROM THE RECIPIENT OF ANY SHIPMENT, AND LICENSEE’S FAILURE TO FOLLOW INSTRUCTIONS OF FEDEX IN REGARD TO THE PLACEMENT OF THE TERMS ON THE SHIPPING DOCUMENTATION FOR SUCH INTERNATIONAL SHIPMENTS.
+                            <br/><br/>(d) Licensee acknowledges that if the Application and/or Service is used to process shipments to locations outside the United States or country of shipment origin, Licensee must enter the name of the person completing the Shipping Documentation to print in lieu of its manual signature on the Shipping Documentation, as applicable, for all shipments tendered by Licensee to FedEx using the Application or Service. Licensee further acknowledges that such printed name shall be sufficient to constitute the Licensee’s signature, and Licensee’s acceptance of FedEx terms and conditions of carriage contained in the applicable transportation agreement, tariff, Service Guide, Standard Conditions, or Shipping Documentation, under which the shipment is accepted by FedEx, or its independent contractor.
+                            <br/><br/>(e) Unless otherwise indicated, the shipper's address indicated on the face of any Shipping Documentation is the place of execution and the place of departure and the recipient's address listed on the face of the Shipping Documentation is the place of destination. Unless otherwise indicated on the face of the Shipping Documentation the first carrier of all shipments is Federal Express Corporation, 3610 Hacks Cross Road, Memphis, TN, 38125. In the event another carrier is listed on any such document, that carrier is the first carrier of the shipment. The address for FedEx Ground is P.O. Box 108, Coraopolis, PA 15230.
+                            <br/><br/><u>Section 11. Indemnity.</u> Licensee shall, at Licensee’s sole cost and expense, defend, indemnify and hold FedEx and its Representatives harmless from and against all claims, demands, suits, damages, losses, liabilities, costs, expenses, fines and judgments, including reasonable attorney’s fees, (hereinafter, collectively, “Claims”) arising out of or relating to (a) Licensee’s installation, use (or inability to use) and/or removal (or inability to remove) of the Application or any other materials or services provided to Licensee by or on behalf of FedEx or its Representatives;
+                            <br/><br/>(b) the intentional acts, willful misconduct or negligence (acts or omissions) of licensee, its employees, officers, directors, suppliers, customer, agents, users, or representatives (collectively, for purposes of sections 11(b) and 11(c), “Licensee”); or, (c) Licensee’s breach of this Agreement. FedEx may intervene and assume its defense in any such Claims, at its expense and in its sole discretion. Licensee will not settle any Claims involving FedEx or the Application without the prior written consent of FedEx.
+                            <br/><br/>Section 12. Complete Agreement. This Agreement constitutes the entire agreement between Licensee and FedEx with respect to the Application, and supersedes any prior or contemporaneous understandings, representations, statements or agreements, written or oral, regarding the Application. Notwithstanding the foregoing, an Application or Modification may come with its own imbedded license agreement and in the event of a conflict between this Agreement and any imbedded license agreement, the terms of the imbedded license agreement control. As used in this Agreement, “including” means “including, without limitation” and is illustrative rather than exhaustive. No amendment to or modification of this Agreement will be binding on FedEx without the written consent of FedEx. Licensee may not assign or otherwise transfer this Agreement or the licenses granted herein, including by operation of law without the prior written consent of FedEx. Any assignment or transfer in violation of the foregoing is void and of no effect. In addition, except for FedEx Representatives, Licensee and FedEx acknowledge and agree that there are no third party beneficiaries to this Agreement. The provisions of Sections 1(b), 1(c), 1(d), 1(e), 2(c), 3, 4, 5, 6, 7, 8, 9, 10 11, and 12 will survive the termination of this Agreement.
+
+                        </p>
+                    </div>                                        
+                                        </div>                                        
+                                        <!-- @end of tab 1 -->
+                                        
+                                        <!-- tab 2 -->
+                                        <div class="tab-pane" id="ups" role="tabpanel"> 
+                                            <apex:outputPanel id="processShipPnl">
+                                                <div class="panel-body">
+                                                    <!-- Row 1 -->
+                                                    <!--<div class="row">
+                                                        <div class="col-md-8">
+                                                            <div class="row">
+                                                                <div class="col-sm-6">
+                                                                    <div class="slds-form-element">
+                                                                        <label class="slds-form-element__label" for="text-input-01">Shipment</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <apex:inputText value="{!Shipment.Name}" id="shipname" styleClass="slds-input" disabled="true" style="background: #ffffff;"/>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-sm-6"> 
+                                                                    <div class="slds-form-element"> 
+                                                                        <label class="slds-form-element__label" for="text-input-01">Shipment Status</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <div class="slds-select_container">
+                                                                                <apex:inputField value="{!Shipment.Status__c}" id="shipstatus" styleClass="slds-select"/>                                                                                      
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>                                                                 
+                                                            </div>                                                        
+                                                        </div>
+                                                        
+                                                        <div class="col-md-4">
+//
+                                                            <div class="col-sm-12 slds-m-top--xxx-small">
+                                                                <apex:commandLink value="Initiate Shipment" action="{!Shipping_Request}" style="padding:0px 15px 0px 12px;" styleClass="slds-button slds-button--neutral" style="width:100%;" status="spinnerS" reRender="processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[1] == true, true, false)}"/>
+                                                            </div>
+//
+                                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                <apex:commandLink value="View Label" action="{!CreateFedexLabel}" styleClass="slds-button slds-button--neutral" style="width:90%;" target="_blank" rendered="{!if(showAndHideMap[2] == true, true, false)}"/>
+                                                            </div>
+                                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                <apex:commandLink value="Cancel Shipment" action="{!Cancel_Request}" styleClass="slds-button slds-button--neutral" style="width:90%;" status="spinnerS" reRender="processShipPnl,messagePnl,popoverScriptPnl" rendered="{!if(showAndHideMap[3] == true, true, false)}"/>
+                                                            </div>
+                                                            <div class="col-sm-12 slds-m-top--xxx-small" style="margin-left: 28%;">
+                                                                <apex:actionStatus id="spinnerS">
+                                                                    <apex:facet name="start">
+                                                                        <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                    </apex:facet>
+                                                                </apex:actionStatus>
+                                                            </div>
+                                                        </div>                                                    
+                                                    </div>-->
+                                                    <!-- @end of Row 1 --> 
+                                                                        
+                                                    
+                                                   <!-- Request UD : <br/><apex:outputText value="{!request_UD}"></apex:outputText><br/>
+                                                    Response UD : <br/><apex:outputText value="{!response_UD}"></apex:outputText>                                                     
+                                                    <br/><br/>
+                                                    
+                                                     
+                                                    Request 1 : <br/><apex:outputText value="{!request_1}"></apex:outputText><br/>
+                                                    Response 1 : <br/><apex:outputText value="{!response_1}"></apex:outputText> 
+                                                    <br/><br/>
+                                                    Request 2 : <br/><apex:outputText value="{!request_2}"></apex:outputText><br/>
+                                                    Response 2 : <br/><apex:outputText value="{!response_2}"></apex:outputText> 
+                                                    -->
+                                                     
+                                                    <div class="row">&nbsp;</div>
+                                                <!--    <apex:outputPanel style="display : {!if(response_Message != null && response_Message != '',true, false)}"> 
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!response_Message}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel> 
+                                                    <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '' && errorMsg1 != 'The Shipment Is Unavailable', '', 'none')}">
+                                                        <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>                                                    
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel style="display : {!if(result != null && result != '', true, false)}">
+                                                        <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                    </apex:outputPanel> 
+                                                    -->
+                                                    <!-- pickup section -->
+                                                   <!-- <apex:outputPanel rendered="{!if(showAndHideMap[4] == true, true, false)}">
+                                                        <div class="panel panel-default slds-m-top--small">
+                                                            <div class="panel-heading">
+                                                                <h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#collapse4" style="text-decoration:none; color:#fff;">Pickup Details</a> </h4>
+                                                            </div>
+                                                            <div id="collapse4" class="panel-collapse collapse in">
+                                                                <div class="panel-body">
+                                                                    <div class="col-md-8">                                                                        
+                                                                        <div class="row">
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Ready Time</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="packrt" value="{!Shipment.Package_Ready_Time__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>                                                                            
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Customer Close Time</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="Custcltime" value="{!Shipment.Customer_Close_Time__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>                                                                            
+                                                                        </div>                                                                        
+                                                                        <div class="row slds-m-top--xxx-small">
+                                                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                                                <div class="slds-form-element">
+                                                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Reference no.</label>
+                                                                                    <div class="slds-form-element__control">
+                                                                                        <apex:inputField id="pcn" value="{!Shipment.Pickup_Confirmation_Number__c}" styleClass="slds-input"/>
+                                                                                    </div>
+                                                                                </div>                                                                       
+                                                                            </div>
+                                                                        </div>                                                                          
+                                                                    </div> 
+                                                                    
+                                                                    <div class="col-md-4">
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Pickup Availability" action="{!PickupAvailability}" styleClass="slds-button slds-button--neutral" style="width:100%;" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[5] == true, true, false)}"/>
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Create Pickup" action="{!CreatePickup}" styleClass="slds-button slds-button--neutral" style="width:100%;" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[6] == true, true, false)}"/>
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                                            <apex:commandLink value="Cancel Pickup" action="{!CancelPickup}" styleClass="slds-button slds-button--neutral" style="width:100%;" status="spinnerP" reRender="processShipPnl,popoverScriptPnl,messagePnl" rendered="{!if(showAndHideMap[7] == true, true, false)}"/> 
+                                                                        </div>
+                                                                        <div class="col-sm-12 slds-m-top--xxx-small">
+                                                                            <apex:actionStatus id="spinnerP">
+                                                                                <apex:facet name="start">
+                                                                                    <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                                </apex:facet>
+                                                                            </apex:actionStatus>
+                                                                        </div>
+                                                                    </div>                                                                    
+                                                                </div>                                                                
+                                                            </div>                                                            
+                                                        </div>                                                        
+                                                    </apex:outputPanel>  -->                                                  
+                                                    <!-- @end of pickup section -->                                                
+                                                </div>                                                
+                                            </apex:outputPanel>                                            
+                                        </div>                                        
+                                        <!-- @end of tab 2 -->
+                                        
+                                        <!-- tab 3 -->
+                                        <div class="tab-pane" id="trackshipment" role="tabpanel">
+                                            <!--
+                                            Request : <br/><apex:outputText value="{!request_1}"></apex:outputText>
+                                            Response : <br/><apex:outputText value="{!response_1}"></apex:outputText> 
+                                            -->
+                                            <apex:outputPanel id="trackPnl">
+                                                <div class="panel-body"> 
+                                                    <div class="col-md-8">
+                                                      <!--  <div class="row">                                                            
+                                                            <div class="col-md-6 col-sm-6 col-xs-12">
+                                                                <div class="slds-form-element">
+                                                                    <label class="slds-form-element__label" for="text-input-01">Tracking no.</label>
+                                                                    <div class="slds-form-element__control">
+                                                                        <apex:inputTextarea value="{!Shipment.Tracking_Number__c}" id="shiptrck" styleClass="slds-input" disabled="true" style="width: 188px; background: #ffffff;"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>  
+                                                            <div class="col-md-6 col-sm-6 col-xs-12"> &nbsp; </div>     
+                                                        </div> -->                                                   
+                                                    </div>                                                
+                                                   <!-- <div class="col-md-4">
+                                                        <div class="col-sm-12 slds-m-top--xxx-small">
+                                                            <apex:commandLink value="Proof of Delivery" action="{!Signature_Proof}" status="spinnerPR" reRender="trackPnl,messagePnl" styleClass="slds-button slds-button--neutral" style="padding:0px 14px 0px 12px;" rendered="{!if(showAndHideMap[8] == true, true, false)}"/>
+                                                        </div>
+                                                        <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                            <apex:outputLink value="{!URLFOR($Action.Attachment.Download,spodLetter.id)}" styleClass="slds-button slds-button--neutral" style="padding:0px 31px 0px 31px;" rendered="{!if(spodLetter.id != null && showAndHideMap[9] == true, true, false)}">POD Letter</apex:outputLink> 
+                                                        </div>
+                                                        <div class="col-sm-12 slds-m-top--xxx-small" style="margin-left: 28%;">
+                                                            <apex:actionStatus id="spinnerPR">
+                                                                <apex:facet name="start">
+                                                                    <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;"/>
+                                                                </apex:facet>
+                                                            </apex:actionStatus>
+                                                        </div>
+                                                    </div>  -->                                                  
+                                                </div>                                            
+                                                
+                                                
+                                                
+                                               <!-- <apex:outputPanel style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}"> 
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg}" style="color:red;"/> </div>                                                    
+                                                </apex:outputPanel>   
+                                                <apex:outputPanel style="display : {!if(errorMsg1 != null && errorMsg1 != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <apex:outputText value="{!errorMsg1}" style="color:red;"/> </div>
+                                                </apex:outputPanel>
+                                                <apex:outputPanel style="display : {!if(result != null && result != '', '', 'none')}">
+                                                    <div class="row" style="text-align: center;"> <b><apex:outputText value="{!result}" style="color:green;"/></b> </div>
+                                                </apex:outputPanel> -->
+                                                    
+                                                <div style="max-height: 400px; width: 640px; overflow-x:auto;">    
+                                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                                        <thead>
+                                                            <tr class="slds-text-title--caps">
+                                                                <th scope="col"> <div class="slds-truncate" title="Location">Location</div> </th>
+                                                                <th scope="col"> <div class="slds-truncate" title="Date/Time">Date/Time</div> </th>                                                            
+                                                                <th scope="col"> <div class="slds-truncate" title="Arrival Location">Arrival Location</div> </th> 
+                                                                <th scope="col"> <div class="slds-truncate" title="Activity">Activity</div> </th>
+                                                            </tr>
+                                                        </thead>
+    
+                                                        <tbody>
+                                                            <apex:variable var="cnt" value="{!0}"/>
+                                                          <!--  <apex:repeat value="{!trackWrapperList}" var="twl">
+                                                            <tr>
+                                                                <td data-label="Location" style="min-width:124px;">
+                                                                    <div class="slds-truncate" title="Location"> 
+                                                                        <apex:outputText value="{!twl.location}"/> 
+                                                                    </div>
+                                                                </td>                                                                                                                               
+                                                                <td data-label="Date" style="min-width:156px;">
+                                                                    <div class="slds-truncate" title="Date/Time">
+                                                                        <apex:outputText value="{0,date, dd/MM/yyyy HH:mm}"> 
+                                                                            <apex:param value="{!twl.dtValue}"/>
+                                                                        </apex:outputText>
+                                                                    </div>
+                                                                </td>                                                            
+                                                                <td data-label="Received By">
+                                                                    <div class="slds-truncate" title="Arrival Location"> 
+                                                                        <apex:outputText value="{!if(twl.arrivalLocation != null, twl.ArrivalLocation, '-')}"/>
+                                                                    </div>
+                                                                </td> 
+                                                                <td data-label="Activity">
+                                                                    <div class="slds-truncate" title="Activity"> 
+                                                                        <apex:outputText value="{!twl.activityDesp}"/> 
+                                                                    </div>
+                                                                </td> 
+                                                            </tr>                                                
+                                                            <apex:variable var="cnt" value="{!cnt+1}"/>
+                                                            </apex:repeat>-->
+                                                        </tbody> 
+                                                    </table>
+                                                 </div>                                                
+                                            </apex:outputPanel>                                        
+                                        </div>
+                                        <!-- @end of tab 3 -->
+                                    </div>                                    
+                                    <!-- @end of Tab panels -->                                    
+                                            </apex:outputPanel><!-- extra added Remove when uncommenting the code -->
+                                            </div> 
+                                        
+                            </div>                           
+                        </div>
+                        <!-- @end of right section -->
+                        
+                        </div>  
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4 style="color: #4d148c;">FedEx service marks are owned by Federal Express Corporation and are used by permission.</h4>
+                            </div>
+                        </div>
+                       
+                    </div> 
+                </div>  
+            </div>  
+                </div></div> <!-- these 2 div are added extra--> 
+        </body>    
+         
+    </html> 
+    
+    <script>
+    
+        function viewLabel(shipId){
+            var myURL = '/apex/ERP7__Pickpackship_PrintUPSLabel?shipmentsId=' + shipId + '&fileName=Fedex_Label&val=pdf';
+            window.open(myURL);
+        }
+    
+        function setFocus() {}
+        
+        function call(e,f) { 
+            //alert('e value : = ' + e);
+          
+            var details = []; 
+            details = e.split(',');                    
+            if(details[0] != null && details[0] != '') jQuery('[id$=rad1]').val(details[0]);                   
+            passStringToController();            
+        }                        
+    </script>
+      
+</apex:component>

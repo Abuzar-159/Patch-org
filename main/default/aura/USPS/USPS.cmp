@@ -1,0 +1,632 @@
+<aura:component controller="USPSLightning" implements="force:appHostable">
+  <!--  <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css, /resource/ERP7__Order_Console/assets/styles/font-awesome.css,
+                          /resource/ERP7__SLDS0121/assets/styles/salesforce-lightning-design-system-vf.css, /resource/ERP7__SLDS0121/assets/styles/salesforce-lightning-design.css,
+                          /resource/ERP7__ShippingManagement/ShippingManagement/css/bootstrap.min.css"/>
+    -->
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css, /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.min.css,
+                          /resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/USPS.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="statusconfirmation" type="List"/>
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    <aura:attribute name="result" type="String"/>
+    <aura:attribute name="errorMsg" type="String"/>
+    <aura:attribute name="errorMsg1" type="String"/>
+    <aura:attribute name="selectedTab" type="String" default="SHIPPING_SERVICES"/>
+    <aura:attribute name="USPS_Services" type="Object" />
+    <aura:attribute name="packageId" type="List"/>
+    <aura:attribute name="shipmentId" type="String"/>
+    <aura:attribute name="address" type="Object"/> 
+    <aura:attribute name="fromAddress" type="Object"/>
+    <aura:attribute name="myConsW" type="Object"/> 
+    <aura:attribute name="packageList" type="List"/>
+    <aura:attribute name="packageLists" type="List"/>
+    <aura:attribute name="upsCred" type="Object"/>
+    <aura:attribute name="trackWrapperList" type="Object"/>
+    <aura:attribute name="toShipmentType" type="Boolean" default="false"/>
+    <aura:attribute name="fromShipmentType" type="Boolean" default="false"/>
+     <aura:attribute name="ShowGetRate" type="boolean" default="true"/>
+    <aura:attribute name="spodLetter" type="Attachment" />
+    <aura:attribute name="shipment" type="Shipment__c" default="{ 'sobjectType': 'Shipment__c',
+                                                                        'ERP7__Status__c':'', 
+                                                                        'ERP7__Payment_Info__c':'DDP'}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <aura:attribute name="statusconfirmationOptions" type="List"/>
+    
+    <body id="mybody">
+    <div class="erp_mark7">
+        <div class="slds-page-header">
+            <div class="slds-media"> 
+                <div class="slds-media__figure">
+                    <span class="slds-icon_container slds-icon-standard-" title="">
+                        <span class="slds-icon slds-page-header__icon" aria-hidden="true">
+                            <img src="/resource/PickPackShipResource/assets/images/logo-header-usps.png" width="180 " height="35" alt="USPS"  class="USPS-class1"/>
+                        </span>
+                    </span>
+                </div>
+                <div class="slds-media__body">
+                    <h1 class="slds-page-header__title slds-truncate slds-align-middle" title=""></h1>
+                    <p class="slds-text-body_small slds-line-height_reset"></p>
+                </div>
+                
+                <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom_xx-small">
+                    <button class="slds-button slds-button--neutral" >Back</button> <!-- onclick="{!c.back}" --> 
+                </div>
+            </div>
+        </div>
+        
+        
+            <div class="row USPS-class2">
+            <!-- left section -->
+            <div class="col-xs-12 col-sm-12 col-md-6 slds-m-top--small">
+                <!--Start of Accor 1-->
+                <div>
+                    <div class="slds-page-header Message USPS-class3" onclick="{!c.sectionOne}">
+                        <section class="slds-clearfix">
+                            <div class="slds-float--left ">
+                                <lightning:icon class="slds-hide" aura:id="articleOne" iconName="utility:up" size="x-small"/>
+                                <lightning:icon class="slds-show" aura:id="articleOne" iconName="utility:right" size="x-small" />
+                            </div>
+                            <div class="slds-m-left--large" >1. Where is this shipment going?</div>
+                        </section>
+                    </div>
+                    
+                    <div aura:id="articleOne">
+                        <div class="epr_Mark7 USPS-class4" >
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label"> To Address :</label> <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecordId="{!v.address.Id}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label"> Company :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Contact__r.ERP7__Company__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Contact :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Contact__r.Name}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Email :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Contact__r.Email}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Phone :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Contact__r.Phone}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">{!$Label.c.Address_line_1} :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Address_Line1__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">{!$Label.c.Address_line_2} :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Address_Line2__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">City/Town :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__City__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">State/County :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__State__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Zip/Post code :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Postal_Code__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Zip 4 :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Zip_4__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label"> Country :</label><lightning:input type="text" variant="label-hidden"  value="{!v.address.ERP7__Country__c}"/>
+                                    </div>
+                                </div>
+                            </div> 
+                        </div>
+                    </div>
+                </div>
+                <!--End of Accor 1-->
+                
+                <!--Start of Accor 2-->
+                <div>
+                    <div class="slds-page-header Message USPS-class3" onclick="{!c.sectionTwo}">
+                        <section class="slds-clearfix">
+                            <div class="slds-float--left ">
+                                <lightning:icon class="slds-hide" aura:id="articleTwo" iconName="utility:up" size="x-small"/>
+                                <lightning:icon class="slds-show" aura:id="articleTwo" iconName="utility:right" size="x-small" />
+                            </div>
+                            <div class="slds-m-left--large" >2. Where is this shipment coming from?</div>
+                        </section>
+                    </div>
+                    
+                    <div aura:id="articleTwo">
+                        <div class="epr_Mark7 USPS-class4">
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">From Address :</label>
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" label="" selectedRecordId="{!v.fromAddress.Id}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Company :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Contact__r.ERP7__Company__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Contact :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Contact__r.Name}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Email :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Contact__r.Email}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Phone :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Contact__r.Phone}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">{!$Label.c.Address_line_1} :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Address_Line1__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5">
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">{!$Label.c.Address_line_2} :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Address_Line2__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label"> City/Town :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__City__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">State/County :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__State__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row slds-grid slds-m-around--small USPS-class5" >
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Zip/Post code :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Postal_Code__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Zip 4 :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Zip_4__c}"/>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label class="slds-form-element__label">Country :</label><lightning:input type="text" variant="label-hidden"  value="{!v.fromAddress.ERP7__Country__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End of Accor 2-->
+                
+                <!--Start of Accor 3-->
+                <div>
+                    <div class="slds-page-header Message USPS-class3"  onclick="{!c.sectionThree}">
+                        <section class="slds-clearfix">
+                            <div class="slds-float--left ">
+                                <lightning:icon class="slds-hide" aura:id="articleThree" iconName="utility:up" size="x-small"/>
+                                <lightning:icon class="slds-show" aura:id="articleThree" iconName="utility:right" size="x-small" />
+                            </div>
+                            <div class="slds-m-left--large" >3. What are you shipping?</div>
+                        </section>
+                    </div>
+                    
+                    <div aura:id="articleThree">
+                        <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                            <thead>
+                                <tr class="slds-text-title--caps">
+                                    <th scope="col"> <div class="slds-truncate2" title="{!$Label.c.Package}">{!$Label.c.Package}</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Order">Order</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Weight">Weight</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Length">Length</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Width">Width</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Height">Height</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Declared Value">Declared Value</div> </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:iteration items="{!v.packageList}" var="package">             
+                                    <tr class="slds-hint-parent">
+                                        <td class="greyheadlabel">
+                                            <a href="{!'/'+ package.Id}" target="_blank">
+                                                <lightning:formattedText value="{!package.Name}"/>
+                                            </a>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                          <!--  <lightning:formattedText value="{!package.ERP7__Sales_Order__r.Name}"/>-->
+                                            <aura:if isTrue="{!package.ERP7__Sales_Order__c!=null}">
+                                                    <lightning:formattedUrl label="{!package.ERP7__Sales_Order__r.Name}" value="{!'/'+package.ERP7__Sales_Order__c}" target="_blank"/>
+                                                </aura:if>
+                                                      <aura:if isTrue="{!package.ERP7__Transfer_Order__c!=null}">
+                                                    <lightning:formattedUrl label="{!package.ERP7__Transfer_Order__r.Name}" value="{!'/'+package.ERP7__Transfer_Order__c}" target="_blank"/>
+                                                </aura:if>
+                                                <aura:if isTrue="{!package.ERP7__Order__r.Name !=null}">
+                                                    <lightning:formattedUrl label="{!package.ERP7__Order__r.Name}" value="{!'/'+package.ERP7__Order__c}" target="_blank"/>
+                                                    <aura:set attribute="else">
+                                                                   <lightning:formattedUrl label="{!package.ERP7__Order__r.OrderNumber}" value="{!'/'+package.ERP7__Order__c}" target="_blank"/>
+                                                                </aura:set>
+                                            </aura:if>
+                                        </td> 
+                                        <td class="greyheadlabel">
+                                            {!package.ERP7__Weight__c}
+                                        </td>
+                                        <td class="greyheadlabel">
+                                           {!package.ERP7__Length__c}  
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            {!package.ERP7__Width__c} 
+                                        </td>                                    
+                                        <td class="greyheadlabel">
+                                            {!package.ERP7__Height__c}
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <lightning:input type="number" formatter="currency" step="0.01"  variant="label-hidden" value="{!package.ERP7__Declared_Value__c}" />
+                                        </td>
+                                    </tr>
+                                </aura:iteration>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!--End of Accor 3-->
+            </div>
+            <!-- End of left section -->
+            
+            <!-- right section -->
+            <div class="col-xs-12 col-sm-12 col-md-6 slds-m-top--small">
+                <div class="slds-tabs--default slds-p-around--xx-small">
+                    <ul class="slds-tabs--default__nav" role="tablist">
+                        <c:Tab label="SHIPPING SERVICES / COST" name="SHIPPING_SERVICES" selectedTab="{!v.selectedTab}" iconclass="fa fa-file-text" />
+                        <div onclick="{!c.setPickList}"><c:Tab label="PROCESS SHIPMENT" name="PROCESS_SHIPMENT" selectedTab="{!v.selectedTab}" iconclass="fa fa-th-large" /></div>
+                        <c:Tab label="TRACK SHIPMENT" name="TRACK_SHIPMENT" selectedTab="{!v.selectedTab}" iconclass="fa fa-truck fa-1x" />
+                    </ul>
+                </div>
+                
+                <aura:if isTrue="{!equals(v.selectedTab,'SHIPPING_SERVICES')}">
+                    <!-- Row 1 -->
+                    <div class="row slds-grid slds-m-around--small USPS-class5" >
+                        <div class="col-md-4 col-xs-4">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                Shipment Date :<lightning:input type="date" variant="label-hidden" class="display-lable"  value="{!v.shipment.ERP7__Shipment_Date__c}"/>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-xs-4">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                Description :<lightning:textarea variant="label-hidden" value="{!v.shipment.ERP7__Description__c}"/>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @end of Row 1 -->
+                    
+                    <!-- Row 2 -->
+                    <div class="row slds-grid slds-m-around--small USPS-class5" >
+                       
+                         <aura:if isTrue="{!v.ShowGetRate}">
+                                <div class="col-xs-12 col-sm-4 col-md-3 USPS-class10" >
+                                    <lightning:button variant="brand" onclick="{!c.Rate_Request}" label="Get Rates"/>
+                                </div>
+                            </aura:if>
+                        <div class="col-md-1 col-xs-1 USPS-class11" >
+                            <aura:if isTrue="{!v.Spinner}">
+                                <div aura:id="spinnerId" class="slds-spinner_container">
+                                    <div class="slds-spinner--brand  slds-spinner slds-spinner--small slds-is-relative" role="alert">
+                                        <span class="slds-assistive-text">Loading</span>
+                                        <div class="slds-spinner__dot-a"></div>
+                                        <div class="slds-spinner__dot-b"></div>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            <!--  Loading spinner end-->
+                        </div>
+                    </div>
+                    <!-- @end of Row 2 -->
+                    <div class="row">&nbsp;</div>
+                    
+                    <aura:if isTrue="{!and(v.errorMsg != undefined, v.errorMsg != '')}"> 
+                        <div class="row USPS-class9" > <lightning:formattedText value="{!v.errorMsg}" class="colorErrorMsg"/> </div>                                                    
+                    </aura:if> 
+                    <aura:if isTrue="{!and(v.errorMsg1 != undefined, v.errorMsg1 != '')}">
+                        <div class="row USPS-class9"> <lightning:formattedText value="{!v.errorMsg1}" class="colorErrorMsg"/> </div>                                                    
+                    </aura:if>
+                    <aura:if isTrue="{!and(v.USPS_Services.UPSErrorMsg != undefined, v.USPS_Services.UPSErrorMsg != '')}">
+                        <div class="col-md-10 col-sm-2 col-xs-12 USPS-class8" >
+                            <lightning:formattedText aura:id="UPSErrorMsg" value="{!v.USPS_Services.UPSErrorMsg}"/>
+                        </div>
+                    </aura:if>
+                    
+                    
+                    <!--Start of Rates-->
+                    <aura:if isTrue="{!v.USPS_Services.time_in_cost_tab}">
+                        <div class="row">
+                            <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        <th scope="col"> <div class="slds-truncate" title="Select">Select</div> </th>
+                                        <th scope="col"> <div class="slds-truncate" title="Service Type">Service Type</div> </th>
+                                        <th scope="col"> <div class="slds-truncate" title="Total Charges">Total Charges</div> </th>
+                                        <th scope="col"> <div class="slds-truncate" title="Commitment Date">Commitment Date</div> </th>
+                                    </tr>
+                                </thead>
+                                
+                                <tbody>
+                                   <aura:iteration var="twl" indexVar="pcount" items="{!v.USPS_Services.Services}">
+                                        <tr>
+                                            <th scope="row" data-label="Select">
+                                                <div class="slds-form-element__control USPS-class12" >
+                                                    <lightning:input type="radio" variant="label-hidden" aura:id="Fr0" name="others" value="{!twl.Selected}"/>
+                                                </div>                                                                            
+                                            </th>
+                                            <td data-label="Service Type">
+                                                <div class="slds-truncate" title="Service">
+                                                    <!-- <lightning:formattedTextArea value="{!twl.Service}" title="{!twl.Service}" /> -->
+                                                    <lightning:formattedRichText value="{!twl.Service}" />
+                                                </div>
+                                            </td> 
+                                            <td data-label="Total Charges">
+                                                <div class="slds-truncate" title="Total Charges"> 
+                                                    <lightning:formattedText value="{!twl.totalCharges}" title="{!twl.totalCharges}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="Delivery Date">
+                                                <div class="slds-truncate" title="Delivery Date">
+                                                    <aura:if isTrue="{!v.USPS_Services.Services.CommitmentDate != ''}">
+                                                    	<lightning:formattedText value="{!twl.CommitmentDate}" title="{!twl.CommitmentDate}" />
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div>
+                    </aura:if>
+                    <!--End of Rates-->
+                    
+                    <aura:if isTrue="{!v.USPS_Services.time_in_cost_tab}"> <!-- showAndHideMap1 -->
+                        <div class="col-sm-12 slds-m-top--small slds-m-bottom--small USPS-class9"  >
+                            <lightning:button variant="brand" onclick="{!c.Shipping_Request}" label="Initiate Shipment"/>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.USPS_Services.showAndHideMap2}"> <!-- showAndHideMap2 -->
+                        <div class="col-xs-12 col-sm-4 col-md-3 USPS-class9"> 
+                            <lightning:button variant="brand" onclick="{!c.CreateUPSLabel}" label="View Label"/>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.USPS_Services.showAndHideMap3}"> <!-- showAndHideMap3 -->
+                        <div class="col-xs-12 col-sm-4 col-md-3 USPS-class9"> 
+                            <lightning:button variant="brand" onclick="{!c.Cancel_Request}" label="Cancel Shipment"/>
+                        </div>
+                    </aura:if>
+                    
+                </aura:if>
+                
+                <aura:if isTrue="{!equals(v.selectedTab,'PROCESS_SHIPMENT')}">
+                    
+                    <div class="row slds-grid slds-m-around--small USPS-class5" >
+                        <div class="col-md-4 col-xs-4">
+                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                Shipment :<lightning:input type="text" variant="label-hidden"  value="{!v.shipment.Name}"/>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-xs-4">
+                            <div class="slds-form-element__control">
+                                <lightning:select value="{!v.shipment.ERP7__Status__c}" aura:id="statusconfirmation">
+                                    <aura:iteration items="{!v.statusconfirmationOptions}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.shipment.ERP7__Status__c, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row slds-grid slds-m-around--small USPS-class5">
+                        <div class="col-md-4">      
+                            <aura:if isTrue="{!v.USPS_Services.showAndHideMap2}"> <!-- showAndHideMap2 -->
+                                <div class="col-sm-12 slds-m-top--xxx-small slds-m-bottom--xxx-small USPS-class9" > 
+                                    <lightning:button variant="neutral" onclick="{!c.CreateUPSLabel}" label="View Label"/>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.USPS_Services.showAndHideMap3}"> <!-- showAndHideMap3 -->
+                                <div class="col-sm-12 slds-m-top--xxx-small slds-m-bottom--xxx-small USPS-class9"> 
+                                    <lightning:button variant="neutral" onclick="{!c.Cancel_Request}" label="Cancel Shipment"/>
+                                </div>
+                            </aura:if>
+                        </div>  
+                    </div>
+                    <div class="row">&nbsp;</div>
+                    <aura:if isTrue="{!and(v.errorMsg1 != undefined, v.errorMsg1 != '')}">
+                        <div class="row USPS-class9" > <lightning:formattedText value="{!v.errorMsg1}" class="colorErrorMsg"/> </div>                                                    
+                    </aura:if>
+                    <aura:if isTrue="{!and(v.USPS_Services.UPSErrorMsg != undefined, v.USPS_Services.UPSErrorMsg != '')}">
+                        <div class="row USPS-class8"> 
+                            <lightning:formattedText aura:id="UPSErrorMsg1" value="{!v.USPS_Services.UPSErrorMsg}"/>
+                        </div>
+                    </aura:if>
+                    <!-- pickup section -->
+                    <aura:if isTrue="{!v.USPS_Services.showAndHideMap4}">
+                        <div class="panel panel-default slds-m-top--small">
+                            <div class="panel-heading">
+                                <h4 class="panel-title"> <a data-toggle="collapse" data-parent="#accordion" href="#collapse4" class="USPS-class13">Pickup Details</a> </h4>
+                            </div>
+                            <div id="collapse4" class="panel-collapse collapse in">
+                                <div class="panel-body">
+                                    <div class="col-md-8">                                                                        
+                                        <div class="row">
+                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                <div class="slds-form-element">
+                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Ready Time</label>
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:input type="datetime" variant="label-hidden" class="display-lable" value="{!v.shipment.Package_Ready_Time__c}" />
+                                                    </div>
+                                                </div>
+                                            </div>                                                                            
+                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                <div class="slds-form-element">
+                                                    <label class="slds-form-element__label" for="text-input-01">Customer Close Time</label>
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:input type="datetime" variant="label-hidden" class="display-lable" value="{!v.shipment.Customer_Close_Time__c}" />
+                                                    </div>
+                                                </div>
+                                            </div>                                                                            
+                                        </div>                                                                        
+                                        <div class="row slds-m-top--xxx-small">
+                                            <div class="col-xs-12 col-sm-6 col-md-6">
+                                                <div class="slds-form-element">
+                                                    <label class="slds-form-element__label" for="text-input-01">Pickup Reference no.</label>
+                                                    <div class="slds-form-element__control">
+                                                        <lightning:input type="text" variant="label-hidden" value="{!v.shipment.Pickup_Confirmation_Number__c}" />
+                                                    </div>
+                                                </div>                                                                       
+                                            </div>
+                                        </div>                                                                          
+                                    </div> 
+                                    
+                                    <div class="col-md-4">
+                                        <aura:if isTrue="{!v.USPS_Services.showAndHideMap5}"> <!-- showAndHideMap5 -->
+                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                <lightning:button variant="neutral" onclick="{!c.PickupRate}" label="Pickup Availability"/>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.USPS_Services.showAndHideMap6}"> <!-- showAndHideMap6 -->
+                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                <lightning:button variant="neutral" onclick="{!c.CreatePickup}" label="Create Pickup"/>
+                                            </div>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.USPS_Services.showAndHideMap7}"> <!-- showAndHideMap7 -->
+                                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                                <lightning:button variant="neutral" onclick="{!c.CancelPickup}" label="Cancel Pickup"/>
+                                            </div>
+                                        </aura:if> 
+                                    </div>                                                                    
+                                </div>                                                                
+                            </div>                                                            
+                        </div>
+                    </aura:if>
+                    <!-- end pickup section -->
+                </aura:if>
+                
+                <aura:if isTrue="{!equals(v.selectedTab,'TRACK_SHIPMENT')}">
+                    <div class="row">                                                               
+                        <div class="col-xs-12 col-sm-6 col-md-6">
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="text-input-01">Tracking no :</label>
+                                <div class="slds-form-element__control">
+                                    <lightning:formattedText value="{!v.shipment.Tracking_Number__c}" />
+                                </div>
+                            </div>
+                        </div>                                                                            
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <aura:if isTrue="{!v.USPS_Services.showAndHideMap8}"> <!-- showAndHideMap8 -->
+                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                <lightning:button variant="neutral" onclick="{!c.Track_Request}" label="Track Shipment"/>
+                            </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.USPS_Services.showAndHideMap8}"> <!-- showAndHideMap8 -->
+                            <div class="col-sm-12 slds-m-top--xxx-small"> 
+                                <lightning:button variant="neutral" onclick="{!c.Signature_Proof_Request}" label="Proof of Delivery"/>
+                            </div>
+                        </aura:if>
+                    </div>
+                    <aura:if isTrue="{!and(v.errorMsg1 != undefined, v.errorMsg1 != '')}">
+                        <div class="row USPS-class9" > <lightning:formattedText value="{!v.errorMsg1}" class="colorErrorMsg"/> </div>                                                    
+                    </aura:if>
+                    <aura:if isTrue="{!and(v.USPS_Services.UPSErrorMsg != undefined, v.USPS_Services.UPSErrorMsg != '')}">
+                        <div class="col-md-10 col-sm-2 col-xs-12 USPS-class8" >
+                            <lightning:formattedText aura:id="UPSErrorMsg" value="{!v.USPS_Services.UPSErrorMsg}"/>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.USPS_Services.UPSErrorMsg == 'Track Shipment Activities'}">
+                        <div class="row slds-grid slds-m-around--small USPS-class5" >
+                            <div class="USPS-class7">    
+                                <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th scope="col"> <div class="slds-truncate" title="Location">Location</div> </th>
+                                            <th scope="col"> <div class="slds-truncate" title="Date/Time">Date/Time</div> </th>                                                            
+                                            <th scope="col"> <div class="slds-truncate" title="Arrival Location">Arrival Location</div> </th> 
+                                            <th scope="col"> <div class="slds-truncate" title="Activity ">Activity</div> </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration var="twl" items="{!v.USPS_Services.trackServices}">
+                                            <tr>
+                                                <td data-label="Location" class="USPS-class6">
+                                                    <div class="slds-truncate" title="Location"> 
+                                                        <lightning:formattedText value="{!twl.eventCity}"/> 
+                                                    </div>
+                                                </td>                                                                                                                               
+                                                <td data-label="Date/Time" class="USPS-class13">
+                                                    <div class="slds-truncate" title="Date/Time">
+                                                        <lightning:formattedDateTime value="{!twl.dtValue}" /> 
+                                                    </div>
+                                                </td>
+                                                <td data-label="Arrival Location">
+                                                    <div class="slds-truncate" title="Arrival Location">
+                                                        <aura:if isTrue="{!and(twl.arrivalLocation != null, twl.arrivalLocation !='')}">
+                                                            <lightning:formattedText value="{!twl.arrivalLocation}"/>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!or(twl.arrivalLocation == null, twl.arrivalLocation == '')}">
+                                                            ---
+                                                        </aura:if>
+                                                    </div>
+                                                </td>
+                                                <td data-label="Activity">
+                                                    <div class="slds-truncate" title="Activity"> 
+                                                        <lightning:formattedText value="{!twl.Event}"/> 
+                                                    </div>
+                                                </td>
+                                            </tr>                                                
+                                        </aura:iteration>
+                                    </tbody> 
+                                </table>
+                            </div>
+                        </div>
+                    </aura:if>
+                </aura:if>
+            </div>
+            <!-- End of right section -->
+        </div>
+    </div>
+    </body>
+</aura:component>

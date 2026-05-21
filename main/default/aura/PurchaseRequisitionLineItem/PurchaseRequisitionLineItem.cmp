@@ -1,0 +1,120 @@
+<aura:component access="global" controller="CreatePurchaseRequisition">
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>  
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css"/>    
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <aura:attribute name="item" type="Map" default="{'ERP7__Price__c':0.00,ERP7__Product__r:{'Id':'','Name':''}}"/>
+    <aura:attribute name="checkValidation" type="Boolean" default="false"/>
+    <aura:attribute name="index" type="Integer"/> 
+    <aura:attribute name="vendorId" type="String"/>
+    <aura:attribute name="deleteIndex" type="Integer" />
+    <aura:attribute name="AllowNew" type="Boolean"/>
+    <aura:attribute name="dCId" type="String" default=""/>
+    <aura:handler name="change" value="{!v.checkValidation}" action="{!c.validate}"/>
+    <aura:method name="callValidate" action="{!c.validate}"/>
+    <aura:attribute name="prli" type="List" default="[]"/>
+    <aura:handler name="change" value="{!v.item.ERP7__Product__c}" action="{!c.getProductCC}"/>
+    <aura:registerEvent name="IndexingEvent" type="c:IndexingEvent"/> 
+    <tr class="slds-hint-parent" >
+        <td data-label="Action" >
+            
+            
+            <a href="javascript:void(0);" onclick="{!c.deletePrli}"> 
+                <center><img src="/resource/ERP7__SLDS0121/assets/icons/action/delete_60_red.png" height="18" width="18" /></center>
+            </a>
+            
+        </td>
+        <td data-label="Name">
+             <div class=""> 
+            <lightning:input type="text" variant="label-hidden" value="{!v.item.Name}"  aura:id="prli_Name" maxlength="80" />
+            </div>     
+        </td>
+        <td data-label="Product">
+            <div class="" onclick="{!c.getstockdetails}">
+               <c:CustomInputLookUp objectAPIName="Product2" IconName="standard:product" selectedRecordId="{!v.item.ERP7__Product__c}" aura:id="product" qry="{!'AND ERP7__Issue_Purchase_Requisition__c = true'}"/><!-- AND Id!=OrderId-->
+            </div>
+       </td>
+        <td data-label="Quantity"> 
+            <lightning:input type="number" variant="label-hidden" aura:id="qty" value="{!v.item.ERP7__Quantity__c}" onchange="{!c.updateTotalPrice}"/> 
+        </td> 
+        <td data-label="Unit Price" title="Not Editable">        
+            <lightning:input type="number" variant="label-hidden" formatter="currency" step="0.01" aura:id="amount" value="{!v.item.ERP7__Price__c}" onchange="{!c.updateTotalPrice}"/>           
+        </td>  
+        <td data-label="Total Price"  title="Not Editable">
+            <lightning:input type="number" variant="label-hidden" formatter="currency" step="0.01" aura:id="Totalamount" value="{!v.item.ERP7__Amount__c}" />
+        </td>
+        <td data-label="Special Instruction" width="24%">
+            <lightning:textarea aura:id="description" value="{!v.item.ERP7__Description__c}" maxlength="200"/>
+        </td>
+        
+    </tr>
+    <aura:if isTrue="{!and(v.item.ERP7__Product__c != '',v.item.ERP7__Product__c != null)}">
+        <tr>
+            <td colspan="10">
+                <div class="erp_Mark7">
+                <div class="row m-0">
+                    <div class="col-md-1 mr-5">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card background-success">
+                            <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:ad_set" size="x-small" alternativeText="clock!" title="clock" variant="inverse"/>
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                            &nbsp;{!$Label.c.InventoryConsole_Items_in_Stock}</h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="manageLeave-newClass18">{!v.item.ItemsinStock}</div>
+                                    </div>    
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card background-new">
+                            <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:high_velocity_sales" size="x-small" alternativeText="clock!" title="clock" variant="inverse"/>
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                            &nbsp;{!$Label.c.Awaiting_Stock} :</h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="manageLeave-newClass18">{!v.item.AwaitingStock}</div>
+                                    </div>    
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card background-inprogress">
+                            <div class="card-body text-center multipurchaseorder-class1" data-status="Cancelled">
+                                <div class="slds-grid">
+                                    <div class="slds-col">
+                                        <lightning:icon iconName="utility:capacity_plan" size="x-small" alternativeText="clock!" title="clock" variant="inverse"/>
+                                    </div>
+                                    <div class="slds-col pt-1">
+                                        <h6 class="mb-0 mt-0 manageLeave-newClass17" >
+                                            &nbsp;{!$Label.c.Demand_UsersShiftMatch} :</h6>
+                                    </div>
+                                    <div class="slds-col">
+                                        <div class="manageLeave-newClass18">{!v.item.demand}</div>
+                                    </div>    
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                </div>
+            </td>
+            
+        </tr>
+    </aura:if>
+</aura:component>

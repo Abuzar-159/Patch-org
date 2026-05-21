@@ -1,0 +1,194 @@
+<aura:component  implements="force:appHostable"  controller="MultiplePO">
+    <head>
+        <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.min.css',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css',$Resource.PickPackShipResource + '/assets/styles/font-awesome.css' )}"/>
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    </head>
+    <aura:attribute name="poliWrap" type="List" />
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="CreatedPOPOLIs" type="object[]"/>
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:attribute name="channelId" type="String" default=""/>
+    <aura:attribute name="dChannelId" type="String" default=""/>
+    <aura:attribute name="ChannelName" type="String" default=""/>
+    <aura:attribute name="dChannelName" type="String" default=""/>
+    <aura:attribute name="fromAP" type="Boolean" default="false"/>
+    <aura:attribute name="fromMultiPO" type="Boolean" default="false"/>
+    <aura:attribute name="POSubmittedforApproval" type="List" />
+    <aura:attribute name="showForm" type="Boolean" default="false"/>
+    <aura:attribute name="comment" type="String" default="" />
+    <aura:attribute name="submitApproval" type="Boolean" default="false"/>
+    <aura:attribute name="showfileUpload" type="Boolean" default="false"/>
+    <aura:attribute name="showAllocations" type="Boolean" default="true"/>
+    <aura:attribute name="MOId" type="String" />
+    <aura:attribute name="plolist" type="object" />
+    <aura:attribute name="addressRequired" type="Boolean" default="false"/>
+    <body>
+        <div class="maqsood erp_Mark7 erp_mark7 cl1" aura:id="body">
+            <span class="spinner35">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+            <div class=" slds-container--fluid">
+                <div class="slds-page-header">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:record"  size="large" alternativeText="record!" title="record" />
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset">{!$Label.c.Multiple}</p>
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle" title="">{!$Label.c.Acc_Pay_Purchase_Orders} </h1>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small headernavmaq showcreatedPO-pt-5">
+                            
+                            <div class="slds-m-right--xx-small slds-truncate2"> <lightning:icon iconName="utility:success" variant="Success" size="x-small"></lightning:icon><!--<i class="fa fa-arrow-right" ></i>-->&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.channelId}" target="_blank"/></div>
+                            <div class="slds-m-right--xx-small slds-truncate2"> <lightning:icon iconName="utility:success" variant="Success" size="x-small"></lightning:icon><!-- <i class="fa fa-filter"></i>-->&nbsp;<lightning:formattedUrl label="{!v.dChannelName}" value="{!'/'+v.dChannelId}" target="_blank"/></div>
+                            
+                        </div>
+                       
+                    </div>
+                </div>
+            </div>
+            <div class="card shadow-custom cl2">
+                <div class="card-body p-0">
+                    <div class="table-responsive nolabel cl3" tabindex="1">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th> <lightning:input type="checkbox" variant="label-hidden" checked="{!v.checkAll}" onchange="{!c.SelectAll}"/></th>
+                                    <th>{!$Label.c.Name_ManageLeave}</th>
+                                    <th>{!$Label.c.InventoryConsole_Vendor}</th>
+                                    <th>{!$Label.c.Contact_Record_Name}</th>
+                                    <th>{!$Label.c.PurchaseOrderPDF_Delivery_Address}</th>
+                                    <th>{!$Label.c.Total_QTY}</th>
+                                    <th>{!$Label.c.PurchaseOrderPDF_Total_Price}</th>
+                                    <th>{!$Label.c.Order_RMA}</th>
+                                    <th>{!$Label.c.Status}</th>
+                                    <th>{!$Label.c.SalesOrderConsole_Action}</th>
+                                    <!--<aura:if isTrue="{!(v.POSubmittedforApproval.length > 0)}"><th>Action</th></aura:if>-->
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                <aura:iteration items="{!v.CreatedPOPOLIs}" var="PO">
+                                    <tr>
+                                       
+                                        <td>
+                                             <lightning:input type="checkbox" checked="{!PO.selected}" disabled="{!PO.ERP7__Status__c == 'Submitted for Approval'}" onchange="{!c.CheckPO}"/>
+                                           <!--<lightning:input aura:id="selectcheck" type="checkbox" variant="label-hidden"  checked="{!PO.selected}" onclick="{!c.CheckPO}" name="{!PO.Id}" disabled="{!PO.ERP7__Status__c == 'Submitted for Approval'}"/> -->
+                                        </td>
+                                      
+                                        <td>
+                                            <a href="{!'/'+ PO.Id}" target="_blank">
+                                                <lightning:formattedText value="{!PO.Name}"/>
+                                                
+                                            </a>
+                                        </td> 
+                                        <td> 
+                                            <a href="{!'/'+ PO.ERP7__Vendor__c}" target="_blank">
+                                                <lightning:formattedText value="{!PO.ERP7__Vendor__r.Name}"/>
+                                                
+                                            </a>
+                                        </td>
+                                        <td> 
+                                            <a href="{!'/'+ PO.ERP7__Vendor_Contact__c}" target="_blank">
+                                                <lightning:formattedText value="{!PO.ERP7__Vendor_Contact__r.Name}"/>
+                                                
+                                            </a>
+                                        </td>
+                                        <td> 
+                                            <a href="{!'/'+ PO.ERP7__Delivery_Address__c}" target="_blank">
+                                                <lightning:formattedText value="{!PO.ERP7__Delivery_Address__r.Name}"/>
+                                                
+                                            </a>
+                                        </td>
+                                        <td> 
+                                            {!PO.ERP7__Total_Quantity__c}
+                                        </td>
+                                        <td> 
+                                            {!PO.ERP7__Total_Amount__c}
+                                        </td>
+                                        <td> 
+                                            <a href="{!'/'+ PO.ERP7__Order__c}" target="_blank">
+                                                <lightning:formattedText value="{!PO.ERP7__Order__r.Name}"/>
+                                                
+                                            </a>
+                                        </td>
+                                        
+                                        <td> {!PO.ERP7__Status__c}</td> 
+                                        <aura:if isTrue="{!(PO.ERP7__Status__c != 'Submitted for Approval')}">
+                                        <td>
+                                            
+                                            <lightning:button label="{!$Label.c.EditLabel}"  iconName="action:edit" variant="brand"  onclick="{!c.handleEdit}" name="{!PO.Id}"/>&nbsp;<!-- name="{!PO.Id}"  onclick="{!c.handleEdit}"-->
+                                            <aura:if isTrue="{!(v.submitApproval)}">
+                                             <lightning:button label="{!$Label.c.Submit_for_approval}"  iconName="action:approval" class="slds-button slds-button_outline-brand"  onclick="{!c.SubmitforApproval}" name="{!PO.Id}" />
+                                            </aura:if>
+                                        </td>
+                                            </aura:if>
+                                    </tr>
+                                    
+                                </aura:iteration>
+                                
+                            </tbody>
+                            
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-docked-form-footer">
+                <lightning:button label="{!$Label.c.Home}" variant="brand" iconName="utility:home" class="slds-button slds-button-brand" onclick="{!c.cancelclick}"/>
+                <aura:if isTrue="{!(v.MOId)}">
+                    <lightning:button label="{!$Label.c.Go_to_MO}"  class="slds-button slds-button_outline-brand"  onclick="{!c.gotoMO}" />
+                </aura:if>
+                <aura:if isTrue="{!and(v.POSubmittedforApproval.length > 0,submitApproval)}">
+                    <lightning:button label="{!$Label.c.Submit_for_approval}"  iconName="action:approval" class="slds-button slds-button_outline-brand"  onclick="{!c.SubmitallforApproval}" />
+                </aura:if>
+            </div>
+            
+        </div>
+        <br/><br/>
+        <div>
+            <aura:if isTrue="{!v.showForm }">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <!-- Modal/Popup Box Header Starts here-->
+                        <div class="slds-modal__header">
+                            <lightning:buttonIcon iconName="utility:close"
+                                                  onclick="{!c.closeModel}"
+                                                  alternativeText="{!$Label.c.Close_Timesheets}"
+                                                  variant="bare-inverse"
+                                                  class="slds-modal__close" size="large"/>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate font500">{!$Label.c.approvalLabel}</h2>
+                        </div>
+                       <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                           <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Are_you_sure_you_want_to_submit}</h2>
+                        </div>
+                        <!--Modal/Popup Box Body Starts here-->
+                       <!-- <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <div class="inputArea">
+                                <lightning:textarea name="comment" label="Comments" value="{!v.comment}" placeholder="" />
+                            </div>
+                        </div>-->
+                        <!--Modal/Popup Box Footer Starts here-->
+                        <footer class="slds-modal__footer text-center">
+                            <lightning:button variant="neutral"
+                                              label="{!$Label.c.No}"
+                                              title="No"
+                                              onclick="{!c.closeModel }"/>
+                            <lightning:button variant="brand"
+                                              label="{!$Label.c.Yes_UserAvailabilities}"
+                                              title="Yes"
+                                              onclick="{!c.submitDetails}"/>     
+                        </footer>
+                    </div>
+                </section>
+              <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+            </aura:if>
+        </div>
+    </body>
+</aura:component>

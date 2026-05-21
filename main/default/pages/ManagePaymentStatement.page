@@ -1,0 +1,471 @@
+<apex:page standardController="Contact" extensions="ManagePaymentStatement" sidebar="false" showHeader="false" id="page" standardStylesheets="true" tabStyle="Product2" docType="html-5.0">
+    <body style="background:#f9f9f9;">
+        <apex:form id="myform">
+            <apex:pagemessages ></apex:pagemessages>
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td valign="middle" align="center" height="25" class="headtxt"><span style=" font-family:verdana; font-size:16px; font-weight:bold; color:#333;">Payment Statement</span></td>
+                </tr>
+                <apex:outputPanel >
+                    <tr>
+                        <td align="left" height="30" class="erp-bg">Customer Information</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td width="5%">&nbsp;</td>
+                                    <td width="20%">&nbsp;</td>
+                                    <td width="20%">&nbsp;</td>
+                                    <td width="5%">&nbsp;</td>
+                                    <td width="20%">&nbsp;</td>
+                                    <td width="20%">&nbsp;</td>
+                                    <td width="5%">&nbsp;</td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td align="left" class="namestxt">First Name : &nbsp;</td>
+                                    <td align="left">
+                                        <apex:inputText styleClass="textarea" value="{!contact.FirstName}" id="fn" disabled="true" rendered="{!$ObjectType.contact.fields.FirstName.Accessible}"/> </td>
+                                    <td align="left" class="namestxt">&nbsp;</td>
+                                    <td align="left" class="namestxt">Last Name: &nbsp;</td>
+                                    <td align="left">
+                                        <apex:inputText styleClass="textarea" value="{!contact.LastName}" disabled="true" rendered="{!$ObjectType.contact.fields.LastName.Accessible}"/> </td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                </tr>
+                                <tr>
+                                    <td>&nbsp;</td>
+                                    <td width="9%" align="left" class="namestxt">Email:&nbsp;</td>
+                                    <td align="left" width="29%">
+                                        <apex:inputText styleClass="textarea" value="{!contact.Email}" disabled="true" rendered="{!$ObjectType.contact.fields.Email.Accessible}"/> </td>
+                                    <td align="left" class="namestxt">&nbsp;</td>
+                                    <td align="left" class="namestxt">Phone: &nbsp;</td>
+                                    <td align="left">
+                                        <apex:inputText styleClass="textarea" value="{!contact.Phone}" disabled="true" rendered="{!$ObjectType.contact.fields.Phone.Accessible}"/> </td>
+                                </tr>
+                                <tr>
+                                    <td width="1%">&nbsp;</td>  
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                    <td>&nbsp;</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </apex:outputPanel>
+                <tr>
+                    <td align="left" height="30" class="erp-bg" valign="middle">
+                        <table>
+                            <tr>
+                                <td>
+                                    <apex:outputText value="Sales Orders With Due Amount" style="color:#FFFFFF;" /> </td>
+                                <td>
+                                    <apex:actionStatus id="spinner8">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="15px;" width="16px;" style="padding-left:10px;" /> </apex:facet>
+                                    </apex:actionStatus>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="height: 5px; padding-left: 20px; padding-top: 3px;"> </td>
+                </tr>
+                <tr>
+                    <td>
+                        <apex:pageBlock id="pb">
+                            <apex:pageBlockTable id="sos" value="{!orderWrapperList}" var="so" columnsWidth="100px;">
+                                <apex:column style="height:25px;{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header">
+                                        <apex:inputCheckbox value="{!selAll}" style="margin-left: 10px;">
+                                            <apex:actionSupport event="onclick" action="{!selectAllOrders}" reRender="pb,amt" status="spinner8" /> </apex:inputCheckbox>
+                                    </apex:facet>
+                                    <apex:inputCheckbox value="{!so.sel}" style="margin-left: 10px;">
+                                        <apex:actionSupport event="onclick" reRender="pb,amt" status="spinner10" /> </apex:inputCheckbox>
+                                    <apex:actionStatus id="spinner10">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/spinner24.gif')}" height="17px;" width="17px;" style="margin-left: 10px;" /> </apex:facet>
+                                    </apex:actionStatus>
+                                </apex:column>
+                                <apex:column style="{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header"> Order No. </apex:facet>
+                                    <apex:outputText value="{!so.currentSalesorder.Name}" rendered="{!$ObjectType.Sales_Order__c.fields.Name.Accessible}"/> </apex:column>
+                                <apex:column style="{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header"> Customer </apex:facet>
+                                    <apex:outputText value="{!so.currentSalesorder.Account__r.name}" rendered="{!$ObjectType.Sales_Order__c.fields.Account__c.Accessible && !$ObjectType.Account.fields.Name.Accessible}"/> </apex:column>
+                                <apex:column style="{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header"> Order Date </apex:facet>
+                                    <apex:outputField value="{!so.currentSalesorder.Order_Date__c}" rendered="{!$ObjectType.Sales_Order__c.fields.Order_Date__c.Accessible}"/> </apex:column>
+                                <apex:column style="{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header"> Order Type </apex:facet>
+                                    <!--<apex:outputText value="{!so.currentSalesorder.Order_Type__r.Name}" rendered="{!$ObjectType.Sales_Order__c.fields.Order_Type__c.Accessible}"/>--> </apex:column>
+                                <apex:column style="{!if(so.sel,'background-color:#FF8080;', 'color:black')}">
+                                    <apex:facet name="header"> Due Amount </apex:facet>
+                                    <apex:outputText value="{!so.currentSalesorder.Due_Amount__c}" rendered="{!$ObjectType.Sales_Order__c.fields.Due_Amount__c.Accessible}"/> </apex:column>
+                            </apex:pageBlockTable>
+                        </apex:pageBlock>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="left" height="30" class="erp-bg" valign="middle">
+                        <table>
+                            <tr>
+                                <td>
+                                    <apex:outputText value="Cash Information" style="color:#FFFFFF;" /> </td>
+                                <td>
+                                    <apex:actionStatus id="spinner9">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="15px;" width="16px;" style="padding-left:10px;" /> </apex:facet>
+                                    </apex:actionStatus>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td width="10%" valign="top">&nbsp;</td>
+                                <td width="15%" valign="top">&nbsp;</td>
+                                <td width="10%" valign="top">&nbsp;</td>
+                                <td width="15%" valign="top">&nbsp;</td>
+                                <td width="10%" valign="top">&nbsp;</td>
+                                <td width="15%" valign="top">&nbsp;</td>
+                                <td width="10%" valign="top">&nbsp;</td>
+                                <td width="15%" valign="top">&nbsp;</td>
+                            </tr>
+                            <tr>
+                                <td valign="top" align="right" class="namestxt">Amount:&nbsp;</td>
+                                <td valign="top" align="left">
+                                    <apex:inputText styleClass="textarea" value="{!TotalDueStr}" disabled="true" id="amt" /> </td>
+                                <td valign="top" align="right" class="namestxt">Payment Type:&nbsp;</td>
+                                <td valign="top" align="left" class="namestxt">
+                                    <apex:selectList value="{!paymentType}" multiselect="false" size="1" id="typepay" styleClass="inputallfields" style="width:85%; height: 25px;" onchange="hideBanksSections(this.value);">
+                                        <apex:selectOption itemValue="Cash" itemLabel="Cash" />
+                                        <apex:selectOption itemValue="Bank" itemLabel="Bank/Cheque" />
+                                    </apex:selectList>
+                                </td>
+                                <td valign="top" align="right" class="namestxt">Description:&nbsp;</td>
+                                <td valign="top" align="left" class="namestxt">
+                                    <apex:inputTextarea id="des" style="height:80px;width:200px;" value="{!description}" styleClass="inputallfields" label="" /> </td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                            </tr>
+                            <tr>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                                <td>&nbsp;</td>
+                            </tr>
+                        </table>
+                        
+                        <!-- ------------------------------------------   Bank Section  ---------------------------------------------------------- -->
+                        <script>
+                        
+                            function hideBanksSections(val){
+                               
+                                actionik();
+                            }
+                        </script>
+                        <apex:actionFunction name="actionik" reRender="myform" status="spinner9"/>
+                        
+                            <tr style="display:{!if(paymentType == 'Bank','','none')}">
+                                <td align="left" height="30" class="erp-bg" valign="middle">
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <apex:outputText value="Payment Methods" style="color:#FFFFFF;" /> </td>
+                                            <td>
+                                                <apex:actionStatus id="spinner11">
+                                                    <apex:facet name="start">
+                                                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="15px;" width="16px;" style="padding-left:10px;" /> </apex:facet>
+                                                </apex:actionStatus>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr style="display:{!if(paymentType == 'Bank','','none')}">
+                                <td style="height: 5px; padding-left: 20px; padding-top: 3px;"> </td>
+                            </tr>
+                            <tr style="display:{!if(paymentType == 'Bank','','none')}">
+                                <td>
+                                    <apex:pageBlock id="pbs">
+                                        <apex:pageBlockTable id="sos" value="{!paymentMethodWrapperList}" var="pm" columnsWidth="100px;" >
+                                            <apex:column style="height:25px;{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:inputCheckbox value="{!pm.sel}" style="margin-left: 10px;">
+                                                    <apex:actionSupport event="onclick" action="{!selectPaymentMethod}" reRender="pbs,cheque,bank" status="spinner11">
+                                                        <apex:param name="payMethodId" value="{!pm.paymentMethod.Id}" assignTo="{!paymentMethodId}" /> </apex:actionSupport>
+                                                </apex:inputCheckbox>
+                                            </apex:column>
+                                            <apex:column style="{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:facet name="header"> Bank Name </apex:facet>
+                                                <apex:outputField value="{!pm.paymentMethod.Bank_Name__c}" /> </apex:column>
+                                            <apex:column style="{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:facet name="header"> Bank Branch Name </apex:facet>
+                                                <apex:outputField value="{!pm.paymentMethod.Bank_Branch_Name__c}" /> </apex:column>
+                                            <apex:column style="{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:facet name="header"> Bank Account Number </apex:facet>
+                                                <apex:outputField value="{!pm.paymentMethod.Reference_Number__c}" /> </apex:column>
+                                            <apex:column style="{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:facet name="header"> Sort Code </apex:facet>
+                                                <apex:outputField value="{!pm.paymentMethod.Sort_Code__c}" /> </apex:column>
+                                            <apex:column style="{!if(pm.sel,'background-color:#FF8080;', 'color:black')}">
+                                                <apex:facet name="header"> Swift BIC Code </apex:facet>
+                                                <apex:outputField value="{!pm.paymentMethod.Swift_BIC_Code__c}" /> </apex:column>
+                                        </apex:pageBlockTable>
+                                    </apex:pageBlock>
+                                </td>
+                            </tr>
+                        
+                            <!-- ////////////////////////////////////////////////////////////// -->
+                        
+                       
+                            <tr style="display:{!if(paymentType == 'Bank','','none')}">
+                                <td align="left" height="30" class="erp-bg" valign="middle">
+                                    <table>
+                                        <tr>
+                                            <td>
+                                                <apex:outputText value="Bank Details" style="color:#FFFFFF;" /> </td>
+                                            <td>
+                                                <apex:actionStatus id="spinner13">
+                                                    <apex:facet name="start">
+                                                        <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="15px;" width="16px;" style="padding-left:10px;" /> </apex:facet>
+                                                </apex:actionStatus>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr style="display:{!if(paymentType == 'Bank','','none')}">
+                                <td>
+                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                        <tr>
+                                            <td width="10%" valign="top">&nbsp;</td>
+                                            <td width="15%" valign="top">&nbsp;</td>
+                                            <td width="15%" valign="top">&nbsp;</td>
+                                            <td width="15%" valign="top">&nbsp;</td>
+                                            <td width="10%" valign="top">&nbsp;</td>
+                                            <td width="15%" valign="top">&nbsp;</td>
+                                            <td width="10%" valign="top">&nbsp;</td>
+                                            <td width="5%" valign="top">&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td valign="top" align="right" class="namestxt"><span style="color:red;">*</span>Bank:&nbsp;</td>
+                                            <td valign="top" align="left">
+                                                <apex:inputField styleClass="textarea" value="{!tempPayment.Bank__c}" id="bank" /> </td>
+                                            <td valign="top" align="right" class="namestxt"><span style="color:red;">*</span>Reference Cheque Number:&nbsp;</td>
+                                            <td valign="top" align="left" class="namestxt">
+                                                <apex:inputField id="cheque" value="{!tempPayment.Reference_Cheque_No__c}" styleClass="textarea" label="" /> </td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                        </tr>
+                                        <tr>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                            <td>&nbsp;</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        
+                        
+                        <!-- ---------------------------------------------------------------------------------------------------- -->
+                        
+                        <tr bgcolor="#ff0000">
+                            <td align="left" height="5" class="headtxt"></td>
+                        </tr>
+                        <tr>
+                            <td align="left" height="25" class="namestxt">
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                    <tr>
+                                        <td align="left" height="15" class="namestxt"></td>
+                                    </tr>
+                                    <tr>
+                                        <td align="center">
+                                            <apex:commandButton value=" " onclick="validate();" reRender=";" style="width:130px; height:40px; background:url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtn.png')}) repeat; border:none; color:#fff;" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtn.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/paynowbtn.png')})';" rendered="{!$ObjectType.Payment__c.Createable && $ObjectType.Payment__c.Updateable}" />
+                                            <apex:commandButton value="" action="{!close}" style="width:130px; height:40px; padding-bottom: 15px; background:url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')}) repeat; border:none; color:#fff;" immediate="true" onMouseOver="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtnh.png')})';" onMouseOut="this.style.background='url({!URLFOR($Resource.SCM,'SCM/Images/closebtn.png')})';" /> </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </td>
+                </tr>
+            </table>
+        <apex:actionFunction name="payNow" action="{!Pay}"/>
+        <script>
+            function validate(){
+                var pType = document.getElementById('{!$Component.typepay}').value;
+                var bank = document.getElementById('{!$Component.bank}').value;
+                var cheque = document.getElementById('{!$Component.cheque}').value;
+                if(pType == 'Bank' && bank == '' && cheque == ''){
+                    document.getElementById('{!$Component.bank}').style.borderColor = "red";
+                    document.getElementById('{!$Component.cheque}').style.borderColor = "red";
+                }
+                else if(pType == 'Bank' && bank == '' && cheque != ''){
+                    document.getElementById('{!$Component.bank}').style.borderColor = "red";
+                    document.getElementById('{!$Component.cheque}').style.borderColor = "#DDDDDD";
+                }
+                else if(pType == 'Bank' && bank != '' && cheque == ''){
+                    document.getElementById('{!$Component.bank}').style.borderColor = "#DDDDDD";
+                    document.getElementById('{!$Component.cheque}').style.borderColor = "red";
+                }
+                else payNow();
+            }
+        </script>
+        <style>
+            input[type=text],
+            textarea,
+            select {
+                -webkit-transition: all 0.30s ease-in-out;
+                -moz-transition: all 0.30s ease-in-out;
+                -ms-transition: all 0.30s ease-in-out;
+                -o-transition: all 0.30s ease-in-out;
+                outline: none;
+                /*margin: 5px 1px 3px 0px;*/
+                border: 1px solid #DDDDDD;
+            }
+            
+            input[type=text]:focus,
+            textarea:focus,
+            select:focus {
+                box-shadow: 0 0 5px rgba(255, 0, 24, 1);
+                /*padding: 3px 0px 3px 3px;
+                margin: 5px 1px 3px 0px;*/
+                border: 1px solid rgba(255, 0, 24, 1);
+            }
+            
+            .bdr {
+                -webkit-transition: all 0.30s ease-in-out;
+                -moz-transition: all 0.30s ease-in-out;
+                -ms-transition: all 0.30s ease-in-out;
+                -o-transition: all 0.30s ease-in-out;
+                outline: none;
+            }
+            
+            .bdr:focus,
+            {
+                -webkit-box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+                box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+                -o-box-shadow: 0 0 0px rgba(255, 0, 24, 1);
+            }
+            
+            .erp-bg {
+                font-family: sans-serif;
+                background-color: #f62b2b;
+                background-image: -webkit-gradient(linear, left top, left bottom, from(#f62b2b), to(#d20202));
+                background-image: -webkit-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -moz-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -ms-linear-gradient(top, #f62b2b, #d20202);
+                background-image: -o-linear-gradient(top, #f62b2b, #d20202);
+                background-image: linear-gradient(to bottom, #f62b2b, #d20202);
+                filter: progid: DXImageTransform.Microsoft.gradient(GradientType=0, startColorstr=#f62b2b, endColorstr=#d20202);
+                border-color: #ddd;
+                text-align: left;
+                padding-left: 10px;
+                color: #ffffff;
+                /*  text-shadow: 0 1px 0 #eee;*/
+                font-weight: normal;
+                /*background-color: #ff6767; background-image: -webkit-gradient(linear, left top, left bottom, from(#ff6767), to(#ff0d0d));
+                background-image: -webkit-linear-gradient(top, #ff6767, #ff0d0d);
+                background-image: -moz-linear-gradient(top, #ff6767, #ff0d0d);
+                background-image: -ms-linear-gradient(top, #ff6767, #ff0d0d);
+                background-image: -o-linear-gradient(top, #ff6767, #ff0d0d);
+                background-image: linear-gradient(to bottom, #ff6767, #ff0d0d);filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#ff6767, endColorstr=#ff0d0d);*/
+                -webkit-border-top-left-radius: 7px;
+                -moz-border-radius-topleft: 7px;
+                border-top-left-radius: 7px;
+                -webkit-border-top-right-radius: 7px;
+                -moz-border-radius-topright: 7px;
+                border-top-right-radius: 7px;
+                -webkit-border-bottom-right-radius: 7px;
+                -moz-border-radius-bottomright: 7px;
+                border-bottom-right-radius: 7px;
+                -webkit-border-bottom-left-radius: 7px;
+                -moz-border-radius-bottomleft: 7px;
+                border-bottom-left-radius: 7px;
+            }
+            
+            .headtxt {
+                font-family: Verdana;
+                color: #FFFFFF;
+                font-size: 13px;
+                font-weight: normal;
+                padding-left: 10px;
+            }
+            
+            .namestxt {
+                font-family: Verdana;
+                color: #666;
+                font-size: 12px;
+                font-weight: normal;
+            }
+            
+            .textarea {
+                border-top: 1px solid #9ed1ff;
+                border-left: 1px solid #9ed1ff;
+                border-right: 1px solid #9ed1ff;
+                border-bottom: 1px solid #9ed1ff;
+                -webkit-border-radius: 3px;
+                -moz-border-radius: 3px;
+                -webkit-transition: all 0.4s ease-in-out;
+                /* fade in effect */
+                -moz-transition: all 0.4s ease-in-out;
+                -o-transition: all 0.4s ease-in-out;
+                height: 20px;
+                width: 150px;
+                padding-left: 7px;
+            }
+            
+            .button6 {
+                width: 80px;
+                height: 40px;
+                background:url({!URLFOR($Resource.SCM,'SCM/Images/addNC5.png')}) repeat;
+                border:none;
+                color:#fff;
+            }
+            .button4 {
+                width: 130px;
+                height: 40px;
+                background:url({!URLFOR($Resource.SCM,'SCM/Images/addNC3.png')}) repeat;
+                border:none;
+                color:#fff;
+            }
+            .inputallfields {
+                border: 1px solid rgb(195,
+                229,
+                247);
+                -webkit-border-radius: 4px;
+                -moz-border-radius: 4px;
+                border-radius: 4px;
+                background: none repeat scroll 0 0 #FFFFFF;
+                border-color: #CCCCCC;
+                color: #111;
+            }
+    
+        </style>
+        </apex:form>
+    </body>
+</apex:page>

@@ -1,0 +1,660 @@
+<aura:component controller="ReturnPurchaseOrder" implements="force:appHostable,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global" >
+     <!-- ReturnPurchaseOrder  -->
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js"/> <!--  afterScriptsLoaded="{!c.focusTOscan}"  -->
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css"/>
+    
+    <ltng:require styles="/resource/ERP7__SLDS213/assets/styles/salesforce-lightning-design-system-vf.css" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__TablesSort/TablesSort/css/dataTables.bootstrap.min.css" />
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ReturnPurchaseOrders.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doinit}"/>
+    <aura:handler name="change" value="{!v.Customer.Id}" action="{!c.fetchCustomerInfo}"/>
+   <!-- <aura:handler name="change" value="{!v.scanValue}" action="{!c.searchSOli}"/> -->
+    <aura:handler name="change" value="{!v.CustContact.Id}" action="{!c.fetchContact}"/>
+    <aura:handler name="change" value="{!v.Address.Id}" action="{!c.fetchAddress}"/>
+    <aura:handler name="change" value="{!v.RPOId}" action="{!c.fetchRMALIValue}"/> <!-- RMA_lookup.Id  -->
+    <aura:handler name="change" value="{!v.RPO.ERP7__Vendor__c}" action="{!c.BuildPoliList}"/> 
+    <aura:handler name="change" value="{!v.DistributeChannelId}" action="{!c.fetchDistributeChannelDetails}"/>
+    
+   <!-- <aura:handler name="change" value="{!v.site.Id}" action="{!c.fetchSiteDetails}"/>
+    <aura:handler name="change" value="{!v.SiteAddressId}" action="{!c.fetchSiteAddress}"/>
+    <aura:handler name="change" value="{!v.DistributeChannel.Id}" action="{!c.fetchSiteDetailsByDC}"/>
+    <aura:handler name="change" value="{!v.RMA.ERP7__Invoice__c}" action="{!c.fetchRMALIByInvId}"/>-->
+    <!--<aura:handler event="aura:waiting" action="{!c.showSpinner}"/>-->
+    <!--<aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>-->
+    <aura:attribute name="message" type="Map" default="{Title:'Error',Severity:'error',Text:''}"/>
+    <aura:attribute name="qry" type="String"/>
+    
+    <!-- dum --> <aura:attribute name="RMA" type="MAP" default="{Id:'',Name:'',ERP7__Authorize__c: false, ERP7__Status__c : '',ERP7__Distribution_Channel__c:'',ERP7__Site__c: '',ERP7__Address__c: '',ERP7__Channel__c: '',ERP7__SO__c: '',ERP7__Return_Contact__c:'',ERP7__Account__c:'',Name:'',ERP7__Frieght_Type__c:'',ERP7__Expected_Date__c: '',ERP7__Is_Closed__c : false,ERP7__Refund_Amount__c : ''}"/>
+    
+    <aura:attribute name="RPO" type="PO__c" default="{Id:'', Name:'',ERP7__Is_Closed__c:'false', ERP7__Total_Amount__c:'0', ERP7__Ready_To_Pick_Pack__c:'false', ERP7__Status__c:'', ERP7__Expected_Date__c:''}"/>
+    <aura:attribute name="RPOId" type="String" default=""/>
+    
+     <aura:attribute name="RPOLI" type="Purchase_Line_Items__c" default=""/>
+    
+    
+    <aura:attribute name="RMA_lookup" type="MAP" default="{Id:'',Name:''}"/>
+    <aura:attribute name="DistributeChannel"  type="sObject" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="savehide" type="Boolean" default='true'/>
+    <aura:attribute name="RMAChange" type="Boolean" default='true'/>
+    <aura:attribute name="expectedDate" type="Date"/>
+    <aura:attribute name="RMALI" type="Object"/>
+    <aura:attribute name="RMAId" type="String"/>
+    <aura:attribute name="SOId" type="String" default=""/>
+    <aura:attribute name="freightType" type="String"/>
+    <aura:attribute name="RMAStatus" type="String"/>
+    <aura:attribute name="site" type="MAP" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="Customer" type="MAP" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="ContactId" type="String"/>
+    <aura:attribute name="Address" type="MAP" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="CustContact" type="MAP" default="{'Id':'','Name':''}"/>
+    <aura:attribute name="AddressId" type="String"/>
+    <aura:attribute name="SiteAddress" type="Object"/>
+    <aura:attribute name="SiteAddressId" type="String" default=""/>
+    <aura:attribute name="channelId" type="String" default=""/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="CustomerAddress" type="Object"/>
+    <aura:attribute name="CustomerContact" type="Object"/>
+    <aura:attribute name="solis" type="Object[]"/>
+    <aura:attribute name="SelectRMALI" type="Object[]"/>
+    <aura:attribute name="offSet" type="Integer" default='0'/>
+    <aura:attribute name="refundAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="EditRMA" type="Boolean" default='true'/>
+    <aura:attribute name="navigateToRecord" type="Boolean" default='false'/>
+    <aura:attribute name="priorCloseValue" type="Boolean" default='false'/>
+    <aura:attribute name="disableSave" type="Boolean" default='false'/>
+    <aura:attribute name="errMsg" type="String" default="No Items Select"/>
+    <aura:attribute name="searcherrMsg" type="String" default="No Items Found"/>
+    <aura:attribute name="isDoneRendering" type="Boolean" default="false"/>
+    <aura:attribute name="DelObj" type="Object"/>
+    <aura:attribute name="showbackBtn" type="Boolean" default="false"/>
+    <aura:attribute name="crudValues" type="Map" default="{}" />
+   
+    <aura:attribute name="RPOStatusList" type="String[]"/>
+    <aura:attribute name="seBool" type="Boolean" default="false"/> 
+    <aura:attribute name="saveErrorMsg" type="String" default="Please fill out all * fields"/> 
+    <aura:attribute name="action" type="String" default=""/>
+    <aura:attribute name="PoliList" type="Object[]"/>
+    <aura:attribute name="PoliListD" type="Object[]"/>
+    <aura:attribute name="DistributeChannelId" type="String" default=""/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchEventHandler}"/>
+    <aura:attribute name="returnRMA" type="String"/>
+    <aura:attribute name="IsClosed" type="Boolean" default="false"/> 
+    <aura:attribute name="ReadyTPP" type="Boolean" default="false"/> 
+    
+  
+    <div class="erp_mark7 ReturnPOs-class1" aura:id="body"><!-- onclick="{!c.focusTOscan}" -->
+        <lightning:spinner variant="brand" size="small" aura:id="spinner" class="slds-hide"/>
+        <div class="slds-page-header">
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        <div class="slds-media__figure">
+                            <lightning:icon iconName="standard:orders"  size="large" alternativeText="orders!" title="orders" />  
+                        </div> 
+                        <div class="slds-media__bod ReturnPOs-class2" >
+                            <p class="slds-text-title--caps slds-line-height--reset"></p>
+                            <nav class="slds-context-bar__secondary" role="navigation">
+                                <ul class="slds-grid">
+                                    <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger--hover ReturnPOs-class3" aria-haspopup="true" >
+                                        <a href="javascript:void(0);" class="slds-context-bar__label-action ReturnPOs-class4" title="Menu Item">
+                                            <span class="">
+                                                <h1 class="slds-page-header__title slds-truncate" title="Return Merchandise Authorisation">
+                                                   Return Purchase Order (PO-RTV)
+                                                </h1></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                                 </nav>
+                            <c:CustomInputLookUp objectAPIName="ERP7__PO__c" IconName="standard:drafts" 
+                            selectedRecordId="{!v.RPOId}" qry=" AND RecordType.DeveloperName='Return_to_Vendor_RTV'" aura:Id="RMA"/> <!-- {!if(empty(v.RPO.ERP7__Vendor__c),'','AND ERP7__Account__c =\''+v.RPO.ERP7__Vendor__c+'\'')}  -->
+                               <!--v.RMA_lookup Customer.Id {!' AND ERP7__Account_Type__c=\'Customer\' --> 
+                           <!-- {!v.RPOId}-->
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-no-flex slds-grid slds-align-top" >
+                    <div class="slds-grid" >
+                    
+                         <div class="slds-col slds-m-right--xx-small">
+                            <div class="ReturnPOs-class5">
+                             <img aura:id="mainSpinId" id="mainSpin" src="/resource/ERP7__SLDS213/assets/images/spinners/slds_spinner_brand.gif"
+                                  class="ReturnPOs-class28" /> 
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="slds-col slds-m-right--xx-small">
+                            <div class="ReturnPOs-class5">
+                                <label class="slds-form-element__label">Channel</label>
+                             <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" IconName="custom:custom24" selectedRecordId="{!v.channelId}" />
+                           
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="slds-col slds-m-right--xx-small">
+                            <div class="ReturnPOs-class5">
+                                <label class="slds-form-element__label"><span class="ReturnPOs-class29">*</span> Distribution Channel</label>       
+                                <c:CustomInputLookUp objectAPIName="ERP7__Distribution_Channel__c"
+                                      IconName="custom:custom24" selectedRecordId="{!v.DistributeChannelId}" qry="{!'And ERP7__Channel__c = \''+v.channelId+'\''}"/></div>
+                        </div>  <!-- DistributeChannelId  RPO.ERP7__Distribution_Channel__c -->
+                        
+                     
+                        
+                    </div>      
+                </div>
+                
+            </div>
+        </div>
+        <div class="epr_Mark7 ReturnPOs-class6" >
+            <div class="row slds-grid slds-m-around--small ReturnPOs-class7" >
+                   <div class="col-md-3 col-xs-3">
+                       <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                           <span class="ReturnPOs-class29">*</span><label class="slds-form-element__label">Name</label><lightning:input type="text" variant="label-hidden" value="{!v.RPO.Name}"/>
+                       </div>
+                    </div> 
+             
+                    <div class="col-md-3 col-xs-3">
+                       <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                           <span class="ReturnPOs-class29">*</span><label class="slds-form-element__label">Vendor</label>
+                       <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.RPO.ERP7__Vendor__c}"
+                                                 qry="{!' AND ERP7__Account_Type__c =\'Vendor\''}"/> <!--  Customer  -->
+                       </div>
+                    </div> 
+             
+                    <div class="col-md-3 col-xs-3">
+                    <label class="slds-form-element__label">Contact</label>
+                    <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" selectedRecordId="{!v.RPO.ERP7__Vendor_Contact__c}" label=""
+                                            qry="{!if(empty(v.RPO.ERP7__Vendor__c),'','AND AccountId =\''+v.RPO.ERP7__Vendor__c+'\'')}"/>
+                     
+               		 </div>
+                
+                 <div class="col-md-3 col-xs-3">
+                    <div class="slds-form-element">
+                     
+                        <div>
+                            <label class="slds-form-element__label">Address</label> <!-- AddressId Address  -->
+                        <c:CustomInputLookUp objectAPIName="ERP7__Address__c" IconName="standard:address" selectedRecord="{!v.Address}"
+                                                label="" qry="{!if(empty(v.RPO.ERP7__Vendor__c),'','AND ERP7__Customer__c  =\''+v.RPO.ERP7__Vendor__c+'\'')}"/>
+                        
+                        </div>
+                        
+                    </div>
+                </div> 
+                
+                
+                
+                
+            </div>
+            <div class="row slds-m-around--small ReturnPOs-class8" id="swapper-first"  >
+                <div class="col-md-3 col-xs-3">
+                    <div class="slds-form-element">
+                        <div class="">
+                            <lightning:select label="Status" value="{!v.RPO.ERP7__Status__c}"   aura:id="RPOStatus">
+                                <aura:iteration items="{!v.RPOStatusList}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.RPO.ERP7__Status__c, option.value)}"/>
+                                </aura:iteration>
+                            </lightning:select>
+                        </div>
+                    </div>
+                </div>          
+                <div class="col-md-3 col-xs-3">
+                    <fieldset class="slds-form-element">
+                        <div class="slds-form-element__control">
+                            <span class="ReturnPOs-class29">*</span><label class="slds-form-element__label">{!$Label.c.RMA_Expected_Date}</label>
+                            <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="expectedDate" label="" 
+                                             value="{!v.RPO.ERP7__Expected_Date__c}"/>
+                            
+                            
+                            
+                        </div>
+                    </fieldset> 
+                </div>
+                   
+                 <div class="col-md-3 col-xs-3">
+                    <label class="slds-form-element__label" for="RefundAmount">Refund Amount:&nbsp;
+                    <lightning:formattedNumber style="currency" value="{!v.RPO.ERP7__Total_Amount__c}" aura:id="RefundAmount" /></label>
+                </div> 
+                 <div class="col-md-3">
+                       <lightning:input type="checkbox" label="Is Closed" checked="{!v.RPO.ERP7__Is_Closed__c}" disabled="{!v.IsClosed}"  aura:id="isClosedId"/> <!-- RPO.ERP7__Is_Closed__c  -->                   
+                       <lightning:input type="checkbox" label="Ready To Pick &amp; Pack" checked="{!v.RPO.ERP7__Ready_To_Pick_Pack__c}" disabled="{!v.ReadyTPP}" aura:id="isRTPP"/>                    
+                </div> 
+                 
+             
+              
+             
+            </div>
+            
+            
+            
+           <div class="row slds-m-around--small ReturnPOs-class30" id="swapper-first">     
+                <div class="col-md-3">
+                    <label class="slds-form-element__label">To Location (Vendor)</label><br/>
+                    <aura:if isTrue="{!not(empty(v.Address.Id))}">
+                        {!v.CustomerAddress.Name},<br/>
+                        {!v.CustomerAddress.ERP7__Address_Line1__c}<br/>
+                        {!v.CustomerAddress.ERP7__Address_Line2__c}&nbsp;{!v.CustomerAddress.ERP7__City__c}
+                        {!v.CustomerAddress.ERP7__State__c}&nbsp;{!v.CustomerAddress.ERP7__Postal_Code__c}
+                        {!v.CustomerAddress.ERP7__Country__c}
+                    </aura:if> 
+                </div>  
+               
+                 <div class="col-md-3 col-xs-3">
+                    <label class="slds-form-element__label">Return Location</label><br/>
+                    <aura:if isTrue="{!not(empty(v.SiteAddressId))}">
+                        {!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.Name}<br/>
+                        {!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.ERP7__Address_Line1__c }&nbsp;{!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.ERP7__Address_Line2__c}<br/>
+                        {!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.ERP7__City__c}&nbsp;
+                        {!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.ERP7__State__c}&nbsp;{!v.SiteAddress. ERP7__Site__r.ERP7__Address__r.ERP7__Postal_Code__c}&nbsp;
+                        {!v.SiteAddress.ERP7__Site__r.ERP7__Address__r.ERP7__Country__c}
+                        
+                      <!--
+                        {!v.SiteAddress.ERP7__Address_Line1__c }&nbsp;{!v.SiteAddress.ERP7__Address_Line2__c}<br/>
+                        {!v.SiteAddress.ERP7__City__c}&nbsp;
+                        {!v.SiteAddress.ERP7__State__c}&nbsp;{!v.SiteAddress.ERP7__Postal_Code__c}&nbsp;
+                        {!v.SiteAddress.ERP7__Country__c}
+                        -->
+                    </aura:if>
+                </div>
+               
+               
+               
+               
+                  <div class="col-md-6 ReturnPOs-class31">
+                    	
+                    <aura:If isTrue="{!not(empty(v.RPO.Id))}"> 
+                        <div class=""> <!-- dropdown-toggle  maqdropdown -->
+                              <a class="slds-button slds-button--brand" href="{!'/apex/ERP7__RPODucument?Id='+v.RPO.Id+'&amp;CustId='+v.RPO.ERP7__Vendor_Contact__c}" target="_blank" aria-haspopup="true" data-toggle="dropdown"> 
+                                <i class="fa fa-file-pdf-o" aria-hidden="true"></i> &nbsp;(PO-RTV) Document <!--<span class="caret"></span>-->
+                              </a>
+                            <!-- {!'/apex/ERP7__RMAPackage?Id='+v.RPO.Id+'&amp;Name='+v.RPO.Name+'&amp;retURL='+v.returnRMA}  -->
+                             <!-- <div class="maqdropdown-content"> 
+                               <a href="#"  target="" ><span class="slds-form-element__label">
+									<i class="fa fa-truck" aria-hidden="true"></i> &nbsp;Shipment</span></a>
+                                
+                              </div> -->
+                        </div>
+                        
+                        
+                    </aura:If>
+                </div>
+               
+               
+               
+               
+          </div>
+            
+            
+            
+            <table id="example" class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover ReturnPOs-class9" > 
+                <thead>
+                    <tr class="slds-text-heading--label">
+                     
+                        <th class="slds-is-sortable" scope="col"> <!-- showModal BuildPoliList -->
+                        <span class="{!v.RPO.ERP7__Is_Closed__c==true || v.RPO.ERP7__Ready_To_Pick_Pack__c==true? 'addDisabled':''}">    
+                          <a onclick="{!c.showPoliList}"  data-action="new" class="ReturnPOs-class10">
+                             Add
+                          </a>
+                        </span>   
+                        </th> 
+                        <th class="slds-is-sortable" scope="col">Name</th>
+                        <th class="slds-is-sortable" scope="col">Product</th> <!-- {!$Label.c.RMA_Asset}  -->
+                        <th class="slds-is-sortable" scope="col">Code</th>
+                        <th >Serial/Batch No</th>
+                        <th class="slds-is-sortable" scope="col">QTY Return</th>
+                        <th class="slds-is-sortable" scope="col">Base Price</th> <!-- Purchase Price  -->
+                        <th class="slds-is-sortable" scope="col">Total Price</th>
+                        
+                       <!-- <th class="slds-is-sortable" scope="col">Status</th> -->  
+                       
+                        <th class="slds-is-sortable" scope="col">&nbsp;</th>
+                    </tr>    
+                </thead>  
+                <tbody>
+                    <aura:iteration items="{!v.SelectRMALI}" var="item">
+                        
+                        <tr >
+                            <th scope="row" data-label="Action" class="ReturnPOs-class32"> <!-- {!(v.EditRMA)?'table table-bordered':'table table-bordered slds-hide'}  -->
+                                      
+                                                <img src="{!$Resource.SLDS0121 + '/assets/icons/action/edit_60_green.png'}" width="18" height="18" title="Edit"
+                                                     data-PoliId="{!item.Id}"  data-action="update" onclick="{!c.showEditModal}"/> 
+                                              &nbsp;<img src="{!$Resource.SLDS0121 + '/assets/icons/action/delete_60_red.png'}" width="18" height="18" title="Delete" 
+                                                     data-PoliId="{!item.Id}" onclick="{!c.deleteRMALI}"/> 
+                                            
+                                          
+                                    
+                            </th>
+                            <td data-label="Serial No">
+                                <div class="slds-truncate2" title="">{!item.Name}</div>
+                            </td>
+                            <td data-label="Product Code">
+                               <!-- <aura:if isTrue="{!not(empty(item.RMALI.ERP7__Product__c))}">--><!--SOLI-->
+                                    <div class="slds-truncate2" title="">{!item.ERP7__Product__r.Name}</div>
+                               <!-- </aura:if>    -->
+                            </td>
+                            <td data-label="Product Code">
+                                 <!-- <aura:if isTrue="{!not(empty(item.RMALI.ERP7__Product__c))}">--><!--SOLI-->
+                                    <div class="slds-truncate2" title="">{!item.ERP7__Code__c}</div>
+                                <!-- </aura:if>    -->  
+                            </td>
+                            <td data-label="Serial/Batch">
+                                <lightning:formattedText value="{!item.ERP7__Serial_Number_Prefix__c}"/>
+                               <!-- <aura:if isTrue="{!not(empty(item.RMALI.ERP7__Serial_Number__c))}">
+                                    <div class="slds-truncate2" title="">{!item.ERP7__Serial_Number_Prefix__c}</div>
+                                </aura:if> 
+                                <aura:if isTrue="{!not(empty(item.RMALI.ERP7__Batch_Lot__c))}">
+                                    <div class="slds-truncate2" title="">,{!item.RMALI.ERP7__Batch_Lot__r.Name}</div>
+                                </aura:if> -->
+                            </td>
+                            
+                            <td data-label="QTY Return">
+                                <div class="slds-truncate2" title="">
+                                    <lightning:formattedNumber value="{!item.ERP7__Return_Quanitty__c}" format="0.00"/>
+                                </div>
+                            </td>
+                            <td data-label="Base Price">
+                                <div class="slds-truncate2" title="">
+                                    <lightning:formattedNumber style="currency" value="{!item.ERP7__Unit_Price__c}"/>
+                                </div>
+                            </td>
+                            <td data-label="Total Price">
+                                <div class="slds-truncate2" title="">
+                                    <lightning:formattedNumber style="currency" value="{!item.ERP7__Total_Price__c}"/>
+                                </div>
+                            </td>
+                            
+                           
+                        </tr>
+                    </aura:iteration>
+                </tbody>    
+            </table>
+        </div>
+        
+        <aura:if isTrue="{!or(and(not(v.savehide),empty(v.RMAId)),v.EditRMA)}">
+            <div class="slds-text-align--center slds-p-around--medium ReturnPOs-class33" >                             
+                <aura:if isTrue="{!not(empty(v.message.Text))}">
+                    <!--message title="{!v.message.Title}" severity="{!v.message.Severity}" closable="true" class="slds-notify_container"-->
+                        {!v.message.Text}.
+                    <!--/message-->
+                </aura:if>
+                <aura:if isTrue="{!true}"><!--empty(v.RMA.Id)? not(v.priorCloseValue):not(equals(v.priorCloseValue,v.RMA.ERP7__Is_Closed__c))-->
+                    <lightning:button class="slds-button slds-button--neutral" aura:id="cancel" onclick="{!c.cancelRMA}" label="Reset"/>
+                	<lightning:button class="slds-button slds-button--brand" onclick="{!c.commitRPO}" label="Save"  variant="brand"/>
+                </aura:if>
+            </div>
+        </aura:if>
+    </div>
+    <div class="erp_mark7">
+        <div class="demo-only slds-hide slds-fade-in-open ReturnPOs-class17"  aura:id="showModal" >
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open ReturnPOs-class18" >
+                <div class="modal-container slds-modal__container">
+                    <header class="slds-modal__header modal__headerbg">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.hideModal}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />		
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Add PO Line Item</h2>
+                        
+                        
+                        
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" aura:id="modalcontent" scrollTop="" offsetHeight="" scrollHeight="" ><!--onscroll="{!c.updatetransform}"-->
+                        <div class="slds-lookup" data-select="single" data-scope="single" data-typeahead="false">
+                            <div class="slds-form-element">
+                                <div class="slds-lookup__control slds-input-has-icon slds-input-has-icon--right">
+                                    <lightning:icon iconName="standard:search" size="x-small" alternativeText="search!" title="search" />		
+                                    <lightning:input type="text" variant="label-hidden" aura:id="searchInput" placeholder="Search PO Line Items By Product Name or Product Code or Order"
+                                                  onchange="{!c.searchPoli}"/>
+                                </div>  <!-- doSearch disabled="{!v.PoliList.length==0 || v.PoliList==''}"  -->
+                            </div>
+                        </div>
+                        <div class="">  <!-- rma --> 
+                            <section class="">
+                                <div class="container table-responsive ReturnPOs-class34" >
+                                    <table id="example" class="table">
+                                        <thead aura:id="tableHead" >
+                                            <tr>
+                                                <th class="text-left">&nbsp;</th>
+                                                <th class="text-left">Product Name</th>
+                                                <th class="text-left">Product Code</th>
+                                                <th class="text-left">Serial/Batch No</th>
+                                                <th class="text-left">Base Price</th>
+                                                <th class="text-left">QTY</th>
+                                                <th class="text-left">Order#</th>
+                                            </tr>    
+                                        </thead>
+                                        <tbody>
+                                            <aura:if isTrue="{!v.PoliList.length > 0}">
+                                                <aura:iteration items="{!v.PoliList}" var="p">
+                                                    <tr>
+                                                        <td data-label="CheckBox">
+                                                            <lightning:input type="checkbox" data-recordId="{!p.Id}" onchange ="{!c.changevalue}"  value="{!p.Id}" aura:id="checkbox" label="Select Item" checked="{!p.isSelect}"/>
+                                                            <!--div class="slds-checkbox_add-button" data-recordId="{!p.Id}" onclick ="{!c.changevalue}"> 
+                                                            < : inputCheckbox text="{!p.Id}"  aura:id="checkbox" class="slds-assistive-text" value="{!p.isSelect}"/>
+                                                            <label for="add-checkbox-5" class="slds-checkbox_faux">
+                                                                <span class="slds-assistive-text">Select Item</span>
+                                                            </label>
+                                                        </div-->
+                                                        </td>
+                                                        
+                                                        <td data-label="{!p.Name}">
+                                                            <div class="slds-truncate2" title="">{!p.Name}</div>
+                                                        </td>
+                                                        <td data-label="Product Code "  >
+                                                            <div class="slds-truncate2" title="">{!p.ERP7__Product__r.ProductCode}</div>
+                                                        </td>
+                                                        <td data-label="Serial NO" align="left" valign="top" class="ReturnPOs-class25">
+                                                            {!p.ERP7__Material_Batch_Lot__r.Name}
+                                                            <!--<aura:if isTrue="{!not(empty(p.ERP7__Serial__c))}">
+                                                            <div class="slds-truncate2" title="">{!p.ERP7__Serial__r.Name}</div>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!not(empty(p.ERP7__Batch_Lot__c))}">
+                                                            <div class="slds-truncate2" title="">{!p.ERP7__Batch_Lot__r.Name}</div>
+                                                        </aura:if>-->
+                                                        </td>
+                                                        
+                                                        <td data-label="Base Price"  >
+                                                            <div class="slds-truncate2" title="">
+                                                                <lightning:formattedNumber style="currency" value="{!p.ERP7__Unit_Price__c}" />
+                                                            </div>
+                                                        </td>
+                                                        <td data-label="Return Quanitty"  >
+                                                            <div class="slds-truncate2" title="">
+                                                                <lightning:input type="number" value="{!p.ERP7__Return_Quanitty__c}" />
+                                                            </div>
+                                                        </td>
+                                                        <!--  <td data-label="Quantity To Ret "  >
+                                                        <div class="slds-truncate2" title="">
+                                                            <lightning:select name="selectItem" label="" value="{!p.accepType}">
+                                                                <option value="Return">Return</option>
+                                                                <option value="Repair">Repair</option>
+                                                                <option value="Replacement">Replacement</option>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="Reason" >
+                                                        <div class="slds-truncate2" title="">
+                                                           <lightning:textarea aura:id="reason" label="" value="{!p.reasonReason}" /> 
+                                                      </div>
+                                                        
+                                               
+                                                    </td>-->
+                                                        
+                                                        <td data-label="Order#">
+                                                            <div class="slds-truncate2" title="">{!p.ERP7__Purchase_Orders__r.Name}</div>
+                                                        </td>
+                                                        
+                                                    </tr>
+                                                    
+                                                </aura:iteration>
+                                                <aura:set attribute="else">
+                                                    <tr>
+                                                        <td colspan="6">
+                                                            <div class="ReturnPOs-class35">
+                                                                <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                                                    <div class="slds-notify slds-notify_toast slds-theme_warning " role="status">
+                                                                        <div>
+                                                                            <span class="slds-assistive-text">warning</span>
+                                                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Venues">
+                                                                                <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="slds-notify__content ReturnPOs-class36" >
+                                                                            <h2 class="slds-text-heading_small ReturnPOs-class37">{!v.searcherrMsg}</h2>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                </aura:set>
+                                            </aura:if>
+                                            
+                                           <!-- <aura:if isTrue="{!v.isDoneRendering}">
+                                                <p>Loading more...</p>
+                                            </aura:if> 
+                                            
+                                            <aura:if isTrue="{!v.PoliList==''}">
+                                                <p>No</p>
+                                            </aura:if> -->
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section> 
+                            
+                        </div> 
+                        
+                    </div>
+                    <footer class="slds-modal__footer ReturnPOs-class21" >
+                        <lightning:button class="slds-button slds-button--neutral" onclick="{!c.hideModal}" label="Cancel"/>
+                        <lightning:button class="slds-button slds-button--brand" onclick="{!c.addPoli}" label="Add"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div> 
+        
+        
+        
+        <div class="slds-hide demo-onlyslds-fade-in-open ReturnPOs-class17"  aura:id="editModal">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1"
+                      class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.hideEditModal}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />		
+                            
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate ReturnPOs-class27">Edit Line Item</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        
+                        <aura:if isTrue="{!not(v.RPOLI == null)}">
+                            <div class="slds-form slds-form--compound">
+                                <!--<aura:iteration items="{!v.RMALI}" var="key">-->
+                                <fieldset class="slds-form-element">	
+                                    
+                                    <div class="slds-form-element__group">
+                                        
+                                        
+                                        
+                                        
+                                         <div class="slds-form-element__row">
+                                            <div class="slds-form-element slds-size_1-of-12">
+                                                <aura:if isTrue="{!v.seBool}">
+                                                     <!-- {!v.saveErrorMsg} --> Name field is mandatory
+                                                </aura:if>
+                                             </div>
+                                         </div>     
+                                        <div class="slds-form-element__row">
+                                            <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-03">Name</label><br/>
+                                                <lightning:input type="text" variant="label-hidden" value="{!v.RPOLI.Name}" />
+                                            </div>
+                                            <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-04">Product</label>
+                                                <c:CustomInputLookUp objectAPIName="Product2" selectedRecordId="{!v.RPOLI.ERP7__Product__c}" IconName="standard:drafts"/> 
+                                                        
+                                            </div>
+                                            
+                                        </div>
+                                        <div class="slds-form-element__row">
+                                            <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-04">Code</label>
+                                                <lightning:input type="text" variant="label-hidden" value="{!v.RPOLI.ERP7__Code__c}" /> 
+                                                        
+                                            </div>
+                                            
+                                           <div class="slds-form-element slds-size_1-of-2">
+                                               <label class="slds-form-element__label" for="input-04">Serial/Batch Number</label>
+                                                <lightning:input type="text" variant="label-hidden" value="{!v.RPOLI.ERP7__Serial_Number_Prefix__c}" /> 
+                                                        
+                                            </div>
+                                            
+                                        </div>
+                                        <div class="slds-form-element__row">
+                                            <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-03">Quantity Return</label><br/>
+                                                <lightning:input  type="number" variant="label-hidden"  aura:id="editqtyBasePrice"  value="{!v.RPOLI.ERP7__Return_Quanitty__c}"/>
+                                            </div>
+                                            <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-04">Purchase Price</label> <!-- Purchase Price  -->
+                                                <lightning:input type="number" variant="label-hidden"  aura:id="editqtyTotalPrice"  value="{!v.RPOLI.ERP7__Unit_Price__c}"/>
+                                            </div>
+                                            
+                                        </div>
+                                        <div class="slds-form-element__row">
+                                             <div class="slds-form-element slds-size_1-of-2">
+                                                <label class="slds-form-element__label" for="input-04">Total Price</label>
+                                                <lightning:input type="number" variant="label-hidden"  aura:id="editqtyTotalPrice"  value="{!v.RPOLI.ERP7__Total_Price__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                                <!-- </aura:iteration>-->
+                            </div>
+                        </aura:if>
+                    </div>
+                    <footer class="slds-modal__footer ReturnPOs-class21" >
+                      
+                        <lightning:button class="slds-button slds-button--neutral" onclick="{!c.hideEditModal}" label="Cancel"/>
+                        <lightning:button class="slds-button slds-button--brand" onclick="{!c.saveRPOLI}" label="Save"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div>
+        
+        
+        <div class="demo-only slds-hide slds-fade-in-open ReturnPOs-class17" aura:id="deleteModal">
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.hideDeletePopup}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />		
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate ReturnPOs-class27" >Delete {!v.DelObj.Name}</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <p class="ReturnPOs-class21">{!'Are you sure you want to delete this '+v.DelObj.Name+'?'}</p>
+                    </div>
+                    <footer class="slds-modal__footer ReturnPOs-class21" >
+                        <lightning:button class="slds-button slds-button--neutral" onclick="{!c.hideDeletePopup}" label="Cancel"/>
+                        <lightning:button class="slds-button slds-button--brand" onclick="{!c.DeleteRecordById}" label="Delete"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div> 
+    </div>      
+</aura:component>

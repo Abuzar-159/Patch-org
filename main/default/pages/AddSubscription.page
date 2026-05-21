@@ -1,0 +1,557 @@
+<apex:page extensions="Addsubscription" standardController="Subscription__c" sidebar="false" showHeader="false" standardStylesheets="true" docType="html-5.0">
+      <html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/erp_mark7_bootstrap.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.PickPackShipResource, '/assets/styles/font-awesome.css')}" />
+        <style>
+        .epr_Mark7 p {
+    margin: 0 0 5px;
+}
+        @media (min-width:992px){
+.epr_Mark7 .col-md-2 {
+    width: 19.666667%;
+}
+}
+       .epr_Mark7 .input{    
+        border: 1px solid #ddd;
+    width: 100%;
+    height: 27px;
+    padding-left: 5px;
+    border-radius:3px;
+    }
+    .epr_Mark7 .select{    
+        border: 1px solid #ddd;
+    width: 100%;
+    height: 27px !important;
+    padding-left: 5px;
+    border-radius:3px;
+    }
+    .epr_Mark7 .textarea{    
+        border: 1px solid #ddd;
+    width: 100%;
+    padding-left: 5px;
+    border-radius:3px;
+    }
+    
+        .dateFormat {
+                padding: 0 2px;
+                display: none;
+            }
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a,
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a:hover,
+            .epr_Mark7 .navbar-default .navbar-nav>.active>a:focus {
+                color: #555;
+                background-color: #ffffff;
+            }
+            
+            .epr_Mark7 .active {
+                background: #3A6690;
+            }
+        </style>
+        <script type="text/javascript">
+            function setupclosepopup(){
+                top.window.returnValue = 1;
+                top.window.close();
+            }
+            function getAllProducts(subscriptionPlanId) {
+                //alert(subscriptionPlanId)
+                if(subscriptionPlanId != '--None--') processProducts(subscriptionPlanId);
+                else processProducts('');
+            }
+            function populateBA(ba, id) {
+                populateBill(ba);
+            }
+            function populateSA(sa, id) {
+                populateShip(sa);
+            }
+            function disableFields() {
+                document.getElementById('{!$Component.myform.ba}').disabled = true;
+                document.getElementById('{!$Component.myform.sa}').disabled = true;
+            }
+        </script>
+    </head>
+    <body onLoad="disableFields();">
+        <apex:pagemessages id="error"></apex:pagemessages>
+       
+        <apex:form id="mainFrm">
+            <apex:actionFunction name="populateBill" reRender="ba" immediate="true" oncomplete="disableFields();">
+                <apex:param name="param2" assignto="{!pageSubscription.Bill_To_Address__c}" value="" />
+            </apex:actionFunction>
+            <apex:actionFunction name="populateShip" reRender="sa" immediate="true" oncomplete="disableFields();">
+                <apex:param name="param3" assignto="{!pageSubscription.Ship_To_Address__c}" value="" />
+            </apex:actionFunction>
+            <apex:actionFunction name="processProducts"  status="idStatus" action="{!processChangeProducts}" reRender="pro,dur,pb,err" immediate="true">
+                <apex:param name="subscriptionPlanId" assignTo="{!currentSubscriptionPlan}" value="" />
+            </apex:actionFunction>
+            <apex:actionFunction name="prepareOrder" reRender="wrap1,table1" status="idStatus" />
+            <div class="erp_mark7 slds-container--fluid">
+                    <div class="slds-page-header">
+  <div class="slds-grid">
+    <div class="slds-col slds-has-flexi-truncate">
+      <div class="slds-media slds-no-space slds-grow">
+        <div class="slds-media__figure">
+          <svg class="slds-icon slds-icon-standard-opportunity slds-p-around--xx-small" aria-hidden="true">
+            <use xlink:href="{!URLFOR($Resource.SLDS, 'assets/icons/action-sprite/svg/symbols.svg#record')}"></use>
+          </svg>
+        </div>
+        <div class="slds-media__body">
+          <p class="slds-text-title--caps slds-line-height--reset">Sales Order</p>
+          <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="{!$Label.AddSubscription_Subscription_Management}">{!$Label.AddSubscription_Subscription_Management}</h1>
+          <div style="text-align:center;float:left;width: 100%; height: 6px;"><apex:outputLabel value="{!errorMsg}" id="err" style="font-family:Arial,Helvetica, sans-serif;font-size:14px; color:red; text-align:center;" /></div>  
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="erp_mark7" style="padding:5px;" >
+                <!--<div class="epr_Mark7">
+                    <nav class="navbar  slds-theme--alt-inverse slds-m-bottom--x-small" style="margin-bottom: 0px;">
+                        <div class="container-fluid">
+                            <ul class="nav navbar-nav navbar-left">
+                                <li><a href="#" style="text-decoration:none;"><i class="fa fa-file-o" aria-hidden="true"  style="color:#fe8f60;"></i>&nbsp; {!$Label.AddSubscription_Subscription_Management}</a></li>
+                            </ul>
+                        </div>
+                    </nav>
+                </div>-->
+                <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xx-small">
+                    <p>Customer Details&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        
+                    </p>
+                </div>
+                <!-- Row 1 -->
+                <div class="epr_Mark7 padding-t-5">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    <b>{!$Label.AddSubscription_Customer}</b></p>
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                       <div class="input" style="background:#f7f9fb;line-height: 24px;"> <apex:outputText value="{!contactName}" Id="cust" rendered="{!$ObjectType.contact.fields.Name.Accessible}" /></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    <b>{!$Label.ERP7__AddSubscription_Subcription_Plan} <span style="color:red;">*</span></b>
+                                </p>
+                                <div class="slds-form-element">
+                                    <div>
+                                        <apex:selectList value="{!Plan}" title="Select a Subscription Plan" size="1" styleClass="select" onchange="getAllProducts(this.value);" >
+                                            <apex:selectOptions value="{!SubPlans}" />
+                                        </apex:selectList>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    <b>{!$Label.ERP7__AddSubscription_Start_Date} <span style="color:red;">*</span></b>
+                                </p>
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <apex:inputField value="{!subscription.Subscription_Date__c}" Id="sd" styleClass="input" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    <b>{!$Label.erp7__addsubscription_duration_in_months} </b>
+                                </p>
+                                <div class="slds-form-element">
+                                    <div >
+                                        <apex:selectList value="{!currentDuration}" title="Select a subscription Duration" size="1" id="dur" styleClass="select" >
+                                            <apex:selectOptions value="{!SubDuration}" />
+                                        </apex:selectList>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2 slds-p-top--xx-small">
+                                <p class="greyhead" style="font-size:14px;">
+                                    <b>Name </b>
+                                </p>
+                                <div class="slds-form-element">
+                                    <div >
+                                        <apex:inputField value="{!subscription.Name}" styleClass="input" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    <!-- @end of Row 1 -->
+                    <!-- Row 2-->
+                    <div class="epr_Mark7 slds padding-t-5 ">
+                        <div class="container-fluid">
+                            <div class="row">
+                            
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <table>
+                                            <tr>
+                                                <td><b>{!$Label.erp7__addsubscription_bill_to} <span style="color:red;">*</span></b></td>
+                                                <td>
+                                                    <apex:selectList id="mba" value="{!billAddressName}" title="Select a Billing Address" size="1" onchange="populateBA(this.value,'{!$Component.ba}');" styleClass="select" >
+                                                        <apex:selectOptions value="{!myBillingAddress}" />
+                                                    </apex:selectList>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pageSubscription.Bill_To_Address__c}" id="ba" styleClass="input" label="" style="height:73px" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <table>
+                                            <tr>
+                                                <td><b>{!$Label.ERP7__AddSubscription_Ship_To} <span style="color:red;">*</span></b></td>
+                                                <td>
+                                                    <apex:selectList id="msa" value="{!shipAddressName}" title="Select a Shipping Address" size="1" onchange="populateSA(this.value,'{!$Component.sa}');" styleClass="select" >
+                                                        <apex:selectOptions value="{!myShippingAddress}" />
+                                                    </apex:selectList>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!pageSubscription.Ship_To_Address__c}" id="sa" styleClass="input" label="" style="height:73px" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <b>{!$Label.ERP7__AddSubscription_Description} </b>
+                                    </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!subscription.Description__c}" Id="des" styleClass="textarea" style="height: 90px;" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <b>{!$Label.ERP7__Add_Subscriptions_Special_Instructions} </b>
+                                    </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!currentSalesOrder.Special_Instructions__c}" Id="si" styleClass="textarea" style="height: 90px;" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-2 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <b>{!$Label.ERP7__AddSubscription_Send_Email}</b>
+                                    </p>
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <label class="slds-checkbox">
+                                    <apex:inputField value="{!subscription.Send_Email_Notication__c}" Id="email" styleClass="input"/>
+                                    <span class="slds-checkbox--faux"></span>           
+                                  </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                <!-- Row 1 -->
+                <div class="epr_Mark7">
+                    <div class="container-fluid" style="padding-bottom: 75px;">
+                        <div class="row">
+                            <div class="col-md-4" style="padding-left:0px;">
+                                <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xx-small">
+                                    <p style="margin: 0 0 0px;">{!$Label.AddSubscription_Product}
+                                        <apex:actionStatus id="idStatus">
+                                            <apex:facet name="start">
+                                                <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="19px;" width="20px;" />
+                                            </apex:facet>
+                                        </apex:actionStatus>
+                                    </p>
+                                </div>
+                                <div class="slds-form--inline slds-m-top--xx-small">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                            <svg aria-hidden="true" class="slds-input__icon slds-icon-text-default">
+                                                  <use xlink:href="{!URLFOR($Resource.SLDS0121, '/assets/icons/utility-sprite/svg/symbols.svg#search')}"></use>
+                                                </svg>
+                                            <apex:inputText value="{!pageFls.Name}" id="inn" style="" styleClass="input" html-placeholder="Search"/>
+                                        </div>
+                                    </div>
+                                    <div class="slds-form-element">
+                                        <apex:commandButton value="Find" action="{!processProducts}" status="idStatus" reRender="pro,err,pb,productsPnl" styleClass="slds-button slds-button--brand" style="    padding: 4px 20px;color:#fff;" />
+                                    </div>
+                                    <div class="slds-form-element" style="border: 1px solid #ddd;padding:4px;border-radius: 6px;">
+                                        <apex:commandLink value="Products" action="{!addProducts}" reRender="pro,pb,wrap1,table1,productdescPnl,productsPnl" status="idStatus" style="color:#31d0e5;text-decoration:none;">
+                                            <i class="fa fa-plus" aria-hidden="true" style="color:#31d0e5;font-size:10px;"></i>&nbsp;
+                                        </apex:commandLink>
+                                    </div>
+                                </div>
+                                <div class="slds-card slds-m-top--xx-small">
+                                    <div class="slds-card__body">
+                                        <apex:outputPanel id="productsPnl">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3 " scope="col">{!$Label.ERP7__AddSubscription_Action}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">{!$Label.ERP7__Add_Subscription_product}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-3" scope="col">{!$Label.ERP7__AddSubscription_Price}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <apex:repeat value="{!productWrapperList}" var="wrap" id="pro">
+                                                        <tr class="slds-hint-parent">
+                                                            <td style="padding: 0.75rem;" class="slds-size--1-of-3" data-label="{!$Label.erp7__addsubscription_action}">
+                                                                <apex:inputcheckbox value="{!wrap.Action}" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__Add_Subscription_product}">
+                                                                <apex:outputText value="{!wrap.product.Name}" ></apex:outputText>
+                                                            </td>
+                                                            <td class="slds-size--1-of-3" data-label="{!$Label.ERP7__AddSubscription_Price}">
+                                                                <apex:outputText value="{!wrap.price}"></apex:outputText>
+                                                            </td>
+                                                        </tr>
+                                                    </apex:repeat>
+                                                </tbody>
+                                            </table>
+                                        </apex:outputPanel>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-8" style="padding-right:0px;">
+                                <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xx-small">
+                                    <p style="margin: 0 0 0px;">{!$Label.ERP7__AddSubscription_Products_Line_Items_Detail}
+                                        <apex:actionStatus id="idStatus1">
+                                            <apex:facet name="start">
+                                                <!--rotate clockwise-->
+                                                <apex:image url="{!URLFOR($Resource.SCM,'SCM/Images/whiteloader.gif')}" height="19px;" width="20px;" />
+                                            </apex:facet>
+                                        </apex:actionStatus>
+                                    </p>
+                                </div>
+                                <div class="slds-form--inline slds-m-top--x-small ">
+                                    <div class="slds-form-element ">
+                                        &nbsp;
+                                        <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="22" height="22" title="Remove Item" styleClass="slds-p-bottom-xx-small">
+                                            <apex:actionSupport event="onclick" action="{!removeProduct}" reRender="pro,pb,wrap1,table1,productsPnl,productdescPnl" status="idStatus1" /> </apex:image>
+                                    </div>
+                                </div>
+                                <div class="slds-card slds-m-top--x-small">
+                                    <div class="slds-card__body">
+                                        <apex:outputPanel id="productdescPnl">
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__AddSubscription_Action} </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__Add_Subscription_product}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__AddSubscription_Code}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__AddSubscription_Quantity}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__AddSubscription_Discount_Plan}</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-6" scope="col">{!$Label.ERP7__AddSubscription_Discount}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <apex:repeat value="{!ProductsAndDiscountsWrapperList}" var="pro" id="pb">
+                                                        <tr class="slds-hint-parent">
+                                                            <td class="slds-size--1-of-6" data-label="Action">
+                                                                <apex:inputCheckbox value="{!pro.selected}" /> </td>
+                                                            <td class="slds-size--1-of-6" data-label="Product">
+                                                                <apex:outputText value="{!pro.product.Name}" rendered="{!$ObjectType.Product2.fields.Name.Accessible}" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="Code">
+                                                                <apex:outputText value="{!pro.product.SKU__c} " rendered="{!$ObjectType.Product2.fields.SKU__c.Accessible}" />
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="Quantity">
+                                                                <apex:inputText value="{!pro.quantity_s}" styleClass="input" style="width:50px;" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Quantity__c.Accessible}">
+                                                                    <apex:actionSupport event="onchange" reRender="ds,dss,dssm" status="idStatus1" action="{!addDiscount}" oncomplete="prepareOrder();">
+                                                                        <apex:param value="{!pro.product.Id}" assignTo="{!sel.Product__c}" name="currentItem" /></apex:actionSupport>
+                                                                </apex:inputText>
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="Discount Plan">
+                                                                <apex:selectList value="{!pro.discountName}" title="Select a Discount" size="1" id="ds" styleClass="fields select" style="width:125px;" rendered="{!$ObjectType.Discount_Plan__c.fields.Name.Accessible}">
+                                                                    <apex:selectOptions value="{!pro.CurrentDiscounts}" />
+                                                                    <apex:actionSupport event="onchange" reRender="dss,dssm,wrap1,table1" status="idStatus1" action="{!DiscountPercent}">
+                                                                        <apex:param value="{!pro.product.Id}" assignTo="{!sel.Product__c}" name="percent" /></apex:actionSupport>
+                                                                </apex:selectList>
+                                                            </td>
+                                                            <td class="slds-size--1-of-6" data-label="Discount %">
+                                                                <apex:inputText value="{!pro.discountPercent}" title="Select Discount Percent" styleClass="input" size="1" id="dss" style="width:50px;" rendered="{!$ObjectType.Discount_Plan__c.fields.Floor_Discount_Percentage__c.Accessible}">
+                                                                    <apex:actionSupport event="onchange" reRender="dss,dssm,wrap1,table1" status="idStatus1" action="{!DiscountPercent}">
+                                                                        <apex:param value="{!pro.product.Id}" assignTo="{!sel.Product__c}" name="percent" /></apex:actionSupport>
+                                                                </apex:inputText>
+                                                                <apex:outputText value="[{!pro.minDiscountPercent}-{!pro.maxDiscountPercent}]" title="Discount Percent Limit" id="dssm" style="display:{!IF((pro.minDiscountPercent != Null && pro.maxDiscountPercent != Null),'', 'none')};" rendered="{!$ObjectType.Discount_Plan__c.fields.Floor_Discount_Percentage__c.Accessible && !$ObjectType.Discount_Plan__c.fields.Ceiling_Discount_Percentage__c.Accessible}" />
+                                                            </td>
+                                                        </tr>
+                                                    </apex:repeat>
+                                                </tbody>
+                                            </table>
+                                        </apex:outputPanel>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xx-small" style="display:none">
+                    <p style="margin: 0 0 0px;">{!$Label.ERP7__AddSubscription_Selected_Products_Line_Items_Detail}</p>
+                </div>
+                
+                <apex:outputPanel id="wrap1" style="display:none">
+                
+                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover ">
+                        <thead>
+                            <tr class="slds-text-heading--label">
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Code}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__Add_Subscription_product}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Quantity}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Points}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Price}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__Add_Subscription_Discount}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Vat}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscription_Tax}
+                                    </div>
+                                </th>
+                                <th class="slds-is-sortable" scope="col">
+                                    <div class="slds-truncate">{!$Label.ERP7__AddSubscriptions_Total}
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <apex:variable value="{!0}" var="itemCounter" />
+                            <apex:repeat var="item" value="{!CurrentWrapperList}" id="rp1">
+                                <tr class="slds-hint-parent">
+                                    <td class="slds-cell-shrink" scope="row" data-label="{!$Label.AddSubscription_Code}">
+                                        <apex:outputText value="{!item.Code}" rendered="{!$ObjectType.Product2.fields.ProductCode.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__Add_Subscription_product}">
+                                        <apex:outputText value="{!item.Itm}" rendered="{!$ObjectType.Product2.fields.Name.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscription_Quantity}">
+                                        <apex:outputText value="{!item.Quantity}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Quantity__c.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscription_Points}">
+                                        <apex:outputText value="{!item.RewardPoints}" rendered="{!$ObjectType.Loyalty_Points__c.fields.Points__c.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscription_Price}">
+                                        <apex:outputText value="{!item.Price}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Base_Price__c .Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__Add_Subscription_Discount}">
+                                        <apex:outputText value="{!item.Discount}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Discount_Plan__c.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscription_Vat}">
+                                        <apex:outputText value="{!item.Vat}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Total_Price__c.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscription_Tax}">
+                                        <apex:outputText value="{!item.Tax}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Other_Tax__c.Accessible}" />
+                                    </td>
+                                    <td class="slds-cell-shrink" data-label="{!$Label.ERP7__AddSubscriptions_Total}">
+                                        <apex:outputText value="{!item.PriceWithVat}" rendered="{!$ObjectType.Sales_Order_Line_Item__c.fields.Total_Price__c.Accessible}" />
+                                    </td>
+                                </tr>
+                                <apex:variable var="itemCounter" value="{!itemCounter + 1}" /></apex:repeat>
+                        </tbody>
+                    </table>
+                </apex:outputPanel>
+                <apex:outputPanel id="table1" style="display:none">
+                    <div class="epr_Mark7">
+                        <div class="container-fluid">
+                            <div class="row" style="box-shadow: 1px 3px 2px -3px;background:#f8f9fb;">
+                                <div class="col-md-3 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <table>
+                                            <tr>
+                                                <td><b>{!$Label.ERP7__AddSubscription_SubTotal}</b></td>
+                                                <td>
+                                                    <apex:outputText value="{!subTotal1}" />
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </p>
+                                </div>
+                                <div class="col-md-3 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <table>
+                                            <tr>
+                                                <td><b>{!$Label.ERP7__AddSuscription_Discounts}</b></td>
+                                                <td>
+                                                    <apex:outputText value="{!totalDiscount1}" /> </td>
+                                            </tr>
+                                        </table>
+                                    </p>
+                                </div>
+                                <div class="col-md-3 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <p class="greyhead" style="font-size:14px;">
+                                            <table>
+                                                <tr>
+                                                    <td><b>{!$Label.ERP7__Add_Subscription_Taxes}</b></td>
+                                                    <td>
+                                                        <apex:outputText value="{!totalTax1}" />
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </p>
+                                    </p>
+                                </div>
+                                <div class="col-md-3 slds-p-top--xx-small">
+                                    <p class="greyhead" style="font-size:14px;">
+                                        <table>
+                                            <tr>
+                                                <td><b>{!$Label.ERP7__AddSubscription_Total_Due}:</b></td>
+                                                <td>
+                                                    <apex:outputText value="{!totalDue1}" />
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </apex:outputPanel>
+                <div style="margin-bottom:10px; float:left; width:100%;position:fixed; bottom:0; left:0;background: rgba(255, 255, 255, 0.7);">
+                        <div class="slds-text-align--center slds-p-around--medium">
+                            <apex:commandButton value="Subscribe" action="{!Subscribe}" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Subscription__c.Createable && $ObjectType.Subscription__c.Updateable}" />
+                            <apex:commandButton value="Close" onclick="setupclosepopup();" styleClass="slds-button slds-button--neutral" />
+                        </div>
+                    </div>
+            </div>
+        </apex:form>
+    </body>
+    </html>
+</apex:page>

@@ -1,0 +1,1931 @@
+<aura:component controller="TimeSheetManagerLC" implements="force:appHostable" >
+    <head>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/manageleave.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+        <ltng:require styles="/resource/ERP7__ERPTheme/css/main-leavemanagement.css"/>
+    </head>    
+    <aura:attribute name="selectedDateRange" type="String" default="Today"/>
+    <aura:attribute name="startDate" type="Date"/>
+    <aura:attribute name="endDate" type="Date"/>
+    <aura:attribute name="DateVal" type="Date"/>
+    <aura:attribute name="DateString" type="String" default=""/>
+    <aura:attribute name="ScdProjId" type="String" default=""/>
+    <aura:attribute name="showTabs" type="String" default="TimeLog"/>
+    <aura:attribute name="isAdmin" type="Boolean" default="false"/>
+    <aura:attribute name="showCustomRange" type="Boolean" default="false"/>
+    <aura:attribute name="popupDetail" type="Boolean" default="false"/>
+    <aura:attribute name="multiUser" type="Boolean" default="false"/>
+    <aura:attribute name="customStartDate" type="Date"/>
+    <aura:attribute name="customEndDate" type="Date"/>
+    <aura:attribute name="EmployeeId" type="String" default=""/>
+    <aura:attribute name="customError" type="String" default=""/>
+    <aura:attribute name="DrafSubTimeId" type="String" default=""/>
+    <aura:attribute name="MyApprTimeId" type="String" default=""/>
+    <aura:attribute name="AdminTimeSheetId" type="String" default=""/>
+    <aura:attribute name="selectedFY" type="String" default="THIS_FISCAL_YEAR"/>
+    <aura:attribute name="dateCells" type="List" default="[]"/>
+    <aura:attribute name="rowsLength" type="Integer" default="5" />
+    <aura:attribute name="TimeDetails" type="list" />
+    <aura:attribute name="modalVal" type="Object" />
+    <aura:attribute name="TCEStatus" type="List" />
+    <aura:attribute name="ActiStatus" type="List" />
+    <aura:attribute name="TSStatus" type="List" />
+    <aura:attribute name="hh" type="String" default="00" />
+    <aura:attribute name="mm" type="String" default="00" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="existProj" type="String" default="" />
+    <aura:attribute name="existEmp" type="String" default="" />
+    <aura:handler name="change" value="{!v.modalVal.TimeSheet.ERP7__Project__c}" action="{!c.getProjSchedule}"/>
+    <aura:handler name="change" value="{!v.modalVal.TimeCard.ERP7__Schedule__c}" action="{!c.getScheduleProj}"/>
+    <aura:handler name="change" value="{!v.EmployeeId}" action="{!c.calledAdmin}"/>  
+    <aura:attribute name="items" type="List" />
+    <aura:attribute name="TimeSheetList" type="List" />
+    <aura:attribute name="TimeSheetListWP" type="Object" />
+    <aura:attribute name="FC" type="Object" />
+    <aura:attribute name="TimeSheetApprovedListWP" type="List" />
+    <aura:attribute name="TimeSheetToApproveListWP" type="List" />
+    <aura:attribute name="counts" type="Object" />
+    <aura:registerEvent name="delete" type="c:timesheetDelete" />
+    <aura:attribute name="projectIds" type="String" />
+    <aura:attribute name="approverList" type="String" />
+    <aura:attribute name="timeSheet" type="Timesheet__c" default="{ 'sobjectType': 'Timesheet__c',
+                                                                  'ERP7__Employees__c': '',
+                                                                  'ERP7__Week_Date__c':'',
+                                                                  'Name':'',
+                                                                  'ERP7__Project__c':'',
+                                                                  'unknown_custom_field':'',
+                                                                  'unknown_custom_field':'',
+                                                                  'ERP7__Status__c': 'Draft',
+                                                                  'ERP7__Approver__c': ''
+                                                                  }" />
+    <aura:attribute name="emp" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute type="String" name="UserImageURL" default=""/>
+    <aura:attribute type="String" name="TotalHours" default=""/>
+    <aura:attribute type="String" name="ApproveHours" default=""/>
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="0"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/>
+    <aura:attribute type="String" name="ApprovalType" default=""/>
+    <aura:attribute name="showCheckbox" type="Boolean" default="false"/>
+    <aura:attribute name="itemshow" type="Boolean" default="true"/>
+    <aura:attribute name="editModal" type="Boolean" default="true"/>
+    <aura:attribute name="TimeCardList" type="List" default="[]" />
+    <aura:handler name="change" value="{!v.timeSheet.ERP7__Employees__c}" action="{!c.onChangeEmp}"/> 
+    <!-- Initialization -->
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getTimeSheetAndEntries}"/>
+    <body aura:id="body" class="manageLeave-newClass" style="background-color: #f3f4f7;">
+        
+        <div class="erp erp-lm"> 
+            <aura:if isTrue="{!v.showSpinner}">
+                <div>
+                    <lightning:spinner variant="brand" size="large" aura:id="mainSpin" description="Please Wait While Loading" class="mainSpinClass"/>
+                </div>
+            </aura:if>
+            <div class="page-container p-2">
+                <div class="page-header">
+                    <nav class="navbar navbar-expand-lg d-flex justify-content-between">
+                        <div class="" id="navbarNav">
+                            <ul class="navbar-nav" id="leftNav">
+                                <li class="nav-item">
+                                    <a class="nav-link" id="sidebar-toggle" href="#">
+                                        <i class="fa fa-calendar-check-o"></i>
+                                    </a>
+                                </li> 
+                                <li class="nav-item">
+                                    <h3 class="slds-p-top_small">Time Management</h3>
+                                </li>
+                                
+                            </ul>
+                        </div>
+                        <aura:if isTrue="{!!v.multiUser}">
+                            <div class="logo" style="justify-content: flex-end;">
+                                <p class="pt-1 pr-2"><strong>{!v.emp.Name}</strong></p>
+                                <span class="slds-avatar slds-avatar_circle">
+                                    <span class="slds-icon_container slds-icon-standard-user" title="">
+                                        <aura:if isTrue="{!not(empty(v.UserImageURL))}">
+                                            <img src="{!v.UserImageURL}" alt="Image not Avaialble"/> 
+                                            <aura:set attribute="else">
+                                                <lightning:icon iconName="standard:user" ></lightning:icon>  
+                                            </aura:set>
+                                        </aura:if>
+                                        <span class="slds-assistive-text">User</span>
+                                    </span>
+                                </span>
+                                
+                            </div>
+                        </aura:if>
+                        
+                    </nav>
+                </div>
+                <div class="page-sidebar mt-6p">
+                    <ul class="list-unstyled accordion-menu">
+                        
+                        
+                        
+                        <aura:if isTrue="{!v.showTabs=='TimeLog'}">
+                            <li class="open active1">
+                                <a href="javascript:void(0);">
+                                    Time Logs
+                                    
+                                </a>
+                            </li>
+                            <aura:set attribute="else">
+                                <li class="open">
+                                    <a href="javascript:void(0);" onclick="{!c.calledTimeLog}">
+                                        Time Logs</a>
+                                </li>
+                            </aura:set>
+                        </aura:if>
+                        <li class="open">
+                            <a href="javascript:void(0);">
+                                My Timesheets&nbsp;&nbsp;<lightning:buttonIcon onclick="{!c.toggle}" iconName="{!v.itemshow ? 'utility:chevrondown' : 'utility:chevronright'}"  class="slds-button_icon slds-button_icon-small toggle-button"/></a><!--<i class="fa fa-chevron-right dropdown-icon"></i></a>-->
+                            <aura:if isTrue="{!v.itemshow}">
+                                <ul class="" style="">
+                                    <aura:if isTrue="{!v.showTabs=='DrafSubTimeSheet'}">
+                                        <li class="active1"><a href="javascript:void(0);"><i class="fa fa-circle"></i>Draft / Submitted</a></li>
+                                        <aura:set attribute="else">
+                                            <li onclick="{!c.calledDrafSubTimeSheet}"><a href="javascript:void(0);"><i class="fa fa-circle"></i>Draft / Submitted</a></li>
+                                        </aura:set>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.showTabs=='ApproRejTimeSheet'}">
+                                        <li class="active1"><a href="javascript:void(0);"><i class="fa fa-circle"></i>Approved / Rejected</a></li>
+                                        <aura:set attribute="else">
+                                            <li onclick="{!c.calledApproRejTimeSheet}"><a href="javascript:void(0);"><i class="fa fa-circle"></i>Approved / Rejected</a></li>
+                                        </aura:set>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.showTabs=='MyApproval'}">
+                                        <li class="active1"><a href="javascript:void(0);"><i class="fa fa-circle"></i>My Approvals</a></li>
+                                        <aura:set attribute="else">
+                                            <li onclick="{!c.calledMyApproval}"><a href="javascript:void(0);"><i class="fa fa-circle"></i>My Approvals</a></li>
+                                        </aura:set>
+                                    </aura:if>            
+                                </ul>
+                            </aura:if>
+                        </li>
+                        
+                        <aura:if isTrue="{!v.isAdmin}">
+                            <aura:if isTrue="{!v.showTabs=='Admin'}">
+                                <li class="open active1">
+                                    <a href="javascript:void(0);">Manage Users</a>
+                                </li>
+                                <aura:set attribute="else">
+                                    <li class="open">
+                                        <a href="javascript:void(0);" onclick="{!c.calledAdmin}">Manage Users</a>
+                                    </li>
+                                </aura:set>
+                            </aura:if>       
+                        </aura:if>  
+                        
+                    </ul>
+                    <!-- admin menu section -->
+                </div>
+                <!--Admin main area -->
+                <div class="page-content">
+                    <div class="main-wrapper">
+                        <aura:if isTrue="{!v.showTabs=='TimeLog'}">
+                            <div class="card mb-2">
+                                <div class="card-body p-3">
+                                    <div class="post-header">
+                                        
+                                        <div class="slds-grid post-info mb-0 pt-2">
+                                            <!--lightning:input type="date" variant="label-hidden" class="display-lable DatePicker" value="{!v.DateVal}" onchange="{!c.handleDateRangeChange}"  /--> 
+                                            <span class="post-author pt-2">
+                                                
+                                                &nbsp;
+                                                <!--aura:if isTrue="{!!v.showCustomRange}"><i class="fa fa-chevron-left slds-p-right_small" onclick="{!c.decreaseDate}"></i></aura:if-->
+                                                &nbsp;
+                                                <aura:if isTrue="{!and(v.DateString != '', v.DateString!=null)}">
+                                                    {!v.DateString}
+                                                    <aura:set attribute="else">
+                                                        {!v.startDate}&nbsp;-&nbsp;{!v.endDate}
+                                                    </aura:set>
+                                                </aura:if>
+                                                &nbsp;
+                                                <!-- <aura:if isTrue="{!!v.showCustomRange}"><i class="fa fa-chevron-right slds-p-left_small" onclick="{!c.increaseDate}"></i></aura:if> -->
+                                            </span>                                     
+                                        </div>
+                                        <div class="post-header-actions pt-0 pb-0">
+                                            
+                                            
+                                            
+                                            <lightning:select class="form-select mr-2 nonlabel" name="dateRangeSelect" value="{!v.selectedDateRange}" onchange="{!c.handleDateRangeChange}">
+                                                <option value="Today" selected="">Daily Log</option>
+                                                <option value="ThisWeek">Weekly Log</option>
+                                                <!-- <option value="ThisMonth">Monthly Log</option> -->
+                                            </lightning:select>
+                                            
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-p-around_small">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="card mb-1">
+                                        <div class="card-body p-1">
+                                            <div class="transactions-list mb-0">
+                                                <div class="tr-item p-1">
+                                                    <div class="tr-company-name">
+                                                        <div class="tr-icon tr-card-icon tr-card-bg-success text-success">
+                                                            <i class="fa fa-clock-o fa-2x"></i>
+                                                        </div>
+                                                        <div class="tr-text">
+                                                            <h4>Submitted Hours</h4>
+                                                            <p>{!v.counts.numTimesheetSub}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                    <div class="card mb-1">
+                                        <div class="card-body p-1">
+                                            <div class="transactions-list mb-0">
+                                                <div class="tr-item p-1">
+                                                    <div class="tr-company-name">
+                                                        <div class="tr-icon tr-card-icon tr-card-bg-primary text-info">
+                                                            <i class="fa fa-clock-o fa-2x"></i>
+                                                        </div>
+                                                        <div class="tr-text">
+                                                            <h4>Approved Hours</h4>
+                                                            <p>{!v.counts.numTimesheetApp}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                    <div class="card mb-1">
+                                        <div class="card-body p-1">
+                                            <div class="transactions-list mb-0">
+                                                <div class="tr-item p-1">
+                                                    <div class="tr-company-name">
+                                                        <div class="tr-icon tr-card-icon tr-card-bg-danger text-danger">
+                                                            <i class="fa fa-clock-o fa-2x"></i>
+                                                        </div>
+                                                        <div class="tr-text">
+                                                            <h4>Rejected Hours</h4>
+                                                            <p>{!v.counts.numTimesheetRej}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-body p-2">
+                                    <!--h5 class="card-title">Leave Applications</h5-->
+                                    <div id="zero-conf_wrapper" class="dataTables_wrapper dt-bootstrap4">
+                                        
+                                        <div class="row">                          
+                                            <div class="col-sm-12" style="overflow-x:auto;" id="{!v.selectedDateRange == 'ThisMonth' ? 'example' : ''}">
+                                                <table class="slds-table slds-table_bordered slds-table_fixed-layout">
+                                                    <thead>
+                                                        <tr>
+                                                            <aura:if isTrue="{!v.selectedDateRange == 'ThisMonth'}">
+                                                                <th scope="col" width="7%">
+                                                                    S.NO
+                                                                </th>
+                                                                <th scope="col" >
+                                                                    Project Name
+                                                                </th>
+                                                                <aura:set attribute="else">
+                                                                    <th width="7%">S.NO</th>
+                                                                    <aura:if isTrue="{!v.multiUser}"><th scope="col" width="150px">Employee</th></aura:if>
+                                                                    <th style="{!v.selectedDateRange == 'ThisWeek' ? 'width: 150px;' : ''}">Project Name</th>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!v.selectedDateRange == 'Today'}">
+                                                                
+                                                                <aura:if isTrue="{!v.FC.ERP7__Budget_Department_Allocation__c}"><th scope="col">Department</th></aura:if>
+                                                                <aura:if isTrue="{!v.FC.ERP7__Budget_Programme_Allocation__c}"><th scope="col">Programme</th></aura:if>
+                                                                <th scope="col">Activity</th>
+                                                                <th scope="col">Activity Notes</th>   
+                                                                <!--<th scope="col">Activity Status</th>
+                                                            <th scope="col">Comments</th>-->
+                                                                <th scope="col" width="10%">Hours</th>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!v.selectedDateRange != 'Today'}">
+                                                                <aura:iteration items="{!v.dateCells}" var="dateCell">
+                                                                    <th scope="col" class="text-left" data-id="{!dateCell.actualDate}"><aura:unescapedHtml value="{!dateCell.formatDate}"/></th>
+                                                                </aura:iteration>    
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!v.selectedDateRange == 'Today'}"><th scope="col" width="7%">Actions</th></aura:if>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>                                                    
+                                                        <aura:iteration items="{!v.TimeDetails}" var="TD" indexVar="Index">   
+                                                            <aura:if isTrue="{!TD.TimeSheet.Id != undefined}">                                                      
+                                                                <tr>
+                                                                    <aura:if isTrue="{!v.selectedDateRange == 'ThisMonth'}"> <td>
+                                                                        <td style="border-top: 0;">{!Index + 1}</td>
+                                                                        <td style="border-top: 0;"><div style="width: 150px;"><c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!TD.TimeSheet.ERP7__Project__c}" hideRemove="{!TD.TimeSheet.Id == '' || TD.TimeSheet.Id == null ? false : true}" qry="{!' AND Id IN '+v.projectIds}"/></div></td><!---->
+                                                                        </td> 
+                                                                        <aura:set attribute="else">
+                                                                            <th>{!Index + 1}</th>
+                                                                            <aura:if isTrue="{!v.multiUser}">
+                                                                                <td>
+                                                                                    <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!TD.TimeSheet.ERP7__Employees__c}"/>
+                                                                                </td>
+                                                                            </aura:if>
+                                                                            <th style="{!v.selectedDateRange == 'ThisWeek' ? '' : ''}"><div style="{!v.selectedDateRange == 'ThisWeek' ? '' : ''}"><c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!TD.TimeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}"/></div></th><!--hideRemove="{!TD.TimeSheet.Id == '' || TD.TimeSheet.Id == null ? false : true}" qry="{!' AND Id =\''+TD.TimeSheet.ERP7__Schedule__r.ERP7__Project__c+'\''}"-->                                                            
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                    <aura:iteration items="{!TD.TimeCardList}" var="TCL" indexVar="TCLROW">
+                                                                        <aura:if isTrue="{!v.selectedDateRange == 'Today'}"> 
+                                                                            
+                                                                            <aura:if isTrue="{!v.FC.ERP7__Budget_Department_Allocation__c}"><td>
+                                                                                <c:CustomInputLookUp aura:id="busunit" objectAPIName="ERP7__Business_Unit__c" IconName="standard:user" selectedRecordId="{!TCL.ERP7__Department__c}" />
+                                                                                </td></aura:if>
+                                                                            <aura:if isTrue="{!v.FC.ERP7__Budget_Programme_Allocation__c}"><td>
+                                                                                <c:CustomInputLookUp aura:id="programme" objectAPIName="ERP7__Programme__c" IconName="standard:user" selectedRecordId="{!TCL.ERP7__Programme__c}" />
+                                                                                </td></aura:if>
+                                                                            <td><lightning:select aura:id="activity" value="{!TCL.ERP7__Task__c}" class="nonlabel">
+                                                                                <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Task__c, option.value)}"/>
+                                                                                </aura:iteration>
+                                                                                </lightning:select>
+                                                                            </td>
+                                                                            <td>{!TCL.ERP7__Activity_Risk__c}
+                                                                                <!-- <lightning:input type="text" value="" class="nonlabel"/> -->
+                                                                            </td>
+                                                                            <!--<td><lightning:select aura:id="actstatus" value="{!TCL.ERP7__Activity_Status__c}" >
+                                                                        <aura:iteration items="{!v.ActiStatus}" var="option">
+                                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Activity_Status__c, option.value)}"/>
+                                                                        </aura:iteration>
+                                                                        </lightning:select></td>
+                                                                    <td><lightning:input type="text" value="{!TCL.ERP7__Week_Day_1_Comment__c}"/></td>-->
+                                                                        </aura:if>   
+                                                                        <td>
+                                                                            <input type="text" value="{!TCL.ERP7__Working_Minutes__c}" onclick="{!c.showPopup}" data-index="{!Index}" data-date="{!TCL.ERP7__Week_Day_1__c}" data-show="false" style="border:0;width:40px;background-color: transparent;"/>
+                                                                            <aura:if isTrue="{!v.selectedDateRange != 'Today'}"><i class="fa fa-edit slds-p-right_small" onclick="{!c.showPopup}" data-index="{!Index}" data-date="{!TCL.ERP7__Week_Day_1__c}" data-show="true"></i></aura:if>
+                                                                        </td>
+                                                                        
+                                                                        <aura:if isTrue="{!and(TCL.Id != undefined,v.selectedDateRange == 'Today')}">
+                                                                            <td style="border-bottom:1px solid #c9c9c9" > 
+                                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_9-of-12 slds-large-size_9-of-12">
+                                                                                    <a class="svg" onclick="{!c.handleDelClickTimeLogs}" data-index="{!TD.TimeSheet.Id}" data-record-id="{!TCL.Id}">
+                                                                                        <lightning:icon iconName="action:delete" variant="inverse" size="xx-small" alternativeText="delete" title="delete"/>
+                                                                                    </a> 
+                                                                                </div>
+                                                                            </td>
+                                                                        </aura:if>
+                                                                        <aura:if isTrue="{!and(TCL.Id == undefined,v.selectedDateRange == 'Today')}">
+                                                                            <td style="border-bottom:1px solid #c9c9c9" > 
+                                                                            </td>
+                                                                        </aura:if>
+                                                                       
+                                                                    </aura:iteration>
+                                                                    
+                                                                </tr>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </tbody>
+                                                </table>
+                                                <section aura:id="popup" aria-label="Dialog title" aria-describedby="popover-body-id" class="slds-popover slds-nubbin_top-right slds-hide" role="dialog">
+                                                    <lightning:button iconName="utility:close" title="Close dialog" variant="inverse" onclick="{!c.closeModal}" class="slds-button slds-button_icon slds-button_icon slds-button_icon-small slds-float_right slds-popover__close" />
+                                                    <!--<header class="slds-popover__header">
+                                                        <div class="slds-media slds-media_center slds-has-flexi-truncate ">
+                                                            <div class="slds-media__figure">
+                                                            </div>
+                                                            <div class="slds-media__body">
+                                                                <h2 class="slds-truncate slds-text-heading_medium" title="">{!v.modalVal.TimeCard.ERP7__Week_Day_1__c}</h2>
+                                                            </div>
+                                                        </div>
+                                                    </header>-->
+                                                    <div id="popover-body-id" class="slds-popover__body">
+                                                        <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                            <div class="slds-form-element__control">
+                                                                <label class="slds-form-element__label">Time</label>
+                                                                <div class="slds-form-element__control">
+                                                                    <div class="custtimepicker slds-grid">
+                                                                        <div class="slds-col">
+                                                                            <lightning:input aura:id="hh" type="number" value="{!v.hh}" maxlength="2" class="custhh slds-input" onblur="{!c.handleHhBlur}" onchange="{!c.handleHhInput}" placeholder="00"/>
+                                                                        </div>
+                                                                        <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                        <div class="slds-col">
+                                                                            <lightning:input aura:id="mm" type="number" value="{!v.mm}" maxlength="2" class="custmm slds-input" onblur="{!c.handleMmBlur}" onchange="{!c.handleMmInput}" placeholder="0"/>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <lightning:input type="text" label="Activity Notes" value="{!v.modalVal.TimeCard.ERP7__Activity_Risk__c}" maxlength="64"/>
+                                                        <aura:if isTrue="{!or(v.existProj =='', v.existProj == null)}">
+                                                            <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                                <div class="slds-form-element__control">
+                                                                    <label class="slds-form-element__label">Project</label>
+                                                                    <div class="slds-form-element__control">
+                                                                        <aura:if isTrue="{!v.modalVal.TimeCard.ERP7__Schedule__c}">
+                                                                            <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.modalVal.TimeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}"/>
+                                                                            <aura:set attribute="else">
+                                                                                <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.modalVal.TimeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}" />
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!and(v.multiUser, or(v.existEmp =='', v.existEmp == null))}" >
+                                                            <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                                <div class="slds-form-element__control">
+                                                                    <label class="slds-form-element__label">Employee</label>
+                                                                    <div class="slds-form-element__control">
+                                                                        <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.modalVal.TimeSheet.ERP7__Employees__c}"/>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!and(v.selectedDateRange != 'Today', v.popupDetail =='true')}">
+                                                            <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                                <div class="slds-form-element__control">
+                                                                    
+                                                                </div>
+                                                            </div>
+                                                            <aura:if isTrue="{!v.FC.ERP7__Budget_Department_Allocation__c}">
+                                                                <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                                    <div class="slds-form-element__control">
+                                                                        <label class="slds-form-element__label">Department</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <c:CustomInputLookUp aura:id="busunit" objectAPIName="ERP7__Business_Unit__c" IconName="standard:user" selectedRecordId="{!v.modalVal.TimeCard.ERP7__Department__c}" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!v.FC.ERP7__Budget_Programme_Allocation__c}">
+                                                                <div class="col-md-12 slds-m-top--small slds-m-bottom--small" aura:id="layout1"  >
+                                                                    <div class="slds-form-element__control">
+                                                                        <label class="slds-form-element__label">Programme</label>
+                                                                        <div class="slds-form-element__control">
+                                                                            <c:CustomInputLookUp aura:id="programme" objectAPIName="ERP7__Programme__c" IconName="standard:user" selectedRecordId="{!v.modalVal.TimeCard.ERP7__Programme__c}" />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:if>
+                                                            <lightning:select label="Activity"  aura:id="activity" value="{!v.modalVal.TimeCard.ERP7__Task__c}" >
+                                                                <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.modalVal.TimeCard.ERP7__Task__c, option.value)}"/>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                            <!--<lightning:select label="Activity Status"  aura:id="actstatus" value="{!v.modalVal.TimeCard.ERP7__Activity_Status__c}" >
+                                                            <aura:iteration items="{!v.ActiStatus}" var="option">
+                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.modalVal.TimeCard.ERP7__Activity_Status__c, option.value)}"/>
+                                                            </aura:iteration>
+                                                        </lightning:select>                                                            
+                                                        <lightning:input type="text" label="Comment" value="{!v.modalVal.TimeCard.ERP7__Week_Day_1_Comment__c}"/>-->
+                                                        </aura:if>
+                                                    </div>
+                                                    <footer class="slds-popover__footer">
+                                                        <div class="slds-grid slds-grid_vertical-align-center">
+                                                            <div class="slds-col_bump-right"></div>
+                                                            <!--<button class="slds-button slds-button_neutral slds-col_bump-right" onclick="{!c.closeModal}">Cancel</button>-->
+                                                            
+                                                            <button class="slds-button slds-button_brand" onclick="{!c.saveTimeEntry}">Confirm</button>
+                                                        </div>
+                                                    </footer>                                                
+                                                </section>
+                                                <div aura:id="bdrop" class="slds-backdrop slds-backdrop_open slds-hide" style=" z-index: 10;" onclick="{!c.closeModal}" role="presentation"></div>
+                                            </div>
+                                        </div>     
+                                        
+                                        <div class="row slds-p-top_small">
+                                            <div class="col-sm-12 col-md-5">
+                                                <div class="dataTables_info" id="zero-conf_info" role="status" aria-live="polite"><lightning:button onclick="{!c.addRow}" >Add Row</lightning:button></div>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aura:if>                        
+                        
+                        <aura:if isTrue="{!v.showTabs=='DrafSubTimeSheet'}">
+                            <aura:if isTrue="{!or(v.DrafSubTimeId == '',v.DrafSubTimeId == null)}">
+                                <article class="slds-card">
+                                    <div class="slds-card__header slds-grid">
+                                        <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container slds-icon-standard-code-set-bundle" title="">
+                                                    <lightning:icon iconName="standard:code_set_bundle" size="small"></lightning:icon>
+                                                    <span class="slds-assistive-text">contact</span>
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__body">
+                                                <h3 class="slds-card__header-title">
+                                                    
+                                                    <span>Draft / Submitted</span>
+                                                    
+                                                </h3>
+                                            </div>
+                                            <div class="slds-no-flex">
+                                                <div class="slds-grid">
+                                                    <lightning:button onclick="{!c.addNew}"  class="slds-m-right_small" iconName="utility:add">New</lightning:button>
+                                                    <lightning:select aura:id="InputSelectDynamic" variant="label-hidden" onchange="{!c.onChange}" value="{!v.selectedFY}" class="nolabel">
+                                                        <!-- <option value="">{!$Label.c.To_Date_Timesheets}</option> -->
+                                                        <option value="THIS_FISCAL_YEAR" selected="true">{!$Label.c.Current_FY_Timesheets}</option>
+                                                        <option value="LAST_FISCAL_YEAR">{!$Label.c.Previous_FY_Timesheets}</option>
+                                                        <option value="NEXT_FISCAL_YEAR">{!$Label.c.Next_FY_Timesheets}</option>
+                                                        <option value="LAST_N_FISCAL_YEARS:2">{!$Label.c.Previous_2_FY_Timesheets}</option>
+                                                    </lightning:select>
+                                                    <!-- <lightning:button class="slds-button slds-button_brand" iconName="utility:add">New Timesheet</lightning:button>-->
+                                                    <!-- <lightning:buttonIcon iconName="utility:filter"  alternativeText="Filter" title="Filter" /> -->
+                                                    <!-- <lightning:buttonIcon iconName="utility:threedots"  alternativeText="" title="" /> -->
+                                                </div>
+                                            </div>
+                                        </header>
+                                    </div>
+                                    <div class="slds-grid slds-p-around_small">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-success text-success">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Submitted Hours</h4>
+                                                                    <p>{!v.counts.numTimesheetSub}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-primary text-info">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Approved Hours</h4>
+                                                                    <p>{!v.counts.numTimesheetApp}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-danger text-danger">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Rejected Hours</h4>
+                                                                    <p>{!v.counts.numTimesheetRej}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-card__body minHeight450">
+                                        <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout" role="grid" aria-label="Example table in a Card">
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th class="" scope="col" width="7%">
+                                                        <div class="slds-truncate" title="S.NO">S.NO</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Timesheet Name">Timesheet Name</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Project">Project</div>
+                                                    </th>                                        
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Total Hours">Total Hours</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Status">Status</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Action">Action</div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.TimeSheetList}" var="account" indexVar="i">
+                                                    <tr class="slds-hint-parent">
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!i +1}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title=""><lightning:formattedUrl value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/></div></td>
+                                                        <td role="gridcell">
+                                                            <div class="slds-truncate" title="">
+                                                                <aura:if isTrue="{!account.ERP7__Project__c}">
+                                                                    <lightning:formattedUrl value="{!'/'+account.ERP7__Project__c}" label="{!account.ERP7__Project__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    <aura:set attribute="else">
+                                                                        -
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Submitted_Minutes__c}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Status__c}</div></td>
+                                                        <td role="gridcell">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                    <aura:if isTrue="{!account.ERP7__Status__c =='Draft'}">
+                                                                        <a class="svg" onclick="{!c.EditClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                            <lightning:icon iconName="action:edit" variant="inverse" size="xx-small" alternativeText="edit" title="edit" />
+                                                                        </a>&nbsp;&nbsp;
+                                                                        <aura:set attribute="else">
+                                                                            <a class="svg disabled-link" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                                <lightning:icon iconName="action:edit" variant="inverse" size="xx-small" alternativeText="edit" title="edit:" disable="true"/>
+                                                                            </a>&nbsp;&nbsp;
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                    <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                        <lightning:icon iconName="action:delete" variant="inverse" size="xx-small" alternativeText="delete" title="delete" />
+                                                                    </a>
+                                                                </div>
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                    <aura:if isTrue="{!account.ERP7__Status__c =='Draft'}">
+                                                                        <a class="svg" onclick="{!c.submitNew}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                            <lightning:button onclick="{!c.submitNew}" class="slds-button slds-button_success" >Submit</lightning:button>                                                                        
+                                                                        </a>&nbsp;&nbsp;
+                                                                        <aura:set attribute="else">
+                                                                            <a class="svg" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                                <lightning:button class="slds-button slds-button_success" disabled="true">Submit:</lightning:button>                                                                        
+                                                                            </a>&nbsp;&nbsp;
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>                                    
+                                            </tbody>
+                                        </table>
+                                        <aura:if isTrue="{!v.TimeSheetList.length==0}">
+                                            <div class="slds-notify_container slds-is-relative" style="margin-top: 100px;">
+                                                <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                    <span class="slds-assistive-text">warning</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                        <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                        
+                                                    </span>
+                                                    <div class="slds-notify__content">
+                                                        <h3 class="slds-text-heading_small mb-0">
+                                                            No Items Found
+                                                        </h3>
+                                                    </div>
+                                                    <div class="slds-notify__close">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                    <!-- <footer class="slds-card__footer">
+                                    
+                                    <a class="slds-card__footer-action" href="#">View All
+                                        <span class="slds-assistive-text">Contacts</span>
+                                    </a>
+                                </footer>  -->
+                                </article>   
+                                <aura:set attribute="else">
+                                    <article class="slds-card">
+                                        <div class="slds-card__header slds-grid">
+                                            <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                                <div class="slds-media__figure">
+                                                    <!--<lightning:icon iconName="action:user" size="x-small"></lightning:icon>
+                                                <span class="slds-assistive-text">user</span> -->
+                                                </div>
+                                                <div class="slds-media__body">
+                                                    <h2 class="slds-card__header-title">
+                                                        <!-- <span>1 01-Feb-2024  10-Feb-2024</span> -->
+                                                    </h2>
+                                                </div>
+                                                <!--div class="slds-no-flex">this is commented to remove close on the edit page coz we already have cancel button
+                                                <lightning:buttonIcon iconName="utility:close"  alternativeText="" title="" onclick="{!c.closeTimeDetails}" />                                               
+                                            </div-->
+                                            </header>
+                                        </div>
+                                        <div class="slds-card__body slds-p-around_small pt-0">
+                                            <div class="slds-grid slds-wrap">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                                    <div class="slds-grid slds-wrap">
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Timesheet Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control nobletm">
+                                                                <aura:if isTrue="{!v.editModal==false}">
+                                                                    <lightning:input aura:id="TimesheetName" type="text" value="{!v.timeSheet.Name}" />
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:input aura:id="TimesheetName" type="text" value="{!v.TimeSheetListWP.TimeSheet.Name}" disabled="{v.editModal}"/>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                        <!-- <div class="slds-form-element slds-form-element_stacked">
+                                                        <lightning:select label="Status"  aura:id="TSStatus" value="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c}" >
+                                                                <aura:iteration items="{!v.TSStatus}" var="option" >
+                                                                    <aura:if isTrue="{!and(option.value!='Approved',option.value!='Rejected')}">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.TimeSheetListWP.TimeSheet.ERP7__Status__c, option.value)}"/>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                    </div> -->
+                                                        <!-- <label class="slds-form-element__label" for="stacked-input-id-02">Discription</label>
+                                                        <div class="slds-form-element__control">
+                                                            <textarea id="stacked-input-id-02" placeholder="" class="slds-textarea"></textarea>
+                                                        </div>
+                                                    <div class="slds-form-element slds-form-element_stacked">
+                                                          <lightning:fileUpload label="Attach receipt"
+                                                                                   />                                                    
+                                                    </div>-->
+                                                        
+                                                        <!-- First Column for Project Name -->
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Project Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control">
+                                                                <aura:if isTrue="{!v.editModal==false}">
+                                                                    <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.timeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}" />
+                                                                    <aura:set attribute="else">
+                                                                        <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}" />
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Second Column for Employee -->
+                                                        <!--aura:if isTrue="{!v.multiUser}"-->
+                                                        <aura:if isTrue="{!and(v.multiUser == true,v.editModal == false)}"> 
+                                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-p-right_small">
+                                                                <div class="slds-form-element slds-form-element_stacked">
+                                                                    <label class="slds-form-element__label" for="stacked-input-id-01">Employee1 <span class="clr-required">*</span></label>
+                                                                    <div class="slds-form-element__control">
+                                                                        <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.timeSheet.ERP7__Employees__c}" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </aura:if>
+                                                        
+                                                        
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small slds-hide">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Project Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control">
+                                                                <aura:if isTrue="{!v.editModal==false}">
+                                                                    <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.timeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}" />
+                                                                    <aura:if isTrue="{!v.multiUser}">
+                                                                        <div class="slds-form-element slds-form-element_stacked" >
+                                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Employee2 <span class="clr-required">*</span></label>
+                                                                            <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.timeSheet.ERP7__Employees__c}"/>
+                                                                        </div>
+                                                                    </aura:if>
+                                                                    <aura:set attribute="else">
+                                                                        <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Project__c}" qry="{!' AND Id IN '+v.projectIds}" />
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">{!$Label.c.Approver_Timesheets} <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control">
+                                                                <aura:if isTrue="{!v.editModal==false}">
+                                                                    <c:CustomInputLookUp aura:id="user" objectAPIName="User" IconName="standard:user" selectedRecordId="{!v.timeSheet.ERP7__Approver__c}" qry="{!' AND Id IN '+v.approverList}"/>
+                                                                    <aura:set attribute="else">
+                                                                        <c:CustomInputLookUp aura:id="user" objectAPIName="User" IconName="standard:user" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Approver__c}" qry="{!' AND Id IN '+v.approverList}"/>
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                    <div class="card stat-widget mb-0">
+                                                        <div class="card-body p-3">
+                                                            <div class="slds-grid slds-wrap">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">   
+                                                                    <h5 class="card-title mb-1">Hours to be submitted</h5>
+                                                                </div>
+                                                                <!--<h2 class="billabletimlogs mb-0">03:23</h2>
+                                                        <p>Billable Time logs</p>
+                                                        <hr/>-->
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                                                                    
+                                                                    <h2 class="billabletimlogs mb-0">{!v.TotalHours}</h2>
+                                                                    <p  class="mb-0">Total hours</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-m-top_small" role="grid" aria-label="Example table in a Card">
+                                                <thead>
+                                                    <tr class="slds-line-height_reset">
+                                                        <aura:if isTrue="{!v.editModal==false}">
+                                                            <th class="" scope="col">
+                                                                <lightning:button onclick="{!c.addNewTimeCard}" iconName="utility:add" >New</lightning:button>
+                                                            </th>
+                                                        </aura:if>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Date">Date</div>
+                                                        </th>
+                                                        
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity">Activity</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity Notes">Activity Notes</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Hour(s)">Hour(s)</div>
+                                                        </th>
+                                                        <th>&nbsp;</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:if isTrue="{!v.editModal}">
+                                                        <aura:iteration items="{!v.TimeSheetListWP.TimeCardList}" var="TCL" indexVar="TCLROW">
+                                                            <aura:if isTrue="{!TCL.Id != undefined}" >
+                                                                <tr class="slds-hint-parent">
+                                                                    
+                                                                    <th scope="row">
+                                                                        <div class="slds-truncate" title="">
+                                                                            {!TCL.ERP7__Week_Day_1__c}
+                                                                        </div>
+                                                                    </th>
+                                                                    
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <lightning:select aura:id="activity" value="{!TCL.ERP7__Task__c}" class="nonlabel">
+                                                                                <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Task__c, option.value)}"/>
+                                                                                </aura:iteration>
+                                                                            </lightning:select>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <lightning:input type="text" value="{!TCL.ERP7__Activity_Risk__c}" class="nonlabel" maxlength="64"/>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <div class="custtimepicker slds-grid">
+                                                                                <aura:if isTrue="{!v.TimeSheetListWP.TimeCardList.length > 1}">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="hhitr" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="mmitr" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="hh1" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                                        </div>
+                                                                                        <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="mm1" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if>                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>                                                    
+                                                                </tr>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.TimeCardList}" var="TCL" indexVar="TCLROW">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td>&nbsp;</td>
+                                                                    <th scope="row">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <lightning:input type="date" aura:id="Weekdate" value="{!TCL.ERP7__Week_Day_1__c}" />
+                                                                        </div>
+                                                                    </th>
+                                                                    
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <lightning:select aura:id="activity" value="{!TCL.ERP7__Task__c}" class="nonlabel">
+                                                                                <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Task__c, option.value)}"/>
+                                                                                </aura:iteration>
+                                                                            </lightning:select>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <lightning:input type="text" value="{!TCL.ERP7__Activity_Risk__c}" class="nonlabel" maxlength="64"/>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <div class="custtimepicker slds-grid">
+                                                                                <aura:if isTrue="{!v.TimeCardList.length > 1}">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="hhitr" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="mmitr" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="hh1" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                        </div>
+                                                                                        <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="mm1" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if>                                                                
+                                                                            </div>
+                                                                        </div>
+                                                                    </td> 
+                                                                    <td>
+                                                                        <a class="svg" onclick="{!c.handleDelNewLI}" data-index="{!TCLROW}" >
+                                                                            <lightning:icon iconName="action:delete" variant="inverse" size="xx-small" alternativeText="delete" title="delete" />
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <footer class="slds-card__footer">
+                                            <button class="slds-button slds-button_neutral" onclick="{!c.closeTimeDetails}">Back</button>
+                                            <aura:if isTrue="{!v.editModal==false}">
+                                                <button class="slds-button slds-button_brand" onclick="{!c.saveNew}">Save</button> 
+                                                <aura:set attribute="else">
+                                                    <button class="slds-button slds-button_brand" onclick="{!c.saveEdit}">Save</button> 
+                                                </aura:set>
+                                            </aura:if>
+                                            <button class="slds-button slds-button_success" onclick="{!c.submitForApproval}">Submit for Approval</button>
+                                        </footer>
+                                    </article>
+                                </aura:set>
+                            </aura:if>
+                            
+                        </aura:if>
+                        
+                        <aura:if isTrue="{!v.showTabs=='ApproRejTimeSheet'}">
+                            <article class="slds-card">
+                                <div class="slds-card__header slds-grid">
+                                    <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                        <div class="slds-media__figure">
+                                            <span class="slds-icon_container slds-icon-standard-approval" title="">
+                                                <lightning:icon iconName="standard:approval" size="small"></lightning:icon>
+                                                <span class="slds-assistive-text">contact</span>
+                                            </span>
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <h3 class="slds-card__header-title">
+                                                
+                                                <span>Approved / Rejected</span>
+                                                
+                                            </h3>
+                                        </div>
+                                        <div class="slds-no-flex">
+                                            
+                                            <lightning:select aura:id="InputSelectDynamic" variant="label-hidden" onchange="{!c.ChangeApproved}" value="{!v.selectedFY}" class="nolabel">
+                                                <!-- <option value="">{!$Label.c.To_Date_Timesheets}</option> -->
+                                                <option value="THIS_FISCAL_YEAR" selected="true">{!$Label.c.Current_FY_Timesheets}</option>
+                                                <option value="LAST_FISCAL_YEAR">{!$Label.c.Previous_FY_Timesheets}</option>
+                                                <option value="NEXT_FISCAL_YEAR">{!$Label.c.Next_FY_Timesheets}</option>
+                                                <option value="LAST_N_FISCAL_YEARS:2">{!$Label.c.Previous_2_FY_Timesheets}</option>
+                                            </lightning:select>
+                                            <!-- <lightning:button class="slds-button slds-button_brand" iconName="utility:add">New Timesheet</lightning:button>-->
+                                            <!-- <lightning:buttonIcon iconName="utility:filter"  alternativeText="Filter" title="Filter" /> -->
+                                            <!-- <lightning:buttonIcon iconName="utility:threedots"  alternativeText="" title="" /> -->
+                                            
+                                        </div>
+                                    </header>
+                                </div>
+                                <div class="slds-grid slds-p-around_small">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                        <div class="card mb-1">
+                                            <div class="card-body p-1">
+                                                <div class="transactions-list mb-0">
+                                                    <div class="tr-item p-1">
+                                                        <div class="tr-company-name">
+                                                            <div class="tr-icon tr-card-icon tr-card-bg-success text-success">
+                                                                <i class="fa fa-clock-o fa-2x"></i>
+                                                            </div>
+                                                            <div class="tr-text">
+                                                                <h4>Submitted Hours</h4>
+                                                                <p>{!v.counts.numTimesheetSub}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                        <div class="card mb-1">
+                                            <div class="card-body p-1">
+                                                <div class="transactions-list mb-0">
+                                                    <div class="tr-item p-1">
+                                                        <div class="tr-company-name">
+                                                            <div class="tr-icon tr-card-icon tr-card-bg-primary text-info">
+                                                                <i class="fa fa-clock-o fa-2x"></i>
+                                                            </div>
+                                                            <div class="tr-text">
+                                                                <h4>Approved Hours</h4>
+                                                                <p>{!v.counts.numTimesheetApp}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                        <div class="card mb-1">
+                                            <div class="card-body p-1">
+                                                <div class="transactions-list mb-0">
+                                                    <div class="tr-item p-1">
+                                                        <div class="tr-company-name">
+                                                            <div class="tr-icon tr-card-icon tr-card-bg-danger text-danger">
+                                                                <i class="fa fa-clock-o fa-2x"></i>
+                                                            </div>
+                                                            <div class="tr-text">
+                                                                <h4>Rejected Hours</h4>
+                                                                <p>{!v.counts.numTimesheetRej}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-card__body minHeight450">
+                                    <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout" role="grid" aria-label="Example table in a Card">
+                                        <thead>
+                                            <tr class="slds-line-height_reset">
+                                                <th class="" scope="col" width="7%">
+                                                    <div class="slds-truncate" title="S.NO" >S.NO</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Timesheet Name">Timesheet Name</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Project">Project</div>
+                                                </th>                                        
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Submitted Hours">Submitted Hours</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Approved Hours">Approved Hours</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Approver">Approver</div>
+                                                </th>
+                                                <th class="" scope="col">
+                                                    <div class="slds-truncate" title="Status">Status</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <aura:iteration items="{!v.TimeSheetList}" var="account" indexVar="i">
+                                                <tr class="slds-hint-parent">
+                                                    <td role="gridcell"><div class="slds-truncate" title="">{!i +1}</div></td>
+                                                    <td role="gridcell"><div class="slds-truncate" title=""><lightning:formattedUrl value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/></div></td>
+                                                    <td role="gridcell">
+                                                        <div class="slds-truncate" title="">
+                                                            <aura:if isTrue="{!account.ERP7__Project__c}">
+                                                                <lightning:formattedUrl value="{!'/'+account.ERP7__Project__c}" label="{!account.ERP7__Project__r.Name}" target="_blank" class="fcolor1"/>
+                                                                <aura:set attribute="else">
+                                                                    -
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </div>
+                                                    </td>
+                                                    <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Submitted_Minutes__c}</div></td>
+                                                    <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Approved_Minutes__c}</div></td>
+                                                    <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Approver__r.Name}</div></td>
+                                                    <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Status__c}</div></td>
+                                                </tr>
+                                            </aura:iteration>                                    
+                                        </tbody>
+                                    </table>
+                                    <aura:if isTrue="{!v.TimeSheetList.length==0}">
+                                        <div class="slds-notify_container slds-is-relative" style="margin-top: 100px;">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                <span class="slds-assistive-text">warning</span>
+                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                    <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                    
+                                                </span>
+                                                <div class="slds-notify__content">
+                                                    <h3 class="slds-text-heading_small mb-0">
+                                                        No Items Found
+                                                    </h3>
+                                                </div>
+                                                <div class="slds-notify__close">
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:if>
+                                </div>
+                                <!-- <footer class="slds-card__footer">
+                                    <a class="slds-card__footer-action" href="#">View All
+                                        <span class="slds-assistive-text">Contacts</span>
+                                    </a>
+                                </footer> -->
+                            </article> 
+                        </aura:if>
+                        
+                        <aura:if isTrue="{!v.showTabs=='MyApproval'}">
+                            <aura:if isTrue="{!or(v.MyApprTimeId == '',v.MyApprTimeId == null)}">
+                                <article class="slds-card">
+                                    <div class="slds-card__header slds-grid">
+                                        <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container slds-icon-standard-funding-requirement" title="">
+                                                    <lightning:icon iconName="standard:approval" size="small"></lightning:icon>
+                                                    <span class="slds-assistive-text">contact</span>
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__body">
+                                                <h3 class="slds-card__header-title">
+                                                    
+                                                    <span>My Approvals</span>
+                                                    
+                                                </h3>
+                                            </div>
+                                            <div class="slds-no-flex">
+                                                
+                                                <!-- <lightning:select aura:id="InputSelectDynamic" variant="label-hidden" onchange="{!c.ChangeMyApproval}" value="{!v.selectedFY}" class="nolabel">
+                                                <option value="">{!$Label.c.To_Date_Timesheets}</option>
+                                                <option value="THIS_FISCAL_YEAR" selected="true">{!$Label.c.Current_FY_Timesheets}</option>
+                                                <option value="LAST_FISCAL_YEAR">{!$Label.c.Previous_FY_Timesheets}</option>
+                                                <option value="NEXT_FISCAL_YEAR">{!$Label.c.Next_FY_Timesheets}</option>
+                                                <option value="LAST_N_FISCAL_YEARS:2">{!$Label.c.Previous_2_FY_Timesheets}</option>
+                                            </lightning:select> -->
+                                                <!-- <lightning:button class="slds-button slds-button_brand" iconName="utility:add">New Timesheet</lightning:button>-->
+                                                <!-- <lightning:buttonIcon iconName="utility:filter"  alternativeText="Filter" title="Filter" /> -->
+                                                <!-- <lightning:buttonIcon iconName="utility:threedots"  alternativeText="" title="" /> -->
+                                                
+                                            </div>
+                                        </header>
+                                    </div>
+                                    <div class="slds-grid slds-p-around_small">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-success text-success">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Submitted Hours:</h4>
+                                                                    <p>{!v.counts.MyApprovalSub}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-primary text-info">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Approved Hours</h4>
+                                                                    <p>{!v.counts.MyApprovalApp}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                            <div class="card mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="transactions-list mb-0">
+                                                        <div class="tr-item p-1">
+                                                            <div class="tr-company-name">
+                                                                <div class="tr-icon tr-card-icon tr-card-bg-danger text-danger">
+                                                                    <i class="fa fa-clock-o fa-2x"></i>
+                                                                </div>
+                                                                <div class="tr-text">
+                                                                    <h4>Rejected Hours</h4>
+                                                                    <p>{!v.counts.MyApprovalRej}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-card__body minHeight450">
+                                        <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout" role="grid" aria-label="Example table in a Card">
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th class="" scope="col" width="7%">
+                                                        <div class="slds-truncate" title="S.NO" >S.NO</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Timesheet Name">Timesheet Name</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Project">Project</div>
+                                                    </th>                                        
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Submitted Hours">Submitted Hours</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Status">Status</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Status">Requested By</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Action">Action</div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:iteration items="{!v.TimeSheetList}" var="account" indexVar="i">
+                                                    <tr class="slds-hint-parent">
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!i +1}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title=""><lightning:formattedUrl value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/></div></td>
+                                                        <td role="gridcell">
+                                                            <div class="slds-truncate" title="">
+                                                                <aura:if isTrue="{!account.ERP7__Project__c}">
+                                                                    <lightning:formattedUrl value="{!'/'+account.ERP7__Project__c}" label="{!account.ERP7__Project__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    <aura:set attribute="else">
+                                                                        -
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Submitted_Minutes__c}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Status__c}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Employees__r.Name}</div></td><!--{!account.ERP7__Employees__r.ERP7__First_Name__c}-->
+                                                        <td role="gridcell">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-right_x-small">
+                                                                    <a class="svg" onclick="{!c.EditMyApprClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                        <lightning:icon iconName="action:edit" variant="inverse" size="xx-small" alternativeText="edit" title="edit" />
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>                                    
+                                            </tbody>
+                                        </table>
+                                        <aura:if isTrue="{!v.TimeSheetList.length==0}">
+                                            <div class="slds-notify_container slds-is-relative" style="margin-top: 100px;">
+                                                <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                    <span class="slds-assistive-text">warning</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                        <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                        
+                                                    </span>
+                                                    <div class="slds-notify__content">
+                                                        <h3 class="slds-text-heading_small mb-0">
+                                                            No Items Found
+                                                        </h3>
+                                                    </div>
+                                                    <div class="slds-notify__close">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                    <!-- <footer class="slds-card__footer">
+                                    <a class="slds-card__footer-action" href="#">View All
+                                        <span class="slds-assistive-text">Contacts</span>
+                                    </a>
+                                </footer> -->
+                                </article>   
+                                <aura:set attribute="else">
+                                    <article class="slds-card">
+                                        <div class="slds-card__header slds-grid">
+                                            <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                                <div class="slds-media__figure">
+                                                    <!--<lightning:icon iconName="action:user" size="x-small"></lightning:icon>
+                                                <span class="slds-assistive-text">user</span> -->
+                                                </div>
+                                                <div class="slds-media__body">
+                                                    <h2 class="slds-card__header-title">
+                                                        <!-- <span>1 01-Feb-2024  10-Feb-2024</span> -->
+                                                    </h2>
+                                                </div>
+                                                <!--div class="slds-no-flex">
+                                                <lightning:buttonIcon iconName="utility:close"  alternativeText="" title="" onclick="{!c.closeTimeDetails}" />                                               
+                                            </div-->
+                                            </header>
+                                        </div>
+                                        <div class="slds-card__body slds-p-around_medium">
+                                            <div class="slds-grid slds-wrap">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                                    <div class="slds-grid slds-wrap">
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Timesheet Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control nobletm">
+                                                                <lightning:input aura:id="TimesheetName" type="text" value="{!v.TimeSheetListWP.TimeSheet.Name}" disabled="true"/>
+                                                            </div>
+                                                        </div>
+                                                        <!-- <div class="slds-form-element slds-form-element_stacked">
+                                                        <lightning:select label="Status"  aura:id="TSStatus" value="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c}" >
+                                                                <aura:iteration items="{!v.TSStatus}" var="option" >
+                                                                    <aura:if isTrue="{!and(option.value!='Draft',option.value!='Submitted')}">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.TimeSheetListWP.TimeSheet.ERP7__Status__c, option.value)}"/>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                    </div> -->
+                                                        <!-- <label class="slds-form-element__label" for="stacked-input-id-02">Discription</label>
+                                                        <div class="slds-form-element__control">
+                                                            <textarea id="stacked-input-id-02" placeholder="" class="slds-textarea"></textarea>
+                                                        </div>
+                                                    <div class="slds-form-element slds-form-element_stacked">
+                                                          <lightning:fileUpload label="Attach receipt"
+                                                                                   />                                                    
+                                                    </div>-->
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Project Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control">
+                                                                <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Project__c}" hideRemove="true" qry="{!' AND Id IN '+v.projectIds}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                    <div class="card stat-widget">
+                                                        <div class="card-body p-3">
+                                                            
+                                                            <h5 class="card-title mb-1">Total Hours</h5>  
+                                                            <div class="row">
+                                                                <p class="mb-0">Submitted Hours</p> 
+                                                                <h2 class="billabletimlogs mb-0 pt-1">{!v.TotalHours}</h2> 
+                                                            </div>
+                                                            <div class="row">
+                                                                <p class="mb-0">Approved/Rejected Hours</p>
+                                                                <h2 class="billabletimlogs mb-0 pt-1">{!v.ApproveHours}</h2>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout slds-m-top_small" role="grid" aria-label="Example table in a Card">
+                                                <thead>
+                                                    <tr class="slds-line-height_reset">
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Date">Date</div>
+                                                        </th>
+                                                        
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity">Activity</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity Notes">Activity Notes</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Submitted Hour(s)">Submitted Hour(s)</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Approved Hour(s)">Approved/Rejected Hour(s)</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <aura:if isTrue="{!v.showCheckbox}"><lightning:input type="checkbox" aura:id="master" onchange="{!c.checkAll}" /></aura:if> 
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration items="{!v.TimeSheetListWP.TimeCardList}" var="TCL" indexVar="TCLROW">
+                                                        <aura:if isTrue="{!TCL.Id != undefined}" >
+                                                            <tr class="slds-hint-parent">
+                                                                <th scope="row">
+                                                                    <div class="slds-truncate" title="">
+                                                                        {!TCL.ERP7__Week_Day_1__c}
+                                                                    </div>
+                                                                </th>
+                                                                
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <lightning:select aura:id="activity" value="{!TCL.ERP7__Task__c}" disabled="true" class="nonlabel">
+                                                                            <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Task__c, option.value)}"/>
+                                                                            </aura:iteration>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                </td>
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <lightning:input type="text" value="{!TCL.ERP7__Activity_Risk__c}" class="nonlabel" disabled="true" maxlength="64"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <div class="custtimepicker slds-grid">
+                                                                            <div class="slds-col">
+                                                                                <lightning:input type="number" disabled="true" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                            </div>
+                                                                            <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                            <div class="slds-col">
+                                                                                <lightning:input type="number" disabled="true" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                            </div>                                                        
+                                                                        </div>
+                                                                    </div>
+                                                                </td> 
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <div class="custtimepicker slds-grid">
+                                                                            <aura:if isTrue="{!v.TimeSheetListWP.TimeCardList.length > 1}">
+                                                                                <div class="slds-col">
+                                                                                    <lightning:input aura:id="hhitr" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                </div>
+                                                                                <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                <div class="slds-col">
+                                                                                    <lightning:input aura:id="mmitr" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                </div>
+                                                                                <aura:set attribute="else">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="hh1" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="mm1" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                    </div>
+                                                                                </aura:set>
+                                                                            </aura:if> 
+                                                                        </div>
+                                                                        <!-- <div class="custtimepicker slds-grid">
+                                                                    <div class="slds-col">
+                                                                        <lightning:input aura:id="hhitr" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                    </div>
+                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                    <div class="slds-col">
+                                                                        <lightning:input aura:id="mmitr" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                    </div>                                                        
+                                                            </div> -->
+                                                                    </div>
+                                                                </td>    
+                                                                <td role="gridcell">
+                                                                    <lightning:input type="checkbox" value="" aura:id="dependent" name="{!TCLROW}" onchange="{!c.checkAsSubMin}" />
+                                                                </td>                                               
+                                                            </tr>
+                                                        </aura:if>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <footer class="slds-card__footer">
+                                            <button class="slds-button slds-button_neutral" onclick="{!c.closeTimeDetails}">Back</button>
+                                            <button class="slds-button slds-button_brand" onclick="{!c.Approve}">Approve</button>
+                                            <button class="slds-button slds-button_brand" onclick="{!c.Reject}">Reject</button>
+                                        </footer>
+                                    </article>
+                                </aura:set>
+                            </aura:if>
+                        </aura:if>
+                        
+                        <aura:if isTrue="{!and(v.showTabs=='Admin',v.isAdmin)}">
+                            <aura:if isTrue="{!or(v.AdminTimeSheetId == '',v.AdminTimeSheetId == null)}">
+                                <article class="slds-card">
+                                    <div class="slds-card__header slds-grid">
+                                        <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container slds-icon-standard-customers" title="">
+                                                    <lightning:icon iconName="standard:customers" size="small"></lightning:icon>
+                                                    <span class="slds-assistive-text">contact</span>
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__body">
+                                                <h3 class="slds-card__header-title">
+                                                    
+                                                    <span>Manage Users</span>
+                                                    
+                                                </h3>
+                                            </div>
+                                            <div class="slds-no-flex">
+                                                <!-- <div>
+                                                Submitted Hours: {!v.counts.numTimesheetSub}
+                                                Approved Hours: {!v.counts.numTimesheetApp}
+                                                Rejected Hours: {!v.counts.numTimesheetRej}
+                                            </div> -->
+                                                <div class="slds-grid">
+                                                    <div>
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecordId="{!v.EmployeeId}" label="Employee" qry="{!' AND Id !=\''+v.emp.Id+'\''}"/>
+                                                    </div>
+                                                    <div class="slds-p-left_small">
+                                                        <label class="slds-form-element__label">Fiscal year</label>
+                                                        <lightning:select aura:id="InputSelectDynamic" variant="label-hidden" onchange="{!c.calledAdmin}" value="{!v.selectedFY}" class="nolabel">
+                                                            <!-- <option value="">{!$Label.c.To_Date_Timesheets}</option> -->
+                                                            <option value="THIS_FISCAL_YEAR" selected="true">{!$Label.c.Current_FY_Timesheets}</option>
+                                                            <option value="LAST_FISCAL_YEAR">{!$Label.c.Previous_FY_Timesheets}</option>
+                                                            <option value="NEXT_FISCAL_YEAR">{!$Label.c.Next_FY_Timesheets}</option>
+                                                            <option value="LAST_N_FISCAL_YEARS:2">{!$Label.c.Previous_2_FY_Timesheets}</option>
+                                                        </lightning:select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </header>
+                                    </div>
+                                    <div class="slds-card__body minHeight450">
+                                        
+                                        <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout" role="grid" aria-label="Example table in a Card">
+                                            <thead>
+                                                <tr class="slds-line-height_reset">
+                                                    <th class="" scope="col" width="7%">
+                                                        <div class="slds-truncate" title="S.NO" >S.NO</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Timesheet Name">Timesheet Name</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Project">Project</div>
+                                                    </th>                                        
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Submitted Hours">Submitted Hours</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Approved Hours">Approved Hours</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Approver">Approver</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Status">Status</div>
+                                                    </th>
+                                                    <th class="" scope="col">
+                                                        <div class="slds-truncate" title="Action">Action</div>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            
+                                            <tbody>
+                                                
+                                                <aura:iteration items="{!v.TimeSheetList}" var="account" indexVar="i">
+                                                    <tr class="slds-hint-parent">
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!i +1}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title=""><lightning:formattedUrl value="{!'/'+account.Id}" label="{!account.Name}" target="_blank" class="fcolor1"/></div></td>
+                                                        <td role="gridcell">
+                                                            <div class="slds-truncate" title="">
+                                                                <aura:if isTrue="{!account.ERP7__Project__c}">
+                                                                    <lightning:formattedUrl value="{!'/'+account.ERP7__Project__c}" label="{!account.ERP7__Project__r.Name}" target="_blank" class="fcolor1"/>
+                                                                    <aura:set attribute="else">
+                                                                        -
+                                                                    </aura:set>
+                                                                </aura:if>
+                                                            </div>
+                                                        </td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Submitted_Minutes__c}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Approved_Minutes__c}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Approver__r.Name}</div></td>
+                                                        <td role="gridcell"><div class="slds-truncate" title="">{!account.ERP7__Status__c}</div></td>
+                                                        <td role="gridcell">
+                                                            <div class="slds-grid">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-right_x-small">
+                                                                    <aura:if isTrue="{!or(account.ERP7__Status__c == 'Draft',account.ERP7__Status__c =='Submitted')}">
+                                                                        <a class="svg" onclick="{!c.EditAdminTimeSheetClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                            <lightning:icon iconName="action:edit" variant="inverse" size="xx-small" alternativeText="edit" title="edit" />
+                                                                        </a>&nbsp;&nbsp;
+                                                                        <aura:set attribute="else">
+                                                                            <a class="svg disabled-link" onclick="{!c.EditAdminTimeSheetClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                                <lightning:icon iconName="action:edit" variant="inverse" size="xx-small" alternativeText="edit" title="edit" />
+                                                                            </a>&nbsp;&nbsp;
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_9-of-12 slds-large-size_9-of-12">
+                                                                    <a class="svg" onclick="{!c.handleDelClick}" data-index="{!i}" data-record-id="{!account.Id}">
+                                                                        <lightning:icon iconName="action:delete" variant="inverse" size="xx-small" alternativeText="delete" title="delete" />
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>               
+                                            </tbody>
+                                        </table>
+                                        <aura:if isTrue="{!or(v.EmployeeId=='',v.EmployeeId==null)}">
+                                            <div class="slds-notify_container slds-is-relative" style="margin-top: 100px;">
+                                                <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                    <span class="slds-assistive-text">warning</span>
+                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                        <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                        
+                                                    </span>
+                                                    <div class="slds-notify__content">
+                                                        <h3 class="slds-text-heading_small mb-0">
+                                                            Please select an Employee
+                                                        </h3>
+                                                    </div>
+                                                    <div class="slds-notify__close">
+                                                        
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!v.TimeSheetList.length==0}">
+                                                    <div class="slds-notify_container slds-is-relative" style="margin-top: 100px;">
+                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                            <span class="slds-assistive-text">warning</span>
+                                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                                <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>
+                                                                
+                                                            </span>
+                                                            <div class="slds-notify__content">
+                                                                <h3 class="slds-text-heading_small mb-0">
+                                                                    No Items Found
+                                                                </h3>
+                                                            </div>
+                                                            <div class="slds-notify__close">
+                                                                
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>  
+                                    </div>
+                                    <!-- <footer class="slds-card__footer">
+                                    <a class="slds-card__footer-action" href="#">View All
+                                        <span class="slds-assistive-text">Contacts</span>
+                                    </a>
+                                </footer> -->
+                                </article> 
+                                <aura:set attribute="else">
+                                    <article class="slds-card">
+                                        <div class="slds-card__header slds-grid">
+                                            <header class="slds-media slds-media_center slds-has-flexi-truncate slds-grid" style="display:flex;">
+                                                <div class="slds-media__figure">
+                                                    <!--<lightning:icon iconName="action:user" size="x-small"></lightning:icon>
+                                                <span class="slds-assistive-text">user</span> -->
+                                                </div>
+                                                <div class="slds-media__body">
+                                                    <h2 class="slds-card__header-title">
+                                                        <!-- <span>1 01-Feb-2024  10-Feb-2024</span> -->
+                                                    </h2>
+                                                </div>
+                                                <!--div class="slds-no-flex">
+                                                <lightning:buttonIcon iconName="utility:close"  alternativeText="" title="" onclick="{!c.closeTimeDetails}" />                                               
+                                            </div-->
+                                            </header>
+                                        </div>
+                                        <div class="slds-card__body slds-p-around_medium">
+                                            <div class="slds-grid slds-wrap">
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                                    <div class="slds-grid slds-wrap">
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Timesheet Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control nobletm">
+                                                                <lightning:input aura:id="TimesheetName" type="text" value="{!v.TimeSheetListWP.TimeSheet.Name}" disabled="true" />
+                                                            </div>
+                                                        </div>
+                                                        <!-- <div class="slds-form-element slds-form-element_stacked">
+                                                        <lightning:select label="Status"  aura:id="TSStatus" value="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c}" >
+                                                                <aura:iteration items="{!v.TSStatus}" var="option" >
+                                                                    <aura:if isTrue="{!and(option.value!='Draft',option.value!='Submitted')}">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.TimeSheetListWP.TimeSheet.ERP7__Status__c, option.value)}"/>
+                                                                    </aura:if>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                    </div> -->
+                                                        <!-- <label class="slds-form-element__label" for="stacked-input-id-02">Discription</label>
+                                                        <div class="slds-form-element__control">
+                                                            <textarea id="stacked-input-id-02" placeholder="" class="slds-textarea"></textarea>
+                                                        </div>
+                                                    <div class="slds-form-element slds-form-element_stacked">
+                                                          <lightning:fileUpload label="Attach receipt"
+                                                                                   />                                                    
+                                                    </div>-->
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                            <label class="slds-form-element__label" for="stacked-input-id-01">Project Name <span class="clr-required">*</span></label>
+                                                            <div class="slds-form-element__control">
+                                                                <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Project__c}" hideRemove="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" qry="{!' AND Id IN '+v.projectIds}"/>
+                                                            </div>
+                                                        </div>
+                                                        <aura:if isTrue="{!or(v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted',v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Draft')}"> <!--<aura:if isTrue="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}">-->
+                                                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-p-right_small">
+                                                                <label class="slds-form-element__label" for="stacked-input-id-01">{!$Label.c.Approver_Timesheets} <span class="clr-required">*</span></label>
+                                                                <div class="slds-form-element__control">
+                                                                    <c:CustomInputLookUp aura:id="user" objectAPIName="User" IconName="standard:user" selectedRecordId="{!v.TimeSheetListWP.TimeSheet.ERP7__Approver__c}" hideRemove="true" />
+                                                                </div>
+                                                            </div>
+                                                        </aura:if>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                    <div class="card stat-widget">
+                                                        <div class="card-body p-3">
+                                                            <h5 class="card-title mb-1">Total Hours</h5>                                                        
+                                                            <h2 class="billabletimlogs mb-0">{!v.TotalHours}</h2>
+                                                            <p class="mb-0">Submitted Hours</p>
+                                                            <aura:if isTrue="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}"><hr/>
+                                                                <h2 class="billabletimlogs mb-0">{!v.ApproveHours}</h2>
+                                                                <p class="mb-0">Approved Hours</p>
+                                                                <h2 class="billabletimlogs mb-0">{!v.ApproveHours}</h2> 
+                                                            </aura:if>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout slds-m-top_small" role="grid" aria-label="Example table in a Card">
+                                                <thead>
+                                                    <tr class="slds-line-height_reset">
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Date">Date</div>
+                                                        </th>
+                                                        
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity">Activity</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Activity Notes">Activity Notes</div>
+                                                        </th>
+                                                        <th class="" scope="col">
+                                                            <div class="slds-truncate" title="Submitted Hour(s)">Submitted Hour(s)</div>
+                                                        </th>
+                                                        <aura:if isTrue="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}">
+                                                            <th class="" scope="col">
+                                                                <div class="slds-truncate" title="Approved Hour(s)">Approved Hour(s)</div>
+                                                            </th>
+                                                            <th class="" scope="col">
+                                                                <aura:if isTrue="{!v.showCheckbox}"><lightning:input type="checkbox" aura:id="master" onchange="{!c.checkAll}" /></aura:if> 
+                                                            </th>
+                                                        </aura:if>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration items="{!v.TimeSheetListWP.TimeCardList}" var="TCL" indexVar="TCLROW">
+                                                        <aura:if isTrue="{!TCL.Id != undefined}" >
+                                                            <tr class="slds-hint-parent">
+                                                                <th scope="row">
+                                                                    <div class="slds-truncate" title="">
+                                                                        {!TCL.ERP7__Week_Day_1__c}
+                                                                    </div>
+                                                                </th>
+                                                                
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <lightning:select aura:id="activity" value="{!TCL.ERP7__Task__c}" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" class="nonlabel" >
+                                                                            <aura:iteration items="{!v.TCEStatus}" var="option" >
+                                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(TCL.ERP7__Task__c, option.value)}"/>
+                                                                            </aura:iteration>
+                                                                        </lightning:select>
+                                                                    </div>
+                                                                </td>
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <lightning:input type="text" value="{!TCL.ERP7__Activity_Risk__c}" class="nonlabel" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" maxlength="64"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td role="gridcell">
+                                                                    <div class="slds-truncate" title="">
+                                                                        <div class="custtimepicker slds-grid">
+                                                                            <aura:if isTrue="{!v.TimeSheetListWP.TimeCardList.length > 1}">
+                                                                                <div class="slds-col">
+                                                                                    <lightning:input aura:id="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted' ? 'hht' : hhitr}" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                                </div>
+                                                                                <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                <div class="slds-col">
+                                                                                    <lightning:input aura:id="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted' ? 'mmt' : mmitr}" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                                </div>
+                                                                                <aura:set attribute="else">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted' ? 'hht' : hh1}" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" type="number" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted' ? 'mmt' : mm1}" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" type="number" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                                    </div>
+                                                                                </aura:set>
+                                                                            </aura:if>                                                                
+                                                                        </div>
+                                                                        <!-- <div class="custtimepicker slds-grid">
+                                                                    <div class="slds-col">
+                                                                        <lightning:input type="number" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" value="{!TCL.subhh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                    </div>
+                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                    <div class="slds-col">
+                                                                        <lightning:input type="number" disabled="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}" value="{!TCL.submm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                    </div>                                                        
+                                                            </div> -->
+                                                                    </div>
+                                                                </td> 
+                                                                <aura:if isTrue="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}">
+                                                                    <td role="gridcell">
+                                                                        <div class="slds-truncate" title="">
+                                                                            <div class="custtimepicker slds-grid">
+                                                                                <aura:if isTrue="{!v.TimeSheetListWP.TimeCardList.length > 1}">
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="hhitr" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                    </div>
+                                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                    <div class="slds-col">
+                                                                                        <lightning:input aura:id="mmitr" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="hh1" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}" placeholder="00"/>
+                                                                                        </div>
+                                                                                        <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                                        <div class="slds-col">
+                                                                                            <lightning:input aura:id="mm1" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}" placeholder="00"/>
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if> 
+                                                                            </div>
+                                                                            <!-- <div class="custtimepicker slds-grid">
+                                                                    <div class="slds-col">
+                                                                        <lightning:input aura:id="hhitr" type="number" value="{!TCL.apphh}" name="{!TCLROW}" maxlength="2" class="custhh slds-input" onblur="{!c.onBlurhh}" onchange="{!c.onChangehh}"/>
+                                                                    </div>
+                                                                    <div class="slds-col slds-p-top_xx-small">:</div>
+                                                                    <div class="slds-col">
+                                                                        <lightning:input aura:id="mmitr" type="number" value="{!TCL.appmm}" name="{!TCLROW}" maxlength="2" class="custmm slds-input" onblur="{!c.onBlurmm}" onchange="{!c.onChangemm}"/>
+                                                                    </div>                                                        
+                                                            </div> -->
+                                                                        </div>
+                                                                    </td>    
+                                                                    <td role="gridcell">
+                                                                        <lightning:input type="checkbox" value="" aura:id="dependent" name="{!TCLROW}" onchange="{!c.checkAsSubMin}" />
+                                                                    </td>     
+                                                                </aura:if>                                          
+                                                            </tr>
+                                                        </aura:if>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <footer class="slds-card__footer">
+                                            <button class="slds-button slds-button_neutral" onclick="{!c.closeTimeDetails}">Back</button>
+                                            <aura:if isTrue="{!v.TimeSheetListWP.TimeSheet.ERP7__Status__c == 'Submitted'}">
+                                                <button class="slds-button slds-button_brand" onclick="{!c.Approve}">Approve</button>
+                                                <button class="slds-button slds-button_brand" onclick="{!c.Reject}">Reject</button>
+                                                <aura:set attribute="else">
+                                                    <button class="slds-button slds-button_success" onclick="{!c.submitForApproval}">Submit for Approval</button>
+                                                </aura:set>
+                                            </aura:if>
+                                        </footer>
+                                    </article>
+                                </aura:set>
+                            </aura:if>
+                        </aura:if>
+                    </div>
+                </div>
+                <!--Admin Main area -->
+            </div>
+        </div>
+        
+    </body>
+    
+</aura:component>

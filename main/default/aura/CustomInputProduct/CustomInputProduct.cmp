@@ -1,0 +1,109 @@
+<aura:component controller="InputLookUpProduct" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+   <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.css,
+                         /resource/ERP7__SLDS213/assets/styles/salesforce-lightning-design.css,"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/> 
+    <aura:attribute name="selectedRecord" type="sObject" default="{}" description="Use,for store SELECTED sObject Record"/>
+    <aura:attribute name="selectedRecordId" type="String"  description="Use,for store SELECTED Record Id" default="" access="global"/>
+    <aura:handler name="change" value="{!v.selectedRecord}" action="{!c.onSelectedChange}"/>
+    <aura:handler name="change" value="{!v.selectedRecordId}" action="{!c.doInit}"/>
+    <aura:method name="clearAll" action="{!c.clear}"></aura:method>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="listOfSearchRecords" type="List" description="Use,for store the list of search records which returns from apex class"/>
+    <aura:attribute name="SearchKeyWord" type="string"/>
+    <aura:attribute name="objectAPIName" type="string" default="" access="global"/>
+    <aura:attribute name="IconName" type="string" default="" access="global"/>
+    <aura:attribute name="IconPath" type="string" default=""/>
+    <aura:attribute name="label" type="string" default="" access="global"/>
+    <aura:attribute name="showList" type="Boolean" default='false'/>
+    <aura:attribute name="dontshowList" type="Boolean" default='false'/>
+    <aura:attribute name="hideRemove" type="Boolean" default='false'/>
+    <aura:attribute name="required" type="Boolean" default='false'/>
+    <aura:attribute name="qry" type="string" default=""/>
+    <aura:attribute name="inputStyleclass" type="string" default=""/>
+    <aura:attribute name="SearchField" type="string" default="Name"/>
+    <aura:attribute name="NameValue" type="String" default=""/>
+    <aura:attribute name="placeholder" type="String" default="{!$Label.c.Search_Placeholder}"/>
+    <aura:attribute name="errors" type="List" default=""/>
+    <aura:attribute name="remove" type="Boolean" default="false" />
+	<aura:handler name="change" value="{!v.remove}" action="{!c.clearval}"/>    
+    <aura:handler name="oSelectedRecordEvent" event="c:selectedsObjectRecordEvent" action="{!c.handleComponentEvent}"/>
+    <aura:attribute name="Message" type="String" default=""/>
+     
+    <div class="erp_mark7">
+    <div aura:id="searchRes" class="slds-form-element slds-lookup slds-is-close" data-select="single">
+        <label class="{!empty(v.label)?'slds-hide':'slds-form-element__label'}" for="lookup-348">{!v.label} <aura:if isTrue="{!v.required}"><span class="custominput-class1">*</span></aura:if></label>
+        <div class="slds-form-element__control">
+            
+            <div class="slds-input-has-icon slds-input-has-icon--right">
+                <lightning:icon class="slds-input__icon slds-show" iconName="utility:search" size="x-small" alternativeText="search"/> 
+                <div aura:id="lookup-pill" class="{!and(empty(v.NameValue),empty(v.selectedRecord.Id))?'slds-pill-container slds-hide':'slds-pill-container'}">
+                    <span class="slds-pill custominput-class2">
+                        <aura:if isTrue="{!or(not(empty(v.IconPath)),not(empty(v.IconName)))}">
+                            <span class="slds-icon_container  slds-combobox__input-entity-icon " title="record">
+                                <aura:if isTrue="{!not(empty(v.IconName))}">
+                                    <lightning:icon class="slds-icon slds-icon slds-icon_small slds-icon-text-default" iconName="{!v.IconName}" size="x-small" alternativeText="icon" />
+                                    <aura:set attribute="else">
+                                        <img src="{!v.IconPath}" class="custominput-class3"/>
+                                    </aura:set>
+                                </aura:if>
+                                
+                                <span class="slds-assistive-text"></span>
+                            </span>
+                        </aura:if>
+                        <span class="{!(or(not(empty(v.IconPath)),not(empty(v.IconName))))?'slds-pill__label slds-p-left_x-large':'slds-pill__label'}" title="{!v.NameValue}">
+                             <aura:if isTrue="{!not(and(empty(v.NameValue),empty(v.selectedRecord.Id)))}">
+                                <a href="{!'/'+v.selectedRecord.Id}" class="slds-pill__action" title="{!v.NameValue}"   target="_blank">
+                                     {!v.NameValue} 
+                                </a>
+                                <aura:set attribute="else">
+                                    {!v.NameValue}  
+                                </aura:set>
+                            </aura:if>
+                        </span>
+                        <aura:if isTrue="{!not(v.hideRemove)}">
+                            <button class="slds-button slds-button--icon slds-pill__remove custominput-class4" onclick="{!c.clear}">
+                                <lightning:icon class="slds-button__icon" iconName="utility:close" size="x-small" alternativeText="search"/>  
+                                <span class="slds-assistive-text">Remove</span>
+                            </button>
+                        </aura:if>    
+                    </span>
+                </div>
+                <div aura:id="lookupField" class="{!not(and(empty(v.NameValue),empty(v.selectedRecord.Id)))?'slds-hide':'slds-show'}">
+                    <aura:if isTrue="{!or(not(empty(v.IconPath)),not(empty(v.IconName)))}">
+                    <span class="slds-icon_container  slds-combobox__input-entity-icon " title="record">
+                        <aura:if isTrue="{!not(empty(v.IconName))}">
+                            <lightning:icon class="slds-icon slds-icon_small slds-icon-text-default" iconName="{!v.IconName}" size="x-small" alternativeText="icon"/>
+                            <aura:set attribute="else">
+                                <img src="{!v.IconPath}" class="custominput-class5"/>
+                            </aura:set>
+                        </aura:if>
+                        <span class="slds-assistive-text"></span>
+                    </span>
+                    </aura:if>
+                    <ui:inputText click="{!c.onfocus}" maxlength="50" updateOn="keyup" keyup="{!c.keyPressController}" class="{!(or(not(empty(v.IconPath)),not(empty(v.IconName))))?'slds-lookup__search-input slds-input leftPaddingClass '+v.inputStyleclass:'slds-lookup__search-input slds-input '+v.inputStyleclass}" value="{!v.SearchKeyWord}" placeholder="{!v.placeholder}" errors="{!v.errors}" blur="{!c.onblur}"/>
+                    <!--
+                    <span onkeyup="{!c.keyPressController}">
+                    	<lightning:input onfocus="{!c.onfocus}" maxlength="50" class="{!(or(not(empty(v.IconPath)),not(empty(v.IconName))))?'slds-lookup__search-input slds-input leftPaddingClass '+v.inputStyleclass:'slds-lookup__search-input slds-input '+v.inputStyleclass}" value="{!v.SearchKeyWord}" placeholder="{!v.placeholder}" errors="{!v.errors}" onblur="{!c.onblur}" autocomplete="false"/>
+                    </span> 
+					-->   
+                </div>   
+            </div>
+        </div>
+        <aura:if isTrue="{!!(v.dontshowList)}">
+        <ul class="slds-listbox slds-listbox_vertical slds-dropdown slds-dropdown_fluid slds-lookup__menu slds custominput-class6" role="listbox" onmouseover="{!c.showList}" onmouseout="{!c.hideList}">
+            <center> <lightning:spinner variant="brand" size="small" aura:id="iconspinner" class="slds-hide"/></center>
+            <center> {!v.Message}</center>
+            <div class="scroll-bar-wrap">
+					<div class="scroll-box">
+                            <aura:iteration items="{!v.listOfSearchRecords}" var="singleRec">
+                                       <c:CustomInputProductResult oRecord="{!singleRec}" IconName="{!v.IconName}" IconPath="{!v.IconPath}"  SearchField="{!v.SearchField}" prodcode="{!singleRec.ProductCode}" Family="{!singleRec.Family}"/>
+                              </aura:iteration>
+                        </div>
+					<div class="custominput-cover-bar"></div>
+				</div>
+        </ul>
+       </aura:if>     
+    </div>
+    </div>
+</aura:component>

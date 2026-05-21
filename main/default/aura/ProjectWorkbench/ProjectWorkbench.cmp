@@ -1,0 +1,594 @@
+<aura:component implements="force:appHostable" controller="ManageProjects"> 
+    
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+        <ltng:require styles="/resource/ERP7__bootStrap/js/bootstrap.min.js"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+         <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css" />
+         <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+    </head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <aura:attribute name = "PlannedProjects" type = "Integer" default = "0"/>
+    <aura:attribute name = "inProgressProjects" type = "Integer" default = "0"/>
+    <aura:attribute name = "CompletedProjects" type = "Integer" default = "0"/>
+    <aura:attribute name = "BacklogProjects" type = "Integer" default = "0"/>
+    <aura:attribute name = "GridView" type = "Boolean" default="false"/>
+    <aura:attribute name = "ListView" type = "boolean" default="true"/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:attribute name = "ProjectsWP" type="object"/>
+    <aura:attribute name = "AllProjectsWP" type="Project__c[]"/>
+    <aura:attribute name = "menu" type = "boolean" default="false"/>
+    <aura:attribute Name="searchProjectStr" type="String"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>    
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="1"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/>
+    <aura:attribute name="projectTab" type="Boolean" default="true"/>
+    <aura:attribute name="schedulerTab" type="Boolean" default="false"/>
+    <aura:attribute name="showSearch" type="Boolean" default="false"/>
+    <aura:attribute name = "setStatus" type = "String" default = ""/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <div class="maqsood erp_Mark7 ProjectWorkbench-newClass1" aura:id="body">
+        
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'ProjectWorkbench-newClass3 slds-notify_container slds-is-fixed','ProjectWorkbench-newClass2 slds-notify_container slds-is-fixed')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error ProjectWorkbench-newClass4" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.error_ManageLeave}" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small ProjectWorkbench-newClass5">{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close ProjectWorkbench-newClass6">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_UsersShiftMatch}" title="close" />
+                        <span class="slds-assistive-text">{!$Label.c.Close_UsersShiftMatch}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <span class="ProjectWorkbench-newClass7">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+           <div class="container-fluid pb-1 pl-2 pt-1 bg-white">	
+                    <div class="d-flex justify-content-between">
+                        <h6 class="card-title">
+                            <ul class="slds-tabs--default__nav" role="tablist">
+                                <li onclick="{!c.projectTabClick}" class="{!(v.projectTab)?'slds-tabs--default__item slds-active ProjectWorkbench-newClass10':'slds-tabs--default__item ProjectWorkbench-newClass10'}" title="Projects" role="presentation">
+                                    <a class="slds-tabs--default__link ProjectWorkbench-newClass12" href="javascript:void(0);" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-deafult-1__item">
+                                        <i class="fa fa-list" aria-hidden="true" ></i> &nbsp;{!$Label.c.Projects_ProjectWB}
+                                    </a>
+                                </li>
+                                <li onclick="{!c.schedulerTabClick}" class="{!(v.schedulerTab)?'slds-tabs--default__item slds-active':'slds-tabs--default__item'}" title="Scheduler" role="presentation">
+                                    <a class="slds-tabs--default__link ProjectWorkbench-newClass12" href="javascript:void(0);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">
+                                        <i class="fa fa-clock-o" aria-hidden="true"></i>&nbsp;{!$Label.c.Scheduler_ProjectWB}
+                                    </a>
+                                </li>
+                            </ul>
+                        </h6>
+                        
+                        <div class="pt-2">
+                            <aura:if isTrue="{!v.projectTab}">
+                                <div class="slds-grid">
+                                    
+                                <div class="slds-grid mr-2 ProjectWorkbench-newClass14">
+                                    <span onkeypress="{!c.searchProjects}" >
+                                        <lightning:input onchange= "{!c.searchProjects}"  onblur="{!c.toggleSearch}" type="Search" name="searchPjt" value="{!v.searchProjectStr}" placeholder="{!$Label.c.Search_project_ProjectWB}" />
+                                    </span>
+                                </div> 
+                                    <div class="slds-page-header__control slds-p-right_small">
+                                        <ul class="slds-button-group-list">
+                                            <li>
+                                               <lightning:button variant="neutral" label="{!$Label.c.Project_Timesheets}"  onclick="{!c.AddProject}" iconName="utility:add"/>
+                                            </li>
+                                            <li>
+                                                
+                                                <lightning:button variant="neutral" label="Allocate Budget" onclick="{!c.CreateBudget}" iconName="utility:budget_category_value"/>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <!--a onclick="{!c.AddProject}" data-record="" class="addNewBTN" title="Add" href="javascript:void(0);">
+                                        &nbsp;<i class="fa fa-plus ProjectWorkbench-newClass15" aria-hidden="true" data-aura-rendered-by="908:0"></i>
+                                        &nbsp;&nbsp;<strong>{!$Label.c.Project_Timesheets}</strong>
+                                    </a>
+                                   <lightning:button variant="neutral" label="Allocate Budget" onclick="{!c.CreateBudget}"/-->
+                                    <aura:if isTrue="{!v.setStatus}">
+                                        <a class="WCCP10" aura:id="mostat"  title="All Orders" onclick="{!c.statusSearchMO}" data-status="All" >
+                                            <center><i class="fa fa-refresh WCCP11"></i></center>
+                                        </a>
+                                    </aura:if>
+                                    <div class="ProjectWorkbench-newClass16">
+                                        <a class="mr-3  ProjectWorkbench-newClass17" aura:id="gridProjects" onclick="{!c.gridViewTab}">
+                                            <i class="fa fa-th-large"></i>
+                                        </a>
+                                        
+                                        <a class="mr-2 acitve-list ProjectWorkbench-newClass17" aura:id="listProjects" onclick="{!c.listViewTab}">
+                                            <i class="fa fa-list"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </aura:if>
+                        </div>
+                    </div>
+               
+              </div>
+          
+        
+        
+        <div class="container-fluid pb-1 ProjectWorkbench-newClass8">	
+            <div class="slds-grid slds-wrap slds-p-top_xx-small">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 ">
+                    <div class="slds-grid slds-wrap pt-1">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="card l-bg-planned mb-2">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" onclick="{!c.changeRecs}" data-attribute="Planned">
+                                        <div class="color-card" >
+                                            <p class="mb-0 color-card-head">{!$Label.c.Planned_ProjectWB}</p>
+                                            <h2 class="text-white">{!v.PlannedProjects}<span class="h5"></span>
+                                            </h2>
+                                        </div>
+                                        <i class="card-icon-indicator fa fa-file-text bg-inverse-icon-primary mt-2"></i>
+                                    </div>
+                                    
+                                </div>
+                            </div>  
+                            <!--div class="support-box text-center l-bg-planned shadow-sm slds-grid ProjectWorkbench-newClass45">
+                                <div class="slds-col">
+                                    <div class="text m-b-10 mr-5 pt-1 ProjectWorkbench-newClass46">{!$Label.c.Planned_ProjectWB}</div>
+                                </div>
+                                <div class="slds-col">
+                                    <h3 class="m-b-0 ProjectWorkbench-newClass47" >{!v.PlannedProjects}
+                                    </h3>
+                                </div>     
+                            </div -->
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="card l-bg-inProgress mb-2">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" onclick="{!c.changeRecs}" data-attribute="In Progress">
+                                        <div class="color-card">
+                                            <p class="mb-0 color-card-head">{!$Label.c.In_Progress_AddTimeCardEntry}</p>
+                                            <h2 class="text-white">{!v.inProgressProjects}<span class="h5"></span>
+                                            </h2>
+                                        </div>
+                                        <i class="card-icon-indicator fa fa-calendar-o bg-inverse-icon-l-bg-inProgress mt-2"></i>
+                                    </div>
+                                    
+                                </div>
+                            </div>  
+                            <!--div class="support-box text-center l-bg-inProgress shadow-sm slds-grid ProjectWorkbench-newClass48">
+                                <div class="slds-col">
+                                    <div class="text m-b-10 pt-1 ProjectWorkbench-newClass46">{!$Label.c.In_Progress_AddTimeCardEntry}</div>
+                                </div>
+                                <div class="slds-col">
+                                    <h3 class="m-b-0 ProjectWorkbench-newClass47">{!v.inProgressProjects}
+                                    </h3>
+                                    
+                                </div>
+                            </div-->
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="card l-bg-active mb-2">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" onclick="{!c.changeRecs}" data-attribute="Completed">
+                                        <div class="color-card">
+                                            <p class="mb-0 color-card-head">{!$Label.c.Completed_AddTimeCardEntry}</p>
+                                            <h2 class="text-white">{!v.CompletedProjects}<span class="h5"></span>
+                                            </h2>
+                                        </div>
+                                        <i class="card-icon-indicator fa fa-calendar-check-o bg-inverse-icon-l-bg-active mt-2"></i>
+                                    </div>
+                                    
+                                </div>
+                            </div> 
+                            <!--div class="support-box text-center l-bg-active shadow-sm slds-grid ProjectWorkbench-newClass48">
+                                <div class="slds-col">
+                                    <div class="text m-b-10 pt-1 ProjectWorkbench-newClass46">{!$Label.c.Completed_AddTimeCardEntry}</div>
+                                </div>
+                                <div class="slds-col">
+                                    <h3 class="m-b-0 ProjectWorkbench-newClass47">{!v.CompletedProjects}
+                                    </h3>  
+                                </div>
+                            </div-->
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small">
+                            <div class="card l-bg-orange mb-2">
+                                <div class="card-body px-3 py-1">
+                                    <div class="d-flex justify-content-between align-items-start" onclick="{!c.changeRecs}" data-attribute="Backlog">
+                                        <div class="color-card">
+                                            <p class="mb-0 color-card-head">Backlog</p>
+                                            <h2 class="text-white">{!v.BacklogProjects}<span class="h5"></span>
+                                            </h2>
+                                        </div>
+                                        <i class="card-icon-indicator fa fa-calendar-times-o bg-inverse-icon-l-bg-orange mt-2"></i>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            <!--div class="support-box text-center l-bg-orange shadow-sm slds-grid ProjectWorkbench-newClass48">
+                                <div class="slds-col">
+                                    <div class="text m-b-10 pt-1 ProjectWorkbench-newClass46">Backlog</div>
+                                </div>
+                                <div class="slds-col">
+                                    <h3 class="m-b-0 ProjectWorkbench-newClass47">{!v.BacklogProjects}
+                                        
+                                    </h3>
+                                </div>
+                            </div-->
+                        </div>
+                    </div>
+                </div>
+                <!-- List View -->
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 pb-100"> 
+                    <div class="tab-pane active" id="projWorkbench">
+                        <aura:if isTrue="{!v.projectTab}">
+                           <aura:if isTrue="{!and(v.ListView, v.ProjectsWP)}">
+                                <div class="card shadow-sm ProjectWorkbench-newClass49 mb-2">
+                                    <div class="card-body">
+                                        <div class="table-responsive ProjectWorkbench-newClass50" tabindex="1">
+                                            <table class="slds-table slds-table_bordered slds-table_fixed-layout">
+                                                <thead class="">
+                                                    <tr>
+                                                        <th class="text-left">{!$Label.c.Name_ManageLeave}</th>
+                                                        <th class="text-left">{!$Label.c.TimeLine_ManageLeave}</th>
+                                                        <th class="text-center">{!$Label.c.Team_ProjectWB}</th>
+                                                        <th class="text-center">{!$Label.c.Acc_Recev_Status_Entered}</th>
+                                                        <th class="text-right"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <aura:iteration items="{!v.ProjectsWP}" var="prj" indexVar="projectIndex">
+                                                        <tr>
+                                                            <td >
+                                                                <div class="slds-grid">
+                                                                    <lightning:formattedText value = "{!v.Offset + projectIndex + 1 + '.'}"/>&nbsp;
+                                                                    <div class="projectName ProjectWorkbench-newClass51 slds-truncate" data-record-id="{!prj.project.Id}" data-index="{!projectIndex}" onclick="{!c.NavProject}" aura:id="projectName"><strong><lightning:formattedText value="{!prj.project.Name}" title="{!prj.project.Name}"/></strong></div>
+                                                                </div>    
+                                                            </td>
+                                                            <td class="text-left">
+                                                                <div class="startime-maq ProjectWorkbench-newClass52" ><lightning:formattedDateTime value="{!prj.project.ERP7__Start_Date__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                                <div class="endime-maq ProjectWorkbench-newClass53"><lightning:formattedDateTime value="{!prj.project.ERP7__End_Date__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <div class="avatar-group">
+                                                                    <aura:iteration items="{!prj.resourceList}" var="ResourcePhoto" indexVar="teamIndex">
+                                                                        <aura:if isTrue = "{!lessthan(teamIndex,5)}">
+                                                                            <figure class="avatar avatar-sm">
+                                                                                <img src="{!ResourcePhoto.FullPhotoUrl}" class="rounded-circle ProjectWorkbench-newClass26" title="{!ResourcePhoto.Name}" alt="{!ResourcePhoto.Name}"/>
+                                                                            </figure>
+                                                                        </aura:if>
+                                                                    </aura:iteration>
+                                                                    <aura:if isTrue="{!greaterthan(prj.resourceList.length, 5)}">
+                                                                        <figure class="avatar avatar-sm ProjectWorkbench-newClass32">
+                                                                            <div class="rounded-circle"  alt="avatar">+&nbsp;<b>{!prj.resourceList.length - 5}</b></div>
+                                                                        </figure>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Planned')}">
+                                                                    <span class="badge badge-planned">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'In Progress')}">
+                                                                    <span class="badge badge-inprogress">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Completed')}">
+                                                                    <span class="badge badge-completed">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Backlog')}">
+                                                                    <span class="badge badge-warning">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Rejected')}">
+                                                                    <span class="badge badge-warning">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Submitted for Approval')}">
+                                                                    <span class="badge badge-planned">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Awaiting Exec Approval')}">
+                                                                    <span class="badge badge-inprogress">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Awaiting Financial Approval')}">
+                                                                    <span class="badge badge-inprogress">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Approved')}">
+                                                                    <span class="badge badge-completed">
+                                                                        <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                                    </span>
+                                                                </aura:if>
+                                                            </td>
+                                                            <td>
+                                                                <small class="">
+                                                                    <!--<lightning:formattedText value="{!prj.project.ERP7__Percentage__c + ' %'}"/>-->
+                                                                    <lightning:formattedNumber value="{!prj.project.ERP7__Percentage__c+ ' '}" maximumFractionDigits="2"/>%</small>
+                                                                <div class="ProjectWorkbench-newClass33"><small class="ml-2 pb-2">{!$Label.c.Progress_ProjectWB}</small></div>
+                                                                <div class="d-flex align-items-center pt-1">
+                                                                    
+                                                                    <div class="progress flex-grow-1 ProjectWorkbench-newClass27">
+                                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Planned')}">
+                                                                            <div class="progress-bar bg-planned" id = "projectProgressBar" ></div><!--"{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}"-->
+                                                                        </aura:if>
+                                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'In Progress')}">
+                                                                            <div class="progress-bar bg-inprogress" id = "projectProgressBar"></div><!--"{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}"-->
+                                                                        </aura:if>
+                                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Completed')}">
+                                                                            <div class="progress-bar bg-completed" id = "projectProgressBar" ></div><!--"{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}"-->
+                                                                        </aura:if>
+                                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Backlog')}">
+                                                                            <div class="progress-bar bg-warning" id = "projectProgressBar" ></div><!--"{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}"-->
+                                                                        </aura:if>
+                                                                    </div>
+                                                                    
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    </aura:iteration>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            <!-- List View end -->
+                            
+                            <!-- Grid View-->
+                            <aura:if isTrue="{!and(v.GridView, v.ProjectsWP)}">
+                                <div class="slds-grid slds-wrap">
+                                    <aura:iteration items="{!v.ProjectsWP}" var="prj" indexVar="projectIndex">
+                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small"> 
+                                            <div class="card shadow-sm ProjectWorkbench-newClass23 mb-2">
+                                                <div class="card-body ProjectWorkbench-newClass24">
+                                                    <div class="d-flex align-items-center mb-2"> 
+                                                        <h5 class="mb-0 ProjectWorkbench-newClass25">
+                                                            <div class="slds-grid">
+                                                                <i title="{!prj.project.ERP7__Status__c}" class="{!(prj.project.ERP7__Status__c == 'Planned')?'ProjectWorkbench-newClass18 fa fa-check-circle' : (prj.project.ERP7__Status__c == 'Completed')?'ProjectWorkbench-newClass20 fa fa-check-circle' : (prj.project.ERP7__Status__c == 'In Progress')?'ProjectWorkbench-newClass21 fa fa-check-circle' : 'ProjectWorkbench-newClass22 fa fa-check-circle'}"></i>&nbsp;
+                                                                <div class="link-2 slds-truncate-pw-grid ProjectWorkbench-newClass26" data-record-id="{!prj.project.Id}" data-index="{!projectIndex}" onclick="{!c.NavProject}" >
+                                                                    <lightning:formattedText value="{!prj.project.Name}" title="{!prj.Project.Name}"/><!--{!prj.project.Id}-->
+                                                                </div>
+                                                            </div>
+                                                        </h5><!--
+                                                <div class="dropdown ml-auto">
+                                                    <a href="" onclick = "{!openOpts}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <i class="fa fa-ellipsis-v" aria-hidden="true"></i>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right" aura:id="gridOptions">
+                                                        <a href="#" class="dropdown-item">View Detail</a>
+                                                    </div>
+                                                </div>-->
+                                                        
+                                                    </div>
+                                                    
+                                                    <!--div class="text-muted small mt-1 mb-3"></div--><!--
+                                            <aura:if isTrue="{!not(equals(prj.project.ERP7__Status__c, 'Completed'))}">-->
+                                                    
+                                                    <p class="small text-right mb-0 slds-hide">
+                                                        <strong>
+                                                            <!---<lightning:formattedText value="{!prj.project.ERP7__Percentage__c + ' %'}"/>-->
+                                                            <lightning:formattedNumber value="{!prj.project.ERP7__Percentage__c+ ' '}"  maximumFractionDigits="2"/>%
+                                                        </strong> 
+                                                    </p>
+                                                    <div class="progress mb-2 ProjectWorkbench-newClass27 slds-hide">
+                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'In Progress')}">
+                                                            <div class="progress-bar bg-inprogress" id = "projectProgressBar"></div><!--{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}-->
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Completed')}">
+                                                            <div class="progress-bar bg-completed" id = "projectProgressBar" ></div><!--{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}-->
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Backlog')}">
+                                                            <div class="progress-bar bg-warning" id = "projectProgressBar" ></div><!--{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}-->
+                                                        </aura:if>
+                                                        <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Submitted for Approval')}">
+                                                            <div class="progress-bar bg-planned" id = "projectProgressBar" ></div><!--{! 'width:'+ prj.project.ERP7__Percentage__c +'%;'}-->
+                                                        </aura:if>
+                                                    </div>
+                                                    <!--
+                                            </aura:if>-->
+                                                    <div class="scroll-bar-wrap">
+                                                        <div class="scroll-box ProjectWorkbench-newClass28">
+                                                            <p>
+                                                                <lightning:formattedRichText value="{!prj.project.ERP7__Description__c}"/>
+                                                            </p>
+                                                        </div>
+                                                        <div class="cover-bar"></div>
+                                                    </div>
+                                                    <div class="row mt-3">
+                                                        <div class="col pr-0">
+                                                            <div class="text-muted mb-1 small startime-maq ProjectWorkbench-newClass29">
+                                                                <div class="startime-maq"><lightning:formattedDateTime value="{!prj.project.ERP7__Start_Date__c}"/></div>
+                                                            </div>
+                                                            
+                                                        </div>
+                                                        
+                                                        <div class="col">
+                                                            <div class="text-muted mb-1 small endtime-maq ProjectWorkbench-newClass29">
+                                                                <div class="endtime-maq"><lightning:formattedDateTime value="{!prj.project.ERP7__End_Date__c}"/></div>
+                                                            </div>
+                                                            
+                                                        </div>
+                                                    </div> 
+                                                </div>
+                                                <hr class="m-0"/>
+                                                <div class="card-body ProjectWorkbench-newClass30">
+                                                    <!--<div class="small mb-2">Team Member</div>-->
+                                                    <div class="avatar-group">
+                                                        <aura:iteration items="{!prj.resourceList}" var="ResourcePhoto" indexVar="teamIndex">
+                                                            <aura:if isTrue = "{!lessthan(teamIndex,5)}">
+                                                                <figure class="avatar avatar-sm">
+                                                                    <img src="{!ResourcePhoto.FullPhotoUrl}" class="rounded-circle ProjectWorkbench-newClass26" title="{!ResourcePhoto.Name}" alt="{!ResourcePhoto.Name}"/>
+                                                                </figure>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                        <aura:if isTrue="{!greaterthan(prj.resourceList.length, 5)}">
+                                                            <figure class="avatar avatar-sm ProjectWorkbench-newClass31">
+                                                                <div class="rounded-circle"  alt="avatar">+&nbsp;<b>{!prj.resourceList.length - 5}</b></div>
+                                                            </figure>
+                                                        </aura:if>
+                                                    </div>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Planned')}">
+                                                        <span class="badge badge-planned float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'In Progress')}">
+                                                        <span class="badge badge-inprogress float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Completed')}">
+                                                        <span class="badge badge-completed float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Backlog')}">
+                                                        <span class="badge badge-warning float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Rejected')}">
+                                                        <span class="badge badge-warning float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                    <aura:if isTrue="{!equals(prj.project.ERP7__Status__c, 'Submitted for Approval')}">
+                                                        <span class="badge badge-planned float-rightpw">
+                                                            <lightning:formattedText value="{!prj.project.ERP7__Status__c}"/>
+                                                        </span>
+                                                    </aura:if>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </aura:iteration>
+                                </div>
+                            </aura:if>
+                        </aura:if>
+                        
+                        <aura:if isTrue="{!and(not(greaterthan(v.ProjectsWP.length,0)),v.menu)}">
+                            <div class="no projects ProjectWorkbench-newClass34">
+                                <div class="slds-notify_container slds-is-relative">
+                                    <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                        <div>
+                                            <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                <lightning:icon iconName="utility:warning" size="medium" alternativeText="{!$Label.c.warning}"/>
+                                            </span>
+                                        </div>
+                                        <div class="slds-notify__content ProjectWorkbench-newClass35">
+                                            <h2 class="slds-text-heading_small ProjectWorkbench-newClass36">{!$Label.c.No_Projects_Available}</h2>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aura:if>
+                        
+                    </div>
+                    <!--grid view end -->
+                </div>
+                
+            </div> 
+                </div>
+            </div>
+            <!--Pagination starts-->
+            <aura:if isTrue="{!v.projectTab}">
+                <div class="erp_Mark7 epr_Mark7">
+                    
+                        <div class="row slds-docked-form-footer m-0" >
+                            <aura:if isTrue="{!v.ProjectsWP.length>0}">
+                                <div class="col-md-2 ProjectWorkbench-newClass37" >
+                                    <div class="slds-grid" >
+                                        <div class="slds-col ProjectWorkbench-newClass38">
+                                            Show&nbsp;
+                                        </div>  
+                                        <div class="slds-col ProjectWorkbench-newClass39 nolabel"> 
+                                            <lightning:select class="slds-show_inline-block"  name="select1"  value="{!v.show}" onchange="{!c.setShow}">
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.ProjectsWP.length>0}">
+                                
+                                <div class="col-md-3 displaynonemobile ProjectWorkbench-newClass40">
+                                    Showing <span class="text-lightblue">{!v.startCount}-{!v.endCount}</span> of total <span class="text-lightblue"> {!v.recSize} </span> Records
+                                </div>
+                                
+                            </aura:if> 
+                            
+                            <aura:if isTrue="{!v.ProjectsWP.length>0}">
+                                
+                                <div class="col-md-5 mb-1 text-align-custom">
+                                    <nav aria-label="Page navigation example">
+                                        <ul class="pagination ProjectWorkbench-newClass41 m-0">
+                                            <li class="">
+                                                <a class="{!if(1 >= v.startCount,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> <!-- -->
+                                            </li>
+                                            <li >
+                                                <a class="{!if(1 >= v.startCount,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}"  onclick="{!c.Previous}"> &lt; Previous</a> <!-- -->
+                                            </li>
+                                            
+                                            <li>
+                                                <a class="{!if(v.endCount == v.recSize,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}" onclick="{!c.Next}">Next &gt;</a> <!--  -->
+                                            </li>
+                                            <li >
+                                                <a class="{!if(v.endCount == v.recSize,'ProjectWorkbench-newClass42','ProjectWorkbench-newClass43')}" onclick="{!c.NextLast}">&gt;&gt; </a> <!--  -->
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                                
+                            </aura:if> 
+                            <aura:if isTrue="{!v.ProjectsWP.length>0}">
+                                
+                                <div class="col-md-2 mb-1 displaynonemobile">
+                                    <div class="slds-grid">
+                                        <div class="slds-col padding-top: 6px;">
+                                            Page 
+                                        </div>
+                                        <div class="slds-col">
+                                            <lightning:input type="number" aura:id="pageId" value="{!v.PageNum}" oncommit="{!c.OfsetChange}" class="width100p"/> 
+                                        </div>
+                                        <div class="slds-col ProjectWorkbench-newClass44">
+                                            <span class="text-lightblue"> of {!v.PNS.length}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </aura:if>
+                        </div>
+                    </div>
+                
+            </aura:if>
+            <!--Pagination End-->
+      
+        <!-- Ends here -->
+    
+</aura:component>

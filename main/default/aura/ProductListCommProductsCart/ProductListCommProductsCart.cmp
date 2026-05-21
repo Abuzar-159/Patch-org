@@ -1,0 +1,234 @@
+<aura:component controller="ProductListComm" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/bootstrap.custom.min.css', 
+                          $Resource.ProductListComm + '/ProductListComm/css/custom.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/fonts_googleapis.css',
+                          
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/cart.css'
+                          )}"/>
+    <ltng:require scripts="{!join(',',
+                           $Resource.ProductListComm + '/ProductListComm/script/common_scripts.min.js',                           
+                           $Resource.ProductListComm + '/ProductListComm/script/main.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/sticky_sidebar.min.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/specific_listing.js')}"/>
+    <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js"/>
+    
+    <aura:attribute name="AccId" type="String"/>
+    <aura:attribute name="PortalUser" type="Boolean" default="false"/>
+    <aura:attribute name="guestProds" type="String[]"/>
+    <aura:attribute name="proDeleted" type="Boolean" default="false"/>
+    <aura:attribute name="allProdIds" type="String[]"/>
+    <aura:attribute name="cookiesGuestProds" type="String[]" description="directly fetching from cookies"/>
+    <aura:attribute name="listOfProduct" type="Object" description="list of all product for comparing from cookies"/>
+    <!--<aura:attribute name="guestQuant" type="Integer"/>-->
+    
+    <aura:attribute name="cartPickedItems" type="Object"/>
+    <aura:attribute name="itemsToDelete" type="String[]"/>
+    <!--<aura:attribute name="cartQuantity" type="ERP7__Cart_Picked_Item__c"/>-->
+    
+    <aura:attribute name="subTotal" type="Integer" default="0"/>
+    <aura:attribute name="shippingCost" type="Integer"/>
+    <aura:attribute name="totalCost" type="Integer"/>
+    <aura:attribute name="couponApply" type="boolean" default="false"/>
+    <aura:attribute name="appDate" type="String"/>
+    <aura:attribute name="amount" type="Integer"/>
+    <aura:attribute name="couponCode" type="String" default=""/>
+    <aura:attribute name="CouponRedemption" type="List"/>
+    <aura:attribute name="isCartEmpty" type="boolean" default="false"/>
+    <aura:attribute name="showContent" type="boolean" default="false"/>
+    <!--<aura:attribute name="guestQuan" type="Integer" default="1"/>-->
+    
+    <aura:registerEvent name="ProductListCommEventBody1" type="c:ProductListComm_BodyToHeader"/>
+    <!--<aura:handler event="ERP7:ProductListComm_BodyToHeader" action="{!c.eventHandler}"/>-->
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    
+    <div id="page" class="erp_mark7">
+        <div class="main">
+            <!--<main class="bg_gray">-->
+            <div class="container margin_30">
+                <div class="page_header">
+                    
+                    <h1>My cart</h1> 
+                    <div class="breadcrumbs">
+                        <ul>
+                            <li><a href="javascript:void(0)" onclick="{!c.home}">Home</a></li>
+                            <!--<li><a href="javascript:void(0)" onclick="{!c.home}">Category</a></li>-->
+                            <li>Cart</li>
+                        </ul>
+                    </div>
+                    <!--<lightning:button label="Home" onclick="{!c.home}"/>-->
+                </div>
+                <!-- /page_header --> 
+                <aura:if isTrue="{!v.showContent}">
+                <aura:if isTrue="{!v.cartPickedItems.length > 0}">
+                	<table class="table table-striped cart-list"> 
+                    <thead>
+                        <tr>
+                            <th>
+                                Product
+                            </th>
+                            <th>
+                                Price
+                            </th>
+                            <th>
+                                Quantity
+                            </th>
+                            <th>
+                                Subtotal
+                            </th>
+                            <th>
+                                
+                            </th>
+                        </tr>
+                    </thead>
+                        
+                    <tbody>
+                        <aura:iteration items="{!v.cartPickedItems}" var="ci" indexVar="count">                                	
+                            <tr>                                        
+                                <td><a onclick="{!c.detailPage}" data-value="{!ci.cartproduct.Product2.Id}">
+                                    <div class="thumb_cart"><!--Here image resolution appearing high-->
+                                        <img src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+ci.ContentDoc.ContentDocumentId}" alt="" width="50" height="50" class="lazy"/>
+                                    </div>
+                                    <span class="item_cart">{!ci.cartproduct.Product2.Name}</span>
+                                    </a>
+                                </td>
+                                <td>
+                                    <strong><lightning:formattedNumber style="currency" value="{!ci.cartproduct.UnitPrice}"/></strong>
+                                </td>                                        
+                                <td>
+                                    <aura:if isTrue="{!v.AccId != ''}">
+                                        <lightning:input onchange="{!c.subTotal}" type="number" value="{!ci.cpiList.ERP7__Quantity__c}" class="mb-2"/>
+                                        <aura:set attribute="else">
+                                            <aura:iteration items="{!v.guestProds}" var="qn" indexVar="ind">
+                                                <aura:if isTrue="{!(qn.prodId == ci.cartproduct.Product2.Id)}">
+                                                    <lightning:input title="{!ind}" onchange="{!c.subTotal}" type="number" name="{!qn.prodId}" value="{!qn.quan}" class="mb-2"/>
+                                                </aura:if>                                                        
+                                            </aura:iteration>
+                                            
+                                        </aura:set>
+                                    </aura:if>                                            
+                                      </td>
+                                <td>
+                                    <aura:if isTrue="{!v.AccId != ''}">
+                                        <lightning:formattedNumber value="{!(ci.cartproduct.UnitPrice * ci.cpiList.ERP7__Quantity__c)}"/>
+                                        <aura:set attribute="else">
+                                            <aura:iteration items="{!v.guestProds}" var="qn">
+                                                <aura:if isTrue="{!(qn.prodId == ci.cartproduct.Product2.Id)}">
+                                                    <lightning:formattedNumber value="{!(ci.cartproduct.UnitPrice * qn.quan)}"/>
+                                                </aura:if>
+                                            </aura:iteration>
+                                        </aura:set>
+                                    </aura:if>
+                                    
+                                    <!--<strong></strong>-->
+                                </td>
+                                <td class="options">
+                                    <a onclick="{!c.removeRow}" data-value="{!ci.cartproduct.Product2Id}" data-service="{!count}"><i class="ti-trash bg-red-erp"></i></a><!--value="{!ci.cpiList.Id}"-->
+                                </td>
+                            </tr>                                        
+                        </aura:iteration>								
+                    </tbody>
+                </table>
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!v.AccId == ''}">
+                        	<div><h3>Your cart is empty</h3></div>
+                            <div class="PLCPC-newClass1">
+                                <a onclick="{!c.SignIn}" class="btn_1 mb-2">Sign In to your Account</a>
+                            </div>  
+                            <div class="PLCPC-newClass1">
+                                <a onclick="{!c.register}" class="btn_1 outline">Register Now</a>
+                            </div>
+                        </aura:if>
+                          
+                    </aura:set>
+                </aura:if>   
+                <aura:if isTrue="{!v.isCartEmpty}">
+                	<div><h3>Your cart is empty, <a onclick="{!c.home}">Add some items to cart</a></h3></div>
+                </aura:if>
+                
+                <div class="row add_top_30 flex-sm-row-reverse cart_actions">
+                    <div class="col-sm-4 text-right">
+                        <aura:if isTrue="{!v.AccId != ''}">
+                            <aura:if isTrue="{!!v.isCartEmpty}">
+                            	<button onclick="{!c.updateCart1}" type="button" class="btn_1 gray">Update Cart</button>
+                        	</aura:if>
+                        </aura:if>
+                    </div>
+                    <div class="col-sm-8">                                
+                        <div class="apply-coupon">
+                            <aura:if isTrue="{!and(v.AccId != '' , v.cartPickedItems.length > 0)}">
+                                <div class="form-group form-inline">
+                                    <lightning:input type="text" variant="label-hidden" value="{!v.couponCode}" placeholder="Promo code" class="form-control"/>
+                                    <aura:if isTrue="{!!v.couponApply}">
+                                        <button type="button" class="btn_1 outline" onclick="{!c.applyCoupon}">Apply Coupon</button>
+                                        <aura:set attribute="else">
+                                            <button type="button" class="btn_1 outline PLCPC-newClass2" onclick="{!c.applyCoupon}">Apply Coupon</button>
+                                        </aura:set>
+                                    </aura:if>                                    
+                                </div>
+                            </aura:if>								
+                        </div>
+                        <aura:if isTrue="{!v.couponApply}">
+                            <table class="slds-table slds-table--bordered">
+                                <thead>
+                                    <tr class="slds-text-heading--label">
+                                        <th class="label1">COUPON</th>
+                                        <th class="label1">APPLIED DATE</th>
+                                        <th class="label1">AMOUNT</th>                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>                                        
+                                        <td>{!v.couponCode}</td>
+                                        <td>{!v.appDate}</td>
+                                        <td>{!v.amount}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </aura:if>
+                    </div>
+                </div>
+                <!-- /cart_actions -->
+                </aura:if>
+            </div>
+            <!-- /container -->
+            <aura:if isTrue="{!v.cartPickedItems.length > 0}">
+            <div class="box_cart">
+                <div class="container">
+                    <div class="row justify-content-end">
+                        <div class="col-xl-4 col-lg-4 col-md-6">
+                            <ul>
+                                <li>
+                                    <div class="slds-grid">
+                                        <div class="slds-col col-4 text-left">Subtotal&nbsp;&nbsp;&nbsp;</div> 
+                                        <div class="slds-col col-8"><lightning:formattedNumber style="currency" value="{!v.subTotal}"/></div>
+                                    </div>    
+                                </li>
+                              
+                                <li >
+                                    <div class="slds-grid">
+                                        <div class="slds-col col-4 text-left">Total&nbsp;&nbsp;&nbsp;
+                                        </div>
+                                        <div class="slds-col col-8 text-right"><lightning:formattedNumber style="currency" value="{!v.totalCost}"/></div>
+                                    </div>
+                                </li>
+                            </ul>
+                            
+                            <div class="PLCPC-newClass1">
+                                <a onclick="{!c.checkout}" class="btn_1 full-width cart">Proceed to Checkout</a>
+                            </div>    
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </aura:if>
+            
+            <!-- /box_cart -->
+            
+            <!--</main>-->
+        </div>
+        <!--/main-->
+    </div>
+</aura:component>

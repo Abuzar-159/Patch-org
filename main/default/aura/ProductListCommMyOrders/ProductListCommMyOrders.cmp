@@ -1,0 +1,276 @@
+<aura:component controller="ProductListComm" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    
+     <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/bootstrap.custom.min.css', 
+                          $Resource.ProductListComm + '/ProductListComm/css/custom.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/fonts_googleapis.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/product_page.css',
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css')}"/> 
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/ProductListCommMyOrders.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:attribute name="AccId" type="String" default=""/>
+    <aura:attribute name="dateChoose" type="String" default="one"/>
+    <aura:attribute name="mapUse" type="List" />
+    <aura:attribute name="listOfMyorder" type="object"/>
+    <aura:attribute name="myOrder" type="boolean" default="true"/>
+    <aura:attribute name="orderDetails" type="object"/>
+    <aura:attribute name="addDetails" type="List"/>
+    <!--<aura:attribute name="orderDetail" type="boolean" default="false"/>-->
+    
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    <!-- <main class="bg_gray">-->
+    <div class="main erp_mark7 "> 
+        <aura:if isTrue="{!v.myOrder}">
+            <div class="container margin_30">
+                <div class="page_header">
+                    <h1>Your Orders </h1>
+                    <div class="breadcrumbs">
+                        <ul>
+                            <li><a href="javascript:void(0)" onclick="{!c.home}">Home</a></li>                            
+                            <li>Your Orders</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="tabs_product mb-2">
+                    <div class="container-fluid p-0">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                                <a id="tab-A" href="#pane-A" class="nav-link active" data-toggle="tab" role="tab">Orders</a>
+                            </li>
+                          
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- /page_header -->
+                <div class="row justify-content-left">
+                    <div class="container-fluid">
+                        <div class="row m-0 pt-2 pb-3">
+                            <strong>{!v.listOfMyorder.length}&nbsp;<aura:if isTrue="{!v.listOfMyorder.length > 1}">orders<aura:set attribute="else">order</aura:set></aura:if>&nbsp;</strong> placed in&nbsp;
+                           <div class="mr-4"> 
+                            <select name="sort" id="dateChoose" onchange="{!c.selectDate}">
+                                <!--<option value="popularity" selected="selected">Sort by popularity</option>
+                                <option value="rating">Sort by average rating</option>-->
+                                <option value="one" selected="selected">Past 30 Days</option>
+                                <option value="six">Past 6 Months</option>
+                                <option value="year">Past 1 year</option>
+                                <option value="all">All</option>
+                            </select>
+                            </div>
+                            <div class="mr-4"> <strong>Sales Order</strong>&nbsp;<input type="text" onkeyup="{!c.searchSales}" id="searchsales" placeholder="Search Sales"/></div>
+                            <div  class="mr-4"> <strong>Invoice</strong>&nbsp;<input type="text" onkeyup="{!c.searchInvoice}" id="searchInvoice" placeholder="Search Invoice"/></div>
+                        </div>
+                    </div>
+                    <aura:iteration items="{!v.listOfMyorder}" var="lo">
+                        <div class="col-xl-12 col-lg-12 col-md-12 mb-2">
+                            
+                            <div class="card-header shadow-sm" >
+                                <div class="row p-2">
+                                    <div class="col-md-2">
+                                        <strong>ORDER PLACED</strong>&nbsp;<br/><lightning:formattedDateTime value="{!lo.so.ERP7__Order_Date__c}" timeZone="{!$Locale.timezone }"/>
+                                    </div>
+                                    <div class="col-md-2">					
+                                        <strong>TOTAL</strong>&nbsp;<br/><lightning:formattedNumber style="currency" value="{!lo.so.ERP7__Total_Due__c}"/>
+                                    </div>
+                                    <div class="col-md-3">					
+                                        <strong>ORDER #</strong>
+                                        {!lo.so.Name}
+                                        <div class="row m-0">
+                                            <aura:iteration items="{!lo.inv}" var="icv">
+                                                <aura:if isTrue="{!(icv.ERP7__Order__c == lo.so.Id)}">
+                                                    <a onclick="{!c.orderDetl}" data-value="{!icv.Id}" class="ProductListCommMyOrders-newClass1">Order Details</a>&nbsp;|&nbsp;<a href="{!'https://'+$Label.c.Host_PathCustomerPortal+'/'+$Label.c.InvoicePrint+'?Id='+icv.Id}" class="ProductListCommMyOrders-newClass1" target="_blank">Invoice</a>
+                                                </aura:if>
+                                            </aura:iteration>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">					
+                                        <strong>Invoice #</strong>
+                                        <aura:iteration items="{!lo.inv}" var="ic">
+                                            <aura:if isTrue="{!(ic.ERP7__Order__c == lo.so.Id)}">
+                                                {!ic.Name}
+                                            </aura:if>
+                                        </aura:iteration>					     
+                                    </div>
+                                    <div class="col-md-3">					
+                                        <aura:if isTrue="{!lo.so.ERP7__Status__c != 'Delivered'}">
+                                            <aura:if isTrue="{!lo.so.ERP7__Status__c == 'Cancelled'}">
+                                                <div>
+                                                    <div class="_30ud5x VGlMMD"></div>
+                                                    <span class="_7BRRQk">Cancelled on&nbsp; <lightning:formattedDateTime value="{!lo.so.ERP7__Cancelled_Date__c}"/></span>
+                                                    <div class="_2t-3dH">As per your request, your item has been cancelled</div>                                        
+                                                </div>
+                                                <aura:set attribute="else">
+                                                   <div class="float-right"> <lightning:button label="Cancel" onclick="{!c.cancelOrd}" value="{!lo.so.Id}" variant="destructive" title="Cancel Order"/></div>
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                <div class="_30ud5x _3ELbo9"></div>
+                                                <span class="_7BRRQk">Delivered on&nbsp; <lightning:formattedDateTime value="{!lo.so.ERP7__Fulfilled_Date__c}"/></span><!-- year="numeric" month="numeric" day="numeric" timeZone="{! $Locale.timezone }-->
+                                                <div class="_2t-3dH">Your item has been delivered</div>
+                                            </aura:set>                              
+                                        </aura:if>                          
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card shadow-sm ProductListCommMyOrders-newClass2">
+                                <div class="row">
+                                    <aura:iteration items="{!lo.soliList}" var="li">
+                                        <div class="col-md-6"><a onclick="{!c.detailPage}" data-value="{!li.ERP7__Product__r.Id}">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="J2h1WZ">
+                                                        <div class="_3BTv9X ProductListCommMyOrders-newClass3">
+                                                            <aura:iteration items="{!v.mapUse}" var="mu">
+                                                                <aura:if isTrue="{!mu.key == li.ERP7__Product__r.Id}">
+                                                            		<img src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+mu.value.ContentDocumentId}" data-src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+mu.value.ContentDocumentId}" alt="" width="75" height="75" class="lazy"/>
+                                                                	<!--<aura:set attribute="else">
+                                                        				<img src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" data-src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" alt=""  width="75" height="75"/>                                                    
+                                                					</aura:set>-->
+                                                                </aura:if>
+                                                            </aura:iteration>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <div class="_3D-3 pt-3">
+                                                        <span class="row _13y4_y _1iu0PI"><h5>{!li.ERP7__Product__r.Name}</h5></span>																				
+                                                        </div>
+                                                </div>
+                                            </div></a>
+                                        </div>
+                                        <div class="col-md-2 JL36Xz"><lightning:formattedNumber style="currency" value="{!li.ERP7__Base_Price__c}"/></div>
+                                    </aura:iteration>
+                                   
+                                </div>
+                            </div>
+                        </div>
+                    </aura:iteration>
+                    
+                    <aura:if isTrue="{!v.listOfMyorder.length ==0}">
+                        <div>
+                                <!--Search Not Found-->No Record Available
+                        </div>
+                    </aura:if>
+                    
+                    <!-- /row -->
+                </div>
+                <!-- /container -->
+                <!--</main>-->
+            </div>
+            <aura:set attribute="else">
+                <div class="container margin_30">
+                    <div class="page_header mb-0">
+                        
+                        <h1>Your Order Details</h1>
+                        <div class="breadcrumbs">
+                            <ul>
+                                <li><a onclick="{!c.home}">Home</a></li>
+                                <li><a onclick="{!c.myOrder}">Orders</a></li>
+                                <li>Order Details</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- /page_header -->
+                    <div class="row justify-content-center">
+                        
+                        <div class="col-xl-12 col-lg-12 col-md-12">
+                            <div class="row card-header _3qesVJ _17XScb m-0">
+                                <div class="col-md-8 _1MoCT-">
+                                    <div class="_15sywe">
+                                        <div class="_2Zi11O"><span class="S19oOu">Delivery Address</span></div>
+                                        	<div class="_3OsVcL">                                            
+                                            <aura:iteration items="{!v.addDetails}" var="addr">
+                                            	<div class="_1TPQHf">
+                                                    <div class="_1MbX3l">{!addr.ERP7__Customer__r.Name}</div>
+                                                </div>
+                                                <div class="wRBMLW">{!addr.ERP7__Contact__r.Email}</div>
+                                                <div class="_3N_1fR">{!addr.ERP7__Address_Line1__c}&nbsp;{!addr.ERP7__Address_Line2__c}&nbsp;{!addr.ERP7__Address_Line3__c}&nbsp;{!addr.ERP7__City__c}&nbsp;-&nbsp;{!addr.ERP7__Postal_Code__c}&nbsp;{!addr.ERP7__State__c}&nbsp;{!addr.ERP7__Country__c}</div>
+                                                <div class="_1TPQHf _1GAUB_">
+                                                    <div>
+                                                        <span class="_1MbX3l">Phone number</span>
+                                                        <div class="">{!addr.ERP7__Contact__r.MobilePhone}<aura:if isTrue="{!addr.ERP7__Contact__r.Phone != undefined}"></aura:if>,&nbsp;{!addr.ERP7__Contact__r.Phone}</div>
+                                                    </div>
+                                                </div>
+                                                <!--<span class="_3IFL-P">This order is also tracked by 7349487017</span>-->
+                                            
+                                                </aura:iteration>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 _3FXQ6P _1MoCT-">
+                                    <span class="_1CWg6K">More actions</span>
+                                    <div class="row _3xbQnf m-0">
+                                        <aura:iteration items="{!v.orderDetails}" var="inv">
+                                        <a href="{!'https://'+$Label.c.Host_PathCustomerPortal+'/'+$Label.c.InvoiceDownload+'?Id='+inv.inv[0].Id}" >Dowanlod Invoice</a><!-- <button class="_2AkmmA _1qifsA _3c5Gic"><span>Download Invoice</span></button>-->                                        
+                                        </aura:iteration>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card shadow-sm ProductListCommMyOrders-newClass2">
+                                <div class="row">
+                                    <aura:iteration items="{!v.orderDetails}" var="od">
+                                        <aura:iteration items="{!od.soliList}" var="soli">
+                                    <div class="col-md-6">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="J2h1WZ">
+                                                    <div class="_3BTv9X ProductListCommMyOrders-newClass3">
+                                                        <aura:iteration items="{!v.mapUse}" var="mp">
+                                                                <aura:if isTrue="{!mp.key == soli.ERP7__Product__r.Id}">
+                                                            		<img src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+mp.value.ContentDocumentId}" data-src="{!'https://'+$Label.c.Host_PathCustomerPortal+'/sfc/servlet.shepherd/document/download/'+mp.value.ContentDocumentId}" alt="" width="75" height="75" class="lazy"/>
+                                                            		<!--<aura:set attribute="else">
+                                                        				<img src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" data-src="../resource/ERP7__ProductListComm/ProductListComm/img/products/shoes/6.jpg" alt=""  width="75" height="75" class="lazy"/>                                                    
+                                                					</aura:set>-->    
+                                                            </aura:if>
+                                                       	</aura:iteration>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-8">
+                                                <div class="_3D-3p2">
+                                                    <span class="row _13y4_y _1iu0PI"><h5>{!soli.ERP7__Product__r.Name}</h5></span>
+                                                    <!--<div class="row _3i00zY"><span class="J1KvyN"><span class="_3i00zY">Color: </span>&nbsp;<span class="_2dTbPB">Black</span></span><span class="J1KvyN"></span></div>
+                                                    <div class="row _3i00zY"><span class="_3i00zY _2n1WrW">Seller: </span>&nbsp;<span class="_2dTbPB">MahajanSports</span></div>-->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                        <div class="col-md-2 JL36Xz"><lightning:formattedNumber style="currency" value="{!soli.ERP7__Base_Price__c}"/></div>
+                                            </aura:iteration>
+                                    <div class="col-md-4 _3Yi3bU">
+                                        <div>
+                                            <aura:if isTrue="{!od.so.ERP7__Status__c != 'Delivered'}">
+                                            <aura:if isTrue="{!od.so.ERP7__Status__c == 'Cancelled'}">
+                                                <div>
+                                                    <div class="_30ud5x VGlMMD"></div>
+                                                    <span class="_7BRRQk">Cancelled on&nbsp; <lightning:formattedDateTime value="{!od.so.ERP7__Cancelled_Date__c}"/></span>    
+                                                    <div class="_2t-3dH">As per your request, your item has been cancelled</div> 
+                                                </div>                                                
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                <div class="_30ud5x _3ELbo9"></div>
+                                                <span class="_7BRRQk">Delivered on&nbsp; <lightning:formattedDateTime value="{!od.so.ERP7__Fulfilled_Date__c}"/></span>
+                                                <div class="_2t-3dH">Your item has been delivered</div>
+                                            </aura:set>                              
+                                        </aura:if>   
+                                            
+                                        </div>
+                                       
+                                    </div>
+                                            
+                                    </aura:iteration>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /row -->
+                    </div>
+                </div>
+            </aura:set>
+        </aura:if>        
+        <!--/main-->
+    </div>
+    <!-- page -->
+</aura:component>

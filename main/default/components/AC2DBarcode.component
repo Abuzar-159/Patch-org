@@ -1,0 +1,115 @@
+<apex:component controller="AQBarcodeController" access="global">
+    <apex:attribute name="Value" description="Barcode value" type="String" assignTo="{!Brcd}" access="global" />
+    <apex:attribute name="BrcdType" description="Barcode Type" type="String" assignTo="{!BarcdType}" access="global" />
+    <apex:attribute name="BrcdCorrection" description="QR Correction Level" type="String" assignTo="{!correctionLevel}" access="global" ></apex:attribute>   
+    <apex:attribute name="BrcdHeight" description="height" type="String" required="false" access="global" ></apex:attribute>
+    <apex:attribute name="BrcdWidth" description="width" type="String" assignTo="{!Width}" access="global" ></apex:attribute>    
+    <apex:attribute name="Brcd-sObjectParentId" description="sObject" type="String" assignTo="{!SObjectParentId}" access="global" ></apex:attribute>    
+    <apex:attribute name="hideText" description="Barcode Text Hide" type="boolean" assignTo="{!brcdValHide}" access="global" default="false"/>  
+    <apex:dynamicComponent componentValue="{!JQueryMin}"></apex:dynamicComponent>
+    <apex:dynamicComponent componentValue="{!QRJScript}"></apex:dynamicComponent>
+    <apex:dynamicComponent componentValue="{!JQRScript}"></apex:dynamicComponent>    
+    <apex:dynamicComponent componentValue="{!PDF417Min}"></apex:dynamicComponent>        
+    <apex:stylesheet value="{!QRCSS}"></apex:stylesheet>  
+   
+    <script type="text/javascript">
+        
+        var barcodezone = {           
+            
+            processor: {
+                    pdfProcessor: {
+                        initPDF417: function(textEntered){
+                            PDF417.init(textEntered);
+                        },
+                         generatePDF417: function(barcodeH,barcodeW,parentId){
+                            var barcode=PDF417.getBarcodeArray(),bw=2,bh=2,e="",canvas=document.createElement("canvas");
+                            canvas.width=bw*barcode.num_cols;canvas.height=bh*barcode.num_rows;
+                            var height= barcodeH+'px';var width= barcodeW+'px';
+                                                         
+                            canvas.style.height = height;
+                            canvas.style.width = width;
+                            if(height == ''){canvas.style.height = '150px';}if(width == ''){canvas.style.width = '150px';}
+                            canvas.setAttribute("id", "canvasId"+parentId);
+                            jQuery("#"+parentId).append(canvas);
+
+                            for(var ctx=canvas.getContext("2d"),y=0,r=0;r<barcode.num_rows;++r){
+                                for(var x=0,c=0;c<barcode.num_cols;++c)
+                                    1==barcode.bcode[r][c]&&ctx.fillRect(x,y,bw,bh),x+=bw;y+=bh; 
+                            }
+                        }    
+                    },
+                    qrProcessor: {
+                        initQR: function(){
+                            
+                        },
+                        generateQR: function(height,width,correctLevel, parentId, textEntered){
+                                                 
+                            if(height == ''){height=150;} if(width== ''){width=150;}
+                            jQuery('#'+parentId).qrcode({
+                                render: "canvas",
+                                border: 20,
+                                text: textEntered,
+                                height: height,                                
+                                width: width,
+                                qrId: "BRCD"+parentId, 
+                                correctLevel: correctLevel
+                            });
+                        }
+                    },                    
+            },
+            
+            /*executor:{ 
+                sfdc:{
+                       
+                        creational:{
+                            createDocument:function(objParent,image){
+                                var doc = new sforce.SObject("Document");    
+                                    doc.FolderId = "";
+                                    doc.ContentType = "image/png";
+                                    doc.Body = image;
+                                    doc.Name = "PDF-"+objParent+".png";
+                                    sforce.connection.create([doc],{onSuccess:barcodezone.success, onFailure:barcodezone.failure});
+                            },
+                        },
+                }
+            }, */
+        }
+    </script>
+   
+    <!-- PDF417 Barcode starts -->
+    <apex:outputPanel rendered="{!IF(BarcdType == 'pdf417', true, false )}"><!-- style="display:{!IF(BarcdType == 'pdf417', '', 'none')}"-->                  
+        <apex:outputPanel style="display:{!IF(BarcdType == 'pdf417', '', 'none')}">           
+            <!--<br/>COMPONENT IMAGE:<br/>-->
+            
+            <span id="pdfBarcode{!HTMLENCODE(SObjectParentId)}"></span>
+            
+        </apex:outputPanel>         
+        
+        <script type="text/javascript">
+            jQuery(function processPDF417Barcode() {                       
+                var _pdf = barcodezone.processor.pdfProcessor;
+                _pdf.initPDF417("{!JSENCODE(Brcd)}");
+                _pdf.generatePDF417("{!JSENCODE(Height)}","{!JSENCODE(Width)}","pdfBarcode{!HTMLENCODE(SObjectParentId)}");
+            });                       
+        </script>     
+    </apex:outputPanel>
+    <!-- PDF417 Barcode Ends --> 
+                   
+    
+    <!-- QR CODE Barcode starts -->
+    <apex:outputPanel rendered="{!(brcdType == 'qrcode')}">
+       <!--<br/>COMPONENT IMAGE:<br/>-->
+       
+       <apex:outputText escape="false"><span id="barcode{!HTMLENCODE(SObjectParentId)}"></span></apex:outputText>
+       
+        <script> 
+         
+            jQuery(function processQRCODEBarcode() {      
+                var qr = barcodezone.processor.qrProcessor;
+                qr.generateQR("{!JSENCODE(Height)}","{!JSENCODE(Width)}",2, "barcode{!HTMLENCODE(SObjectParentId)}", "{!JSENCODE(Brcd)}");
+            });
+        </script>  
+    </apex:outputPanel>
+    <!-- QR CODE Barcode Ends --> 
+
+</apex:component>

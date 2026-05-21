@@ -1,0 +1,317 @@
+<apex:page docType="html-5.0" showHeader="false" controller="QuotationPDFController" sidebar="false" standardStylesheets="true" readOnly="false" id="quotePDF" renderAs="{!if($CurrentPage.parameters.val == 'pdf' || $CurrentPage.parameters.pdf != null, 'pdf', null)}">
+
+    <head>
+        <script type="text/javascript">
+            function setupclosepopup() {
+                 top.window.returnValue = 1;
+                top.window.close();
+            }
+        </script>
+
+        <style>
+        .helpOrb {
+            background-position:-22px;
+        }
+        div.tooltip {
+            width: 20px;
+            float: left;
+            display:inline;
+        }    
+        div.tooltip span {
+            display: none;
+            font-weight:normal;
+            text-align:left;
+            padding: 3px 5px;
+            margin-left: 8px;
+            width: 125px;
+        }    
+        div.tooltip:hover span {
+            display: inline;
+            position: absolute;
+            border: 1px solid #cccccc;
+            background: #FFC;
+            color: #000000;
+            z-index:10000;
+        }
+        .erpmark7 .wrapper{
+            width:800px;
+            margin:0 auto;
+        }
+        </style>        
+    </head>
+    
+    <body>
+        <apex:form id="mainFrm">
+            
+            <div class="erpmark7">                
+                <div class="wrapper">
+                    
+                    <!-- Link Section -->
+                        <apex:outputPanel rendered="{!if($CurrentPage.parameters.val == 'pdf' || $CurrentPage.parameters.pdf != null, 'pdf', null)}">
+                            <table border="0" width="100%" cellpadding="0" cellspacing="0">
+                                <tr><td>&nbsp;</td></tr>
+                                
+                                <tr>
+                                    <td align="center" valign="middle">                                        
+                                        <apex:commandLink value="{!$Label.ERP7__QuotationPDF_Print}" action="{!viewQuote}" style="padding-left:17px; font-size:18px; font-family: bold; color:#ff0000;"/> &nbsp;&nbsp;                               
+                                        <apex:commandLink value="{!$Label.ERP7__QuotationPDF_Send_Proposal}" action="{!sendProposal}" style="padding-left:17px; font-size:18px; font-family: bold; color:#ff0000;" rendered="{!$ObjectType.Attachment.Createable}"/> &nbsp;&nbsp;
+                                        <apex:commandLink value="{!$Label.ERP7__Quotation_Close}" style="padding-left:17px; font-size:18px; font-family: bold; color:#ff0000;" onclick="javascript:setupclosepopup();"/>
+                                    </td>
+                                </tr>
+                                
+                                <tr><td>&nbsp;</td></tr>
+                            </table>
+                        </apex:outputPanel>
+                    <!-- @end of Link Section -->
+                    
+                    <apex:pageMessages />
+                    
+                    <!-- error section -->
+                        <table border="0" wdith="100%" align="center" cellpadding="0" style="display : {!if(errorMsg != null && errorMsg != '', '', 'none')}">
+                            <tr>
+                                <td>
+                                    <apex:outputLabel id="errmsg" value="{!errorMsg}" style="color:#000000; font-weight:bold; font-size:15px;"></apex:outputLabel>
+                                </td>
+                            </tr>
+                        </table>
+                    <!-- @end of error section -->
+                    
+                    <!-- Exception section -->    
+                        <table border="0" wdith="100%" align="center" cellpadding="0" style="display : {!if(exceptionMsg == null || exceptionMsg == '', 'none', '')};">
+                            <tr>
+                                <td>
+                                    <apex:outputLabel id="excepmsg" value="{!exceptionMsg}" style="color:#ff0000; font-weight:bold; font-size:15px;"></apex:outputLabel>
+                                </td>
+                            </tr>
+                        </table>
+                    <!-- @end of Exception section -->
+                    
+                    <!-- Recipient Div Section -->
+                        <apex:outputPanel rendered="{!if($CurrentPage.parameters.val == 'pdf' || $CurrentPage.parameters.pdf != null, 'pdf', null)}">
+                            <div style="width:100%; height:35px; background:#ec0505; color:#fff;" onclick="var element = document.getElementById('{!$Component.MainBlock}'),style = window.getComputedStyle(element),top = style.getPropertyValue('display');if(top =='none'){document.getElementById('{!$Component.MainBlock}').style.display='block'; document.getElementById('offExpand').style.display='none';document.getElementById('onExpand').style.display='block';}else {document.getElementById('{!$Component.MainBlock}').style.display='none';document.getElementById('offExpand').style.display='block';document.getElementById('onExpand').style.display='none';}">
+                                <a href="#" style="text-decoration:none; color:#fff;line-height:0px;padding-left:0px; ">
+                                    <table border="0" width="100%">
+                                        <tr>
+                                            <td height="30" align="left" valign="middle" width="3%">
+                                                <img src="{!URLFOR($Resource.SCM,'SCM/Images/plus.png')}" id="offExpand" title="click to Expand" style="display: block;"/>
+                                                <img src="{!URLFOR($Resource.SCM,'SCM/Images/minus.png')}" id="onExpand" style="display:none"/>
+                                            </td>                            
+                                            <td align="left" valign="middle" width="97%" style="text-decoration:none; color:#fff;">{!$Label.QuotationPDF_Add_Recipients}</td>
+                                        </tr>
+                                    </table>
+                                </a>
+                            </div>
+                        <!-- @end of Recipient Div Section -->
+                        
+                        <!-- Recipient Panel -->
+                            <apex:outputPanel id="MainBlock" style="display:none; background:none;">
+                                <apex:pageBlock id="MainPB" tabStyle="Product2">
+                                    <table border="0" align="center" width="100%" style="border:0px solid black;" bgcolor="#f9f9f9">
+                                        <tr><td>&nbsp;</td></tr>
+                                        <tr style="border-bottom:1px solid black;">
+                                            <td>&nbsp;</td>
+                                            <th>            
+                                                <apex:outputLabel value="{!$Label.ERP7__QuotationPDF_To}"/>
+                                            </th>
+                                            <td>
+                                                <apex:input type="email" value="{!toEmail_Address}" style="background : #ffffff; border-radius : 5px; height : 20px; width : 25%; border:1px solid #ddd; padding:5px;"/>
+                                            </td>                                            
+                                        </tr>
+                                        
+                                        <tr width="100%">
+                                            <td>&nbsp;</td>
+                                            <th>
+                                               <apex:outputLabel value="{!$Label.ERP7__QuotationPDF_Cc}"/> 
+                                            </th>                                            
+                                            <td>
+                                                <table border="0" cellpadding="0" cellspacing="0"  width="100%">
+                                                    <tr>
+                                                        <td style="width: 78%;">
+                                                            <apex:input type="email" value="{!ccEmail_Addresses}" style="border-radius : 5px; height : 20px; width :97%; border:1px solid #ddd; padding:5px;"/>
+                                                        </td>
+                                                        <td>
+                                                            <div class="helpOrb tooltip" style="position:relative;left:0px;">
+                                                                <span> {!$Label.QuotationPDF_You_can_have_multiple_email_addresses_with_comma_separation}</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>                                            
+                                            <td>&nbsp;</td>                                                                               
+                                        </tr>
+                                                                                
+                                        <tr>
+                                            <td>&nbsp;</td>
+                                            <th>
+                                                <apex:outputLabel value="{!$Label.ERP7__QuotationPDF_Subject}"/>
+                                            </th>                                                    
+                                            <td>
+                                                <apex:inputText style="width:510px; border:1px solid #ddd; border-radius: 5px; padding:5px;" value="{!EmailSubject}"/>                                            
+                                            </td>
+                                        </tr>
+                                        
+                                        <tr>
+                                            <td>&nbsp;</td>
+                                            <th style="vertical-align:top;">
+                                                <apex:outputLabel value="{!$Label.ERP7__QuotationPDF_Email_Body}"/>
+                                            </th>
+                                            <td>
+                                                <apex:inputTextarea id="editTemplate" value="{!emailBody}" cols="95" rows="12" style="border:1px solid #ddd; border-radius: 5px; padding:5px;"/>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </apex:pageBlock>
+                            </apex:outputPanel>
+                        </apex:outputPanel>
+                    <!-- @end of Recipient Panel -->
+                    
+                    <br/>
+                    <table width="100%" border="" cellspacing="0" cellpadding="0"  bgcolor="#a1a1a1" style="border-top:1px solid #CCC; border-bottom:1px solid #CCC;">                                                                   
+                        <tr>
+                            <td height="35" align="center" valign="middle"><span style="font-weight:lighter; letter-spacing: 0.2em; text-align: center; text-transform: uppercase; color:#ffffff; font-family:Verdana, Geneva, sans-serif;">{!$Label.QuotationPDF_QUOTATION_PROPOSAL}</span> </td>
+                        </tr>
+                    </table>
+                    
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td width="37%">
+                                <span style="color:#000; font-family:Verdana, Geneva, sans-serif; font-size:12px;">
+                                    <p><b>{!$Label.QuotationPDF_From}</b><br/></p>
+                                    <p><b><apex:outputText value="{!$Organization.Name}" rendered="{!$ObjectType.Organization.fields.Name.Accessible}"/></b><br/></p>
+                                    <p><apex:outputText value="{!$Organization.Street}" rendered="{!$ObjectType.Organization.fields.Street.Accessible}"/><br/>
+                                    <apex:outputText value="{!$Organization.City}" rendered="{!$ObjectType.Organization.fields.City.Accessible}"/><br/>
+                                    <apex:outputText value="{!$Organization.State}" rendered="{!$ObjectType.Organization.fields.State.Accessible}"/><br/>
+                                    <apex:outputText value="{!$Organization.PostalCode}" rendered="{!$ObjectType.Organization.fields.PostalCode.Accessible}"/><br/><br/>
+                                    <apex:outputText value="{!$Organization.Phone}" rendered="{!$ObjectType.Organization.fields.Phone.Accessible}"/></p>
+                                </span>
+                            </td>           
+                            <td>&nbsp;</td>
+                            <td align="center">
+                                <apex:image url="{!imageURL}" width="208" height="61" />
+                            </td>   
+                        </tr>
+                        
+                        <tr>
+                            <td width="37%">
+                                <span style="color:#000; font-family:Verdana, Geneva, sans-serif; font-size:12px;">
+                                    <p><b>{!$Label.ERP7__QuotationPDF_To}</b><br/></p>
+                                    <p><b><apex:outputText id="acc" value="{!currentContact.Name}" rendered="{!$ObjectType.Contact.fields.Name.Accessible}"/></b><br/></p>
+                                    <p><apex:outputText id="a1" value="{!billingAddress.Address_Line1__c}" rendered="{!$ObjectType.Address__c.fields.Address_Line1__c.Accessible}"/><br />
+                                       <apex:outputText id="a2" value="{!billingAddress.Address_Line2__c}" rendered="{!$ObjectType.Address__c.fields.Address_Line2__c.Accessible}"/><br />
+                                       <apex:outputText id="a3" value="{!billingAddress.Address_Line3__c}" rendered="{!$ObjectType.Address__c.fields.Address_Line3__c.Accessible}"/><br />
+                                       <apex:outputText id="city" value="{!billingAddress.City__c}" rendered="{!$ObjectType.Address__c.fields.City__c.Accessible}"/><br />
+                                       <apex:outputText id="county" value="{!billingAddress.State__c}" rendered="{!$ObjectType.Address__c.fields.State__c.Accessible}"/><br />
+                                       <apex:outputText id="country" value="{!billingAddress.Country__c}" rendered="{!$ObjectType.Address__c.fields.Country__c.Accessible}"/><br />
+                                       <apex:outputText id="pc" value="{!billingAddress.Postal_Code__c }" rendered="{!$ObjectType.Address__c.fields.Postal_Code__c.Accessible}"/> 
+                                    </p>
+                                </span>
+                            </td>
+                            <td width="33%">&nbsp;</td>
+                            <td width="30%" valign="bottom">
+                                <table width="100%" border="0">
+                                    <tr>
+                                        <th height="25" align="right">{!$Label.QuotationPDF_Quotation} #&nbsp;</th>
+                                        <td height="25"><apex:outputText id="invno" value="{!currentQuotes.Name}" rendered="{!$ObjectType.Quotes__c.fields.Name.Accessible}"/></td>
+                                    </tr>
+                                    <tr>
+                                        <th height="25" align="right">{!$Label.QuotationPDF_Quotation_Date}&nbsp;</th>
+                                        <td height="25">
+                                            <apex:outputText id="qtDate" value="{0,date,dd/MM/yyyy}" rendered="{!$ObjectType.Quotes__c.fields.Request_Date__c.Accessible}">
+                                                <apex:param value="{!currentQuotes.Request_Date__c}" />
+                                            </apex:outputText>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <br/>                    
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0"  bgcolor="#a1a1a1" style="border-top:1px solid #CCC; border-bottom:1px solid #CCC;">
+                        <tr>
+                            <td height="30" align="Center" valign="middle" style="border:1px solid #CCC; border-radius:.40em;">
+                                <span style="color:#ffffff; text-transform:uppercase; letter-spacing:0.2em; font-family:Verdana, Geneva, sans-serif; font-size:14px; font-weight:ligher;">
+                                    {!$Label.QuotationPDF_Quote_Line_Items}
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <table width="100%" border="0">
+                        <thead>
+                            <tr>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Code}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Item}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Quantity}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Base_Price}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Discount}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Vat}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Tax}</td>
+                                <td align="center" height="25">{!$Label.QuotationPDF_Total_Price}</td>
+                            </tr>
+                        </thead>
+                        
+                        <tbody>
+                            <apex:variable value="{!0}" var="itemCounter"/>
+                            <apex:repeat var="item" value="{!QuoteLineItems}"  id="rp"> 
+                            <tr>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Code}" rendered="{!$ObjectType.Product2.fields.SKU__c.Accessible}"/></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Product}" rendered="{!$ObjectType.Product2.fields.Name.Accessible}"/></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Quantity}" /></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.BasePrice}" /></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Discount}" /></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Vat}" /></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Tax}" /></td>
+                            <td align="center" valign="middle" height="25"><apex:outputText value="{!item.Totalprice}" /></td>
+                            </tr>
+                            <apex:variable var="itemCounter" value="{!itemCounter + 1}"/>
+                            </apex:repeat>
+                        </tbody>
+                    </table>
+                    
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td></tr>
+                    </table>
+                    
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><span style="font-weight : bold; font-size: 15px;"> {!$Label.QuotationPDF_Sub_Total} </span></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><apex:outputText id="st" value="{!subtotal}"/></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><span style="font-weight : bold; font-size: 15px;"> {!$Label.QuotationPDF_Discounts} </span></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><apex:outputText id="dis" value="{!discount}"/></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><span style="font-weight : bold; font-size: 15px;"> {!$Label.QuotationPDF_Vat} </span></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><apex:outputText id="vat" value="{!vat}"/></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><span style="font-weight : bold; font-size: 15px;"> {!$Label.QuotationPDF_Tax} </span></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><apex:outputText id="tax" value="{!tax}"/></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><span style="font-weight : bold; font-size: 15px;"> {!$Label.QuotationPDF_Total_Due} </span></td>
+                            <td>&nbsp;</td>
+                            <td height="25" align="center" valign="middle"><apex:outputText id="td" value="{!totalDue}"/></td>
+                        </tr>
+                    </table>
+                    
+                    <br/>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td style="border-top:1px solid #ccc;">
+                                <p align="center"><font face="Arial"><i>{!$Label.Invoice_Copyright} {!$Organization.Name}.</i></font></p>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                </div>
+            </div>
+        </apex:form>
+    </body>
+    
+</apex:page>

@@ -1,0 +1,382 @@
+<aura:component controller="ExpenseSheetLC"  implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" /> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" /> 
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+       <!-- <ltng:require styles="/resource/ERP7__SupplierPoratalComm/CSS/overiding-standard.css"/>-->
+        
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/AddExpense.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    </head>    
+    <aura:attribute name = "isDraftEdit" type = "boolean" default = "false"/>
+    <aura:attribute name = "expenseWrap" type = "object[]"/>
+    <aura:attribute name="parentId" type="Id" />
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="Index2del" type="Integer" default="-1"/>
+    <aura:registerEvent name="IndexingEvent" type="c:IndexingEvent"/> 
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:attribute name="ExpenseLinelistObj" type="Expense_Line_Item__c[]" />
+    <aura:attribute name="expWrapList" type="Object[]" />
+    <aura:attribute name="emp" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute name="AddExpenseFLSCheck" type="object" default="{'sObjectType' : 'AddExpenseFLSCheck'}"/>
+    <aura:attribute name="expenseComp" type="Expense__c" />
+    <aura:attribute name="AccId" type="String" default=''/>
+    <aura:registerEvent name="saveEventFired" type="c:saveEvent" />
+    <aura:attribute name="expli" access="global" type="List"/>
+    <aura:attribute name="accList" access="global" type="List"/>
+    <aura:attribute name="FromSP" type="Boolean" default="false"/>
+    <aura:attribute name="EditRecord" type="Boolean" default="false"/>
+    <aura:attribute name="eLineItem" type="Expense_Line_Item__c" default="{'sobjectType' : 'Expense_Line_Item__c'}" />
+    <aura:attribute name="Expenses" type="List"/>
+    <aura:attribute name="Expense" type="Expense__c" default="{ 'sobjectType': 'Expense__c',
+                                                                    'Name':'',                                                                
+                                                                    'ERP7__Employees__c': '',
+                                                                    'unknown_custom_field':'',
+                                                                    'unknown_custom_field':'',
+                                                                    'ERP7__Status__c': '',
+                                                                    'ERP7__Project__c':'' ,
+                                                                    'ERP7__Chart_of_Account__c':'',
+                                                                    'ERP7__Vendor_Account__c':'',
+                                                                    'ERP7__Sales_Order__c':''
+                                                                    }" />    
+    <aura:handler event="c:IndexingEvent" action="{!c.deleteExxliWP}"/>
+    <aura:attribute name="uId" type="String" default=""/>
+    <aura:attribute name="header" type="Boolean" default="true"/>
+    <aura:attribute name="isEditAll" type="Boolean" default="false"/>
+    <aura:attribute name="explilist" type="Expense_Line_Item__c[]"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/>
+    
+    <div class="maqsood erp_mark7 erp_Mark7 AddExpense-newClass1" aura:Id="body" >
+        <span class="AddExpense-newClass2">
+            <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <aura:if isTrue="{!not(empty(v.exceptionError))}">
+        <div class="{!if(and(v.exceptionError != null, v.exceptionError != undefined),'slds-notify_container slds-is-fixed AddExpense-newClass3','slds-notify_container slds-is-fixed AddExpense-newClass4')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small AddExpense-newClass6">{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close AddExpense-newClass7">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        </aura:if>
+        <div class="container-fluid pt-2 bg-fb">
+            <div class="card d-flex flex-row mb-4 shadow-mrr AddExpense-newClass8">
+                <a href="{!'/'+v.emp.Employee_User__r.Id}" target="_blank" class="d-flex AddExpense-newClass9">
+                    <div class="profile-pic" title="{!v.emp.Employee_User__r.Name}">
+                        <h2 class="listing-row Heading3">    
+                            <span class="slds-avatar slds-avatar--circle slds-avatar--medium AddExpense-newClass10">
+                                <img src="{!v.emp.Employee_User__r.fullphotourl}"  alt="" class="AddExpense-newClass11"/> 
+                            </span>&nbsp;
+                        </h2>
+                    </div>
+                    
+                </a>
+                <div class=" d-flex flex-grow-1 min-width-zero">
+                    <div class="card-body pl-0 p-1"> <!--  align-self-center d-flex flex-column flex-lg-row justify-content-between min-width-zero AddExpense-newClass12-->
+                        <div class="min-width-zero slds-truncate AddExpense-newClass13">
+                            <aura:if isTrue="{!!v.FromSP}">
+                            <a href="{!'/'+v.emp.Id}" target="_blank">
+                                <p class="list-item-heading mb-1 truncate">{!v.emp.ERP7__First_Name__c}&nbsp;{!v.emp.ERP7__Last_Name__c}</p>
+                            </a>
+                                <aura:set attribute="else">
+                                	<p class="list-item-heading mb-1 truncate">Community&nbsp;User</p>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                        
+                        <div class="slds-grid slds-wrap pt-2 pb-2 pl-4 pr-4">
+                            <aura:if isTrue="{!v.header}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="unique-id-of-input"><span class="AddExpense-newClass14">*</span>&nbsp;Name</label>
+                                        <lightning:input type="text" variant="label-hidden" aura:id="exName1" required="true"  value="{!v.Expense.Name}" maxlength="30" placeholder="Name"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            <!--<div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Vendor</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <ERP7:CustomInputLookUp objectAPIName="Account"  IconName="standard:product" selectedRecordId="{!v.Expense.ERP7__Vendor_Account__c}" qry="AND ERP7__Account_Type__C = 'Vendor'"/>
+                                    </div>
+                                </div>
+                            </div>-->
+                            <aura:if isTrue="{!v.header}">
+                                
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element ">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Organisation</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                        IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/> 
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Credit Card/Bank Account</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c"  IconName="standard:product" selectedRecordId="{!v.Expense.ERP7__Chart_of_Account__c}" qry="AND ERP7__IsCreditCard__c = true"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.AddExpenseFLSCheck.soAccess}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element ">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Sales Order</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order__c"  IconName="standard:product" selectedRecordId="{!v.Expense.ERP7__Sales_Order__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            <!--<aura:if isTrue="{!v.AddExpenseFLSCheck.soAccess}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input"></label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="checkbox" label="Refund Expense" checked="{!v.Expense.ERP7__Refund_Expense__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>-->
+                            <aura:if isTrue="{!v.header}">
+                            <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Project</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <c:CustomInputLookUp objectAPIName="ERP7__Project__c"  IconName="standard:product" selectedRecordId="{!v.Expense.ERP7__Project__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            </aura:if>
+                            
+                            <aura:if isTrue="{!and(v.AddExpenseFLSCheck.statusAccess, v.AddExpenseFLSCheck.approverAccess)}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <lightning:select name="select1" label="Status" value="{!v.Expense.ERP7__Status__c}" required="true" onchange="{!c.handleStatusChange}">
+                                            <option value="Draft">Draft</option>
+                                            <option value="Submitted">Submitted</option>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.AddExpenseFLSCheck.approverAccess}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <aura:if isTrue="{!!v.FromSP}">
+                                        <label class="slds-form-element__label" for="unique-id-of-input">Approver</label>
+                                        <c:CustomInputLookUp objectAPIName="User"  IconName="standard:user" selectedRecordId="{!v.Expense.ERP7__Approver__c}" /><!--hideRemove="true"-->
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                            <!--<div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <aura:if isTrue="{!!v.FromSP}">
+                                        <label class="slds-form-element__label" for="unique-id-of-input">Post</label>
+                                        <lightning:input type="checkbox" name="input2" checked="{!v.Expense.ERP7__Post__c}"/>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                            </div>-->
+                            
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+          
+            <aura:if isTrue="{!v.header == false}">
+                
+                <!--{!expi.exp.Name}>
+                <div class="slds-grid slds-wrap pt-2 pb-2 pl-4 pr-4">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-form-element__label" for="unique-id-of-input"><span class="AddExpense-newClass14">*</span>&nbsp;Name</label>
+                                        <lightning:input type="text" variant="label-hidden" required="true"  value="{!expi.exp.Name}" maxlength="30" placeholder="Name"/>
+                                    </div>
+                                </div>
+                            </div>
+                
+                <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Credit Card/Bank Account</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <ERP7:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c"  IconName="standard:product" selectedRecordId="{!expi.exp.ERP7__Chart_of_Account__c}" qry="AND ERP7__IsCreditCard__c = true"/>
+                                    </div>
+                                </div>
+                            </div>
+                    <aura:if isTrue="{!v.AddExpenseFLSCheck.projectAccess}">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12 pr-2">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="unique-id-of-input">Project</label>
+                                    
+                                    <div class="slds-form-element__control">
+                                        <ERP7:CustomInputLookUp objectAPIName="ERP7__Project__c"  IconName="standard:product" selectedRecordId="{!expi.expExpense.ERP7__Project__c}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            </aura:if>
+                    </div>
+                
+                   <b>{!explii.Name}</b--> 
+                     <div class="card shadow-mrr erp_Mark7 AddExpense-newClass15">
+                <div class="card-body AddExpense-newClass16" > 
+                    <div class="slds" aura:id="TimeCEContent">
+                        <!--<div style="overflow:auto;" class="table-responsive AddExpense-newClass17" tabindex="1" data-aura-rendered-by="512:0"> style="height:500px;"-->
+                            <table class="slds-table slds-table_bordered  slds-no-row-hover" >
+                                <thead >
+                                    <tr>
+                                        <th width="5%"></th>
+                                        <!--th class="slds-text-heading-label AddExpense-newClass18" scope="col">//removed 2- between heading and label in slds
+                                            <span class="slds-truncate" title="Name">&nbsp; <a onclick="{!c.addNew}" data-record="Add" data-target="#myModal" class="AddExpense-newClass19" data-toggle="modal" title="Add"> <i class="fa fa-plus AddExpense-newClass20" aria-hidden="true"></i>&nbsp;New</a></span>
+                                        </th-->
+                                        <!--<aura:renderIf isTrue="{!v.isDraftEdit}">
+                                            <th class="slds-text-heading-/-label" scope="col" >Split Total</th>
+                                        </aura:renderIf>-->
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.nameAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Name</th>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.CategoryAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Category</th>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.TypeAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Transaction Type</th>
+                                        </aura:if>
+                                        <th class="slds-text-heading--label" scope="col" >Date</th>
+                                        <th class="slds-text-heading--label" scope="col" >Sub Total</th>
+                                        <th  class="slds-text-heading--label" scope="col" >Tax</th>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Total</th>
+                                        </aura:if>
+                                        <th class="slds-text-heading--label" scope="col" ><div class="width150">Expense Account</div></th>
+                                        <aura:renderIf isTrue="{!v.isDraftEdit}">
+                                            <th class="slds-text-heading--label" scope="col" ><div class="width150">Receipt</div></th>
+                                        </aura:renderIf>
+                                        <th class="slds-text-heading--label " scope="col" >
+                                           <div class="width150">Vendor</div></th>
+                                        <!--<th class="slds-text-heading-/-label" scope="col" ><div class="width150">Bill</div></th>
+                                        <th  class="slds-text-heading-/-label" scope="col" >Refund</th>-->
+                                        <th class="slds-text-heading--label" scope="col" >Description</th>
+                                        
+                                    </tr>
+                                </thead>
+                                <aura:iteration items="{!v.expWrapList}" var="expi" indexVar="wrapIndex">
+                                <tbody>
+                                    <aura:iteration items="{!expi.expline}" var="explii" indexVar="lineIndex">
+                                         
+                                        <c:ExpenseLineItem  aura:Id="exli" aItem="{!explii}" expline="{!expi.expline}" parentIndex="{!wrapIndex}" index="{!lineIndex}" AddExpenseFLSCheck="{!v.AddExpenseFLSCheck}" Expense="{!expi}" expenseWrap1="{!v.expWrapList}" expli="{!explii}" isExpUpdate="{!v.isDraftEdit}" expliiret="true" accList="{!v.accList}"/>
+                                        
+                                    </aura:iteration>
+                                </tbody>
+                                     </aura:iteration>
+                                
+                            </table>
+                       
+                       <!-- </div>-->
+                    </div>
+                </div>
+            </div>
+                
+            </aura:if>
+               
+            
+            <!-- Line Item Table starts here-->
+            <aura:if isTrue="{!v.header}">
+            <div class="card shadow-mrr erp_Mark7 AddExpense-newClass15">
+                <div class="card-body AddExpense-newClass16" > 
+                    <div class="slds" aura:id="TimeCEContent">
+                        <!--<div style="overflow:auto;" class="table-responsive AddExpense-newClass17" tabindex="1" data-aura-rendered-by="512:0"> style="height:500px;"-->
+                            <table class="table slds-table_bordered slds-table_fixed-layout slds-no-row-hover">
+                                <thead >
+                                    <tr>
+                                        <th class="slds-text-heading--label AddExpense-newClass18" scope="col">
+                                            <span class="slds-truncate" title="Name">&nbsp; <a onclick="{!c.addNew}" data-record="Add" data-target="#myModal" class="AddExpense-newClass19" data-toggle="modal" title="Add"> <i class="fa fa-plus AddExpense-newClass20" aria-hidden="true"></i>&nbsp;New</a></span>
+                                        </th>
+                                        <!--<aura:renderIf isTrue="{!v.isDraftEdit}">
+                                            <th class="slds-text-heading-/-label" scope="col" >Split Total</th>
+                                        </aura:renderIf>-->
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.nameAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Name</th>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.CategoryAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Category</th>
+                                        </aura:if>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.TypeAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Transaction Type</th>
+                                        </aura:if>
+                                        <th class="slds-text-heading--label" scope="col" >Date</th>
+                                        <th class="slds-text-heading--label" scope="col" >Sub Total</th>
+                                        <th  class="slds-text-heading--label" scope="col" >Tax</th>
+                                        <aura:if isTrue="{!v.AddExpenseFLSCheck.caAccess}">
+                                        <th class="slds-text-heading--label" scope="col" >Total</th>
+                                        </aura:if>
+                                        <th class="slds-text-heading--label" scope="col" ><div class="width150">Expense Account</div></th>
+                                        <aura:renderIf isTrue="{!v.isDraftEdit}">
+                                            <th class="slds-text-heading--label" scope="col" ><div class="width150">Receipt</div></th>
+                                        </aura:renderIf>
+                                        <th class="slds-text-heading--label " scope="col" >
+                                           <div class="width150">Vendor</div></th>
+                                        <!--<th class="slds-text-heading-/-label" scope="col" ><div class="width150">Bill</div></th>
+                                        <th  class="slds-text-heading-/-label" scope="col" >Refund</th>-->
+                                        <th class="slds-text-heading--label" scope="col" >Description</th>
+                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.expenseWrap}" var="lineitem" indexVar="ind">
+                                        <c:ExpenseLineItem  aura:Id="exli" Org="{!v.Organisation}" aItem="{!lineitem}" index="{!ind}" AddExpenseFLSCheck="{!v.AddExpenseFLSCheck}" Expense="{!v.Expense}" expenseWrap1="{!v.expenseWrap}" expli="{!v.expli}" isExpUpdate="{!v.isDraftEdit}"/>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                       <!-- </div>-->
+                    </div>
+                </div>
+            </div>
+            </aura:if>
+            <!-- Line Item Table ends here -->
+            <!--BODY ends here-->
+            
+            <div class="slds-p-top--small">
+            </div>
+            
+            <div class="slds-docked-form-footer ">
+                <lightning:button label="Cancel"  class="slds-button slds-button--neutral" onclick="{!c.cancelClick}"/> &nbsp;
+                <lightning:button label="Save" variant="brand" class="slds-button slds-button--brand white" onclick="{!c.saveEX}"/>
+                <lightning:button label="Save and Post" variant="brand" class="slds-button slds-button--brand white" onclick="{!c.savePostEX}"/>
+            </div>
+            
+        </div>
+    </div>
+</aura:component>

@@ -1,0 +1,991 @@
+<aura:component Controller="ERP7.RecordPayment" implements="lightning:actionOverride,force:appHostable,flexipage:availableForAllPageTypes,force:hasRecordId" access="global">
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/RecordPayment.css"/> 
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.payment.ERP7__Accounts__c}" action="{!c.accountBalance}"/>
+    <aura:attribute name="Invoice" type="Invoice__c"/>
+    <aura:attribute name="creditNotes" type="Object[]" default="{'sObjectType':'CNWrapper'}"/>
+    <aura:attribute name="heading" type="String" default="{!$Label.c.CreateAddress_Customer + ' ' + $Label.c.Payment}"/>
+    <aura:attribute name="today" type="Date"/>
+    <aura:attribute name="recordId" type="String" /> 
+    <aura:attribute name="paymentId" type="String" /> 
+    <aura:attribute name="RefundPaymentId" type="String" />
+    <aura:attribute name="Message" type="String" default=""/>
+    <aura:attribute name="DisMessage" type="String" default=""/>
+    <aura:attribute name="RT" type="String"/>
+    <aura:attribute name="payment" type="Map" default="{'ERP7__Accounts__c':'','ERP7__Refund__c':'false'}"/>
+    <aura:attribute name="fromInvoice" type="Boolean" default="false" />
+    <aura:attribute name="disabled" type="Boolean" default="false" />
+    <aura:attribute name="Refund" type="Boolean" default="false" />
+    <aura:attribute name="saved" type="Boolean" default="false" />
+    <aura:attribute name="post" type="Boolean" default="false" />
+    <aura:attribute name="advancePayment" type="Boolean" default="false" />
+    <aura:attribute name="CustomerBalance" type="Decimal" default="0.00" />
+    <aura:attribute name="creditBalance" type="Decimal" default="0.00" />
+    <aura:attribute name="cnAmount" type="Decimal" default="0.00" />
+    <aura:attribute name="totalAmount" type="Decimal" default="0.00" />
+    <aura:attribute name="dueAmount" type="Decimal" default="0.00" />
+    <aura:attribute name="defaultDiscount" type="Decimal" default="0.00" />
+    <aura:attribute name="paymentAmount" type="Decimal" default="0.00" />
+    <aura:attribute name="navigateToRecord" type="Boolean" default="true"/> 
+    <aura:attribute name="NoPayment" type="Boolean" default="false"/> 
+    <aura:attribute name="invoiceList" type="List" />
+    
+    <aura:attribute name="CardError" type="String" default=""/>
+    <aura:attribute name="PaymentMethod" type="Payment_Method__c" default="{'sobjectType':'Payment_Method__c','ERP7__CardType__c':'','ERP7__Card_Expiration_Month__c':'','ERP7__Card_Expiration_Year__c':''}"/>
+    <aura:attribute name="CVV" type="String" />
+    <aura:attribute name="cardOptions" type="List"/>
+    <aura:attribute name="countryOptions" type="List"/>
+    <aura:attribute name="stateOptions" type="List"/>
+    <aura:attribute name="monthsOptions" type="List"/>
+    <aura:attribute name="yearsOptions" type="List"/>
+    <aura:attribute name="isMultiCurrency" type="Boolean" default="false"/>
+     <aura:attribute name="fromAccRec" type="Boolean" default="false"/>
+    <aura:attribute name="orderCurrency" type="String"/>
+    <aura:attribute name="finalDue" type="Decimal" default="0"/>
+    <aura:attribute name="billingAdd" type="Address__c" default="{sobjectType:'Address__c','ERP7__Customer__c': '','ERP7__Contact__c': ''}"/>
+    <aura:attribute name="FromClosing"     type="String" default="false"/> 
+    <aura:attribute name="AccoutingPeriod"                  type="Accounting_Period__c" default="{'sobjectType' : 'Accounting_Period__c'}" />
+    <aura:attribute name="cancelclick" type="Aura.Action" default="{!c.goBack}"/>
+    <aura:attribute name="saveclick" type="Aura.Action" default="{!c.saveAppliedPayments}"/>
+    <aura:method name="savePayment" action="{!c.saveAppliedPayments}" access="PUBLIC">
+        <aura:attribute name="callback" type="Function" />
+    </aura:method> 
+    
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="options1" type="List" default="[{'label': 'Cheque', 'value': 'Cheque'},{'label': 'Cash', 'value': 'Cash'},{'label': 'Wire transfer', 'value': 'Wire transfer'},{'label': 'E transfer', 'value': 'E transfer'},{'label': 'Direct Payment', 'value': 'Direct Payment'},{'label': 'Credit Card', 'value': 'Credit Card'},{'label': 'Card', 'value': 'Card'},{'label': 'Webiste Payment', 'value': 'Website Payment'}]"/>
+    <aura:attribute name="paymentMode" type="String" default="Cheque"/>
+    <aura:attribute name="options2" type="List" default="[{'label': 'Cheque', 'value': 'Cheque'}]"/>
+    <aura:attribute name="ShowPaymentType" type="Boolean" default="false"/> 
+    <aura:attribute name="displayCN" type="Boolean" default="true"/> 
+    <aura:attribute name="showPage" type="Boolean" default="false"/>
+    <aura:attribute name="showRefundPage" type="Boolean" default="false"/>
+    <aura:attribute name="payType" type="String" />
+    <aura:attribute name="setRT" type="String"/>
+    <aura:attribute name="ShowToast" type="Boolean" default="false"/>
+    <aura:attribute name="PayName" type="String" default="45"/>
+    <aura:attribute name="OrgId" type="String" default=""/>
+    <aura:method name="fetch" action="{!c.fetch}"/>
+    <aura:attribute name="AccountsFilter" type="String" default=" AND Id=null"/>
+    <aura:iteration items="{!v.creditNotes}" var="item">
+    	<!--{!item.Name}-->
+    </aura:iteration>
+    <aura:if isTrue="{!v.showPage}">
+         
+    <div class=" erp_mark7 erp_Mark7 maqsood">
+        
+        <aura:if isTrue="{!v.ShowToast}">                       
+            <div class="maq-only">
+                <div class="slds-notify_container slds-is-relative">
+                    <div class="slds-notify slds-notify_toast slds-theme--success" role="alert">                                   
+                        <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="">
+                            <lightning:icon iconName="action:approval" size="x-small" alternativeText="{!$Label.c.Success1}" title="Success" />
+                            
+                        </span>
+                        <div class="slds-notify__content RecordPmt-class1" >
+                            <h2 class="slds-text-heading_small ">{!$Label.c.Payment}&nbsp;{!v.PayName}&nbsp;{!$Label.c.Is_Created}</h2>
+                        </div>
+                        
+                        <div class="slds-notify__content RecordPmt-class2" >
+                            <button class="slds-button slds-button_icon slds-notify__close slds-button_icon-inverse" title="Close" 
+                                    onclick="{!c.getNotificationHide}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </aura:if> 
+        <aura:if isTrue="{!v.showSpinner}">
+             <lightning:spinner variant="brand" size="large" class="mainSpinClass"/><!--alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"-->
+        </aura:if>
+        <lightning:layout multipleRows="true" horizontalAlign="spread" class="bg-white">
+            <lightning:layoutItem size="12">
+                <div class="slds-page-header">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:scan_card" size="x-small" alternativeText="{!$Label.c.scan_card}" title="" />	
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset RecordPmt-class3" ><aura:if isTrue="{!or(v.CustomerBalance>0, v.CustomerBalance == 0)}">{!v.heading}<aura:set attribute="else">{!$Label.c.Refund_Payment_for_Invoice}&nbsp;{!v.Invoice.Name}</aura:set></aura:if></p>
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title=""></h1>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top">                      
+                        </div>
+                    </div>
+                </div>
+                
+            </lightning:layoutItem>
+        
+                <lightning:layoutItem size="12" class="slds-p-around_medium">
+                    <lightning:layout multipleRows="true" horizontalAlign="start">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <aura:if isTrue="{!or(v.CustomerBalance>0, v.CustomerBalance == 0)}">
+                            <c:CustomInputLookUp label="{!$Label.c.Received_from}" objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Accounts__c}" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Customer'"  required="true" />
+                            <aura:set attribute="else">
+                            <c:CustomInputLookUp label="{!$Label.c.Paying_to}" objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Accounts__c}" aura:Id="vendorAccount" qry=" AND ERP7__Account_Type__c = 'Customer'"  required="true" hideRemove="true"/>
+                            </aura:set>
+                            </aura:if>
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!or(v.CustomerBalance>0, v.CustomerBalance == 0)}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" readonly="true" value="{!v.CustomerBalance}" label="{!v.setRT == 'Debit_Note_Payments'?$Label.c.Acc_Recev_Debit + ' ' + $Label.c.Acc_Pay_Balance : $Label.c.CreateAddress_Customer + ' ' + $Label.c.Acc_Pay_Balance }" formatter="currency" step="0.01"/>
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.RT!='On_Account_Payment'}">
+                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                <lightning:input type="number" readonly="true" value="{!v.creditBalance}" label="{!$Label.c.Available_Credits}" formatter="currency" step="0.01"/>
+                            </lightning:layoutItem>
+                        </aura:if> 
+                            <aura:set attribute="else">
+                                <lightning:layoutItem size="3" padding="horizontal-small">
+                            	<lightning:input type="number" readonly="true" value="{!(-1*v.CustomerBalance)}" label="{!$Label.c.Refund_Balance}" formatter="currency" step="0.01"/>
+                                </lightning:layoutItem>
+                            </aura:set>
+                        </aura:if>
+                        <aura:if isTrue="{!!v.NoPayment}">
+                        <aura:if isTrue="{!v.Invoice.ERP7__Invoice_Date__c!=null}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                             <span class="slds-form-element__label slds-no-flex">{!$Label.c.Invoice_Invoice_Date}</span>
+                            <lightning:input type="date"  value="{!v.Invoice.ERP7__Invoice_Date__c}" class="displaynone-label" disabled="true"/><!-- onchange="{!c.checkDiscount}" -->
+                        </lightning:layoutItem> 
+                        </aura:if>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                             <span class="slds-form-element__label slds-no-flex">{!$Label.c.Acc_Pay_Payment_Date}</span>
+                            <lightning:input type="date"  value="{!v.payment.ERP7__Payment_Date__c}" class="displaynone-label" /><!-- onchange="{!c.checkDiscount}" Moin Commented This -->
+                        </lightning:layoutItem> 
+                        </aura:if>
+                        <aura:if isTrue="{!!v.NoPayment}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" aura:id="paymentAmount" required="true" value="{!v.payment.ERP7__Total_Amount__c}" label="{!$Label.c.Acc_Pay_Payment_Amount}" formatter="currency" step="0.01" messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" onchange="{!c.resetInvoices}" title=""/>
+                        </lightning:layoutItem>
+                        </aura:if>
+                        <aura:if isTrue="{!!v.NoPayment}">
+                        <aura:if isTrue="{!v.payment.ERP7__Discount_Rate__c>0}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                        <lightning:input formatter="percent" value="{!v.payment.ERP7__Discount_Rate__c}" label="{!$Label.c.Discount_Rate}" step="0.00000000000000000000000000000000001" onchange="{!c.UpdateDiscountAmount}" disabled="true"/><!-- onchange="{!c.UpdateTax}"   -->
+                            <aura:if isTrue="{!(v.DisMessage!='')}">
+                            <div class="slds-grid">
+                                <div class="warning-recordpayment">
+                                    
+                                    <lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>&nbsp;
+                                    {!v.DisMessage}
+                                </div>
+                            </div>
+                            </aura:if>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <label class="slds-form-element__label slds-no-flex">{!$Label.c.Discount_Amount}</label>&nbsp;<lightning:helptext content="{!v.Message}"/>
+                            <lightning:input type="number" aura:id="paymentDiscount" value="{!v.payment.ERP7__Discount_Amount__c}" variant="label-hidden" formatter="currency" step="0.01" messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" disabled="true"/><!--  onchange="{!c.resetInvoices}" -->
+                            <aura:if isTrue="{!and(v.payment.ERP7__Discount_Amount__c>0, v.DisMessage == '')}">
+                                <div class="slds-grid">
+                                    <div class="warning-recordpayment">
+                                        
+                                        <!--<lightning:icon iconName="utility:warning" size="x-small"></lightning:icon>&nbsp;
+                                        {!v.Message}-->
+                                    </div>
+                                </div> 
+                            </aura:if>
+      
+                           
+                        </lightning:layoutItem>
+                        </aura:if>
+                        </aura:if>
+                        <aura:if isTrue="{!v.cnAmount>0}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" value="{!(v.CustomerBalance - v.cnAmount)}" label="{!$Label.c.Acc_Pay_Balance_Amount}" formatter="currency" step="0.01" disabled="true"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" value="{!v.cnAmount}" label="{!$Label.c.Acc_Pay_Applied_Credit}" formatter="currency" step="0.01" disabled="true"/>
+                        </lightning:layoutItem>
+                        
+                        </aura:if>
+                        <aura:if isTrue="{!and(not(v.NoPayment),v.payment.ERP7__Total_Amount__c >0)}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <c:CustomInputLookUp label="{!$Label.c.Payment_Account}" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Payment_Account__c}" aura:Id="paymentAccount"  required="true" qry="{! v.OrgId != ''?' AND ERP7__Organisation__c =\''+ v.OrgId+'\''+ ' AND ERP7__Payment_Account__c=true' : ' AND ERP7__Payment_Account__c=true'}"/><!--qry="{!v.AccountsFilter}"    -->
+                            
+                        </lightning:layoutItem>
+                        </aura:if>
+                        <aura:if isTrue="{!and(not(v.NoPayment),v.payment.ERP7__Total_Amount__c >0)}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" aura:id="bankFee"  value="{!v.payment.ERP7__Bank_Charges__c}" label="{!$Label.c.Bank_Charges}" formatter="currency" step="0.01" min="1" messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" onchange="{!c.resetInvoices}"/>
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.payment.ERP7__Bank_Charges__c > 0}">
+                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                <c:CustomInputLookUp label="{!$Label.c.Bank_Fee_Account}" required="true" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Bank_Fee_COA__c}" aura:Id="bankFeeAccount"  qry=" AND RecordType.DeveloperName = 'Expense' " />
+                            </lightning:layoutItem>
+                        </aura:if>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="text" aura:id="checkReference" required="true" value="{!v.payment.ERP7__Reference_Cheque_No__c}" label="{!$Label.c.Reference_Number}"  messageWhenValueMissing="{!$Label.c.Please_enter_the_value}"/>
+                        </lightning:layoutItem>
+                        </aura:if>
+                        <aura:if isTrue="{!and(not(v.NoPayment),v.payment.ERP7__Total_Amount__c >0)}">
+                        <lightning:layoutItem size="12" padding="horizontal-small">
+                            
+                            <lightning:radioGroup name="radioButtonGroupRequired"
+                                                  label="{!$Label.c.Payment_Mode}"
+                                                  options="{!(v.RT=='On_Account_Payment'?v.options2:v.options1)}"
+                                                  value="{!v.paymentMode }"
+                                                  type="button"
+                                                  required="true" onchange="{!c.checkSettings}"/>
+                            <!-- disabled="{!(v.paymentMode=='Credits'?v.creditBalance>0?false:true:false)}" -->
+                        </lightning:layoutItem>
+                        </aura:if>
+                        
+                        
+
+                        
+                        <!--<aura:if isTrue="{!(v.paymentMode=='Cheque'?true:v.paymentMode=='Cash'?true:false)}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                          <ERP7:CustomInputLookUp label="Payment Account" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Payment_Account__c}" aura:Id="paymentAccount"  required="true" qry="{!v.AccountsFilter}" />
+                   
+                        </lightning:layoutItem>
+                        </aura:if> -->    
+                        
+                        <!--<aura:if isTrue="{!equals(v.paymentMode,'Cheque')}">
+                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                <lightning:input type="text" aura:id="checkReference" required="true" value="{!v.payment.ERP7__Reference_Cheque_No__c}" label="Cheque Transaction Number"  messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" onchange="{!c.resetInvoices}"/>
+                            </lightning:layoutItem>
+                        </aura:if>-->
+                        <aura:if isTrue="{!equals(v.paymentMode,'Card')}">
+                            <!-- Card Related Fields-->                            
+                        </aura:if>     
+                        
+                        
+                    </lightning:layout>
+                </lightning:layoutItem>
+         <!--   <aura:if isTrue="{!v.setRT!='Customer payment'}"> -->
+            
+            <lightning:layoutItem size="12" class="slds-p-top_medium">
+                <div class="card shadow-sm m-3">
+                <div class="card-body">
+                <aura:if isTrue="{!and(v.creditNotes.length>0,v.CustomerBalance>0)}">
+                <a href="javascript:void(0)" onclick="{!c.displayCreditNote}">
+                    <h3 class="creditnotes-text"><lightning:icon iconName="utility:chevrondown" size="x-small"></lightning:icon>&nbsp;{!$Label.c.Acc_Recev_Credit_Notes}</h3>
+                    
+                    </a>
+                    <div class="mb-3"></div>
+                </aura:if>
+                <aura:if isTrue="{!and(v.creditNotes.length>0, v.displayCN)}">
+                <aura:if isTrue="{!v.CustomerBalance>0}">
+                <div class="my-scrollable-element recPay" >
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="{!$Label.c.Credit_Note1}">{!$Label.c.Credit_Note1}</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="{!$Label.c.Acc_Pay_Available_Credit}">{!$Label.c.Acc_Pay_Available_Credit}</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="{!$Label.c.Acc_Recev_Debit}">{!$Label.c.Acc_Recev_Debit}</div>
+                            </th>
+                            <th  scope="col" >
+                                <div class="slds-truncate" title="{!$Label.c.Acc_Pay_Balance}">{!$Label.c.Acc_Pay_Balance}</div>
+                            </th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:if isTrue="{!and(v.creditNotes.length>0,v.CustomerBalance>0)}">
+                            <aura:iteration items="{!v.creditNotes}" var="item">
+                                <tr class="slds-hint-parent">
+                                    <td data-label="Reference #">
+                                        <a href="{!('/'+item.credNote.Id)}" target="_blank">{!item.credNote.Name}</a>
+                                    </td>
+                                    <td data-label="Total Amount" >
+                                        <lightning:formattedNumber value="{!item.credNote.ERP7__Balance__c}" style="currency"/>
+                                    </td>
+                                    <td data-label="Payment">
+                                        <lightning:input type="number" aura:id="appliedpayment" value="{!item.debitAmount}" variant="label-hidden" name="{!item.Id}" formatter="currency" step="0.01" class="cinput2" max="{!(item.credNote.ERP7__Credit__c-item.credNote.ERP7__Debit__c)}" onchange="{!c.updatePaymentAmount}"/>
+                                    </td>
+                                    <td data-label="Amount Due" >
+                                        <lightning:formattedNumber value="{!(item.credNote.ERP7__Balance__c-item.debitAmount)}" style="currency"/>
+                                    </td>
+                                </tr>
+                                
+                            </aura:iteration>
+                        </aura:if>
+                    </tbody>
+                </table>
+                    </div>   
+                </aura:if>
+                </aura:if>
+                    </div>
+                </div>
+            </lightning:layoutItem>
+                <aura:if isTrue="{!or(v.CustomerBalance>0, v.CustomerBalance == 0)}">
+                <lightning:layoutItem size="12" class="slds-p-top_medium">
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th class="" scope="col">
+                                <!--<lightning:input disabled="{!v.invoiceList.length==0}" type="checkbox-button" label="Select All" name="selectAll"/>-->
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="{!$Label.c.Date_ManageLeave}">{!$Label.c.Date_ManageLeave}</div>
+                            </th>
+                            <th class="" scope="col">
+                                <div class="slds-truncate" title="{!$Label.c.Number}">{!$Label.c.Number}</div>
+                            </th>
+                            <th  scope="col" class="textAlign_right">
+                                <div class="slds-truncate" title="{!$Label.c.Total_Amount}">{!$Label.c.Total_Amount}</div>
+                            </th>
+                            <th  scope="col" class="textAlign_right">
+                                <div class="slds-truncate" title="{!$Label.c.Amount_due}">{!$Label.c.Amount_due}</div>
+                            </th>
+                            <th  scope="col" class="textAlign_right">
+                                <div class="slds-truncate" title="{!$Label.c.Payment}" >{!$Label.c.Payment}</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:if isTrue="{!v.invoiceList.length>0}">
+                            <aura:iteration items="{!v.invoiceList}" var="item">
+                                <tr class="slds-hint-parent">
+                                    <th data-label="Select" scope="row">
+                                        <lightning:input type="checkbox" aura:id="cbox" checked="{!item.checked}" variant="label-hidden" name="{!item.Id}" onchange="{!c.updatedToInvoices}"/>
+                                    </th>
+                                    <td data-label="Date">
+                                        <lightning:formattedDateTime value="{!item.ERP7__Invoice_Date__c}"/>
+                                    </td>
+                                    <td data-label="Reference #">
+                                        <a href="{!('/'+item.Id)}" target="_blank">{!item.Name}</a>
+                                    </td>
+                                    <td data-label="Total Amount" class="textAlign_right">
+                                        <lightning:formattedNumber value="{!item.ERP7__Invoice_Amount__c}" style="currency"/>
+                                    </td>
+                                    <td data-label="Amount Due" class="textAlign_right">
+                                        <aura:if isTrue="{!item.ERP7__Total_Due__c>0}">
+                                        <lightning:formattedNumber value="{!item.ERP7__Total_Due__c}" style="currency"/>
+                                            <aura:set attribute="else">
+                                            <lightning:formattedNumber value="{!(-1 * item.ERP7__Total_Due__c)}" style="currency"/>
+                                            </aura:set>
+                                        </aura:if>
+                                    </td>
+                                    <td data-label="Payment" class="textAlign_right RecordPmt-class4">
+                                        <aura:if isTrue="{!item.paymentApplied.ERP7__Amount__c>0}">
+                                        <lightning:input type="number" aura:id="appliedpayment" value="{!item.paymentApplied.ERP7__Amount__c}" variant="label-hidden" name="{!item.Id}" formatter="currency" step="0.01" class="cinput" />
+                                            <aura:set attribute="else">
+                                            <lightning:input type="number" aura:id="appliedpayment" value="{!(-1 * item.paymentApplied.ERP7__Amount__c)}" variant="label-hidden" name="{!item.Id}" formatter="currency" step="0.01" class="cinput" />
+                                            </aura:set>
+                                        </aura:if>
+                                    </td>
+                                </tr>
+                                
+                            </aura:iteration>
+                            <aura:set attribute="else">
+                              
+                        <tr class="slds-hint-parent">
+                            <th data-label="Select" scope="row" class="RecordPmt-class5">
+                               
+                            </th>
+                            <td data-label="Date">
+                                
+                            </td>
+                            <td data-label="Reference #" >
+                                
+                            </td>
+                            <td data-label="Total Amount">
+                                
+                            </td>
+                            <td data-label="Amount Due">
+                                
+                            </td>
+                            <td data-label="Payment">
+                                
+                            </td>
+                        </tr>
+                       
+                            </aura:set>
+                        </aura:if>
+                    </tbody>   
+                    <tfoot>
+                    	 <tr class="slds-hint-parent">
+                             <th data-label="Select" scope="row" >
+                               
+                            </th>
+                            <td data-label="Date">
+                                
+                            </td>
+                            <td data-label="Reference #"  class="textAlign_left">
+                                {!$Label.c.QuotationPDF_Sub_Total}
+                            </td>
+                            <td data-label="Total Amount"  class="textAlign_right">
+                                <aura:if isTrue="{!v.totalAmount>0}">
+                                <lightning:formattedNumber value="{!v.totalAmount}" style="currency"/>
+                                    <aura:set attribute="else">
+                                    <lightning:formattedNumber value="{!( -1 * v.totalAmount)}" style="currency"/>
+                                    </aura:set>
+                                </aura:if>
+                            </td>
+                            <td data-label="Amount Due"  class="textAlign_right">
+                                <aura:if isTrue="{!v.dueAmount>0}">
+                                    <lightning:formattedNumber  value="{!v.dueAmount}" style="currency"/>
+                                    <aura:set attribute="else">
+                                    	<lightning:formattedNumber  value="{!(-1 * v.dueAmount)}" style="currency"/>
+                                    </aura:set>
+                                </aura:if>
+                            </td>
+                            <td data-label="Payment" class="textAlign_right ">
+                                <aura:if isTrue="{!v.paymentAmount>0}">
+                                 <lightning:formattedNumber class="slds-p-right_medium" value="{!v.paymentAmount}" style="currency"/>
+                                    <aura:set attribute="else">
+                                    <lightning:formattedNumber class="slds-p-right_medium" value="{!(-1 * v.paymentAmount)}" style="currency"/>
+                                    </aura:set>
+                                </aura:if>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </lightning:layoutItem>
+            </aura:if>
+          
+           <!-- </aura:if>   -->
+           <!-- <aura:if isTrue="{!v.setRT!='Customer payment'}"> -->
+            <aura:if isTrue="{!or(v.CustomerBalance>0, v.CustomerBalance == 0)}">
+            <lightning:layoutItem size="12" class="slds-p-top_medium slds-p-bottom_xx-large slds-m-bottom_small" >
+                <lightning:layout multipleRows="true" horizontalAlign="end" >
+                    <lightning:layoutItem size="8" >
+                        <span aura:id="invErrMsg" class="slds-hide">
+                            <abbr title="" class="slds-required">*</abbr> <span class="slds-has-error">{!$Label.c.Please_select_a_Invoice}</span>
+                        </span>
+                    </lightning:layoutItem>
+                    <lightning:layoutItem size="3" flexibility="auto" padding="around-xx-small" class="custom-selected-invoice" >
+							{!$Label.c.Amounts_for_Selected_Invoices} 
+					</lightning:layoutItem>
+                    <lightning:layoutItem size="8"></lightning:layoutItem>
+                    <lightning:layoutItem size="4" alignmentBump="left">
+                        <lightning:layout verticalAlign="center" multipleRows="true" >
+                            <lightning:layoutItem size="6" flexibility="auto" padding="around-xx-small" class="text-right slds-p-right_large">{!$Label.c.Amount_due}</lightning:layoutItem>
+                            <lightning:layoutItem size="6" flexibility="auto" padding="around-xx-small" class="text-right slds-p-right_large">
+                                <aura:if isTrue="{!v.dueAmount>0}"><lightning:formattedNumber  value="{!v.dueAmount}" style="currency"/>
+                                    <aura:set attribute="else">
+                                    	<lightning:formattedNumber  value="{!(-1 * v.dueAmount)}" style="currency"/>
+                                    </aura:set>
+                                    </aura:if>
+                            </lightning:layoutItem>
+                            <lightning:layoutItem size="6" flexibility="auto" padding="around-xx-small" class="text-right slds-p-right_large">{!$Label.c.Applied}</lightning:layoutItem>
+                            <lightning:layoutItem size="6" flexibility="auto" padding="around-xx-small" class="text-right slds-p-right_large">
+                                <aura:if isTrue="{!v.paymentAmount>0}">
+                                <lightning:formattedNumber  value="{!v.paymentAmount}" style="currency"/>
+                                    <aura:set attribute="else">
+                                    <lightning:formattedNumber  value="{!(-1 * v.paymentAmount)}" style="currency"/>
+                                    </aura:set>
+                                </aura:if>
+                            </lightning:layoutItem>
+                            
+                        </lightning:layout>
+                    </lightning:layoutItem>                
+                </lightning:layout>
+            </lightning:layoutItem>
+            </aura:if>
+         <!--   </aura:if>-->
+        </lightning:layout>
+        <div class="slds-docked-form-footer slds-float_right">
+            <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!v.cancelclick}" class=""/>
+            
+            <aura:if isTrue="{!equals(v.paymentMode,'Card')}">
+                <lightning:button name="Card Payment" label="{!$Label.c.Card_Payment}"  variant="brand" onclick="{!c.cardPaymentModal}"  class="color-white"/>
+                <aura:set attribute="else">
+                    <aura:if isTrue="{!v.setRT=='Debit_Note_Payments'}">
+                        <div onmouseover="{!c.setPostToFalse}">
+                            <lightning:button name="Save" label="{!$Label.c.ContractConsole_Save}"  variant="brand" onclick="{!v.saveclick}"  class="color-white"/>
+                        </div>
+                        <div onmouseover="{!c.setPostToTrue}">
+                            <lightning:button name="Save and Post" label="{!$Label.c.Save_and_Post}" variant="brand" onclick="{!v.saveclick}"  class="color-white"/>
+                        </div>
+                        <aura:set attribute="else">
+                            <div onmouseover="{!c.setPostToFalse}">
+                                <lightning:button name="Save" label="{!(or(v.NoPayment, not(v.payment.ERP7__Total_Amount__c > 0))?$Label.c.Apply_Credit : $Label.c.ContractConsole_Save)}"  variant="brand" onclick="{!v.saveclick}" disabled="{!(v.setRT=='Customer payment'?false:v.invoiceList.length==0)}" class="color-white"/>
+                            </div>
+                            <div onmouseover="{!c.setPostToTrue}">
+                                <aura:if isTrue="{!and(not(v.NoPayment),v.payment.ERP7__Total_Amount__c >0)}">
+                                <lightning:button name="Save and Post" label="{!$Label.c.Save_and_Post}" variant="brand" onclick="{!v.saveclick}" disabled="{!(v.setRT=='Customer payment'?false:v.invoiceList.length==0)}" class="color-white"/>
+                                </aura:if>
+                            </div> 
+                        </aura:set>    
+                    </aura:if>
+                </aura:set>
+            </aura:if>
+            
+          </div>
+    </div>
+    </aura:if> 
+    
+    <aura:if isTrue="{!v.showRefundPage}">
+    <div class=" erp_mark7 bg-white erp_Mark7 maqsood">
+        
+        <aura:if isTrue="{!v.ShowToast}">                       
+            <div class="maq-only">
+                <div class="slds-notify_container slds-is-relative">
+                    <div class="slds-notify slds-notify_toast slds-theme--success" role="alert">                                   
+                        <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="">
+                            <lightning:icon iconName="action:approval" size="x-small" alternativeText="{!$Label.c.Success1}" title="{!$Label.c.Success1}" />
+                            
+                        </span>
+                        <div class="slds-notify__content RecordPmt-class1" >
+                            <h2 class="slds-text-heading_small ">{!$Label.c.Payment}&nbsp;{!v.PayName}&nbsp;{!$Label.c.Is_Created}</h2>
+                        </div>
+                        
+                        <div class="slds-notify__content RecordPmt-class2" >
+                            <button class="slds-button slds-button_icon slds-notify__close slds-button_icon-inverse" title="Close" 
+                                    onclick="{!c.getNotificationHide}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="{!$Label.c.Close_ProjectScheduler}" />	
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            
+        </aura:if> 
+        <aura:if isTrue="{!v.showSpinner}">
+             <lightning:spinner variant="brand" size="large" class="mainSpinClass"/><!--alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"-->
+        </aura:if>
+        <lightning:layout multipleRows="true" horizontalAlign="spread" class="bg-white">
+            <lightning:layoutItem size="12">
+                <div class="slds-page-header">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:scan_card" size="x-small" alternativeText="scan_card!" title="" />	
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset RecordPmt-class3" >{!$Label.c.Refund_Payment}</p>
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title=""></h1>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top">                      
+                        </div>
+                    </div>
+                </div>
+                
+            </lightning:layoutItem>
+        
+                <lightning:layoutItem size="12" class="slds-p-around_medium">
+                    <lightning:layout multipleRows="true" horizontalAlign="start">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <c:CustomInputLookUp label="{!$Label.c.Paying_to}" objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Accounts__c}" aura:Id="RvendorAccount" qry=" AND ERP7__Account_Type__c = 'Customer'"  required="true"/>
+                         </lightning:layoutItem>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                                <lightning:input type="number" readonly="true" value="{!v.creditBalance}" label="{!$Label.c.Available_Credits}" formatter="currency" step="0.01"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                             <span class="slds-form-element__label slds-no-flex">{!$Label.c.Acc_Pay_Payment_Date}</span>
+                            <lightning:input type="date"  value="{!v.payment.ERP7__Payment_Date__c}" class="displaynone-label" />
+                        </lightning:layoutItem> 
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" aura:id="RpaymentAmount" required="true" value="{!v.payment.ERP7__Total_Amount__c}" label="{!$Label.c.Acc_Pay_Payment_Amount}" formatter="currency" step="0.01" messageWhenValueMissing="{!$Label.c.Please_enter_the_value}"/>
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.cnAmount>0}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" value="{!v.cnAmount}" label="{!$Label.c.Acc_Pay_Applied_Credit}" formatter="currency" step="0.01" disabled="true"/>
+                        </lightning:layoutItem>
+                        
+                        </aura:if>
+                        <aura:if isTrue="{!v.payment.ERP7__Total_Amount__c >0}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <c:CustomInputLookUp label="{!$Label.c.Payment_Account}" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Payment_Account__c}" aura:Id="RpaymentAccount"  required="true" qry="{! v.OrgId != ''?' AND ERP7__Organisation__c =\''+ v.OrgId+'\''+ ' AND ERP7__Payment_Account__c=true' : ' AND ERP7__Payment_Account__c=true'}"/><!--qry="{!v.AccountsFilter}"    -->
+                            
+                        </lightning:layoutItem>
+                        </aura:if>
+                        <aura:if isTrue="{!v.payment.ERP7__Total_Amount__c >0}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="number" aura:id="RbankFee"  value="{!v.payment.ERP7__Bank_Charges__c}" label="{!$Label.c.Bank_Charges}" formatter="currency" step="0.01" min="1" messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" onchange="{!c.resetInvoices}"/>
+                        </lightning:layoutItem>
+                        <aura:if isTrue="{!v.payment.ERP7__Bank_Charges__c > 0}">
+                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                <c:CustomInputLookUp label="{!$Label.c.Bank_Fee_Account}" required="true" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Bank_Fee_COA__c}" aura:Id="RbankFeeAccount"  qry=" AND RecordType.DeveloperName = 'Expense' " />
+                            </lightning:layoutItem>
+                        </aura:if>
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                            <lightning:input type="text" aura:id="RcheckReference" required="true" value="{!v.payment.ERP7__Reference_Cheque_No__c}" label="{!$Label.c.Reference_Number}"  messageWhenValueMissing="{!$Label.c.Please_enter_the_value}"/>
+                        </lightning:layoutItem>
+                        </aura:if>
+                        <lightning:layoutItem size="12" padding="horizontal-small">
+                            
+                            <lightning:radioGroup name="radioButtonGroupRequired"
+                                                  label="{!$Label.c.Payment_Mode}"
+                                                  options="{!(v.RT=='On_Account_Payment'?v.options2:v.options1)}"
+                                                  value="{!v.paymentMode }"
+                                                  type="button"
+                                                  required="true" onchange="{!c.checkSettings}"/>
+                            <!-- disabled="{!(v.paymentMode=='Credits'?v.creditBalance>0?false:true:false)}" -->
+                        </lightning:layoutItem>
+                        
+                        
+
+                        
+                        <!--<aura:if isTrue="{!(v.paymentMode=='Cheque'?true:v.paymentMode=='Cash'?true:false)}">
+                        <lightning:layoutItem size="3" padding="horizontal-small">
+                          <ERP7:CustomInputLookUp label="Payment Account" objectAPIName="ERP7__Chart_of_Accounts__c" IconName="standard:account" selectedRecordId="{!v.payment.ERP7__Payment_Account__c}" aura:Id="paymentAccount"  required="true" qry="{!v.AccountsFilter}" />
+                   
+                        </lightning:layoutItem>
+                        </aura:if> -->    
+                        
+                        <!--<aura:if isTrue="{!equals(v.paymentMode,'Cheque')}">
+                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                <lightning:input type="text" aura:id="checkReference" required="true" value="{!v.payment.ERP7__Reference_Cheque_No__c}" label="Cheque Transaction Number"  messageWhenValueMissing="{!$Label.c.Please_enter_the_value}" onchange="{!c.resetInvoices}"/>
+                            </lightning:layoutItem>
+                        </aura:if>-->
+                        <aura:if isTrue="{!equals(v.paymentMode,'Card')}">
+                            <!-- Card Related Fields-->                            
+                        </aura:if>     
+                        
+                        
+                    </lightning:layout>
+                </lightning:layoutItem>
+         <!--   <aura:if isTrue="{!v.setRT!='Customer payment'}"> -->
+            
+            <lightning:layoutItem size="12" class="slds-p-top_medium">
+                <div ><!-- class="my-scrollable-element" style="height:400px;overflow:auto;" -->
+                <div class="card shadow-sm m-3">
+                <div class="card-body">
+                <aura:if isTrue="{!v.creditNotes.length>0}">
+                <a href="javascript:void(0)" onclick="{!c.displayCreditNote}">
+                    <h3 class="creditnotes-text"><lightning:icon iconName="utility:chevrondown" size="x-small"></lightning:icon>&nbsp;{!$Label.c.Acc_Recev_Credit_Notes}</h3>
+                    
+                    </a>
+                    <div class="mb-3"></div>
+                </aura:if>
+                <aura:if isTrue="{!and(v.creditNotes.length>0, v.displayCN)}">
+                    
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="{!$Label.c.Credit_Note1}">{!$Label.c.Credit_Note1}</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="{!$Label.c.Acc_Pay_Available_Credit}">{!$Label.c.Acc_Pay_Available_Credit}</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="{!$Label.c.Acc_Recev_Debit}">{!$Label.c.Acc_Recev_Debit}</div>
+                                    </th>
+                                    <th  scope="col" >
+                                        <div class="slds-truncate" title="{!$Label.c.Acc_Pay_Balance}">{!$Label.c.Acc_Pay_Balance}</div>
+                                    </th>
+                                    
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <aura:if isTrue="{!v.creditNotes.length>0}">
+                                    <aura:iteration items="{!v.creditNotes}" var="item">
+                                        <tr class="slds-hint-parent">
+                                            <td data-label="Reference #">
+                                                <a href="{!('/'+item.credNote.Id)}" target="_blank">{!item.credNote.Name}</a>
+                                            </td>
+                                            <td data-label="Total Amount" >
+                                                <lightning:formattedNumber value="{!item.credNote.ERP7__Balance__c}" style="currency"/>
+                                            </td>
+                                            <td data-label="Payment">
+                                                <lightning:input type="number" aura:id="appliedpayment" value="{!item.debitAmount}" variant="label-hidden" name="{!item.Id}" formatter="currency" step="0.01" class="cinput2" max="{!(item.credNote.ERP7__Credit__c-item.credNote.ERP7__Debit__c)}" onchange="{!c.updateRefundPaymentAmount}"/>
+                                            </td>
+                                            <td data-label="Amount Due" >
+                                                <lightning:formattedNumber value="{!(item.credNote.ERP7__Balance__c-item.debitAmount)}" style="currency"/>
+                                            </td>
+                                        </tr>
+                                        
+                                    </aura:iteration>
+                                </aura:if>
+                            </tbody>
+                        </table>
+                    
+                </aura:if>
+                </div>
+                </div>
+                </div>
+            </lightning:layoutItem>
+           
+        </lightning:layout>
+        <div class="slds-docked-form-footer slds-float_right">
+            <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!v.cancelclick}" class=""/>
+            
+            <aura:if isTrue="{!equals(v.paymentMode,'Card')}">
+                <lightning:button name="Card Payment" label="{!$Label.c.Card_Payment}"  variant="brand" onclick="{!c.cardPaymentModal}"  class="color-white"/>
+                <aura:set attribute="else">
+                    <aura:if isTrue="{!v.setRT=='Debit_Note_Payments'}">
+                        <div onmouseover="{!c.setPostToFalse}">
+                            <lightning:button name="Save" label="{!$Label.c.ContractConsole_Save}"  variant="brand" onclick="{!v.saveclick}"  class="color-white"/>
+                        </div>
+                        <div onmouseover="{!c.setPostToTrue}">
+                            <lightning:button name="Save and Post" label="{!$Label.c.Save_and_Post}" variant="brand" onclick="{!v.saveclick}"  class="color-white"/>
+                        </div>
+                        <aura:set attribute="else">
+                            <div onmouseover="{!c.setPostToFalse}">
+                                <lightning:button name="Save" label="{!$Label.c.ContractConsole_Save}"  variant="brand" onclick="{!c.saveRefund}" disabled="{!(v.setRT=='Customer payment'?false:v.invoiceList.length==0)}" class="color-white"/>
+                            </div>
+                            <div onmouseover="{!c.setPostToTrue}">
+                                <lightning:button name="Save and Post" label="{!$Label.c.Save_and_Post}" variant="brand" onclick="{!c.saveRefundPost}" disabled="{!(v.setRT=='Customer payment'?false:v.invoiceList.length==0)}" class="color-white"/>
+                            </div> 
+                        </aura:set>    
+                    </aura:if>
+                </aura:set>
+            </aura:if>
+            
+          </div>
+    </div>
+    </aura:if>
+   
+    <aura:if isTrue="{!v.ShowPaymentType}"> 
+         <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open RecordPmt-class6">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="{!c.cancelclick}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                            
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                        <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate RecordPmt-class7">
+                                 {!$Label.c.Select_Payment_Type} </h2>
+                    </header>
+                <div class="slds-modal__content" id="modal-content-id-1">
+                   
+                    <div class="epr_Mark7">
+                    	<div class="container-fluid">
+                            <div class="row slds-p-around--large RecordPmt-class8">
+                                <div class="col-md-6 slds-grid">
+                                    <lightning:input type="checkbox" aura:id="invoiceCheckbox" onchange="{!c.onCheck}" class="width20"/>
+                                	 <!--<inputCheckbox aura:id="invoiceCheckbox"  change="{!c.onCheck}" class="width20"/>--> <!-- label="PO Bill" -->
+                                     &nbsp;<label class="slds-form-element__label slds-p-left--small pt-0">{!$Label.c.Invoice}</label>
+                                </div>
+                                <div class="col-md-6 slds-grid">
+                                    <lightning:input type="checkbox" aura:id="customerCheckbox" onchange="{!c.onCheck}" class="width20"/>
+                                    <!--<inputCheckbox aura:id="customerCheckbox"  change="{!c.onCheck}" class="width20"/>-->
+                                      &nbsp;<label class="slds-form-element__label slds-p-left--small pt-0">{!$Label.c.Refund}</label>
+                                </div>
+                            </div><br/>
+                            <br/>
+                            <footer class="slds-modal__footer RecordPmt-class9">
+                            <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.cancelclick}" class="slds-m-left_x-small" variant="neutral"/>
+                            </footer>
+                            </div>
+                        </div>
+                  	 </div> 
+             </div>
+        </section>
+    </aura:if>
+    
+    <!-- Modal Card -->
+		<div class="erp_Mark7 displaynone-label bg-transparent">
+        <section aura:id="myModalCard" role="dialog" tabindex="-1" aria-labelledby="PBModalHeading" aria-modal="true" aria-describedby="PBModalBody" class="slds-modal slds-modal_medium">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon class="slds-modal__close" alternativeText="{!$Label.c.Close_Timesheets}" iconName="utility:close" onclick="{!c.closeCardModal}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                    <div class="slds-grid">
+                        <div class="col-md-4">
+                            <h2 id="deleteModalHeading" class="slds-text-heading_medium slds-hyphenate RecordPmt-class10">{!$Label.c.Card_Payment}</h2>
+                        </div>
+                        <div class="col-md-4">
+                            <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.OrgId}" IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND ERP7__Account_Type__C = 'Organisation'"/>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="slds-form-element">
+                                <!--<label class="slds-form-element__label" for="text-input-01"><span class="clr-red">* </span> Payment Type</label>-->
+                                <div class="slds-form-element__control">
+                                    <ui:inputSelect class="slds-select" aura:id="payType" value="{!v.payType}"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="contactModalBody">
+                    <p>
+                        <div class="container-fluid">
+                            <aura:if isTrue="{!v.showSpinner}">
+                                <lightning:spinner variant="brand" size="large" class="mainSpinClass"/><!--alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"-->
+                            </aura:if>
+                            <!--<aura:if isTrue="{!!equals(v.payType, 'Stripe')}">-->
+                            <div class="row slds-m-top--xx-small">
+                                <div class="col-md-12 col-sm-12 col-xs-12">
+                                    <span class="RecordPmt-class11">
+                                        <lightning:formattedText aura:id="paymentError" value="{!v.CardError}" class="displaynone-label"/>
+                                    </span>
+                                </div>
+                           
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span> {!$Label.c.Card_Holder_Name}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:input value="{!v.PaymentMethod.ERP7__Name_on_Card__c}" class="displaynone-label"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span RecordPmt-class12="RecordPmt-class12">* </span> {!$Label.c.Card_Type}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.PaymentMethod.ERP7__CardType__c}" class="displaynone-label">
+                                            <aura:iteration items="{!v.cardOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span> {!$Label.c.Card_Number}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="password" value="{!v.PaymentMethod.ERP7__Card_Number__c}" class="displaynone-label"/>                                        
+                                    </div>
+                                </div>
+                            </div>                            
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span>CVV</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="password" value="{!v.CVV}" aura:id="cvv" class="displaynone-label" maxlength="4"/>                                        
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span> {!$Label.c.Expiry_Month}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.PaymentMethod.ERP7__Card_Expiration_Month__c}" class="displaynone-label">
+                                            <aura:iteration items="{!v.monthsOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span> {!$Label.c.Expiry_Year}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.PaymentMethod.ERP7__Card_Expiration_Year__c}" class="displaynone-label">
+                                            <aura:iteration items="{!v.yearsOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12">* </span> {!$Label.c.Cash_Payment_Amount}</label>
+                                    <div class="slds-form-element__control">  
+                                        <aura:if isTrue="{!v.isMultiCurrency}">
+                                            {!v.orderCurrency}&nbsp;<lightning:formattedNumber value="{!v.payment.ERP7__Total_Amount__c}" style="decimal" maximumFractionDigits="2" minimumFractionDigits="2"/>
+                                            <aura:set attribute="else">
+                                                <lightning:input type="number" formatter="currency" value="{!v.payment.ERP7__Total_Amount__c}" disabled="true" class="displaynone-label"/> 
+                                            </aura:set>
+                                        </aura:if>                                 
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                      
+                  
+                        <h1 class="pt-2 pb-2 billing-address">{!$Label.c.Billing_Address}</h1>
+                        <div class="row">
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"></span>{!$Label.c.Address_line_1}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:input value="{!v.billingAdd.ERP7__Address_Line1__c}" class="displaynone-label"/>                                            
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"> </span>{!$Label.c.Address_line_2}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:input value="{!v.billingAdd.ERP7__Address_Line2__c}" class="displaynone-label"/>                                            
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"> </span>{!$Label.c.City}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:input value="{!v.billingAdd.ERP7__City__c}" class="displaynone-label"/>                                            
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"></span>{!$Label.c.Cash_Payment_Country}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:select value="{!v.billingAdd.ERP7__Country__c}" class="displaynone-label">
+                                            <aura:iteration items="{!v.countryOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                            </aura:iteration>
+                                        </lightning:select>                                           
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"></span>{!$Label.c.State_Province}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:select value="{!v.billingAdd.ERP7__State__c}" class="displaynone-label">
+                                            <aura:iteration items="{!v.stateOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!option.selected}"/>
+                                            </aura:iteration>
+                                        </lightning:select>                                           
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-4 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label" for="text-input-01"><span class="RecordPmt-class12"></span>{!$Label.c.Zip_post_code}</label>
+                                    <div class="slds-form-element__control">                                        
+                                        <lightning:input value="{!v.billingAdd.ERP7__Postal_Code__c}" class="displaynone-label"/>                                            
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                                
+                      <!--</aura:if>-->
+                      </div>
+                    </p>
+                    
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning:button onclick="{!c.closeCardModal}" variant="neutral">{!$Label.c.Cancel_UserAvailabilities}</lightning:button>
+                    <lightning:button onclick="{!c.CardPayment}" variant="brand" >{!$Label.c.Pay_Now}</lightning:button>
+                       
+                </footer>
+            </div>
+        </section>
+        <div aura:id="myModalCardBackdrop" class="slds-backdrop"></div>
+    </div>
+          
+   
+    <!-- Modal Card ends-->
+    
+</aura:component>

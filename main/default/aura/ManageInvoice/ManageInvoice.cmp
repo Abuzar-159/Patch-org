@@ -1,0 +1,458 @@
+<aura:component controller="ManageInvoice" implements="lightning:actionOverride,force:hasRecordId,force:hasSObjectName,flexipage:availableForAllPageTypes" access="global" > 
+    <ltng:require styles="{!join(',', $Resource.bootStrap+'/css/bootstrap-4.1.css',$Resource.SLDS+'/assets/styles/salesforce-lightning-design-system-vf.css',$Resource.SLDS+'/assets/styles/salesforce-lightning-design-system-vf.min.css',
+                          $Resource.PickPackShipResource+'/assets/styles/font-awesome.css')}" />
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/createinvoice.css"/> 
+    <ltng:require styles="resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:attribute name="Rec" type="Invoice__c"/>
+    <aura:attribute name="InvoiceId" type="String" />
+    <aura:attribute name="OrdId" type="String"/>
+    <aura:attribute name="StandardOrdId" type="String"/>
+    <aura:attribute name="SoId" type="String" default=""/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="Name" type="String"/>
+    <aura:attribute name="Type" type="String"/>
+    <aura:attribute name="recordId" type="String"/>
+    <aura:attribute name="invoiceFields" type="List"/>
+    <aura:attribute name="INVLIList" type="List" />
+    <aura:attribute name="ItemstoDelete" type="List" /> 
+    <aura:attribute name="TotalPaidAdvance" type="Decimal" default='0.00'/>
+    <aura:attribute name="subtotal" type="Decimal" default='0.00'/>
+    <aura:attribute name="newQuantity" type="integer" default="0"/> 
+    <aura:attribute name="newTax" type="Decimal" default='0.00'/>
+    <aura:attribute name="newDescription" type="String"/>
+    <aura:attribute name="newDiscount" type="integer" default="0"/>
+    <aura:attribute name="pageReference" type="Object"/>
+    <aura:registerEvent name="refreshView" type="force:refreshView"/>
+    <aura:attribute name="allowEdit" type="Boolean" default="true"/>
+    <aura:attribute name="InvAmt" type="Integer" default='0'/>
+    <aura:attribute name="TaxAmt" type="Integer" default='0'/>
+    <aura:attribute name="Discount" type="Integer" default='0'/>
+    <aura:attribute name="AdvAmt" type="Integer" default='0'/>
+    <aura:attribute name="PayTermsoptions" type="List" />
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <span class="spinner35">
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+    </span>
+    <div class="slds-page-header">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <lightning:icon iconName="standard:work_plan" variant="inverse" size="medium" alternativeText="close" title="close" />
+                    </div>
+                    <div class="slds-media__body">
+                        <p class="slds-text-title--caps slds-line-height--reset">EDIT {!v.Name}</p>
+                        <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">
+                            <aura:if isTrue="{!v.Type == 'Sale'}">Sales </aura:if>
+                            <aura:if isTrue="{!v.Type == 'Advance'}">Advance </aura:if>
+                            <aura:if isTrue="{!v.Type == 'Schedule_Invoice'}">Schedule Invoice </aura:if>
+                        </h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <aura:if isTrue="{!v.exceptionError}">
+        <div  class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed class1','slds-notify_container slds-is-fixed class2')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error " role="status" >
+                <span class="slds-assistive-text">{!$Label.c.error}</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small slds-text-heading_x-smallextra" >{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close ship-top25" >
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                        <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+    <div class="erp_Mark7 createinvoice-class5 bg-white"> 
+        <!--lightning:recordEditForm aura:id="invoiceEditForm"
+                                  recordId="{!v.InvoiceId}"
+                                  onload="{!c.setDefaultValues}"
+                                  onsuccess="{!c.handleInvoiceSuccess}"
+                                  objectApiName="ERP7__Invoice__c">
+            <lightning:messages />
+            <lightning:layout multipleRows="true">
+                <lightning:layoutItem size="12">
+                    
+                    <lightning:layout multipleRows="true">
+                        
+                        <aura:iteration items="{!v.invoiceFields}" var="item" end="10">
+                            
+                            <lightning:layoutItem size="2" padding="around-small">
+                                <lightning:inputField fieldName="{!item}" aura:id="inv_input_field" />
+                                
+                                
+                            </lightning:layoutItem>
+                            
+                        </aura:iteration>
+                        
+                    </lightning:layout>
+                </lightning:layoutItem>
+                <lightning:layoutItem size="12">
+                    <div class="createinvoice-class6">
+                        <table class="slds-table slds-tablebordered slds-table_cell-buffer">
+                            <thead>
+                                
+                                <aura:if isTrue="{!v.INVLIList.length>0}">
+                                    
+                                    <tr>
+                                        <th>	</th>
+                                        <th class="slds-text-heading-label " scope="col"><aura:if isTrue="{!v.SoId != ''}">Order<aura:set attribute="else">{!$Label.c.Order_RMA}</aura:set></aura:if> Line Item </th>
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.AddSubscription_Product} </th>
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.PackageSlip_List_Quantity}<span class="createinvoice-class7">*</span></th>                        
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price}</th>
+                                        <th class="slds-text-heading-label" scope="col">Sub Total Price</th>
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.Tax_Amount}</th>
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.Add_Subscription_Discount}</th>
+                                        <th class="slds-text-heading-label" scope="col">{!$Label.c.InventoryConsole_Total_Price}</th>
+                                        <th class="slds-text-heading-label" scope="col">Description</th>
+                                    </tr>      
+                                    
+                                </aura:if>
+                                
+                                
+                            </thead>
+                            <aura:if isTrue="{!v.INVLIList.length>0}">
+                                <tbody> 
+                                    
+                                    <aura:iteration items="{!v.INVLIList}" var="i" indexVar="Index">                         
+                                        <tr data-index="{!Index}"> 
+                                            <td> <lightning:icon iconName="utility:delete" alternativeText="Delete" size="x-small" onclick="{!c.handledelete}" title="{!Index}"/></td> 
+                                            <td> <lightning:input type="text" value="{!i.ERP7__Order_Product__c}" title="{!Index}" disabled="true"/></td>
+                                            <td> <lightning:input type="text" value="{!i.ERP7__Product__r.Name}" title="{!Index}" disabled="true" /></td>
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__Quantity__c}" title="{!Index}"  onchange="{!c.quanchange}"/></td> 
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__Unit_Price__c}" title="{!Index}"  disabled="false" /></td>
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__Sub_Total__c}" title="{!Index}" disabled="true" /></td>
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__VAT_Amount__c}" title="{!Index}"   onchange="{!c.taxchange}"/></td>
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__Discount_Amount__c}" title="{!Index}"   onchange="{!c.dischange}"/></td>
+                                            <td> <lightning:input type="Number" value="{!i.ERP7__Total_Price__c}" title="{!Index}" disabled="true"/></td>
+                                            <td> <lightning:input type="text" value="{!i.ERP7__Description__c}" title="{!Index}" onchange="{!c.deschange}"/></td>
+                                        </tr>   
+                                        
+                                    </aura:iteration>                                          
+                                </tbody>
+                            </aura:if>
+                            
+                        </table>
+                    </div>
+                </lightning:layoutItem>
+                
+                <aura:if isTrue="{!v.INVLIList.length>0}" >
+                    <aura:if isTrue="{!equals(v.Type,'Advance')}">
+                        <lightning:layoutItem size="2" padding="horizontal-small">
+                            <p></p>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small">
+                            <lightning:inputField fieldName="ERP7__Invoice_Amount__c" aura:id="inv" disabled="true"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small">
+                            <lightning:inputField fieldName="ERP7__Tax_Amount__c" aura:id="inv" disabled="true"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small">
+                            <lightning:inputField fieldName="ERP7__Discount_Amount__c" aura:id="inv" disabled="true"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small" >
+                            <lightning:input label="Advance Amount Applied" aura:id="inv" onchange="{!c.advchange}"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small">
+                            <p></p>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small" >
+                            <lightning:inputField fieldName="ERP7__Down_Payment__c" aura:id="inv" onchange="{!c.dwpaychange}"/>
+                        </lightning:layoutItem>
+                        <lightning:layoutItem size="2" padding="horizontal-small" >
+                            <lightning:inputField fieldName="ERP7__Total_Down_Payment_Amount__c"  aura:id="inv" onchange="{!c.dwpayperchange}"/>
+                        </lightning:layoutItem>
+                        
+                        <aura:set attribute="else"> 
+                            <aura:if isTrue="{!equals(v.Type,'Schedule_Invoice')}">
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <p></p>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Sales_Order_Amount__c" aura:id="inv" disabled="true"/>
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Sales_Invoice_Percentage__c" aura:id="inv" onchange="{!c.invperchange}"/>
+                                    
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Invoice_Amount__c"  aura:id="inv" disabled="true"/>
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Amount_Paid__c" aura:id="inv" />
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <p></p>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Sub_Total_Amount__c" aura:id="inv" />
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Tax_Amount__c" aura:id="inv" disabled="true"/>
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Discount_Amount__c" aura:id="inv" disabled="true"/>
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Paid_Amount_Applied__c" aura:id="inv" onchange="{!c.advchange}"/>
+                                </lightning:layoutItem> 
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <p></p>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="2" padding="horizontal-small">
+                                    <lightning:inputField fieldName="ERP7__Total_Due__c" aura:id="inv" disabled="true"/>
+                                </lightning:layoutItem>  
+                                
+                                <aura:set attribute="else"> 
+                                    <lightning:layoutItem size="2" padding="horizontal-small">
+                                        <p></p>
+                                    </lightning:layoutItem>
+                                    
+                                    <lightning:layoutItem size="2" padding="horizontal-small">
+                                        <lightning:inputField fieldName="ERP7__Invoice_Amount__c" aura:id="inv" disabled="true"/>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="2" padding="horizontal-small">
+                                        <lightning:inputField fieldName="ERP7__Tax_Amount__c" aura:id="inv" disabled="true"/>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="2" padding="horizontal-small">
+                                        <lightning:inputField fieldName="ERP7__Discount_Amount__c" aura:id="inv" disabled="true"/>
+                                    </lightning:layoutItem>
+                                    <lightning:layoutItem size="2" padding="horizontal-small">
+                                        
+                                        <lightning:input label="Advance Amount Applied" aura:id="inv" onchange="{!c.advchange}"/>
+                                    </lightning:layoutItem> 
+                                </aura:set>
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </aura:if>
+            </lightning:layout>
+            
+        </lightning:recordEditForm-->
+        <!--_____________________________________-->
+        <div class="row padding-t-5 m-0">
+            <div class="col-md-3  slds-p-top--xx-small">
+                <!--lightning:input label="Order" type="text" value="{!v.Rec.ERP7__Order_S__r.Name}" disabled="true"/-->
+                <aura:if isTrue="{!v.Rec.ERP7__Order_S__c}">
+                    <c:CustomInputLookUp objectAPIName="Order" IconName="standard:orders" selectedRecordId="{!v.Rec.ERP7__Order_S__c}" label="Order" hideRemove="true"/>
+                </aura:if>
+                <aura:if isTrue="{!v.Rec.ERP7__Order__c}">
+                    <c:CustomInputLookUp objectAPIName="ERP7__Sales_Order__c" IconName="standard:orders" selectedRecordId="{!v.Rec.ERP7__Order__c}" label="Sales Order" hideRemove="true"/>    
+                </aura:if>
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.Rec.ERP7__Account__c}" label ="Customer Account" aura:id="customeraccount" required="true" qry=" AND ERP7__Account_Type__c= 'Customer'"/>
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <!--lightning:input label ="Contact" type="text" value="{!v.Rec.ERP7__Contact__c}" disabled="true"/-->
+                <c:CustomInputLookUp objectAPIName="Contact" IconName="standard:contact" selectedRecordId="{!v.Rec.ERP7__Contact__c}" label="Contact" aura:Id="Contact" /> 
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <!--lightning:input label ="Organisation" type="text" value="{!v.Rec.ERP7__Organisation__c}" disabled="true"/-->
+                <c:CustomInputLookUp objectAPIName="Account" IconName="standard:account" selectedRecordId="{!v.Rec.ERP7__Organisation__c}" required="true" label="Organisation" aura:Id="organisationAccount" qry=" AND ERP7__Account_Type__c= 'Organisation'"/>
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <label for="text-input-01" class="slds-form-element__label" data-aura-rendered-by="8775:0">Invoice Date<span class="createinvoice-class7" data-aura-rendered-by="8777:0">*</span></label>
+                <lightning:input variant="label-hidden" type="date" value="{!v.Rec.ERP7__Invoice_Date__c}" required="true" />
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <label for="text-input-01" class="slds-form-element__label" data-aura-rendered-by="8775:0">Invoice Due Date<span class="createinvoice-class7" data-aura-rendered-by="8777:0">*</span></label>
+                <lightning:input variant="label-hidden" type="date" value="{!v.Rec.ERP7__Invoice_Due_Date__c}" required="true"/>
+            </div>
+            <div class="col-md-3  slds-p-top--xx-small">
+                <!--lightning:input label ="Payment Terms" type="text" value="{!v.Rec.ERP7__Payment_Terms__c}" disabled="true"/-->
+                <lightning:select name="payterms"  label="Payment Terms" aura:id="payterms" value="{!v.Rec.ERP7__Payment_Terms__c}" >
+                    <aura:iteration items="{!v.PayTermsoptions}" var="state">
+                        <option text="{!state}" value="{!state}" selected="{!v.Rec.ERP7__Payment_Terms__c == state}"/>
+                    </aura:iteration>
+                </lightning:select> 
+                
+            </div>
+        </div>
+        <div class="slds-grid slds-wrap">
+            <table class="slds-table slds-tablebordered slds-table_cell-buffer">
+                <thead>
+                    
+                    <aura:if isTrue="{!v.INVLIList.length>0}">
+                        
+                        <tr>
+                            <th>	</th>
+                            <th class="slds-text-heading-label " scope="col"><aura:if isTrue="{!v.Rec.ERP7__Order_S__c}">Order<aura:set attribute="else">Sales Order</aura:set></aura:if> Line Item </th>
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.AddSubscription_Product} </th>
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.PackageSlip_List_Quantity}<span class="createinvoice-class7">*</span></th>                        
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price}<span class="createinvoice-class7">*</span></th>
+                            <th class="slds-text-heading-label" scope="col">Sub Total Price<span class="createinvoice-class7">*</span></th>
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.Tax_Amount}</th>
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.Add_Subscription_Discount}</th>
+                            <th class="slds-text-heading-label" scope="col">{!$Label.c.InventoryConsole_Total_Price}<span class="createinvoice-class7">*</span></th>
+                            <th class="slds-text-heading-label" scope="col">Description</th>
+                        </tr>      
+                        
+                    </aura:if>
+                    
+                    
+                </thead>
+                <aura:if isTrue="{!v.INVLIList.length>0}">
+                    <tbody> 
+                        
+                        <aura:iteration items="{!v.INVLIList}" var="i" indexVar="Index">                         
+                            <tr data-index="{!Index}"> 
+                                 
+                                <td> 
+                                    <aura:if isTrue="{!v.INVLIList.length == 1}">
+                                    <lightning:buttonIcon iconName="utility:delete" variant="destructive" title="{!Index}" class="delete-icon disabledButton"/>
+                                         <aura:set attribute="else">
+                                             <lightning:buttonIcon iconName="utility:delete" variant="destructive" onclick="{!c.handledelete}" title="{!Index}" class="delete-icon"/>
+                                        </aura:set>
+                                    </aura:if>
+                                </td> 
+                                
+                                <td> <aura:if isTrue="{!v.Rec.ERP7__Order_S__c}">
+                                    <lightning:input type="text" value="{!i.ERP7__Order_Product__r.OrderItemNumber}" title="{!Index}" disabled="true"/>
+                                    <aura:set attribute="else">
+                                        <lightning:input type="text" value="{!i.ERP7__Sales_Order_Line_Item__r.Name}" title="{!Index}" disabled="true"/>
+                                    </aura:set>
+                                    </aura:if>
+                                </td>
+                                <td> <lightning:input type="text" value="{!i.ERP7__Product__r.Name}" title="{!Index}" disabled="true" /></td>
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Quantity__c}" title="{!Index}"  onchange="{!c.quanchange}"/></td> 
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Unit_Price__c}" title="{!Index}"  onchange="{!c.unitpricechange}" /></td>
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Sub_Total__c}" title="{!Index}" disabled="true" /></td>
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Total_Tax__c}" title="{!Index}"   onchange="{!c.taxchange}"/></td>
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Discount_Amount__c}" title="{!Index}"   onchange="{!c.dischange}"/></td>
+                                <td> <lightning:input type="Number" step ="0.001" value="{!i.ERP7__Total_Price__c}" title="{!Index}" disabled="true"/></td>
+                                <td> <lightning:input type="text" step ="0.001" value="{!i.ERP7__Description__c}" title="{!Index}" onchange="{!c.deschange}"/></td>
+                            </tr>   
+                            
+                        </aura:iteration>                                          
+                    </tbody>
+                </aura:if>
+                
+            </table>
+            
+        </div>
+        <aura:if isTrue="{!v.INVLIList.length>0}" >
+            <aura:if isTrue="{!equals(v.Type,'Advance')}">
+                <div class="slds-grid slds-wrap">
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Invoice Amount" value="{!v.Rec.ERP7__Invoice_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Tax Amount" value="{!v.Rec.ERP7__Tax_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Discount Amount" value="{!v.Rec.ERP7__Discount_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Advance Amount Applied" value="{!v.AdvAmt}" aura:id="inv" onchange="{!c.advchange}"/>
+                    </div>
+                    
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.01" label="Down Payment" aura:id="inv" value="{!v.Rec.ERP7__Down_Payment__c}" onchange="{!c.dwpaychange}"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Total Down Payment Amount" value="{!v.Rec.ERP7__Total_Down_Payment_Amount__c}" aura:id="inv" onchange="{!c.dwpayperchange}"/>
+                    </div>
+                    
+                </div>               
+            </aura:if>
+            
+            <aura:if isTrue="{!equals(v.Type,'Schedule_Invoice')}">
+                <div class="slds-grid slds-wrap">
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Sales Order Amount" value="{!v.Rec.ERP7__Sales_Order_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div> 
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Sales Invoice Percentage" value="{!v.Rec.ERP7__Sales_Invoice_Percentage__c}" aura:id="inv" onchange="{!c.invchange}"/>
+                        
+                    </div>
+      
+                   
+                    
+                     <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Invoice Amount" value="{!v.Rec.ERP7__Invoice_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Sub Total Amount" value="{!v.Rec.ERP7__Sub_Total_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Amount Paid" value="{!v.Rec.ERP7__Amount_Paid__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Paid Amount Applied" value="{!v.Rec.ERP7__Paid_Amount_Applied__c}" aura:id="inv" onchange="{!c.advchange}"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Tax Amount" value="{!v.Rec.ERP7__Tax_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Discount Amount" value="{!v.Rec.ERP7__Discount_Amount__c}" aura:id="inv" disabled="true"/>
+                    </div>
+                    
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Total Due" value="{!v.Rec.ERP7__Total_Due__c}" aura:id="inv" disabled="true"/>
+                    </div> 
+                </div>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.Rec.ERP7__Record_Type_Name__c=='Sale'}"> 
+                <div class="slds-grid slds-wrap">
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Invoice Amount" value="{!v.InvAmt}" aura:id="inv" disabled="true"/>
+                    </div>
+                    
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Tax Amount" value="{!v.TaxAmt}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <lightning:input type="Number" step ="0.001" label="Discount Amount" value="{!v.Discount}" aura:id="inv" disabled="true"/>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        <p></p>
+                    </div>
+                    <div class="col-md-3  slds-p-top--xx-small">
+                        
+                        <lightning:input type="Number" step ="0.001" label="Advance Amount Applied" value="{!v.AdvAmt}" aura:id="inv" onchange="{!c.advchange}"/>
+                    </div>
+                </div>
+            </aura:if>
+        </aura:if>
+        <div class="slds-docked-form-footer">
+            <lightning:button label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button_neutral" onclick="{!c.CancelCalled}"/>
+            
+            <lightning:button label="{!$Label.c.ContractConsole_Save}" disabled="{!v.INVLIList.length eq 0}" variant="brand" class="slds-button slds-button_brand" onclick="{!c.handleSaveNew}"/>
+        </div>
+        
+    </div>
+    
+</aura:component>

@@ -1,0 +1,1045 @@
+<apex:page showHeader="true" sidebar="false" standardStylesheets="true" controller="Scheduler" cache="false" id="pag" docType="html-5.0" action="{!BuildSchedule}">
+<html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink">
+    <head>
+        <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+        <title>Scheduler</title>
+        <apex:stylesheet value="{!URLFOR($Resource.codebase, 'codebase/dhtmlxgantt.css')}" />
+      <!-- <apex:stylesheet value="{!URLFOR($Resource.SLDS0121, 'assets/styles/salesforce-lightning-design-system-vf.css')}" />-->
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+        <apex:stylesheet value="{!URLFOR($Resource.SLDS213, 'assets/styles/salesforce-lightning-design-system-vf.min.css')}" />
+    
+        <apex:stylesheet value="{!URLFOR($Resource.bootStrap,'/css/bootsrap.css')}" />
+        <apex:includeScript value="{!URLFOR($Resource.bootStrap,'/js/bootstrap.min.js')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery_3.5.0.min.js')}"/>
+        <apex:includeScript value="{!URLFOR($Resource.jQuery,'/js/jquery-ui.min.js')}"/>
+        <apex:stylesheet value="{!URLFOR($Resource.jQuery,'/css/jquery-ui.css')}"/>
+        <apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/font-awesome.css')}" />
+        <apex:stylesheet value="{!URLFOR($Resource.BankReconcile, 'css/erp_mark7_bootstrap.css')}" /> 
+        </head>
+    <style>
+    erp_mark7 a:hover, .erp_mark7 a:focus {
+        color: #23527c;
+        text-decoration: underline;
+        outline: 0px !important;
+    }
+     .erp_mark7 a:active, .erp_mark7 a:hover {
+        outline: 0px !important;
+    }
+    .slds .slds-table--bordered td {
+        border-top:1px solid #f7f7f7;
+    }
+    .slds .slds-table th, .slds .slds-table td {
+        padding: 5px;
+        white-space: nowrap;
+    }
+        @media screen and (max-width: 767px){
+        .epr_Mark7 .table-responsive > .table > thead > tr > th, .epr_Mark7 .table-responsive > .table > tbody > tr > th, .epr_Mark7 .table-responsive > .table > tfoot > tr > th, .epr_Mark7 .table-responsive > .table > thead > tr > td, .epr_Mark7 .table-responsive > .table > tbody > tr > td, .epr_Mark7 .table-responsive > .table > tfoot > tr > td {
+            white-space: nowrap;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+    }        
+            .epr_Mark7 .table > thead > tr > th, .epr_Mark7 .table > tbody > tr > th, .epr_Mark7 .table > tfoot > tr > th, .epr_Mark7 .table > thead > tr > td, .epr_Mark7 .table > tbody > tr > td, .epr_Mark7 .table > tfoot > tr > td {
+            padding: 5px;
+            line-height: 1.42857143;
+            vertical-align: top;
+            border-top: 2px solid #f7f7f7;
+             max-width: 100%;
+            word-wrap: break-word;
+    }
+    .epr_Mark7 .table > thead > tr > th {
+        vertical-align: bottom;
+        border-bottom: 1px solid #f7f7f7;
+        max-width: 150px;
+        word-wrap: break-word;
+}
+    .slds .slds-text-heading--label {
+    font-size: 12px;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: .0625em;
+    color: #54698d;
+    font-weight:400;
+}
+    .dateFormat {
+        padding: 0 2px;
+        display: none;
+    }
+    .errorMsg{
+        font-size:12px;
+    }
+    .slds .slds-tabs--path__item:hover + .slds-is-current:before {
+    background-color: #d8dde6;
+}
+    .slds .slds-tabs--path__item + .slds-is-complete:before, .slds .slds-tabs--path__item + .slds-is-current:before {
+     background-color: #e0e5ee; 
+}
+
+     .slds .slds-size--1-of-8 {
+    width: 10% !important;
+}
+    .slds .slds-table th, .slds .slds-table td {
+    padding: 5px;
+    white-space: nowrap;
+}
+    @media (min-width: 1200px) {
+    .container {
+        width: 1223px;
+    }
+    .noSidebarCell,
+    .sidebarCell .fixed {
+        padding: 0px;
+    }
+    .hasMotif {
+        margin: 0 0px;
+    }
+    body .bodyDiv .outerNoSidebar {
+        background: #f8f9fb;
+    }
+    .headerSearchLeftRoundedCorner #phSearchInput {
+        top: -2px;
+    }
+    .multiforce {
+        font-size: 12px;
+    }
+    .zen .zen-tabMenu a {
+        //font-size: .8em;
+        //color: #353535;
+        font-weight: 500;
+        text-decoration: none;
+    }
+    .epr_Mark7 .nav > li > a:hover,
+    .epr_Mark7 .nav > li > a:focus {
+        text-decoration: none;
+        background-color: #0070d2 ;
+    }
+    
+
+    </style>
+    
+
+    <body>
+        <apex:form id="myform">
+            <script type="text/javascript">
+            //setFocusOnLoad() {}
+            window.onload = setFocus();
+            
+            function setFocus() {
+                document.getElementById('{!$Component.myform.panelb}').focus();
+            }
+        </script>
+            <apex:actionFunction action="{!FetchSchedules}" name="Evaluate" reRender="pb" status="loading" />
+            <apex:actionFunction action="{!scheduleResources}" name="scheduleResources">
+                <apex:param assignTo="{!jString}" value="" name="schedule" /> </apex:actionFunction>
+           
+            <apex:actionFunction action="{!addChecklist}" name="addChecklist" />
+            <apex:actionFunction name="switchTab" immediate="true"/>
+            <apex:actionFunction action="{!switchTabs}" name="switchTabs" immediate="true" reRender="panelb" oncomplete="switchTab();">
+                <apex:param name="param1" assignTo="{!selectedType}" value=""/>
+            </apex:actionFunction>
+            <apex:actionFunction name="PickChange" reRender="empl,mach" status="loading"/>
+            <apex:outputPanel id="panelb"></apex:outputPanel>
+            <apex:outputPanel id="wik">
+                <div class="slds erp_mark7" style="margin: 5px;">
+                <div class="slds-page-header slds-page-header--object-home" role="banner">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                <div class="slds-media__figure">                                
+                                    <span class="slds-icon_container">
+                                        <div aria-hidden="true" class="slds-icon slds-icon-standard-process slds-icon--large" > 
+                                            <i class="fa fa-cog" aria-hidden="true" style="color:#fff;padding:14px;font-size:22px;"></i>
+                                        </div>
+                                    </span>
+                                </div>
+
+                                <div class="slds-media__bod" style="width:207px">
+                                    <p class="slds-text-title--caps slds-line-height--reset">&nbsp; </p>
+                                    <nav class="slds-context-bar__secondary" role="navigation">
+                                        <ul class="slds-grid">
+                                            <li class="slds-context-bar__item slds-context-bar__dropdown-trigger slds-dropdown-trigger slds-dropdown-trigger--hover" aria-haspopup="true" style="margin-left: 0px;">
+                                                <a href="javascript:void(0);" class="slds-context-bar__label-action" title="Menu Item" style="padding:0em;">
+                                                    <span class="slds-truncate"><h1 class="slds-page-header__title slds-truncate" title="Scheduler">Scheduler</h1></span>
+                                                </a>
+                                                
+                                               
+                                            </li>
+                                            
+                                        </ul>
+                                    </nav>
+                                    
+                                </div>
+                                <ul class="slds-grid--vertical-align-left" style=" display:inline-flex;">
+                                   <li style="padding-left: 10px;">
+                                        <span style="text-decoration:none;font-size:14px;line-height:48px;"><apex:commandLink action="{!manageResources}"  style="text-decoration:none;"><i class="fa fa-archive" aria-hidden="true"  style="color:#009688;"></i> Builder</apex:commandLink></span>
+                                    </li>
+                                         
+                                         <div style="text-align:right;margin-right:10px;">
+                                       <apex:actionStatus id="spinner1">
+                                            <apex:facet name="start">
+                                                <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_inverse.gif')}" height="42px;" width="42px;"/>
+                                            </apex:facet>
+                                        </apex:actionStatus>
+                                   </div>  
+                                </ul>
+                                
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small">
+                            <div class="slds-button-group" role="group">
+                                <apex:commandLink action="{!Back2ManageSchedulesChecklists}" immediate="true" style="text-decoration:none;" styleClass="slds-button slds-button--neutral" >
+                                   <i class="fa fa-chevron-left" aria-hidden="true" style="color:#fe8f60;"></i> Back
+                               </apex:commandLink>
+                               
+                            </div>
+                        </div>
+                    </div>
+                    
+                  </div>  
+                  
+                    <div class="epr_Mark7" style="">
+                       <!-- <nav class="navbar slds-theme--alt-inverse slds-m-bottom--x-small" style="margin-bottom: 0px;">
+                            <div class="container-fluid" style="padding-left: 0px;">
+                               
+                                <ul class="nav navbar-nav navbar-left">
+                                       <li>
+                                        <apex:commandLink action="{!Back2Scheduler}" style="text-decoration:none;" immediate="true"><i class="fa fa-cog" aria-hidden="true" style="color:#00c6b7;"></i>&nbsp;Scheduler</apex:commandLink>
+                                       </li>
+                                       <li style="margin-left:1em;"><a href="#" style="text-decoration:none;background:transparent !important;"><i class="fa fa-archive" aria-hidden="true"  style="color:#bfec6c;"></i> Builder<apex:inputHidden id="comVal" value="{!comAppend}"/></a></li>
+                                    
+                                    
+                                </ul>
+                                <ul class="nav navbar-nav navbar-right">
+                                 
+                                    <li>
+                                        <apex:commandLink action="{!Back2ManageSchedulesChecklists}" immediate="true" style="text-decoration:none;"><i class="fa fa-chevron-left" aria-hidden="true" style="color:#00c6b7;"></i> Back</apex:commandLink>
+                                    </li>
+                                   
+                                   
+                                </ul>
+                               </div>
+                        </nav>-->
+                    </div>
+                    <div class="container-fluid" style="margin-bottom:0px;background:#fff;padding-right: 0px;padding-left: 0px;">
+                        <div class="slds slds-container--fluid">
+                            <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xxx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Name.Accessible,'','none')};">
+                                <p style="padding-left:5px;margin:0px;">{!selSchedule.Name}</p>
+                            </div>
+                            
+                            <div class="epr_Mark7" style="padding:10px;">
+                                <div class="row padding-t-5">
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Name.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Name</p>
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control"> 
+                                          
+                                            <apex:outputLink value="/{!selSchedule.id}" >{!selSchedule.Name}</apex:outputLink>    
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Product__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Product</p>
+                                        <div class="slds-form-element__control"> 
+                                      
+                                        <apex:outputLink value="/{!selSchedule.Product__c}" >{!selSchedule.Product__r.Name}</apex:outputLink> </div>
+                                    </div>
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Work_Order__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Work Center</p>
+                                        <div class="slds-form-element__control"> 
+                                       
+                                        <apex:outputLink value="/{!selSchedule.Work_Order__c}" >{!selSchedule.Work_Order__r.Name}</apex:outputLink></div>
+                                    </div>
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Schedule_Start_Date__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Start Date</p>
+                                        <div class="slds-form-element__control" style="border:0px solid #f2f2f2;width:100%;font-size:12px;height:30px;padding:5px;">
+                                            <apex:outputField value="{!selSchedule.Schedule_Start_Date__c}" id="sd" html-placeholder="Start Date" style="width:100%;font-size:12px;height:30px;padding:5px;"
+                                            /> </div>
+                                    </div>
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Schedule_End_Date__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">End Date</p>
+                                        <div class="slds-form-element__control" style="border:0px solid #f2f2f2;width:100%;font-size:12px;height:30px;padding:5px;">
+                                            <apex:outputField value="{!selSchedule.Schedule_End_Date__c}" id="ed" html-placeholder="End Date" style="" /> </div>
+                                    </div>
+                                     <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Total_Cost__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Direct Labour (Cost)</p>
+                                        <div class="slds-form-element__control">
+                                           <apex:outputField value="{!selSchedule.Direct_Labour__c}" id="dc" html-placeholder="Total Cost" style="" />
+                                        </div>
+                                    </div>
+                                    
+                                  
+                                
+                                
+                                </div>
+                                 <div class="row padding-t-5">
+                                     <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Total_Cost__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Direct Materials (Cost)</p>
+                                        <div class="slds-form-element__control">
+                                           <apex:outputField value="{!selSchedule.Direct_Materials__c}" id="dmc" html-placeholder="Total Cost" style="" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Total_Cost__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Overhead (Cost)</p>
+                                        <div class="slds-form-element__control">
+                                           <apex:outputField value="{!selSchedule.Overhead__c}" id="oc" html-placeholder="Total Cost" style="" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Total_Cost__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Total Cost</p>
+                                        <div class="slds-form-element__control">
+                                           <apex:outputField value="{!selSchedule.Total_Cost__c}" id="tc" html-placeholder="Total Cost" style="" />
+                                        </div>
+                                    </div>
+                                        <div class="col-md-2 slds-p-top--xx-small" style="display:{!if($ObjectType.Schedule__c.Fields.Progress__c.Accessible,'','none')};">
+                                        <p class="greyhead" style="font-size:14px;">Progress</p>
+                                        <div class="slds-form-element__control">
+                                           
+                                            <div class="progress" style="background-color:#ccc;margin-bottom: 10px;margin-top: 15px;">
+                                                <div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width:{!JSINHTMLENCODE(TEXT(selSchedule.Progress__c))}%"
+                                                    value="{!JSINHTMLENCODE(TEXT(selSchedule.Progress__c))}">
+                                                    <apex:outputField value="{!selSchedule.Progress__c}"/> </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                 </div>
+                            </div>
+                       
+                            
+                        </div>
+                        
+                        
+                        
+                             <div class="slds-grid slds-p-top--small">
+                             <div class="slds-tabs--path" role="application">
+                                <ul class="slds-tabs--path__nav" role="tablist">
+                                  <li class="slds-tabs--path__item {!if(selectedType=='checklist','slds-is-current','slds-is-incomplete')}" role="presentation" onclick="switchTabs('checklist');">
+                                    <a class="slds-tabs--path__link" id="tabs-path-1" aria-controls="content-path-1" aria-selected="false" tabindex="-1" role="tab"  aria-live="assertive" style="text-decoration:none;" href="javascript:void(0)">
+                                          <span class="slds-tabs--path__stage">
+                                            <svg class="slds-icon slds-icon--x-small" aria-hidden="true">
+                                              <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/utility-sprite/svg/symbols.svg#check')}"></use>
+                                            </svg>
+                                            <span class="slds-assistive-text">Stage Complete</span>
+                                          </span>
+                                          <span class="slds-tabs--path__title"> Action/Task</span>
+                                        
+                                        <!-- <span class="slds-tabs--path__title">Action/Task</span>-->
+                                    </a>
+                                  </li>
+                                 
+                                  <li class="slds-tabs--path__item {!if(selectedType=='mrp','slds-is-current','slds-is-incomplete')}" role="presentation" onclick="switchTabs('mrp');">
+                                    <a class="slds-tabs--path__link" id="tabs-path-1"  aria-controls="content-path-1" aria-selected="false" tabindex="-1" role="tab"  aria-live="assertive" style="text-decoration:none;border:0;" href="javascript:void(0)">
+                                        <span class="slds-tabs--path__stage">
+                                            <svg class="slds-icon slds-icon--x-small" aria-hidden="true">
+                                              <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/utility-sprite/svg/symbols.svg#check')}"></use>
+                                            </svg>
+                                            <span class="slds-assistive-text">Stage Complete</span>
+                                          </span>
+                                          <span class="slds-tabs--path__title">  MRP (Material Requirements Planning)</span>
+                                        
+                                        
+                                         <!-- <span class="slds-tabs--path__title">MRP</span> -->
+                                    </a>
+                                  </li>
+                                   <li class="slds-tabs--path__item {!if(selectedType=='ra','slds-is-current','slds-is-incomplete')}" role="presentation" onclick="switchTabs('ra');">
+                                    <a class="slds-tabs--path__link" id="tabs-path-1"  aria-controls="content-path-1" aria-selected="false" tabindex="-1" role="tab" aria-live="assertive" style="text-decoration:none;" href="javascript:void(0)">
+                                        <span class="slds-tabs--path__stage">
+                                            <svg class="slds-icon slds-icon--x-small" aria-hidden="true">
+                                              <use xlink:href="{!URLFOR($Resource.SLDS213, 'assets/icons/utility-sprite/svg/symbols.svg#check')}"></use>
+                                            </svg>
+                                            <span class="slds-assistive-text">Stage Complete</span>
+                                          </span>
+                                          <span class="slds-tabs--path__title">Resource Allocation</span>
+                                        
+                                         
+                                         <!--<span class="slds-tabs--path__title">Resource Allocation</span>-->
+                                    </a>
+                                  </li>
+                               </ul>
+                            </div>
+                         </div>
+                         
+                         
+                         
+                        <apex:outputPanel id="checklist" style="display:{!if(selectedType=='checklist','','none')}">
+                        
+                        <div class="slds slds-container--fluid" >
+                            <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xxx-small">
+                                <p style="padding-left:5px;margin:0px;">CheckLists</p>
+                            </div>
+                         </div>    
+                            <div class="epr_Mark7">
+                                <div class="table-responsive">      
+                                   <table class="table table--condensed slds-max-medium-table--stacked-horizontal slds-no-row-hoverslds-no-row-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="slds-text-heading--label " style="padding:7px !important;">
+                                                    <apex:commandLink action="{!addChecklist}" immediate="true" style="background: #fff;padding: 6px;border: 1px solid #ddd;border-radius: 4px;text-decoration: none;font-size: 10px;"> New <i class="fa fa-plus" aria-hidden="true" style="color:#005fb2;"></i>  </apex:commandLink> 
+                                                </th>
+                                                <th class="slds-text-heading--label " scope="col" >Name</th>
+                                                <th class="slds-text-heading--label " scope="col" >Type</th>
+                                                <th class="slds-text-heading--label " scope="col" >Reviewed By</th>
+                                                <th class="slds-text-heading--label " scope="col" >Date</th>
+                                                <th class="slds-text-heading--label " scope="col" >Weighting %</th>
+                                                <th class="slds-text-heading--label " scope="col" >Status</th>
+                                                <th class="slds-text-heading--label " scope="col" >Notes</th>
+                                            </tr>
+                                        </thead>
+                                        
+                                            <apex:outputPanel id="ikl">
+                                                <apex:variable var="count" value="{!0}" />
+                                                <apex:repeat var="scl" value="{!ScheduleChecklist}" id="pb">
+                                                <tbody>
+                                                    <tr class="slds-hint-parent">
+                                                        <td class="" style="text-align:center;" >
+                                                            <apex:commandLink action="{!RemoveChecklist}" immediate="true">
+                                                                <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="18" height="18"> </apex:image>
+                                                                <apex:param name="count" value="{!count}" assignTo="{!counter}" /></apex:commandLink>
+                                                        </td>
+                                                        <td class="" data-label="Name">
+                                                            <apex:inputField value="{!scl.Name}" required="true"/>
+                                                        </td>
+                                                        <td class="" data-label="Type">
+                                                            <apex:inputField value="{!scl.Type__c}" style="width:90%;height: 30px;"/>
+                                                        </td>
+                                                        <td class="" data-label="Reviewed By">
+                                                            <apex:inputField value="{!scl.Reviewed_By__c}" style="width:90%;" />
+                                                        </td>
+                                                        <td class="" data-label="Date">
+                                                            <apex:inputField value="{!scl.Date__c}" style="width:90%;" />
+                                                        </td>
+                                                        <td class="" data-label="Weighting %">
+                                                            <apex:inputField value="{!scl.Weight__c}" style="width:90%;"/>
+                                                        </td>
+                                                       
+                                                        <td class="" data-label="Status">
+                                                            <apex:inputField value="{!scl.Status__c}" style="height: 30px;"/>
+                                                        </td>
+                                                      
+                                                        <td class="" data-label="Notes">
+                                                            <apex:inputTextarea value="{!scl.Notes__c}"/>
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                    <apex:variable var="count" value="{!count+1}" /> </apex:repeat>
+                                            </apex:outputPanel>
+                                        
+                                        <tr>
+                                            <td style="text-align:center;" colspan="10">
+                                                <apex:commandLink value="Save" action="{!SaveCheckLists}" styleClass="slds-button slds-button--brand" />
+                                                <apex:commandLink value="Cancel" action="{!Back2ManageSchedulesChecklists}" styleClass="slds-button slds-button--neutral" style="margin-left:20px;" immediate="true"
+                                                /> </td>
+                                        </tr>
+                                    </table>
+                                </div>  
+                            </div>  
+                               
+                       
+                        </apex:outputPanel>
+                        
+                        
+                        <apex:outputPanel id="mrp" style="display:{!if(selectedType=='mrp','','none')}">
+                        <div class="slds slds-container--fluid">
+                            <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xxx-small">
+                                <p style="padding-left:5px;margin:0px;">MRP (Material Requirements Planning)</p>
+                            </div>
+                            <div class="slds-card">
+                                <div class="slds-card__body">
+                                
+                                    <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                        <thead>
+                                            <tr>
+                                                <th class="slds-text-heading--label" scope="col" style="padding:7px;padding-left: 12px;">
+                                               
+                                                    <apex:commandLink action="{!addMRP}" immediate="true" style="background: #fff;padding: 5px;border: 1px solid #ddd;border-radius: 4px;text-decoration: none;font-size:10px;">New <i class="fa fa-plus" aria-hidden="true" style="color:#005fb2;"></i>  </apex:commandLink> 
+                                               
+                                                </th>
+                                                <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Name</th>
+                                                <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Product</th>
+                                                <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Quantity</th>
+                                                <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Actual Cost</th>
+                                                <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Notes</th>
+                                            </tr>
+                                        </thead>
+                                         <apex:outputPanel id="ikmrp">
+                                        
+                                            
+                                                <apex:variable var="count" value="{!0}" />
+                                                <apex:repeat var="scl" value="{!ScheduleMRPs}" id="pbmrp">
+                                                    <tbody>
+                                                    <tr class="slds-hint-parent">
+                                                        <td class="" style="text-align:center;">
+                                                            <apex:commandLink action="{!RemoveMRP}" immediate="true">
+                                                                <apex:image url="{!URLFOR($Resource.SLDS0121,'assets/icons/action/delete_60_red.png')}" width="18" height="18"> </apex:image>
+                                                                <apex:param name="count" value="{!count}" assignTo="{!counter}" /></apex:commandLink>
+                                                        </td>
+                                                        <td  class="slds-size--1-of-4" data-label="Name">
+                                                            <apex:inputField value="{!scl.Name}" style="" required="true"/>
+                                                        </td>
+                                                        <td class="slds-size--1-of-4" data-label="Process">
+                                                            <apex:inputField value="{!scl.MRP_Product__c}" style="" required="true"/>
+                                                        </td>
+                                                        <td  class="slds-size--1-of-4" data-label="Process">
+                                                            <apex:inputField value="{!scl.Total_Amount_Required__c}" style="" required="true"/>
+                                                        </td>
+                                                        <td  class="slds-size--1-of-4" data-label="Process">
+                                                            <apex:inputField value="{!scl.BOM_Actual_Cost__c}" style="" required="true"/>
+                                                        </td>
+                                                        <td  class="slds-size--1-of-4" data-label="Work Station Assignment">
+                                                            <apex:inputTextarea value="{!scl.Notes__c}" style=""/>
+                                                        </td>
+                                                    </tr>
+                                                    </tbody>
+                                                    <apex:variable var="count" value="{!count+1}" /> 
+                                                    </apex:repeat>
+                                                
+                                            
+                                        
+                                         </apex:outputPanel>
+                                        <tr>
+                                            <td style="text-align:center;" colspan="8">
+                                                <apex:commandLink value="Save" action="{!SaveMRPs}" rendered="{!$ObjectType.MRP__c.Createable && $ObjectType.MRP__c.Updateable}" styleClass="slds-button slds-button--brand" />
+                                                
+                                                <apex:commandLink value="Cancel" action="{!Back2ManageSchedulesChecklists}" styleClass="slds-button slds-button--neutral" style="margin-left:20px;" immediate="true"
+                                                /> </td>
+                                        </tr>
+                                    </table>
+                                   
+                                </div>
+                            </div>
+                        </div>
+                        </apex:outputPanel>
+                       
+                       
+                      
+                     <apex:outputPanel id="ra" style="display:{!if(selectedType=='ra','','none')}">
+                         <div class="container-fluid" style="margin-bottom:0px;background:#fff;padding-right: 0px;padding-left: 0px;">
+                            <div class="slds-grid slds-p-top--small">
+                                
+                                <div class="epr_Mark7  slds slds-container--fluid">
+                                    <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xxx-small" style="background:#015ba7;">
+                                           <div class="row">
+                                            <div class="col-md-2" style="margin-top: 10px;">   
+                                            <p style="padding-left:5px;margin:0px;color:#ffffff;">Resource Allocation</p>
+                                            </div>
+                                            
+                                            
+                                            
+                                            <div class="col-md-3" style="display:{!if($ObjectType.Schedule__c.Fields.Actual_Workforce_Hour__c.Accessible,'','none')}">
+                                                Employee Allocation 
+                                                <div class="progress" style="background-color:#ffffff;width:90%;margin-bottom: 5px;">
+                                                    <div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width:{!JSINHTMLENCODE(TEXT(selSchedule.Actual_Workforce_Hour__c))}%"
+                                                        value="{!JSINHTMLENCODE(TEXT(selSchedule.Actual_Workforce_Hour__c))}">
+                                                        <apex:outputText value="{!FLOOR(selSchedule.Actual_Workforce_Hour__c)}%" escape="true"/> </div>
+                                                </div>
+                                           </div>
+                                           <div class="col-md-3" style="display:{!if($ObjectType.Schedule__c.Fields.Actual_Machine_Hour__c.Accessible,'','none')}">
+                                                Machine Allocation 
+                                                <div class="progress" style="background-color:#ffffff;width:90%;margin-bottom: 5px;">
+                                                    <div class="progress-bar progress-bar-success progress-bar-striped" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width:{!JSINHTMLENCODE(TEXT(selSchedule.Actual_Machine_Hour__c))}%"
+                                                        value="{!JSINHTMLENCODE(TEXT(selSchedule.Actual_Machine_Hour__c))}">
+                                                        <apex:outputText value="{!FLOOR(selSchedule.Actual_Machine_Hour__c)}%" escape="true"/> </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4" style="text-align:right;margin-top: 6px;" >
+                                               
+                                             <button type="button" class="slds-button slds-button--neutral" data-toggle="modal" data-target="#myModal">New</button>&nbsp;
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="epr_Mark7">
+                        <!-- popup start -->
+                        <!-- Modal -->
+                              <div class="modal fade" id="myModal" role="dialog" style="background: rgba(0,0,0, 0.4);">
+                                <div class="modal-dialog modal-lg" style="width: 90%;margin: 8% auto;">
+                                
+                                  <!-- Modal content-->
+                                  <div class="modal-content">
+                                    <div class="modal-header" style="height:60px;">
+                                      <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                      <span style="font-size:14px;font-weight:bold;">&nbsp;&nbsp;Resource Type : </span>&nbsp;<apex:selectList value="{!empIdsAllocated}" size="1" style="Width:150px; height:28px; margin-right:20px;" onchange="PickChange();">
+                                        <apex:selectOption itemLabel="Employees" itemValue="Employees"/>
+                                        <apex:selectOption itemLabel="Machines" itemValue="Machines"/>
+                                    </apex:selectList>  
+                                    
+                                    <apex:actionStatus id="loading" startStyle="color:red;text-align:left;">
+                                        <apex:facet name="start">
+                                            <apex:image url="{!URLFOR($Resource.PickPackShipResource,'/assets/images/spinners/slds_spinner_brand.gif')}" height="30px;" width="30px;" /> </apex:facet>
+                                    </apex:actionStatus>
+                                            
+                                    </div>
+                                    <div class="modal-body">
+                                      <!---------- Employees ------------------>
+                       
+                        <apex:outputPanel id="empl"  style="display:{!if(empIdsAllocated=='Employees','','none')};">
+                                    
+                                   
+                                    <div class="slds-card" style="height:300px; overflow:scroll;">
+                                        <div class="slds-card__body">
+                                            <table >
+                                                <tr><td>
+                                                
+                                                    
+                                                
+                                                <apex:inputText value="{!searchString}" style="width:300px; margin:10px;"  html-placeholder="Search..." rendered="{!$objectType.Employees__c.Accessible}"/>
+                                                
+                                                <apex:commandButton status="loading" value="Search" action="{!SearchEmployees}" reRender="empl" style="text-decoration:none; color:#fff; margin-top: 0px;padding:4px 8px;margin-left:20px;margin-bottom:5px;" styleClass="slds-button slds-button--brand" rendered="{!$objectType.Employees__c.Accessible}"/>
+                                       
+                                                <apex:commandButton status="loading" value="Add" action="{!AddEmployees}" reRender="wik" style="text-decoration:none; color:#fff; margin-top: 0px;padding:4px 8px;display:{!if(AvailableEmployeeList != null && AvailableEmployeeList.size > 0,'','none')};margin-left:20px;margin-bottom:5px;" styleClass="slds-button slds-button--brand" rendered="{!$objectType.Employees__c.Createable && $objectType.Employees__c.Updateable}"/>
+                                       
+                                            <table style="" >
+                                            <tr>
+                                                <td>
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col" style="padding:7px;  padding-left: 12px;">
+                                                        <apex:actionFunction action="{!selectDeselectAllAvailableEmployees}" name="selectDeselectAllAvailableEmployees" reRender="empl,mach" status="loading"/>
+                                                        <apex:inputCheckbox value="{!selectAll}" id="ide1" selected="{!selectAll}" onclick="selectDeselectAllAvailableEmployees();" style="margin-left:10px;display:{!if(AvailableEmployeeList != null && AvailableEmployeeList.size > 0,'','none')};">
+                                                             
+                                                        </apex:inputCheckbox>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Employee</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Job Title</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Employee Profiling</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Email</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Skills</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-12" scope="col">Description</th>
+                                                    </tr>
+                                                </thead>
+                                                  
+                                                        <apex:variable var="count" value="{!0}" />
+                                                        <apex:repeat var="scl" value="{!AvailableEmployeeList}" id="pbce">
+                                                        <tbody>
+                                                            <tr class="slds-hint-parent" >
+                                                                <th class="slds-text-heading--label" style="padding-left: 23px;">
+                                                                    <apex:inputCheckbox value="{!scl.selected}" selected="{!scl.selected}" /> </th>
+                                                                <td class="slds-size--1-of-12" data-label="Employee">
+                                                                    <apex:outputLink value="/{!scl.Employee.id}" >{!scl.Employee.Name}</apex:outputLink></td>
+                                                                <td class="slds-size--1-of-12" data-label="Job Title">
+                                                                    <apex:outputField value="{!scl.Employee.Job_Title__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-12" data-label="Profiling">
+                                                                    <apex:outputField value="{!scl.Employee.Employee_Profiling__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-12" data-label="Email">
+                                                                    <apex:outputField value="{!scl.Employee.Email__c}" style="" /> </td>
+                                                                
+                                                                <td class="slds-size--1-of-12" data-label="Skills">
+                                                                    <apex:inputTextarea value="{!scl.skills}" style="height:70px;"/> 
+                                                                </td>
+                                                                <td class="slds-size--1-of-12" data-label="Description">
+                                                                    <apex:inputTextarea value="{!scl.Employee.Description__c}" style="height:70px;"/></td>
+                                                            </tr>
+                                                            </tbody>
+                                                            <apex:variable var="count" value="{!count+1}" /> </apex:repeat>
+                                                    
+                                                
+                                               </table>
+                                </td>
+                                    </tr>
+                                </table>
+                                
+                                </td> </tr>         
+                                </table>        </div>
+                                    </div>
+                                    
+                                
+                                </apex:outputPanel>
+                                <!---------- Machines ------------------>
+                                
+                                <apex:outputPanel id="mach"  style="display:{!if(empIdsAllocated=='Machines','','none')};">
+                                
+                                    <div class="slds-card" style="height:300px; overflow:scroll;">
+                                        <div class="slds-card__body">
+                                             <table >
+                                                <tr><td>
+                                                
+                                                <apex:inputText value="{!searchMachString}" style="width:300px;  margin:10px;"  html-placeholder="Search..." rendered="{!$ObjectType.Machine__c.Accessible}"/>
+                                                
+                                                <apex:commandButton status="loading" value="Search" action="{!SearchMachines}" reRender="mach" style="text-decoration:none; color:#fff; margin-top: 0px;padding:4px 8px;margin-left:20px;margin-bottom:5px;" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Machine__c.Accessible}"/>
+                                       
+                                                <apex:commandButton status="loading" value="Add" action="{!AddMachines}" reRender="wik" style="text-decoration:none; color:#fff; margin-top: 0px;padding:4px 8px;display:{!if(AvailableMachineList != null && AvailableMachineList.size > 0,'','none')};margin-left:20px;margin-bottom:5px;" styleClass="slds-button slds-button--brand" rendered="{!$ObjectType.Machine__c.Createable && $ObjectType.Machine__c.Updateable}"/>
+                                       
+                                            <table style="" >
+                                            <tr>
+                                                <td>
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label " scope="col" style="padding:7px;    padding-left: 12px;">
+                                                            <apex:inputCheckbox value="{!selectAll}" selected="{!selectAll}" style="margin-left:10px;display:{!if(AvailableMachineList != null && AvailableMachineList.size > 0,'','none')}">
+                                                                <apex:actionSupport event="onclick" action="{!selectDeselectAllAvailableMachines}" reRender="mach,empl" status="loading"/> 
+                                                            </apex:inputCheckbox>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Machine</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Production Capacity/Day</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Maximum Hours/Day</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Activation Date</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Next Maintenance Date</th>
+                                                    </tr>
+                                                </thead>
+                                                    
+                                                        <apex:variable var="count" value="{!0}" />
+                                                        <apex:repeat var="scl" value="{!AvailableMachineList}" id="pbm">
+                                                        <tbody>
+                                                            <tr class="slds-hint-parent">
+                                                                <td class="slds-text-heading--label" style="padding-left: 23px;">
+                                                                   <apex:inputCheckbox value="{!scl.selected}" selected="{!scl.selected}" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Name">
+                                                                    <apex:outputLink value="/{!scl.Machine.id}" rendered="{!$ObjectType.Machine__c.Accessible}">{!scl.Machine.Name}</apex:outputLink></td>
+                                                                <td class="slds-size--1-of-4" data-label="Production Capacity/Day">
+                                                                    <apex:outputField value="{!scl.Machine.Production_Capacity_Per_Day__c}" style="" /> </td>
+                                                                    <td class="slds-size--1-of-4" data-label="Maximum Hours/Day">
+                                                                    <apex:outputField value="{!scl.Machine.Maximum_Hours_Day__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Activation Date">
+                                                                    <apex:outputField value="{!scl.Machine.Activation_Date__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Next Maintenance Date">
+                                                                    <apex:outputField value="{!scl.Machine.Next_Maintenance_Date__c}" style="" /> </td>
+                                                            </tr>
+                                                            </tbody>
+                                                            <apex:variable var="count" value="{!count+1}" /> </apex:repeat>
+                                                    
+                                            
+                                            
+                                </table>
+                                </td>
+                                    </tr>
+                                </table>
+                                
+                                </td> </tr>         
+                                </table>        </div>
+                                    </div>
+                              
+                            
+                            </apex:outputPanel>
+                            
+                           <!-- popup end -->
+                                    </div>
+                                    <div class="modal-footer">
+                                      <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                  </div>
+                                  
+                                </div>
+                              </div>
+                            </div> 
+                                  
+                        
+                            
+                            <!-- ----------------------------  Allocated Resources  ----------------------------->
+                            
+                            
+                            <div class="epr_Mark7" style="">
+                            <apex:outputPanel id="allocated">
+                                
+                               
+                                    <div class="slds-theme--info slds-m-top--xxx-small  slds-p-around--xxx-small">
+                                        <p style="padding-left:5px;margin:0px;">Allocated Resources</p>
+                                    </div>
+                                    <div class="slds-card">
+                                        <div class="slds-card__body">
+                                            
+                                            <table class="slds-table slds-table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="slds-text-heading--label " scope="col" style="padding:7px;    padding-left: 12px;">
+                                                            <apex:inputCheckbox value="{!deSelectAll}" selected="{!deSelectAll}" style="margin-left:10px;display:{!if(ResourceAllocations.size > 0,'','none')}">
+                                                                <apex:actionSupport event="onclick" action="{!selectDeselectAllAllocatedEmployees}" /> 
+                                                            </apex:inputCheckbox>
+                                                        </th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Name</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Employee</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Machine</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Start Date</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">End Date</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Hours</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Actual Cost</th>
+                                                        <th class="slds-text-heading--label slds-size--1-of-4" scope="col">Description</th>
+                                                    </tr>
+                                                </thead>
+                                                
+                                                    
+                                                        <apex:variable var="count" value="{!0}" />
+                                                        <apex:repeat var="RA" value="{!ResourceAllocations}" id="pba">
+                                                            <tbody>
+                                                            <tr class="slds-hint-parent">
+                                                                <td class="slds-text-heading--label" style="padding-left:22px;">
+                                                                    
+                                                                    <apex:inputCheckbox value="{!RA.selected}" selected="{!RA.selected}" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Name">
+                                                                    <apex:inputField value="{!RA.RA.Name}" style="" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Employee">
+                                                                    <apex:outputField value="{!RA.RA.Employees__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Machine">
+                                                                    <apex:outputField value="{!RA.RA.Machine__c}" style="" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Start Date">
+                                                                    <apex:inputField value="{!RA.RA.Start_Date__c}" style="height:30px;text-decoration:none;" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="End Date">
+                                                                    <apex:inputField value="{!RA.RA.End_Date__c}" style="height:30px;text-decoration:none;" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Hours">
+                                                                    <apex:inputField value="{!RA.RA.Hours__c}" style="height:30px;text-decoration:none;" /> </td>
+                                                                    <td class="slds-size--1-of-4" data-label="Hours">
+                                                                    <apex:inputField value="{!RA.RA.Cost__c}" style="height:30px;text-decoration:none;" /> </td>
+                                                                <td class="slds-size--1-of-4" data-label="Description">
+                                                                    <apex:inputTextarea value="{!RA.RA.Description__c}" style=" height:70px;" rendered="{!$ObjectType.Resource_Allocation__c.Fields.Description__c.Accessible}"/> </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" style="display:{!if(RA.error,'','none')};">
+                                                                <td class="slds-text-heading--label" style="border-top:0px solid #ffffff;" valign="top">
+                                                                    
+                                                                &nbsp; </td>
+                                                                <td class="slds-size--1-of-4" data-label="" style="border-top:0px solid #ffffff;" valign="top">
+                                                                    &nbsp;  </td>
+                                                                <td class="slds-size--1-of-4" data-label="" style="border-top:0px solid #ffffff;" valign="top">
+                                                                    &nbsp;  </td>
+                                                                <td class="slds-size--1-of-4" data-label="" style="border-top:0px solid #ffffff;" valign="top">
+                                                                    &nbsp;  </td>
+                                                                <td class="slds-size--1-of-4" valign="top" data-label="Error" colspan="4" style="padding:0px;border-top:0px solid #ffffff;">
+                                                                    <apex:outputText style="color:red;font-size:13px;" value="{!RA.ErrMsg}"/>
+                                                                </td>
+                                                            </tr>
+                                                            </tbody>
+                                                            <apex:variable var="count" value="{!count+1}" /> </apex:repeat>
+                                                    
+                                               
+                                            </table>
+                                        </div>
+                                    
+                                </div>
+
+                            </apex:outputPanel>
+                            
+                            <apex:outputPanel id="jsl">
+                                <script type="text/javascript">    
+                                   var optionss;
+                                   var cusJ;
+                                    var tableObjj;
+                                    var $j = jQuery.noConflict();        
+                                
+                                    $j(document).ready(function(){
+                                        $j('table.search-table').tableSearch({
+                                            searchPlaceHolder:'&nbsp;Search...'
+                                        });
+                                                    
+                                    });
+                                
+                                <!-- jQuery for search sales order -->
+                                    (function($j){  
+                                    $j.fn.tableSearch = function(options){
+                                        if(!$j(this).is('table')){
+                                            return;
+                                        }
+                                        
+                                        var tableObj = $j(this),
+                                            searchText = (options.searchText)?options.searchText:'',
+                                            searchPlaceHolder = (options.searchPlaceHolder)?options.searchPlaceHolder:'',
+                                            divObj = $j('<div style="float:left; margin:0px 0px 8px 20px; border:0px solid black;">'+searchText+'</div>'),
+                                            inputObj = $j('<input type="text" style="width:300px; " class="inputallfields" placeholder="'+searchPlaceHolder+'" />'),
+                                            caseSensitive = (options.caseSensitive===true)?true:false,
+                                            searchFieldVal = '',
+                                            pattern = '';
+                                            
+                                            inputObj.off('keyup').on('keyup', function(){
+                                            searchFieldVal = $j(this).val();
+                                            pattern = (caseSensitive)?RegExp(searchFieldVal):RegExp(searchFieldVal, 'i');
+                                            tableObj.find('table tbody tr').hide().each(function(){    
+                                                var currentRow = $j(this);
+                                                currentRow.find('td').each(function(){
+                                                    if(pattern.test($j(this).html())){
+                                                        currentRow.show();
+                                                        return false;
+                                                    }
+                                                });
+                                            });
+                                        });
+                                        tableObj.before(divObj.append(inputObj));
+                                        return tableObj;
+                                    }
+                                    }(jQuery));
+                                    
+                                    $('#empdes').elastic();
+                                                
+                            </script> 
+                            </apex:outputPanel>
+                                    <table>
+                                        <tr style="height:70px;">
+                                            <td style="text-align:center;" colspan="8">
+                                                <apex:commandButton value="Save" action="{!SaveResources}" styleClass="slds-button slds-button--brand" style="text-decoration:none; color:#fff;" rendered="{!$ObjectType.Resource_Allocation__c.Createable && $ObjectType.Resource_Allocation__c.Updateable}"/>
+                                                <apex:commandButton value="Delete" action="{!RemoveResources}" style="text-decoration:none;border: 1px solid #d8dde6; background-color: #fff; margin-left:20px;display:{!if(ResourceAllocations.size > 0,'','none')}" styleClass="slds-button slds-button--neutral" rendered="{!$ObjectType.Resource_Allocation__c.deletable}"/>
+                                                <apex:commandButton value="Cancel" action="{!Back2ManageSchedulesChecklists}" styleClass="slds-button slds-button--neutral" style="margin-left:20px; text-decoration:none; border: 1px solid #d8dde6; background-color: #fff;" /> 
+                                            </td>
+                                        </tr>
+                                    </table>
+                                   
+                                </div>
+                            
+                        </apex:outputPanel>
+                        
+                    </div>
+                </div>
+                <style>
+                 .slds .slds-tabs--path .slds-is-active ~ .slds-is-current .slds-tabs--path__link {
+          color: #16325c;border:none;
+          
+           }
+                    /* all */
+                    
+                    .deleteBin {}
+                    
+                    ::-webkit-input-placeholder {
+                        font-size: 11px !important;
+                        background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+                    }
+                    
+                    ) center right 5px no-repeat;
+                    background-size:12px 12px;
+                    
+                    }
+                    ::-moz-placeholder {
+                        font-size: 11px !important;
+                        background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+                    }
+                    ) center right 5px no-repeat;
+                    background-size:12px 12px;
+                    
+                    }
+                    
+                    /* firefox 19+ */
+                    :-ms-input-placeholder {
+                        font-size:11px !important;
+                        background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+                    }
+                    ) center right 5px no-repeat;
+                    background-size:12px 12px;
+                    
+                    }
+                    
+                    /* ie */
+                    input:-moz-placeholder {
+                        font-size:11px !important;
+                        background: white url({!URLFOR($Resource.codebase,'codebase/Images/search_icon.png')
+                    }
+                    ) center right 5px no-repeat;
+                    background-size:12px 12px;
+                    
+                    }
+                    .erp_mark7 .form-control-feedback {
+                        position: absolute;
+                        top: 24px;
+                        right: 14px;
+                        z-index: 2;
+                        display: block;
+                        width: 34px;
+                        height: 50px;
+                        line-height: 50px;
+                        text-align: center;
+                        pointer-events: none;
+                    }
+                    input[type=text],
+                    textarea,
+                    select {
+                        border: 1px solid rgba(0,
+                        0,
+                        0,
+                        0.1);
+                        color: #616161!important;
+                        font-size: 12px !important;
+                        padding: 5px;
+                    }
+                    input[type=text],
+                    textarea,
+                    select:focus {
+                        -webkit-box-shadow: inset 0 1px 1px rgba(0,
+                        0,
+                        0,
+                        0.075);
+                        box-shadow: inset 0 1px 1px rgba(0,
+                        0,
+                        0,
+                        0.075);
+                        -webkit-transition: border-color ease-in-out 0.15s,
+                        -webkit-box-shadow ease-in-out 0.15s;
+                        -o-transition: border-color ease-in-out 0.15s,
+                        box-shadow ease-in-out 0.15s;
+                        transition: border-color ease-in-out 0.15s,
+                        box-shadow ease-in-out 0.15s;
+                    }
+                    .delicon {
+                        height: 15px;
+                        width: 15px;
+                        cursor:pointer;
+                        margin-left: 5px;
+                        vertical-align: middle;
+                    }
+                    .lookupIcon {
+                        cursor:pointer;
+                        vertical-align: middle;
+                    }
+                    .lookupInput {
+                        display: inline;
+                        white-space: nowrap;
+                        vertical-align: middle;
+                        color: #616161;
+                        box-shadow: none !important;
+                        width: 100%;
+                        font-size: 0.85em;
+                        font-weight: 300;
+                        height: 30px;
+                        border-radius: 0;
+                        -webkit-appearance: none;
+                    }
+                    .displayNone {
+                        display:none;
+                    }
+                    .displayBlock {
+                        display:block;
+                    }
+                    .ui-autocomplete-loading {
+                        background: white url({!URLFOR($Resource.codebase,'codebase/Images/slds_spinner_brand.gif')
+                    }
+                    ) center right 10px no-repeat;
+                    background-size:20px 20px;
+                    
+                    }
+                    .placeHolder {
+                        font-style: italic;
+                    }
+                    .ui-helper-hidden-accessible {
+                        display:none;
+                    }
+                    .liclassik {
+                        background: #ffffff;
+                        width: 20%;
+                        border-bottom: 1px solid #f2f2f2;
+                        border-left: 1px solid #f2f2f2;
+                        border-right: 1px solid #f2f2f2;
+                        color: #333;
+                        padding-left: 5px;
+                        position: relative;
+                        left: -60px;
+                        top: 0px;
+                        list-style:none;
+                        cursor:pointer;
+                    }
+                    .liclassik:hover {
+                        background: #f4f4f4;
+                        width: 20%;
+                        border-bottom: 1px solid #f2f2f2;
+                        border-left: 1px solid #f2f2f2;
+                        border-right: 1px solid #f2f2f2;
+                        color: #333;
+                        padding-left: 5px;
+                        position: relative;
+                        left: -61px;
+                        top: 0px;
+                        list-style:none;
+                        cursor:pointer;
+                    }
+
+       </style>
+            </apex:outputPanel>
+        </apex:form>
+    </body>
+   </html> 
+</apex:page>

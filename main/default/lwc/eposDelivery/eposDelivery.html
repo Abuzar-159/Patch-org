@@ -1,0 +1,461 @@
+<template>
+    <template if:true={spinner}>
+        <lightning-spinner variant="brand" size="large" alternative-text="Please wait while loading..."></lightning-spinner>        
+    </template>
+    <div class="slds-grid slds-wrap">
+    <div class="col-md-9" >
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>{labels.Name}</th>
+                    <th>{labels.Type}</th>                    
+                    <th>{labels.Tracking_No}</th>
+                    <th>{labels.Delivery_Date}</th>
+                    <th>{labels.Status}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template if:true={isShipmentsList} for:each={shipmentsList} for:item="ship" for:index="index">
+                    <tr key={ship.Id}>
+                        <td>
+                            <lightning-formatted-url value={ship.nameUrl} label={ship.Name} target="_blank"></lightning-formatted-url>
+                        </td>
+                        <td>
+                            <lightning-formatted-text value={ship.shipmentType}></lightning-formatted-text>
+                        </td>
+                        <td>
+                            <lightning-formatted-text value={ship.ERP7__Tracking_Number__c}></lightning-formatted-text>
+                        </td>
+                        <td>
+                            {ship.ERP7__Shipment_Delivery_Date__c}
+                        </td>
+                        <td>
+                            <lightning-formatted-text value={ship.ERP7__Status__c}></lightning-formatted-text>
+                        </td>
+                    </tr>
+                </template>
+                <template if:false={isShipmentsList}>
+                    <tr>
+                        <td colspan="5">
+                            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                <i class="mdi mdi-alert-circle-check icon-size-warning"></i>
+                                <div>{labels.Shipment}&nbsp;{labels.not_found} </div>
+                            </div>
+                        </td>
+                    </tr> 
+                </template>
+                   
+            </tbody>
+        </table>        
+    </div>    
+    <div class="col-md-3">
+        <template if:true={isOrderHasId}>
+            <button onclick={estimateDeliveryModalOpen} class="btn btn-lighten-success waves-effect  width-md waves-info mb-1 text-left mr-2"><i class="mdi mdi-file-document-edit mr-1"></i>{labels.Estimate_Delivery}</button>
+            <button onclick={shipmentModalOpen} class="btn btn-lighten-info waves-effect  width-md waves-info mb-1 text-left mr-2"><i class="mdi mdi-truck mr-1"></i>{labels.Shipment}</button>
+        </template>
+    </div>
+        <!--<div>
+            <div >
+                <div if:true={showUPS}>
+                    <button type="submit" title="UPS" onclick={estimateDeliveryModalOpen}>
+                        <img alt="UPS"  class="slds-button__icon slds-button__icon--right" src={UPSLogo}></img>
+                    </button>            
+                </div>
+                <div if:true={showFedex}>
+                    <button class="slds-button" title="FedEx">
+                        <img alt="FedEx"  class="slds-button__icon slds-button__icon--right" src={FedexLogo}></img>
+                    </button>            
+                </div>
+                <div if:true={showDHL}>
+                    <button class="slds-button" title="DHL">
+                        <img alt="DHL"  class="slds-button__icon slds-button__icon--right" src={DHLLogo}></img>
+                    </button>            
+                </div>
+                <div if:true={showShipment}>                    
+                    <button class="slds-button" title="Internal Shipment">Shipment
+                        <i class="fa fa-truck" aria-hidden="true"></i> 
+                    </button>            
+                </div>
+            </div> 
+        </div>-->
+    </div>
+    <template if:true={isEstimateModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large" aria-labelledby="modal-heading-01" aria-modal="true">
+            <div class="erp_Mark7 slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning-icon icon-name="utility:close" class="customfill" alternative-text="Close" title="Close" onclick={estimateDeliveryModalClose}></lightning-icon>
+                    </button>
+                    <div>
+                        <h1 class="slds-modal__title slds-hyphenate">{labels.Estimate_Delivery}</h1>
+                    </div>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">                                        
+                    <div class="container-fluid">
+                        <div class="row slds-m-top--xx-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <div if:true={shipmentError} class="required">
+                                    *&nbsp;<lightning-formatted-text value={shipmentError}></lightning-formatted-text>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="slds-grid slds-wrap slds-m-top--xx-small" > 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Package_Type}: UPS</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox variant="label-hidden" value={selectedUPSPack} placeholder={labels.Select} options={UPSPackages} onchange={handleUPSPackage}></lightning-combobox>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Package_Type}: Fedex</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox variant="label-hidden" value={selectedFedexPack} placeholder={labels.Select} options={FedexPackages} onchange={handleFedexPackage}></lightning-combobox>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Shipment_Date}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="date" value={shipDate} label="Shipment Date" onchange={handleShipDate} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <!--<div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">Admin Fee</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input variant="label-hidden" type="number" formatter="currency" value={adminFee} label="" oncommit={handleAdminFee}></lightning-input>
+                                    </div>
+                                </div>
+                            </div> -->
+                        </div>
+                            
+                            
+                        
+
+                        <p>{labels.Available_Services}</p>
+                        <div class="row slds-m-top--x-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <table class="slds-table slds-table--bordered">
+                                    <thead>                                 
+                                        <tr>
+                                            <th>{labels.Select}</th>
+                                            <th>{labels.Service_Code}</th>
+                                            <th>{labels.Service_Type}</th>
+                                            <th>{labels.Total} <lightning-icon icon-name="utility:arrowdown" alternative-text="Sort" size="xx-small" onclick={sortServices} class="clickableIcon" title={sortOrder}></lightning-icon></th>
+                                            <!--<th>Currency</th>-->
+                                            <th>{labels.Delivery_Date}</th>
+                                            <th>{labels.Service_From}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template if:true={allServices} for:each={allServices} for:item="service" for:index="index">
+                                            <tr key={service.keyId}>
+                                                <td>
+                                                    <input type="radio" name="fav_language" value={index} onclick={handleRadio}>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={service.ServiceCode}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={service.ServiceManual}></lightning-formatted-text>
+                                                    <lightning-formatted-text value={service.Service}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <div if:true={service.isShowTotalCharges}>
+                                                        <lightning-formatted-number value={service.totalCharges} ></lightning-formatted-number>&nbsp;&nbsp;<lightning-formatted-text value={service.currencyCode}></lightning-formatted-text> 
+                                                    </div>
+                                                    <div if:false={service.isShowTotalCharges}>
+                                                        <lightning-formatted-number value={service.negotiatedCharges}></lightning-formatted-number>&nbsp;&nbsp;<lightning-formatted-text value={service.currencyCode}></lightning-formatted-text> 
+                                                    </div>   
+                                                                                                    
+                                                </td>
+                                                <!--<td>
+                                                    <lightning-formatted-text value={service.currencyCode}></lightning-formatted-text>
+                                                </td>-->
+                                                <td>
+                                                    <div if:true={service.isShowDeliveryDate}>
+                                                        <lightning-formatted-text value={service.DeliveryDate}></lightning-formatted-text>
+                                                    </div>
+                                                    <div if:false={service.isShowDeliveryDate}>
+                                                        <lightning-formatted-text value={service.DeliveryDateS}></lightning-formatted-text>
+                                                    </div>                                                    
+                                                </td>  
+                                                <td>
+                                                    <lightning-formatted-text value={service.serviceFrom}></lightning-formatted-text>
+                                                </td>                                                                                          
+                                            </tr>
+                                        </template>
+                                        
+                                        <template if:false={isServiceAvl}>{labels.Services}&nbsp;{labels.not_found}</template>
+                                        <template if:true={showLoader} >
+                                            <div class="loader"></div>
+                                            {loaderText}
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        
+                        <!--<p>UPS Services</p>
+                        <p class="green">{UPS_Services.UPSErrorMsg}</p>
+                        <div class="row slds-m-top--x-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <table>
+                                    
+                                        <tr>
+                                            <th>Select</th>
+                                            <th>Service Code</th>
+                                            <th>Service Type</th>
+                                            <th>Total</th>
+                                            <th>Currency</th>
+                                            <th>Delivery Date</th>
+                                        </tr>
+                                    
+                                        <template if:true={UPS_Services.Services} for:each={UPS_Services.Services} for:item="ups">
+                                            <tr key={ups.ServiceCode}>
+                                                <td>
+                                                    <input type="radio" name="fav_language" value={ups} onclick={handleRadio}>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={ups.ServiceCode}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={ups.ServiceManual}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <div if:true={ups.isShowTotalCharges}>
+                                                        <lightning-formatted-number value={ups.totalCharges} format-style="currency" currency-code={ups.currencyCode}></lightning-formatted-number>
+                                                    </div>
+                                                    <div if:false={ups.isShowTotalCharges}>
+                                                        <lightning-formatted-number value={ups.negotiatedCharges} format-style="currency"></lightning-formatted-number>
+                                                    </div>                                                    
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={ups.currencyCode}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <div if:true={ups.isShowDeliveryDate}>
+                                                        <lightning-formatted-text value={ups.DeliveryDate}></lightning-formatted-text>
+                                                    </div>
+                                                    <div if:false={ups.isShowDeliveryDate}>
+                                                        <lightning-formatted-text value={ups.DeliveryDateS}></lightning-formatted-text>
+                                                    </div>                                                    
+                                                </td>
+                                                                                            
+                                            </tr>
+                                        </template>
+                                        
+                                        <template if:false={isUPS_ServicesAvl}>UPS Serviced not found</template>
+                                        <template if:true={showUPSLoader} ><div class="loader"></div></template>
+                                    
+                                </table>
+                            </div>
+                        </div>
+
+                        <p>Fedex Services</p>
+                        <p class="green">{FEDEX_Services.UPSErrorMsg}</p>
+                        <div class="row slds-m-top--x-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <table class="slds-table slds-table--bordered" >
+                                    <tr>
+                                        <th>Select</th>
+                                        <th>Service Type</th>
+                                        <th>Total</th>
+                                        <th>Currency</th>
+                                    </tr>
+                                    <template if:true={FEDEX_Services.Services} for:each={FEDEX_Services.Services} for:item="fed" for:index="index">
+                                        <tr key={fed.Service}>
+                                            <td>
+                                                <input type="radio" name="fav_language" value={fed.Selected}>
+                                            </td>
+                                            <td>
+                                                <lightning-formatted-text value={fed.Service}></lightning-formatted-text>
+                                            </td>
+                                            <td>
+                                                <lightning-formatted-number value={fed.totalCharges} format-style="currency"></lightning-formatted-number>
+                                            </td>
+                                            <td>
+                                                <lightning-formatted-text value={fed.currencyCode}></lightning-formatted-text>
+                                            </td>
+                                        </tr>
+                                    </template>                                     
+                                    <template if:false={isFEDEX_ServicesAvl}>Fedex Services not found</template>    
+                                    <template if:true={showFedexLoader} ><div class="loader"></div></template>                               
+                                </table>
+                            </div>
+                        </div>
+
+                        <p>DHL Services</p>
+                        <p class="green">{DHL_Services.UPSErrorMsg}</p>
+                        <div class="row slds-m-top--x-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <table class="slds-table slds-table--bordered" >
+                                    <thead>
+                                        <tr>
+                                            <th>Select</th>
+                                            <th>Service Type</th>
+                                            <th>Total</th>
+                                            <th>Currency</th>
+                                            <th>Commitment Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template if:true={DHL_Services.Services} for:each={DHL_Services.Services} for:item="dhl">
+                                            <tr key={dhl.ServiceName}>
+                                                <td>
+                                                    <input type="radio" name="fav_language" value={dhl.Selected}>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={dhl.ServiceName}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-number value={dhl.totalCharges} format-style="currency"></lightning-formatted-number>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={dhl.currencyCode}></lightning-formatted-text>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-text value={dhl.CommitmentDate}></lightning-formatted-text>
+                                                </td>
+                                            </tr>
+                                        </template>                                        
+                                        <template if:false={isDHL_ServicesAvl}>DHL Service not found</template>
+                                        <template if:true={showDHLLoader} ><div class="loader"></div></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>-->
+                        
+                    </div>
+                </div>
+                <footer class="slds-modal__footer text-center">
+                    <lightning-button label={labels.Cancel} variant="neutral" onclick={estimateDeliveryModalClose} class="mr-2"></lightning-button>&nbsp;&nbsp;
+                    <lightning-button label={labels.Get_Rates} variant="brand" onclick={estimateDeliveryModalOpen} class="mr-2"></lightning-button>&nbsp;&nbsp;
+                    <lightning-button label={labels.Save} variant="brand" onclick={saveEstimateDelivery} disabled={disableExtimateSave} class="mr-2"></lightning-button>&nbsp;&nbsp;
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template if:true={isInternalShipment}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large" aria-labelledby="modal-heading-01" aria-modal="true">
+            <div class="erp_Mark7 slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning-icon icon-name="utility:close" class="customfill" alternative-text="Close" title="Close" onclick={shipmentModalClose}></lightning-icon>
+                    </button>
+                    <div>
+                        <h1 class="slds-modal__title slds-hyphenate">{labels.Shipment_Details}</h1>
+                    </div>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">                                        
+                    <div class="container-fluid">
+                        <div class="row slds-m-top--xx-small">
+                            <div class="col-md-12 col-sm-12 col-xs-12">
+                                <div if:true={shipmentError} class="required">
+                                    *&nbsp;<lightning-formatted-text value={shipmentError}></lightning-formatted-text>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="slds-grid slds-wrap slds-m-top--xx-small" > 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Total_Quantity}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" value={copyOrderForSave.ERP7__Total_Quantity__c} variant="label-hidden" disabled></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Picked_qty}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" value={copyOrderForSave.ERP7__Picked_Quantity__c} variant="label-hidden" disabled></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Packed}&nbsp;{labels.Quantity}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" value={copyOrderForSave.ERP7__Packed_Quantity__c} variant="label-hidden" disabled></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Shipped}&nbsp;{labels.Quantity}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" value={copyOrderForSave.ERP7__Shipped_Quantity__c} variant="label-hidden" disabled></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Services}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input value={copyOrderForSave.ERP7__UPS_Service__c} variant="label-hidden" oncommit={handleService}></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Estimated_Delivery_Date}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="date" value={copyOrderForSave.ERP7__Estimated_Delivery_Date__c} onchange={handleEstDate} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Tracking_No}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input value={copyOrderForSave.ERP7__Tracking_Number__c} oncommit={handleTracNo} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div> 
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Estimated_cost}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" step=".01" value={copyOrderForSave.ERP7__Estimated_Shipping_Amount__c} oncommit={handleEstAmount} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Tax}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" step=".01" value={copyOrderForSave.ERP7__Shipping_VAT__c} oncommit={handleShipTax} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <div class="slds-form-element">
+                                    <label class="slds-form-element__label">{labels.Total}</label>
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="number" step=".01" value={copyOrderForSave.ERP7__Total_Shipping_Amount__c} oncommit={handleShipTotal} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer text-center">
+                    <lightning-button label={labels.Cancel} variant="neutral" onclick={shipmentModalClose} class="mr-2"></lightning-button>&nbsp;&nbsp;
+                    <lightning-button label={labels.Save} variant="brand" onclick={saveShipment}></lightning-button>&nbsp;&nbsp;
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

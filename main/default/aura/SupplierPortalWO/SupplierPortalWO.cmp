@@ -1,0 +1,359 @@
+<aura:component controller="SupplierPortalPO" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global">
+    
+    <ltng:require styles="{!join(',',
+                          $Resource.ProductListComm + '/ProductListComm/css/style.css')}"/>
+    <ltng:require styles="{!$Resource.SupplierPoratalComm  + '/SupplierPortalComm/CSS/SupplierportalComm.css'}"/>
+    <ltng:require styles="{!$Resource.SupplierPoratalComm  + '/ProductListComm/css/account.css'}"/>
+    <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require scripts="{!join(',',
+                           $Resource.ProductListComm + '/ProductListComm/script/common_scripts.min.js',                           
+                           $Resource.ProductListComm + '/ProductListComm/script/main.js',
+                           $Resource.ProductListComm + '/ProductListComm/script/carousel_with_thumbs.js'
+                           )}"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/SupplierPortalWO.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="WOList" type="WO__c[]"/>
+    <aura:attribute name="WOListDup" type="WO__c[]"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/> 
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="NoSlotsMessage" type="String"/>
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute Name="searchPOStr" type="String"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUserRecord}"/>
+    <aura:handler name="Search_Event" event="c:SearchEvent" action="{!c.searchUser}"/>
+    <aura:attribute name="SearchString" type="String" default=""/>
+    <aura:attribute name="show" type="Integer" default="10"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="0"/>
+    <aura:attribute name="revert" type="Boolean" default="true"/>    
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:method name="doInit" action="{!c.doInit}"/>
+    <aura:attribute name="AccId" type="String" default=""/>
+    <aura:handler event="c:SupplierPortalCommEvent" action="{!c.doInit}"/>
+    <aura:handler event="force:navigateToSObject" action="{!c.navigate}"/> 
+    
+    <div aura:id="sldshide"> 
+        <div class="maqsood erp_Mark7 erp_mark7 SupplierPWO-class1" aura:Id="body">
+            <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="spinner" class="slds-hide"/>
+            
+            <div>
+                <div class="container-fluid SupplierPWO-class2" >
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 mt-3" data-aura-rendered-by="54:125;a">
+                            <a class="box_topic SupplierPWO-class3" onclick="{!c.getBills}" href="javascript:void(0);">
+                                <div class="slds-grid">
+                                    <div class="slds-col col-3">
+                                        <i class="ti-book SupplierPWO-class4" ></i>
+                                    </div> 
+                                    <div class="slds-col pt-3 col-9 text-left"> 
+                                        <h3 data-aura-rendered-by="57:125;a">Bills</h3>
+                                    </div>    
+                                </div>    
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mt-3" data-aura-rendered-by="54:125;a">
+                            <a class="box_topic SupplierPWO-class5" onclick="{!c.getPayments}" href="javascript:void(0);">
+                                <div class="slds-grid">
+                                    <div class="slds-col col-3">
+                                        <i class="ti-wallet SupplierPWO-class6" ></i>
+                                    </div> 
+                                    <div class="slds-col pt-3 col-9 text-left"> 
+                                        <h3 data-aura-rendered-by="57:125;a">Payments Received</h3>
+                                    </div>    
+                                </div>    
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mt-3" data-aura-rendered-by="54:125;a">
+                            <a class="box_topic SupplierPWO-class7" onclick="{!c.getRFPs}"  href="javascript:void(0);">
+                                <div class="slds-grid">
+                                    <div class="slds-col col-3">
+                                        <i class="ti-agenda SupplierPWO-class8" ></i>
+                                    </div> 
+                                    <div class="slds-col pt-1 pr-0 col-9 text-left"> 
+                                        <h3 data-aura-rendered-by="57:125;a">RFP ( Request for Proposal)</h3>
+                                    </div>    
+                                </div>    
+                            </a>
+                        </div>
+                        <!--div class="col-lg-3 col-md-6 mt-3" data-aura-rendered-by="54:125;a">
+                            <a class="box_topic SupplierPWO-class9" onclick="{!c.getExpenses}" href="javascript:void(0);">
+                                <div class="slds-grid">
+                                    <div class="slds-col col-3">
+                                        <i class="ti-stats-up SupplierPWO-class10" ></i>
+                                    </div> 
+                                    <div class="slds-col pt-3 col-9 text-left"> 
+                                        <h3>Expenses</h3>
+                                    </div>    
+                                </div>    
+                            </a>
+                        </div-->
+                        
+                    </div>
+                    
+                    <div class="card shadow-custom SupplierPWO-class11" >
+                        <div class="card-body">  
+                            <div class="card-body pb-0 pl-2 pt-2">
+                                <div class="d-flex justify-content-between pb-2">
+                                    <div class="breadcrumbs">
+                                        
+                                        <h6 class="card-title mb-1">
+                                            <a class="SupplierPWO-class12" onclick="{!c.home}" href="">
+                                                Home&nbsp;
+                                            </a>
+                                            >&nbsp;Work Orders
+                                        </h6>    
+                                    </div>                           
+                                </div>
+                                
+                                <div class="container-fluid pl-0">
+                                    <div class="col-md-3 pl-0">
+                                        <c:SearchRecord searchString="{!v.SearchString}" Placeholder="Work Order.." aura:id="Work_Order_Id"/>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive SupplierPWO-class13" tabindex="1" >
+                                <table class="table">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="workorders"> NAME
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="Name" title="Descending Order" class="arrowColor">
+                                                        <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                   
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                        <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                              
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="purchaseorders"> PO
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="Name" title="Descending Order" class="arrowColor">
+                                                        <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                        <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                            
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="Product">Product 
+                                                    
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="ERP7__Product__r.Name" title="Descending Order" class="arrowColor">
+                                                        <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                    
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                       <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                           
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="Quantity">Quantity 
+                                                    
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="ERP7__Total_Quantity__c" title="Descending Order" class="arrowColor">
+                                                        <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                      
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                        <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                              
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="Status">Status 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="ERP7__Status__c" title="Descending Order" class="arrowColor">
+                                                        <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                   
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                        <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                              
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            
+                                            <th scope="col">
+                                                <div class="slds-truncate2" title="purchaseorders">Expected Date
+                                                    
+                                                    <span onclick="{!c.getSortedRecords}" data-service="DESC" data-record="Name" id="ERP7__ExpectedDate__c" title="Descending Order" class="arrowColor">
+                                                       <lightning:icon iconName="utility:arrowdown"  size="x-small" alternativeText="arrowdown!" title="arrowdown" />                                   
+                                                    </span> 
+                                                    <span onclick="{!c.getSortedRecords}" data-service="ASC" data-record="Name"  title="Ascending Order" class="arrowColor">      
+                                                        <lightning:icon iconName="utility:arrowup"  size="x-small" alternativeText="arrowup!" title="arrowup" />                           
+                                                    </span>
+                                                    
+                                                </div>
+                                            </th>
+                                            
+                                        </tr>
+                                    </thead>
+                                    <aura:if isTrue="{!not(greaterthan(v.WOList.length, 0))}">
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="no projects SupplierPWO-class14" >
+                                                    <div class="slds-notify_container slds-is-relative SupplierPWO-class15" >
+                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                            <div>
+                                                                <span class="slds-assistive-text">warning</span>
+                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No PO">
+                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                                </span>
+                                                            </div>
+                                                            <div class="slds-notify__content SupplierPWO-class16" >
+                                                                <h2 class="slds-text-heading_small SupplierPWO-class17">Sorry, No Records Available.</h2>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <aura:set attribute="else">
+                                    <aura:iteration items="{!v.WOList}" var="wo">
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <th scope="row" data-label="WO Name">
+                                                <div class="slds-truncate2" title="{!wo.Name}"><a href="javascript:void(0);"   data-record-Id="{!wo.Id}" data-record="ERP7__WO__c" onclick="{!c.getRecord}" target="_blank">{!wo.Name}</a></div>
+                                            </th>
+                                            
+                                            <td data-label="Purchase Order">
+                                                
+                                                <div class="slds-truncate2" title="{!wo.ERP7__Purchase_Orders__r.Name}">
+                                                    <a href="javascript:void(0);"   data-record-Id="{!wo.ERP7__Purchase_Orders__r.Id}" data-name="{!wo.ERP7__Purchase_Orders__r.Name}" data-record="ERP7__PO__c" onclick="{!c.getRecord}" target="_blank">{!wo.ERP7__Purchase_Orders__r.Name}</a>
+                                                </div>
+                                            </td>
+                                            <td data-label="Product">
+                                                
+                                                <div class="slds-truncate2" title="{!wo.ERP7__Product__r.Name}"><lightning:formattedText value="{#wo.ERP7__Product__r.Name}"/>
+                                                    <!--<a href="javascript:void(0);"   data-record-Id="{!wo.ERP7__Product__r.Id}" data-name="{!wo.ERP7__Product__r.Name}" data-record="Product2" onclick="{!c.getRecord}" target="_blank">{!wo.ERP7__Product__r.Name}</a>-->
+                                                </div>
+                                              
+                                            </td>
+                                            
+                                            <td data-label="Quantity">
+                                                <div class="slds-truncate2" title="{!wo.ERP7__Total_Quantity__c}"><lightning:formattedNumber value="{!wo.ERP7__Total_Quantity__c}"/></div>
+                                            </td>
+                                            <td data-label="Status">
+                                                <div class="slds-truncate2" title="{!wo.ERP7__Status__c}"><lightning:formattedText value="{#wo.ERP7__Status__c}"/></div>
+                                            </td>
+                                            <td data-label="Date">
+                                                <div class="slds-truncate2" title="{!wo.ERP7__ExpectedDate__c}"><lightning:formattedDateTime value="{!wo.ERP7__ExpectedDate__c}"/></div>
+                                            </td>
+                                            
+                                        </tr>
+                                    </aura:iteration> 
+                                             </aura:set>
+                                    </aura:if>
+                                </table>
+                            </div>
+                            <aura:if isTrue="{!(v.WOList.length>0)}">
+                            <aura:if isTrue="{!and(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')}"><!--(v.NoSlotsMessage!=undefined, v.NoSlotsMessage!='')-->
+                                <div class="slds-notify_container slds-is-relative SupplierPWO-class18" aura:id="criteriaMsgId">
+                                    <div class="slds-notify slds-notify_toast slds-theme_warning SupplierPWO-class19" role="alert">
+                                        <span class="slds-assistive-text">warning</span>
+                                        <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                        <div class="slds-notify__content SupplierPWO-class20" >
+                                            <h2 class="slds-text-heading_small SupplierPWO-class21">
+                                                {!v.NoSlotsMessage}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                </div>     
+                            </aura:if>
+                            </aura:if>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <aura:if isTrue="{!v.showMmainSpin}">
+                <span class="SupplierPWO-class22">
+                    <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+                </span>
+            </aura:if> 
+        </div>
+        <aura:if isTrue="{!v.revert}">
+            <div class="epr_Mark7">
+                <div class="row SupplierPWO-class23" >
+                    <aura:if isTrue="{!v.WOList.length>0}">
+                        <div class="col-md-2 SupplierPWO-class24" >
+                            <div class="slds-grid" >
+                                <div class="slds-col SupplierPWO-class25">
+                                    Show&nbsp;&nbsp;
+                                </div>  
+                                <div class="slds-col SupplierPWO-class26"> 
+                                    <lightning:select class="slds-show_inline-block"  name="select1"  value="{!v.show}" onchange="{!c.setShow}">
+                                        <option value="5">5</option>
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                    </lightning:select>
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+                    <aura:if isTrue="{!v.WOList.length>0}">
+                        
+                        <div class="col-md-3 SupplierPWO-class27">
+                            Showing <span class="text-lightblue">{!v.startCount}-{!v.endCount}</span> of total <span class="text-lightblue"> {!v.recSize} </span> Records
+                        </div>
+                        
+                    </aura:if> 
+                    
+                    <aura:if isTrue="{!v.WOList.length>0}">
+                        
+                        <div class="col-md-4 SupplierPWO-class28" >
+                            <div class="pb-3">
+                                <nav aria-label="Page navigation example" >
+                                    <ul class="pagination SupplierPWO-class29" >
+                                        <li class="SupplierPWO-class24" >
+                                            <a class="{!if(1 >= v.startCount,'SupplierPWO-class30','SupplierPWO-class31')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> <!-- -->
+                                        </li>
+                                        <li class="SupplierPWO-class24" >
+                                            <a class="{!if(1 >= v.startCount,'SupplierPWO-class30','SupplierPWO-class31')}"  onclick="{!c.Previous}"> Previous</a> <!-- -->
+                                        </li>
+                                        <li class="SupplierPWO-class24" >
+                                            <a class="{!if(v.endCount == v.recSize,'SupplierPWO-class30','SupplierPWO-class31')}" onclick="{!c.Next}">Next </a> <!--  -->
+                                        </li>
+                                        <li class="SupplierPWO-class24">
+                                            <a class="{!if(v.endCount == v.recSize,'SupplierPWO-class30','SupplierPWO-class31')}" onclick="{!c.NextLast}">&gt;&gt; </a> <!--  -->
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </aura:if> 
+                    <aura:if isTrue="{!v.WOList.length>0}">
+                        
+                        <div class="col-md-2 SupplierPWO-class32" >
+                            <div class="mb-1" >
+                                <div class="slds-grid">
+                                    <div class="slds-col SupplierPWO-class33">
+                                        Page 
+                                    </div>
+                                    <div class="slds-col">
+                                       <lightning:input type="number" variant="label-hidden" aura:id="ik" value="{!v.PageNum}" oncommit="{!c.OfsetChange}" class="width100p"/> 
+                                    </div>
+                                    <div class="slds-col SupplierPWO-class33"><span class="text-lightblue"> of &nbsp;&nbsp;{!v.PNS.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> 
+                    </aura:if>
+                </div>
+            </div></aura:if>
+    </div>    
+    
+</aura:component>

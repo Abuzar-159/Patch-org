@@ -1,0 +1,138 @@
+<aura:component access="global" controller="TimeSheetManagerLC" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId" ><!--,forceCommunity:availableForAllPageTypes,force:lightningQuickAction-->
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css"/>
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/> 
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css"/>
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__SupplierPoratalComm/CSS/overiding-standard.css"/>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+     <aura:registerEvent name="saveEventFired" type="c:saveEvent" />
+    <aura:attribute name="timeSheet" type="Timesheet__c" default="{ 'sobjectType': 'Timesheet__c',
+                                                                        'ERP7__Employees__c': '',
+                                                                        'unknown_custom_field':'',
+                                                                        'unknown_custom_field':'',
+                                                                        'ERP7__Status__c': 'Draft',
+                                                                        'ERP7__Approver__c': ''
+                                                                        }" />
+    <aura:attribute name="emp" type="Employees__c" default="{sobjectType : 'Employees__c'}" />
+    <aura:attribute name="tceObj" type="Time_Card_Entry__c" default="{sobjectType : 'Time_Card_Entry__c'}" />
+    <aura:attribute name="listtceObj" type="Time_Card_Entry__c[]" default=""/>
+    <aura:attribute name="tSheetcomp" type="Timesheet__c" />
+    <aura:attribute name="rid" type="String" default="" />
+    <aura:attribute name="id" type="String" default="" access="GLOBAL" />
+    <aura:attribute name="weekint" type="Integer" default="0" />
+    <aura:attribute name="apprError" type="String"/>
+    <aura:attribute name="AccId" type="String" default=''/>
+    <aura:attribute name="EditRecord" type="Boolean" default="false"/>
+    <aura:attribute name="FromSP" type="Boolean" default="false"/>
+    <aura:attribute name = "serverSuccess" type = "String" default=""/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <aura:registerEvent name="validationError" type="c:validationTimeSheet"/>
+    
+    <div class="maqsood erp_Mark7 erp_mark7 bg-white"> 
+        <div class="container-fluid pt-2 bg-white">
+            <div class="{!if(and(v.serverSuccess != '', v.serverSuccess != undefined),'slds-notify_container slds-is-fixed AddTimesheet-newClass2','slds-notify_container slds-is-fixed AddTimesheet-newClass3')}">
+                <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.success_AddTimesheets}</span>
+                    <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="">
+                        <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                    </span>
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_small ">{!v.serverSuccess}</h2>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeSuccess}">
+                            <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                            <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card d-flex flex-row mb-4 ">
+                <a class="d-flex AddTimesheet-newClass4">
+                    <lightning:avatar variant="circle" src="/servlet/servlet.FileDownload?file=0151o000006wi52" initials="AW" fallbackIconName="standard:person_account" alternativeText="Amy Weaver" title="Amy Weaver" class="slds-m_small" size="large"/>
+                </a>
+                <div class=" d-flex flex-grow-1 min-width-zero">
+                    <div class="card-body pl-0 align-self-center d-flex flex-column flex-lg-row justify-content-between min-width-zero AddTimesheet-newClass5">
+                        <div class="min-width-zero slds-truncate AddTimesheet-newClass6">
+                            <a >
+                                <p class="list-item-heading mb-1 truncate">{!v.emp.ERP7__First_Name__c}&nbsp;{!v.emp.ERP7__Last_Name__c}</p>
+                            </a>
+                            
+                        </div>
+                        <div class="slds-grid slds-wrap pt-2 pb-2 pl-4 pr-4">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                
+                                <div class="slds-form-element ">
+                                    <div class="slds-form-element__control">
+                                        <lightning:input type="text" value="{!v.timeSheet.Name}" label="{!$Label.c.Name_Timesheets}" placeholder="{!$Label.c.Name_AddTimesheets}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <div class="has-feedback" data-aura-rendered-by="403:0">
+                                            <c:CustomInputLookUp aura:id="project" objectAPIName="ERP7__Project__c" IconName="standard:product" selectedRecordId="{!v.timeSheet.ERP7__Project__c}" label="{!$Label.c.Project_Timesheets}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control" data-aura-rendered-by="410:0">
+                                        <lightning:select aura:id="status" value="{!v.timeSheet.ERP7__Status__c}" label="{!$Label.c.EmployeeReview_Status}">
+                                            <option value="Draft" label="{!$Label.c.Draft_AddTimesheets}"/>
+                                            <option value="Submitted" label="{!$Label.c.Submitted_AddTimesheets}"/>
+                                        </lightning:select> 
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 pr-2">
+                                
+                                <div class="slds-form-element" data-aura-rendered-by="433:0">
+                                    <div class="slds-form-element__control" data-aura-rendered-by="437:0">
+                                        <c:CustomInputLookUp aura:id="user" objectAPIName="User" IconName="standard:user" selectedRecordId="{!v.timeSheet.ERP7__Approver__c}" label="{!$Label.c.Approver_Timesheets}"/>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="{!if(and(v.serverSuccess != '', v.serverSuccess != undefined),'slds-notify_container slds-is-fixed AddTimesheet-newClass2','slds-notify_container slds-is-fixed AddTimesheet-newClass3')}">
+                    <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                        <span class="slds-assistive-text">{!$Label.c.success_AddTimesheets}</span>
+                        <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                            <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                        </span>
+                        <div class="slds-notify__content">
+                            <h2 class="slds-text-heading_small ">{!v.serverSuccess}</h2>
+                        </div>
+                        <div class="slds-notify__close">
+                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeSuccess}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="{!$Label.c.Close_Timesheets}" />	
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+           <div aura:id="TimeCEContent">
+            </div>
+            <br/>
+           <div class="slds-docked-form-footer">
+                <lightning:button label="{!$Label.c.Cancel_Timesheets}" class="slds-button slds-button--neutral" onclick="{!c.Cancel}" variant="neutral" />&nbsp;
+                <lightning:button label="{!$Label.c.Save_AddTimesheets}" class="slds-button slds-button__brand" onclick="{!c.savetSheet}" variant="brand" />
+              
+               </div>
+          
+        </div>
+    </div>
+    
+</aura:component>

@@ -1,0 +1,861 @@
+<aura:component Controller="ERP7.WorkCenterCapacityPlanning" implements="force:appHostable" access="global">
+    <head>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <!--ltng:require styles="/resource/ERP7__CMP_CSS/CSS/WorkCenterCapacityPlanning.css"/--> 
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+         
+    </head>
+    <aura:attribute name="custInvoiceTest" type="Invoice__c" default="{sobjectType:'Invoice__c','ERP7__Account__c':''}"/>
+    <aura:attribute name="WCCP" type="Object"/>
+    <aura:attribute name="MOWRAP" type="Object"/>
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="Overview" type="String"/>
+    <aura:attribute name="RecordId" type="String"/>
+    <!--<aura:attribute name="SearchMOString" type="String" default=""/>-->
+    <aura:attribute name="Show" type="Boolean" default="false"/>
+    <aura:attribute name="FilterShow" type="Boolean" default="false"/>
+    <aura:attribute name="Record" type="Object"/>
+    <aura:attribute name="simpleRecord" type="Object"/>
+    <aura:attribute name="View" type="String" default="List"/><!--Shift Planner-->
+    <aura:attribute name="MOStatusCount" type="List" />
+    <aura:attribute name="showPlanner" type="Boolean"/>       
+    <aura:attribute name="showSheduler" type="Boolean"/>
+    <aura:attribute name="showBuilder" type="Boolean"/> 
+    <aura:attribute name="ShowOrderandOrderProducts" type="Boolean"/> 
+    
+    <!--Pagination Attributes-->
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="1"/>
+    <aura:attribute name="showPg" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/>
+    
+    <aura:attribute name = "DraftMO" type = "Integer" default = "0"/>
+    <aura:attribute name = "ProgressMO" type = "Integer" default = "0"/>
+    <aura:attribute name = "CompletedMO" type = "Integer" default = "0"/>
+    <aura:attribute name = "CancelledMO" type = "Integer" default = "0"/>
+    
+    <aura:attribute name="ReplaceTravellerOrgURL" type="boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForTraveller" type="Boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForTravellerModal" type="Boolean" default="false"/>
+    <aura:attribute name="Langoptions" type="List" default="[
+                                                            {'label': 'English', 'value': 'English'},
+                                                            {'label': 'French', 'value': 'French'}
+                                                            ]"/>
+    <aura:attribute name="SelectedLang" type="String" default="English"/>
+    <aura:attribute name="MOId" type="String" default=""/>
+    <aura:attribute name="showStage" type="String" default=""/>
+    
+    <!--Pagination Attributes End-->
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="popInit" action="{!c.loadAllDetails}"></aura:method> 
+    <aura:method name="Back2Planner" action="{!c.Back2Planner}"></aura:method> 
+    <aura:method name="NavScheduler" action="{!c.NavScheduler}"></aura:method>
+    <aura:method name="NavBuilder" action="{!c.NavBuilder}"></aura:method> 
+    
+    <div class="erp_mark7 WCCP1 bg-white" aura:id="body" >
+        <span class="WCCP2">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <div class="maqsood erp_mark7 erp_Mark7 WCCP3 bg-white">
+            <div class="panel-collapse">
+                <div class="panel-body WCCP4 pb-0">
+                    <div class="d-flex align-items-center mb-0 WCCP5">
+                        <ul class="nav nav-tabs col-8 WCCP6" role="tablist" >
+                            <aura:if isTrue="{!v.showPlanner}">
+                                <li class="nav-item active"> 
+                                    <a class="nav-link WCCP7" data-toggle="tab" role="tab" onclick="{!c.Back2Planner}" ><!-- onclick="Back2ManufacturingPlanner();" -->
+                                        <i class="fa fa-list WCCP8" aria-hidden="true"  ></i>&nbsp;{!$Label.c.Planner_ManufacturingWB}</a> 
+                                </li>
+                            </aura:if>
+                            <aura:if isTrue="{!v.showSheduler}">
+                                <li class="nav-item"> 
+                                    <a class="nav-link WCCP7" data-toggle="tab" role="tab" onclick="{!c.NavScheduler}" >
+                                        <i class="fa fa-clock-o WCCP8" aria-hidden="true" ></i>&nbsp;{!$Label.c.Schedule_UsersShiftMatch}</a> 
+                                </li>
+                            </aura:if>
+                            <aura:if isTrue="{!v.showBuilder}">
+                                <li class="nav-item"> 
+                                    <a class="nav-link WCCP7" data-toggle="tab" role="tab" onclick="{!c.NavBuilder}" >
+                                        <i class="fa fa-gears WCCP8" aria-hidden="true" ></i>&nbsp;{!$Label.c.Builder_UsersShiftMatch}</a> 
+                                </li>
+                            </aura:if>
+                        </ul>
+                        <div class="slds-grid col-4 WCCP9">
+                            <div  class="mr-2" > <!--onkeypress="{!c.searchMO}" change SM 16/10/23 -->
+                                <lightning:input oncommit= "{!c.searchMO}" value="{!v.WCCP.searchMOs}" placeholder="{!$Label.c.Search_Order_Product}" variant="label-hidden"/>
+
+                               <!-- <lightning:input onchange= "{!c.searchMO}" type="Search" name="searchMO" value="{!v.WCCP.searchMOs}" placeholder="Search Order/Product..." />-->
+                            </div>
+                            <aura:if isTrue="{!v.WCCP.statusMOs != 'All'}">
+                                <a class="WCCP10" aura:id="mostat"  title="All Orders" onclick="{!c.statusSearchMO}" data-status="All" >
+                                    <center><i class="fa fa-refresh WCCP11"></i></center>
+                                </a>
+                            </aura:if>
+                            <div class="WCCP12">
+                                <a class="{!(v.View == 'Grid')?'acitve-list2 WCCP13':'WCCP14'}"  title="" data-tab = "Grid" href="javascript:void(0);" onclick="{!c.toggleTabs}">
+                                    <i class="fa fa-th-large"></i>
+                                </a>
+                                <a class="{!(v.View == 'List')?'acitve-list2 WCCP13':'WCCP14'}"  title="" data-tab = "List" href="javascript:void(0);" onclick="{!c.toggleTabs}">
+                                    <i class="fa fa-list"></i>
+                                </a>
+                            </div>
+                            <a class="WCCP14"  title="Shift Planner" data-tab = "Shift Planner" onclick="{!c.toggleTabs}" href="javascript:void(0);">
+                                <center><i class="fa fa-users WCCP15" aria-hidden="true"  ></i>&nbsp;</center>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="epr_Mark7 WCCP3 bg-greywccp">
+            <div class="container-fluid slds-p-top--xx-small">
+                <div class="row">
+                    <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),' slds-notify_container slds-is-fixed WCCP16',' slds-notify_container slds-is-fixed WCCP17')}">
+                        <div class="slds-notify slds-notify_toast slds-theme_error WCCP18" role="status" >
+                            <span class="slds-assistive-text">{!$Label.c.error}</span>
+                            <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                            </span>
+                            <div class="slds-notify__content">
+                                <h2 class="slds-text-heading_x-small  WCCP19">{!v.exceptionError}
+                                </h2>
+                            </div>
+                            <div class="slds-notify__close WCCP20">
+                                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                    <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-content WCCP21">
+                <div class="{!(v.View == 'Shift Planner')?'slds-show':'slds-hide'}" id="shiftplanner">
+                    <div class="container-fluid">
+                        <!--<aura:If isTrue="{!v.View == 'Shift Planner'}">
+                            <ERP7:UsersShiftMatch/>
+                        </aura:If>-->
+                    </div>
+                </div>
+                <div class="{!(v.View == 'List')?'slds-show':'slds-hide'}" aura:id="mosList">
+                    <div class="maqsood erp_Mark7 container-fluid">
+                        <div class="row pt-2">
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                
+                                <div class="card background-new mb-2" onclick="{!c.statusSearchMO}" data-status="Draft">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="color-card">
+                                                <p class="mb-0 color-card-head">{!$Label.c.Draft_AddTimesheets}</p>
+                                                <h2 class="text-white mb-0">{!v.DraftMO}<span class="h5"></span>
+                                                </h2>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-pencil-square-o bg-inverse-icon-background-new mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <!--div class="card background-new">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center WCCP22" onclick="{!c.statusSearchMO}" data-status="Draft">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-pencil-square-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                            <h6 class="mb-0 mt-0">{!$Label.c.Draft_AddTimesheets} &nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.DraftMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div-->
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card background-inprogress mb-2" onclick="{!c.statusSearchMO}" data-status="In Progress">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="color-card">
+                                                <p class="mb-0 color-card-head">{!$Label.c.In_Progress_AddTimeCardEntry}</p>
+                                                <h2 class="text-white mb-0">{!v.ProgressMO}<span class="h5"></span>
+                                                </h2>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-calendar-o  bg-inverse-icon-background-inprogress mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <!--div class="card background-inprogress">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center  WCCP22" onclick="{!c.statusSearchMO}" data-status="In Progress">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                               <h6 class="mb-0 mt-0">{!$Label.c.In_Progress_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.ProgressMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div-->
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card background-success mb-2" onclick="{!c.statusSearchMO}" data-status="Complete">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="color-card">
+                                                <p class="mb-0 color-card-head">{!$Label.c.Completed_AddTimeCardEntry}</p>
+                                                <h2 class="text-white mb-0">{!v.CompletedMO}<span class="h5"></span>
+                                                </h2>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-calendar-check-o  bg-inverse-icon-background-success mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <!--div class="card background-success">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center WCCP22" onclick="{!c.statusSearchMO}" data-status="Complete">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-check-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                                <h6 class="mb-0 mt-0">{!$Label.c.Completed_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.CompletedMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                       
+                                        
+                                    </div>
+                                </div-->
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card l-bg-orange mb-2"  onclick="{!c.statusSearchMO}" data-status="Cancelled">
+                                    <div class="card-body px-3 py-1">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="color-card">
+                                                <p class="mb-0 color-card-head">{!$Label.c.Cancelled_AddTimeCardEntry}</p>
+                                                <h2 class="text-white mb-0">{!v.CancelledMO}<span class="h5"></span>
+                                                </h2>
+                                            </div>
+                                            <i class="card-icon-indicator fa fa-calendar-times-o  bg-inverse-icon-l-bg-orange mt-2"></i>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                <!--div class="card l-bg-orange"> 
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center  WCCP22" onclick="{!c.statusSearchMO}" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-times-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                                 <h6 class="mb-0 mt-0">{!$Label.c.Cancelled_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.CancelledMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                       
+                                    </div>
+                                </div-->
+                            </div>
+                        </div>
+                        
+                        <div class="card shadow-sm WCCP23">
+                            <div class="card-body">
+                                <div class="table-responsive WCCP24" tabindex="1" >
+                                    <table class="table">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                               
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.Name_ManageLeave}
+                                                    </div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.MOsetupProductCode}
+                                                    </div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">Version
+                                                    </div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.Routing}
+                                                    </div>
+                                                </th>
+                                                <aura:if isTrue="{!v.ShowOrderandOrderProducts}">
+                                                    <th scope="col">
+                                                        <div class="slds-truncate2" title="">{!$Label.c.Order_Order_Product}
+                                                        </div>
+                                                    </th>
+                                                    <aura:set attribute="else">
+                                                         <th scope="col">
+                                                        <div class="slds-truncate2" title="">{!$Label.c.MO_Owner}
+                                                        </div>
+                                                    </th>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <!--
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">Sales Order
+                                                    </div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">Project
+                                                    </div>
+                                                </th>-->
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.TimeLine_ManageLeave}
+                                                    </div>
+                                                </th><!--
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">Status
+                                                    </div>
+                                                </th>-->
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.PackageSlip_List_Quantity}
+                                                    </div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate2" title="">{!$Label.c.Produced_Quantity}
+                                                    </div>
+                                                </th>
+                                                <aura:if isTrue="{!v.showStage}">
+                                                 <th scope="col">
+                                                    <div class="slds-truncate2" title="">Stage
+                                                    </div>
+                                                </th>
+                                                </aura:if>
+                                                <th scope="col"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            
+                                            <aura:if isTrue="{!v.MOWRAP.length>0}">
+                                                <aura:iteration var="RR" indexVar="RRCount" items="{!v.MOWRAP}">
+                                                    <tr class="slds-hint-parent">
+                                                        <td scope="row" data-label="">
+                                                            <div class="projectName " aura:id="reqSuppName">
+                                                                <div class="slds-grid"> 
+                                                                    <div class="pr-1">
+                                                                        <lightning:formattedText value = "{!v.Offset + RRCount + 1 + '.'}"/>&nbsp;&nbsp;
+                                                                    </div>
+                                                                    <div class="pr-1">
+                                                                        <aura:if isTrue="{!RR.Morder.ERP7__Status__c == 'Cancelled'}">
+                                                                            <i class="fa fa-times-circle WCCP25" title="{!RR.Morder.ERP7__Status__c}"></i>&nbsp;
+                                                                            <aura:set attribute="else">
+                                                                                <i title="{!RR.Morder.ERP7__Status__c}" class="{!(RR.Morder.ERP7__Status__c == 'Draft')?' fa fa-check-circle WCCP28' : (RR.Morder.ERP7__Status__c == 'Complete')?' fa fa-check-circle WCCP27' : (RR.Morder.ERP7__Status__c == 'In Progress')?' fa fa-check-circle WCCP26' : ' fa fa-check-circle WCCP25'}"></i>&nbsp;
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </div>
+                                                                    <div class="slds-col  slds-truncate2 WCCP29">
+                                                                        <strong><lightning:formattedText value="{!RR.Morder.Name}" onclick="{!c.Nav2MO}" title="{!RR.Morder.Id}"/></strong>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td scope="row" data-label="">
+                                                            <div class="slds-truncate2 WCCP29">
+                                                                <aura:if isTrue="{!and(RR.Morder.ERP7__Product__r.ProductCode != null,RR.Morder.ERP7__Product__r.ProductCode != '')}">
+                                                                    <lightning:formattedUrl  value="{!'/'+RR.Morder.ERP7__Product__c}" label="{!(RR.Morder.ERP7__Product__r.ProductCode)}" target="_blank" class="fcolor1"/> -
+                                                                </aura:if>
+                                                                <lightning:formattedUrl  value="{!'/'+RR.Morder.ERP7__Product__c}" label="{!(RR.Morder.ERP7__Product__r.Name)}" target="_blank" class="fcolor1"/>
+                                                                
+                                                            </div>
+                                                        </td>
+                                                        <td data-label="">
+                                                            <div class="slds-truncate2 WCCP29">
+                                                                <lightning:formattedUrl  value="{!'/'+RR.Morder.ERP7__Version__c}" label="{!RR.Morder.ERP7__Version__r.Name}" target="_blank" class="fcolor1"/>
+                                                            </div>
+                                                        </td>
+                                                        <td data-label="">
+                                                            <div class="slds-truncate2 WCCP29">
+                                                                <lightning:formattedUrl  value="{!'/'+RR.Morder.ERP7__Routing__c}" label="{!RR.Morder.ERP7__Routing__r.Name}" target="_blank" class="fcolor1"/>
+                                                            </div>
+                                                        </td>
+                                                         <aura:if isTrue="{!v.ShowOrderandOrderProducts}">
+                                                             <td data-label="">
+                                                                 <div class="slds-truncate2 WCCP29">
+                                                                     <aura:if isTrue="{!and(RR.Morder.ERP7__Sales_Order__c != null, RR.Morder.ERP7__Sales_Order__c != '')}">
+                                                                         {!RR.Morder.ERP7__Sales_Order__r.Name} / {!RR.Morder.ERP7__Sales_Order_Line_Item__r.Name}
+                                                                     </aura:if>
+                                                                     <aura:if isTrue="{!and(RR.Morder.ERP7__Order__c != null, RR.Morder.ERP7__Order__c != '')}">
+                                                                         {!RR.Morder.ERP7__Order__r.OrderNumber} / {!RR.Morder.ERP7__Order_Product__r.OrderItemNumber}
+                                                                     </aura:if>
+                                                                 </div>
+                                                             </td>
+                                                             <aura:set attribute="else">
+                                                                 <td data-label="">
+                                                                     <div class="slds-truncate2 WCCP29">
+                                                                         <lightning:formattedUrl  value="{!'/'+RR.Morder.ERP7__Owner__c}" label="{!RR.Morder.ERP7__Owner__r.Name}" target="_blank" class="fcolor1"/>
+                                                                     </div>
+                                                                 </td>
+                                                             </aura:set>
+                                                        </aura:if>
+                                                        <td data-label="" class="WCCP30">
+                                                            <div class="startime-maq WCCP31"><lightning:formattedDateTime value="{!RR.Morder.ERP7__StartDate__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                            <div class="endime-maq WCCP32"><lightning:formattedDateTime value="{!RR.Morder.ERP7__ExpectedDate__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                        </td><!--
+                                                    <td scope="row" data-label="">
+                                                        <div class="slds-truncate2" title="">{!RR.Morder.ERP7__Status__c}</div>
+                                                    </td>-->
+                                                        <td data-label="">
+                                                            <div class="slds-truncate2" title="">{!RR.Morder.ERP7__Quantity__c}</div>
+                                                        </td>
+                                                        <td data-label="">
+                                                            <div class="slds-truncate2" title="">
+                                                                {!RR.Morder.ERP7__Quantity_Produced__c}
+                                                               <!-- {!RR.Morder.ERP7__Progress__c  +' %'} -->
+                                                                <!--<center><lightning:progressRing value="{!RR.ERP7__Progress__c * 10}" title="{!RR.ERP7__Progress__c}" direction="Fill" variant="base"/></center>-->
+                                                            </div>
+                                                        </td>
+                                                        <aura:if isTrue="{!v.showStage}">
+                                                            <td data-label="">
+                                                                <div class="slds-truncate2" title="">
+                                                                    {!RR.Morder.ERP7__Stage__c}
+                                                                </div>
+                                                            </td>
+                                                        </aura:if>
+                                                        <td  class="WCCP30">
+                                                            <div class="slds-grid">
+                                                            <div onclick="{!c.TravellerDoc}" data-record-Id="{!RR.Morder.Id}">
+                                                                <img src="/resource/ERP7__ERPTheme/icons/pdf.png" class="cursor-pointer" title="" width="30"></img>
+                                                               
+                                                            </div>&nbsp;
+                                                           <!-- <a href="{!($Label.c.Traveller_URL_for_MO+'?RId='+RR.Morder.Id+'&amp;ra=pdf')}"  target="_blank" title="Traveller">ra=pdf&amp;
+                                                                <i title="Traveller" class="fa fa-file-pdf-o WCCP33" aria-hidden="true" ></i>
+                                                            </a>&nbsp;-->
+                                                            <aura:if isTrue="{!and(RR.Morder.ERP7__StartDate__c > RR.NOW, RR.Morder.ERP7__Status__c == 'Draft')}">
+                                                                <div onclick="{!c.ScheduleMO}" data-record-Id="{!RR.Morder.Id}">
+                                                                    <i class="fa fa-clock-o WCCP34" aria-hidden="true"  title="" ></i>
+                                                                </div>&nbsp;
+                                                            </aura:if>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>
+                                                <aura:set attribute="else">
+                                                    <tr>
+                                                        <td colspan="12" class="WCCP335">
+                                                            <div class="slds-notify_container slds-is-relative WCCP36">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning WCCP37" role="alert">
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                    <div class="slds-notify__content WCCP38">
+                                                                        <h2 class="slds-text-heading_small  WCCP39">{!$Label.c.Search_Order_Product} </h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:set>
+                                            </aura:if>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="{!(v.View == 'Grid')?'slds-show':'slds-hide'}" aura:id="mosGrid">
+                    <div class="maqsood erp_Mark7 container-fluid" >
+                        <div class="row pt-2">
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card background-new">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center WCCP22" onclick="{!c.statusSearchMO}" data-status="Draft">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-pencil-square-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                            <h6 class="mb-0 mt-0">{!$Label.c.Draft_AddTimesheets} &nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.DraftMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card background-inprogress">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center  WCCP22" onclick="{!c.statusSearchMO}" data-status="In Progress">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                               <h6 class="mb-0 mt-0">{!$Label.c.In_Progress_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.ProgressMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card background-success">
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center WCCP22" onclick="{!c.statusSearchMO}" data-status="Complete">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-check-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                                <h6 class="mb-0 mt-0">{!$Label.c.Completed_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.CompletedMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                       
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-lg-3 mb-1">
+                                <div class="card l-bg-orange"> 
+                                    <div class="card-header p-0 position-relative">
+                                        <div class="position-absolute handle card-icon">
+                                            <i class="simple-icon-shuffle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body text-center  WCCP22" onclick="{!c.statusSearchMO}" data-status="Cancelled">
+                                        <div class="slds-grid">
+                                            <div class="slds-col slds-p-right_small">
+                                                <i class="fa fa-calendar-times-o fa-2x" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="slds-col text-left">
+                                                 <h6 class="mb-0 mt-0">{!$Label.c.Cancelled_AddTimeCardEntry}&nbsp;&nbsp;<span data-aura-rendered-by="345:0">{!v.CancelledMO}&nbsp;</span></h6>
+                                            </div>
+                                        </div>
+                                       
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <aura:if isTrue="{!v.MOWRAP.length>0}">
+                            <div class="slds-grid slds-wrap slds-p-bottom_xx-large">
+                                <aura:iteration var="RR" indexVar="RRCount" items="{!v.MOWRAP}">
+                                     <div class="col-md-3">
+                                        <div class="card shadow-sm WCCP40">
+                                            <div class="card-body WCCP41 p-3">
+                                                <div class="slds-grid">
+                                                    <div class="col-10 pl-0">
+                                                        <div class="d-flex align-items-center WCCP42">
+                                                            <h5 class="mb-0">
+                                                                <lightning:formattedText value = "{!v.Offset + RRCount + 1 + '.'}"/>&nbsp;&nbsp;
+                                                                <div class="pr-1">
+                                                                    <aura:if isTrue="{!RR.Morder.ERP7__Status__c == 'Cancelled'}">
+                                                                        <i class="fa fa-times-circle WCCP43" title="{!RR.Morder.ERP7__Status__c}"></i>&nbsp;
+                                                                        <aura:set attribute="else">
+                                                                            <i  title="{!RR.Morder.ERP7__Status__c}" class="{!(RR.Morder.ERP7__Status__c == 'Draft')?'fa fa-check-circle  WCCP44' : (RR.Morder.ERP7__Status__c == 'Complete')?'fa fa-check-circle  WCCP45' : (RR.Morder.ERP7__Status__c == 'In Progress')?'fa fa-check-circle  WCCP46' : 'fa fa-check-circle  WCCP43'}"></i>&nbsp;
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                                <div class="slds-truncate WCCP47" title="{!RR.Morder.Name}">
+                                                                    <strong><lightning:formattedText value="{!RR.Morder.Name}" onclick="{!c.Nav2MO}" title="{!RR.Morder.Id}"/></strong>
+                                                                </div>
+                                                            </h5>                                                
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-2">
+                                                        <a href="{!'/apex/ERP7__Traveller?RId='+RR.Morder.Id}"  target="_blank" title="Traveller"><!--ra=pdf&amp;-->
+                                                            <img src="/resource/ERP7__ERPTheme/icons/pdf.png" class="cursor-pointer" title="" width="30"></img>
+                                                            
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="slds-grid">
+                                                    <div class="font-size15wccp pl-4 pt-2"><a href="{!'/'+RR.Morder.ERP7__Product__c}" target="_Blank"><i class="fa fa-archive" aria-hidden="true"></i>  &nbsp;{!RR.Morder.ERP7__Product__r.Name}</a></div>
+                                                </div>
+                                                <div class="slds-grid">
+                                                    <div class="font-size15wccp pl-4 pt-2"><a href="{!'/'+RR.Morder.ERP7__Owner__c}" target="_Blank"><i class="fa fa-user-o"/>&nbsp;{!RR.Morder.ERP7__Owner__r.Name}</a></div>
+                                                </div>
+                                                <div class="slds-grid WCCP48">
+                                                    
+                                                    <aura:if isTrue="{!and(RR.Morder.ERP7__StartDate__c > RR.NOW, RR.Morder.ERP7__Status__c == 'Draft')}">
+                                                        <div onclick="{!c.ScheduleMO}" data-record-Id="{!RR.Morder.Id}">
+                                                            <i class="fa fa-clock-o WCCP34" aria-hidden="true"  title="" ></i>
+                                                        </div>&nbsp;
+                                                    </aura:if>
+                                                </div>
+                                                
+                                                
+                                                <div class="slds-grid sld-wrap mt-1 mb-2">
+                                                    <div class="col-6 text-left pl-0">
+                                                        <p class="font-size15wccp mb-1 mt-2"><i class="fa fa-stack-exchange build-icon-color"></i>&nbsp;{!$Label.c.WO_Build}&nbsp; {!RR.Morder.ERP7__Quantity_Produced__c} / {!RR.Morder.ERP7__Quantity__c}</p>
+                                                    </div>
+                                                    <div class="col-6 text-right">
+                                                        <p class="font-size15wccp mb-1 mt-2"><i class="fa fa-recycle scrap-icon-color" aria-hidden="true"></i>&nbsp;{!$Label.c.Scrap}&nbsp; {!RR.Morder.ERP7__Quantity_Scrapped__c} / {!RR.Morder.ERP7__Quantity__c}</p>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="scroll-bar-wrap">
+                                                    <div class="scroll-box WCCP49">
+                                                        <aura:iteration var="MO_wos" indexVar="WOCount" items="{!RR.Worders}">
+                                                            <p class="">
+                                                                <div class="mb-1 slds-grid mr-2 mt-2">  
+                                                                    
+                                                                    <div class="{!((MO_wos.ERP7__Status__c == 'Issued')?'Issuedgrid':'')||((MO_wos.ERP7__Status__c == 'In Progress')?'InProgressgrid':'')||((MO_wos.ERP7__Status__c == 'Complete')?'Completegrid':'')|| ((MO_wos.ERP7__Status__c == 'Backlog')?'Backloggrid':'')}">
+                                                                        <div class="slds-col col-12 p-0 ">
+                                                                            <span class="slds-truncate ">
+                                                                                <aura:renderIf isTrue="{!MO_wos.ERP7__Active__c}">
+                                                                                    <div class="slds-grid">
+                                                                                        
+                                                                                        <div class="slds-truncate4 WCCP50" data-record-id = "{!MO_wos.Id}" onclick="{!c.NavWO}" >
+                                                                                            <lightning:formattedText title="{!MO_wos.Name}" value="{!MO_wos.Name +'('+MO_wos.ERP7__Progress__c+'%)'}" class="whitetext"/>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    
+                                                                                </aura:renderIf>
+                                                                                <aura:renderIf isTrue="{!not(MO_wos.ERP7__Active__c)}"> 
+                                                                                    <div class="slds-grid">
+                                                                                        <div class="slds-truncate4" >
+                                                                                            <lightning:formattedText title="{!MO_wos.Name}" value="{!MO_wos.Name +'('+MO_wos.ERP7__Progress__c+'%)'}" class="whitetext"/>
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>     
+                                                                                </aura:renderIf>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </p>
+                                                        </aura:iteration>
+                                                    </div>
+                                                    <div class="cover-bar"></div>
+                                                </div>
+                                                <div class="row m-0">
+                                                    <div class="col-12 p-0">
+                                                        <div class="slds-grid">
+                                                            <div class="slds-col col-6 pl-0 pr-0"> 
+                                                                <div class="startime-maq WCCP31"><i class="fa fa-calendar" aria-hidden="true"></i>&nbsp;<lightning:formattedDateTime value="{!RR.Morder.ERP7__StartDate__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                            </div>
+                                                            <div class="slds-col col-6 pl-0 pr-0  text-right">
+                                                                <div class="endime-maq WCCP51"><i class="fa fa-calendar" aria-hidden="true"></i>&nbsp;<lightning:formattedDateTime value="{!RR.Morder.ERP7__ExpectedDate__c}" hour="2-digit" minute="2-digit" month="short" day="2-digit"/></div>
+                                                            </div> 
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                   </aura:iteration>
+                            </div>
+                            <aura:set attribute="else">
+                             <center>   <tr>
+                                    <td colspan="12" class="WCCP335">
+                                        <div class="slds-notify_container slds-is-relative WCCP36">
+                                            <div class="slds-notify slds-notify_toast slds-theme_warning WCCP37" role="alert" >
+                                                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                <div class="slds-notify__content WCCP37">
+                                                    <h2 class="slds-text-heading_small  WCCP39">{!$Label.c.No_Items_to_display} </h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                 </center>
+                            </aura:set>
+                        </aura:if>
+                    </div>
+                </div>
+                
+                <!--Pagination starts-->
+                <aura:if isTrue="{!(v.View == 'List') || (v.View == 'Grid')}">
+                    <div class="epr_Mark7" >
+                        <div class="slds-docked-form-footer">
+                            <aura:if isTrue="{!v.WCCP.MOS.length>0}">
+                                <div class="col-md-2 WCCP42" >
+                                    <div class="slds-grid" >
+                                        <div class="slds-col WCCP53 slds-p-right_small">
+                                            {!$Label.c.Acc_Recev_Show}
+                                        </div>  
+                                        <div class="slds-col WCCP54"> 
+                                            <lightning:select class="slds-show_inline-block label-hidden-select"  name="select1"  value="{!v.showPg}" onchange="{!c.setShow}">
+                                                <option value="5">5</option>
+                                                <option value="10">10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aura:if>
+                            <aura:if isTrue="{!v.WCCP.MOS.length>0}">
+                                
+                                <div class="col-md-3 displaynonemobile WCCP55">
+                                    {!$Label.c.Acc_Recev_Showing}&nbsp;<span class="text-lightblue">{!v.startCount}-{!v.endCount}</span>&nbsp;{!$Label.c.Acc_Recev_of_total}&nbsp;<span class="text-lightblue">{!v.recSize}</span>&nbsp;{!$Label.c.Acc_Recev_Records}
+                                </div>
+                                
+                            </aura:if> 
+                            
+                            <aura:if isTrue="{!v.WCCP.MOS.length>0}">
+                                
+                                <div class="col-md-5 mb-1 text-align-custom" >
+                                    <nav aria-label="Page navigation example" >
+                                        <ul class="pagination WCCP56">
+                                            <li class="" >
+                                                <a class="{!if(1 >= v.startCount,'WCCP57','WCCP58')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a>
+                                            </li>
+                                            <li class="" >
+                                                <a class="{!if(1 >= v.startCount,'WCCP57','WCCP58')}"  onclick="{!c.Previous}"> &lt; {!$Label.c.Previous}</a>
+                                            </li>
+                                            <li class="" >
+                                                <a class="{!if(v.endCount == v.recSize,'WCCP57',' WCCP58')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} &gt;</a> <!--  -->
+                                            </li>
+                                            <li class="" >
+                                                <a class="{!if(v.endCount == v.recSize,'WCCP57','WCCP58')}" onclick="{!c.NextLast}">&gt;&gt; </a> <!--  -->
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                </div>
+                                
+                            </aura:if> 
+                            <aura:if isTrue="{!v.WCCP.MOS.length>0}">
+                                
+                                <div class="col-md-2 mb-1 displaynonemobile">
+                                    <div class="slds-grid">
+                                        <div class="slds-col WCCP55 text-center">
+                                            {!$Label.c.page}&nbsp;{!v.PageNum}&nbsp;{!$Label.c.page_of}&nbsp;{!v.PNS.length}
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                                
+                            </aura:if>
+                        </div>
+                    </div>
+                </aura:if>
+                <!--Pagination End-->
+            </div>
+        </div>
+        <!-- Modal Starts here -->
+        <aura:renderIf isTrue="{!v.Show}"> 
+            <div class="demo-only">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open slds-show slds-modal_large WCCP59">
+                    <div class="slds-modal__container">
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                                
+                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate WCCP60">{!$Label.c.Modal_Header}</h2>
+                        </header>
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <force:recordEdit aura:id="editHandler" recordId="{!v.RecordId}"/>
+                        </div>
+                        <footer class="slds-modal__footer">
+                            <button class="slds-button slds-button--brand" onclick="{!c.Save}">{!$Label.c.ContractConsole_Save}</button>
+                            <button class="slds-button slds-button--neutral" onclick="{!c.CancelEditRecord}">{!$Label.c.Cancel_ManageLeave}</button>
+                        </footer>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+            </div>
+        </aura:renderIf>
+        <!-- Modal Ends Here-->
+        
+        <!-- === Popover == -->
+        <aura:renderIf isTrue="{!v.FilterShow}"> 
+            
+            <section aria-labelledby="panel-heading-id" class="erp_mark7  slds-popover_panel  slds-popover_large slds-popover" role="dialog" id="mypopover"><!--slds-nubbin_top-->
+                <lightning:icon class="slds-button slds-button_icon slds-button_icon slds-button_icon-small slds-float_right slds-popover__close" onclick="{!c.FilterSet}" iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                
+                <div class="row epr_Mark7">
+                    <div class="slds-popover__body col-md-12" >
+                        <aura:renderIf isTrue="{!(v.FilterShow)}"> 
+                            <div class="col-md-4 col-xs-4">
+            
+                            </div>
+                            <div class="col-md-4 col-xs-4">
+                                <div class="slds-col">
+                                    <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.AddSubscription_Start_Date}</label>
+                                </div>
+                                <div class="slds-col">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <lightning:input type="date" aura:id="st"  value="{!v.WCCP.StartDate}"  onchange="{!c.loadAllDetails}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-xs-4">
+                                <div class="slds-col">
+                                    <label class="slds-form-element__label" for="input-unique-id">{!$Label.c.Days_ManageLeave}</label>
+                                </div>
+                                <div class="slds-col">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <lightning:input type="Text" aura:id="str" class="slds-input" value="{!v.WCCP.Days}" onchange="{!c.loadAllDetails}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </aura:renderIf>
+                        
+                    </div>
+                </div>
+            </section>
+            
+        </aura:renderIf>
+        <!-- === Ends here == -->
+        
+        <aura:if isTrue="{!v.ShowLangOptionForTravellerModal}">
+                <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1">
+                            <lightning:radioGroup name="radioGroup"
+                                                  label="Select Language"
+                                                  options="{! v.Langoptions }"
+                                                  value="{! v.SelectedLang }"
+                                                  type="radio"/>
+                        </div>
+                        <div class="slds-modal__footer">
+                            <lightning:button label="Cancel" onclick="{!c.goBackTraveller}"/>
+                            <lightning:button variant="brand" label="Next" onclick="{!c.TravellerNext}"/>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+            </aura:if>
+    </div>
+    
+</aura:component>

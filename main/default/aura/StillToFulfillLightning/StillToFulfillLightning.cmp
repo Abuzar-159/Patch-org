@@ -1,0 +1,184 @@
+<aura:component Controller="ERP7.OutboundLogisticsLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="logisticIds" type="String" access="global"/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="pickItem" type="Integer" default="0"/>
+    <aura:attribute name="packItem" type="Integer" default="0"/>
+    <aura:attribute name="shipItem" type="Integer" default="0"/>
+    <aura:attribute name="logWrap" type="Logistic_Line_Item__c[]" />
+    <aura:attribute name="IsSpinner" type="Boolean"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="Container" type="object"/>
+    <aura:handler name="init" value="{!this}" action="{!c.init}" />
+   <!-- <aura:handler name="change" value="{!v.searchText}" action="{!c.Load}"/>-->
+    <aura:method name="createPicks" action="{!c.createPicks}"></aura:method>
+    <aura:method name="createPacks" action="{!c.createPacks}"></aura:method>
+    <aura:method name="createShips" action="{!c.createShips}"></aura:method>
+    <head>  
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StillToFulfillLightning.css"/>
+    </head> 
+    
+    <body aura:id="body" class="cl1">
+        <div class="erp_mark7 cl2" id="er7">
+            <span class="cl3">
+                <aura:if isTrue="{!v.IsSpinner}">
+                    <lightning:spinner variant="brand"  size="large" />
+                </aura:if>
+            </span>
+            
+            <div class="slds-page-header slds-page-header--object-home" role="banner">
+                <div class="slds-grid"> 
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">                                
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large cl6"> 
+                                        <img src="/resource/ERP7__SLDS213/assets/icons/custom/stock_disp.png" width="48"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod cl4">
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate cl7" title="Outbound Logistics" onclick="{!c.Back2Outbound}">Still To FulFill</h1>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom_xx-small">
+                        <div class="cl5">
+                          <!--  <span onkeypress="{!c.Load}">  
+                                
+                                <lightning:input  aura:id="enter-search" type="search"
+                                                 value="{!v.searchText}" />  
+                                
+                            </span> -->
+                            
+                            <!--    <lightning:input aura:id="enter-search" type="search"  onchange="{!c.Load}" value="{!v.searchText}" />-->
+                         <!-- <lightning:input aura:id="enter-search" name="enter-search"   type="search"  onchange="{!c.Load}" value="{!v.searchText}" />-->   
+                           <!-- < :inputText updateOn="keyup" value="{!v.searchText}" placeholder="Search.." class="slds-input" />-->
+                        </div>
+                        <div> </div>
+                        <div class="slds-button-group"  role="group">
+                           
+                            <lightning:button variant="brand" iconName="utility:products" label="Pick" class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2 bright" onclick="{!c.createPicks}"/>
+                            <lightning:button variant="brand" iconName="utility:archive" label="Pack" class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2 bright" onclick="{!c.createPacks}"/>
+                            <lightning:button variant="brand" iconName="utility:setup_assistant_guide" label="Ship" class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2" onclick="{!c.createShips}"/>
+                           
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            
+            <div class="erp_mark7">
+                <div id="logistic">
+                    <div class="slds-notify slds-notify_alert slds-alert_warning" >
+                    <h3 class="cl8">
+                        Items that has not been picked 
+                        <aura:renderIf isTrue="{!if(v.pickItem!=null,true,false)}">
+                            <!--<i class="fa fa-check-circle" aria-hidden="true" click="{!c.NavRecord}"></i>-->
+                            &nbsp;<lightning:formattedNumber value="{!v.pickItem}"  title="{!v.pickItem}" />
+                        </aura:renderIf>
+                        
+                        
+                    </h3></div>
+                    <div>   </div>
+                    <div class="epr_Mark7" >
+                        <div class="slds-card cl9">                                    
+                            <table id="example" class="table table-bordered  slds-no-row-hover cl10"> 
+                                <thead>
+                                    <tr class="slds-text-heading--label">
+                                        
+                                        <th class="slds-is-sortable" scope="col"> Product </th>
+                                        <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col"> Line Item </th>
+                                        <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">Family</th> 
+                                        <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">Quantity</th>
+                                        <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col"> Picked </th>
+                                        <th class="slds-is-sortable no-sort mobiledisplaynone mobiledisplaynone-landscape" scope="col">Packed</th>   
+                                        <th class="slds-is-sortable no-sort mobiledisplaynone mobiledisplaynone-landscape" scope="col">Shipped</th>                               
+                                        
+                                    </tr>    
+                                </thead> 
+                                <tbody>
+                                    <aura:iteration var="solis" indexVar="soliCounter" items="{!v.logWrap}">
+                                        <aura:if isTrue="{!(solis.ERP7__Picked_Quantity__c != solis.ERP7__Quantity__c)}">
+                                            
+                                            <tr class="slds-hint-parent">
+                                                <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Product" scope="row">
+                                                    <div class="slds-truncate cl11" title="SLN" id="{!solis.ERP7__Product__r.Id}">
+                        									<aura:if isTrue="{!solis.ERP7__Product__r.Id != undefined}">
+                                                         <lightning:formattedUrl label="{!solis.ERP7__Product__r.Name}" value="{!'/'+solis.ERP7__Product__r.Id}" target="_blank"/>
+                                                        </aura:if>
+                                                        &nbsp; 
+                                                        <aura:renderIf isTrue="{!solis.ERP7__Product__r.ERP7__Picture__c != undefined}">
+                                                            <img src="{!solis.ERP7__Product__r.ERP7__Picture__c}" id="itemImage" class="cl12" styleclass="mobiledisplaynone"/>
+                                                            
+                                                        </aura:renderIf>
+                                                    </div>
+                                                </td>
+                                                <td data-label="LineItem" scope="row">
+                                                    <div class="slds-truncate cl13" title="SLN" id="{!solis.Id}">
+                                                          <lightning:formattedUrl label="{!solis.Name}" value="{!'/'+solis.Id}" target="_blank"/>
+                                                    </div>
+                                                </td>
+                                                <td data-label="Family" scope="row">
+                                                    <div class="slds-truncate cl14" title="SLN" id="{!solis.ERP7__Product__r.Family}">
+                                                        <lightning:formattedText value="{!solis.ERP7__Product__r.Family}" /> 
+                                                    </div>
+                                                </td>
+                                                <td data-label="Quantity" scope="row">
+                                                    <div class="slds-truncate" title="SLN" id="{!solis.ERP7__Quantity__c}">
+                                                        <lightning:formattedNumber  value="{!solis.ERP7__Quantity__c}" /> 
+                                                    </div>
+                                                </td>
+                                                <td data-label="Picked" scope="row">
+                                                    <div class="slds-truncate" title="SLN" id="{!solis.ERP7__Picked_Quantity__c}">
+                                                        <lightning:formattedNumber  value="{!solis.ERP7__Picked_Quantity__c}" /> 
+                                                    </div>
+                                                </td>
+                                                <td data-label="Packed" scope="row">
+                                                    <div class="slds-truncate" title="SLN" id="{!solis.ERP7__Packed_Quantity__c}">
+                                                        <lightning:formattedNumber  value="{!solis.ERP7__Packed_Quantity__c}" /> 
+                                                    </div>
+                                                </td>
+                                                <td data-label="Shipped" scope="row">
+                                                    <div class="slds-truncate" title="SLN" id="{!solis.ERP7__Shipped_Quantity__c}">
+                                                        <lightning:formattedNumber  value="{!solis.ERP7__Shipped_Quantity__c}" /> 
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:if>
+                                        
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                            
+                            <div>
+                            </div>
+                             <div class="cl15">
+                    			<h3 class="cl16">
+                                Items that has been Picked but not Packed 
+                                &nbsp;<lightning:formattedNumber value="{!v.packItem}"  title="{!v.packItem}" />
+                            </h3>
+                            </div>
+                             <div class="cl15">
+                    		<h3 class="cl16">
+                                Items that has been Picked ,Packed but not Shipped 
+                                &nbsp;<lightning:formattedNumber value="{!v.shipItem}"  title="{!v.shipItem}" />
+                            </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>       
+            </div>
+        </div>
+    </body>
+    
+</aura:component>

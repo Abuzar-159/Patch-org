@@ -1,0 +1,1523 @@
+<aura:component Controller="ERP7.InboundNew" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <head>  
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />        
+        <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+        
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>  
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Manufacturing_orders.css"/>
+        <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" />
+        <ltng:require styles="/resource/ERP7__fontawesome5/fontawesome5/css/all.css" />
+    </head> 
+    <aura:dependency resource="force:showToast"/>
+    <aura:attribute name="preventsStatusEdit" type="Boolean" default="false" />
+     <aura:attribute name="uploadError" type="String" default=""/>
+    <aura:attribute name="displayUplaodforItems" type="Boolean" default="false" />
+    <aura:attribute name="renderedOnce" type="Boolean" default="false" />
+    <aura:attribute name="SelectedStatus" type="String" default=""/>
+    <aura:attribute name="vendId" type="String" default=""/>
+    <aura:attribute name="ShowBinBatch" type="Boolean" default='true'/>
+    <aura:attribute name="ShowBinSerial" type="Boolean" default='true'/>
+    <aura:attribute name="ShowBinNormal" type="Boolean" default='true'/>
+    <aura:attribute name="ShowBinSerBatch" type="Boolean" default='true'/>
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="newBatch" type="Batch__c" default="{sobjectType : 'Batch__c','Name': '','ERP7__Product__c':'','ERP7__Barcode__c':'',ERP7__Shelf_Life_Expiration_Date__c:'',ERP7__Production_Version__c:''}"/>
+    <aura:attribute name="proNameForBatch" type="String" default=""/>
+    <aura:attribute name="currLOLIForBatch" type="String" default=""/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="SiteName" type="String" default=""/>
+    <aura:attribute name="ChannelName" type="String"/>
+    <aura:attribute name="ChannelId" type="String"/>
+    <aura:attribute name="logisticIds" type="String" default=""/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="BatchError" type="String" default=''/>
+    <aura:attribute name="ExistingSILI" type="object"/>
+    <aura:attribute name="selectedSILI" type="List"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    
+    <aura:attribute name="BatchProdsize" type="Integer" default="0"/>
+    <aura:attribute name="SerialProdsize" type="Integer" default="0"/>
+    <aura:attribute name="NormalProdsize" type="Integer" default="0"/>
+    <aura:attribute name="SerBatchProdsize" type="Integer" default="0"/>
+    <aura:attribute name="hideSave" type="Boolean" default='true'/>
+    <aura:attribute name="DisplayStatus" type="Boolean" default='false'/>
+    <aura:attribute name="scannedProd" type="String" default=""/>
+    <aura:attribute name="scannedIndx" type="Integer" default="-1" />
+    
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCodes}"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getAllRecieveDetails}" />
+    
+    <aura:method name="SaveAllLOLines" action="{!c.SaveAllLOLines}"/>
+    <aura:method name="getAllRecieveDetails" action="{!c.getAllRecieveDetails}"/>
+    <aura:method name="Back2Inbound" action="{!c.Back2Inbound}"></aura:method>
+    <aura:attribute name="SerialNoScan" type="Boolean" default='false'/>
+    <aura:attribute name="showBarcode" type="Boolean" default="false"/>    
+    <aura:attribute name="disableNameReceive" type="Boolean" default="false"/>    
+    <aura:attribute name="disableLocReceive" type="Boolean" default="false"/> 
+    <aura:attribute name="showCreateNewLotModal" type="Boolean" default="false"/> 
+    <aura:attribute name="statusOption" type="object" /> 
+    <aura:attribute name="AllocationAccess" type="Boolean" default="false"/>
+    
+    <!-- For file Uplaod -->
+    <aura:attribute name="fillList" type="String[]" default="[]"/>
+    <aura:attribute name="showDelete" type="Boolean" default="false"/>
+    <aura:attribute name="showLoadingSpinner" type="boolean" default="false" />
+    <aura:attribute name="FileList" type="object" default=""/>
+    <aura:attribute name="fileName" type="String" default="No File Selected.." />
+    <aura:attribute name="showfileUpload" type="Boolean" default="false"/>
+    <aura:attribute name="filetype" type="List" default="['.png', '.jpg', '.jpeg', '.pdf']" />
+    
+    <!-- For QA added by shaguftha on 20_03_23 -->
+    <aura:attribute name="showVendorCode" type="Boolean" default="false"/>
+    <aura:attribute name="showQA" type="Boolean" default="false"/>
+    <aura:attribute name="objDetail" type="Checklist__c" default="{'sobjectType' : 'Checklist__c'}"/>
+    <aura:attribute name="controllingFieldAPI" type="string" default="ERP7__Comply__c" description="store field API name of Controller field"/>
+    <aura:attribute name="dependingFieldAPI" type="string" default="ERP7__Result__c" description="store field API name of dependent field"/>
+    <aura:attribute name="listDependingValues" type="list" default="['--- None ---']" description="to store dependent field values"/>
+    <aura:attribute name="listControllingValues" type="String" default="" description="to store controller field values"/>
+    <aura:attribute name="bDisabledDependentFld" type="boolean" default="true"/> 
+    <aura:attribute name="depnedentFieldMap" type="object" description="map to store dependent values with controlling value"/>
+    <aura:attribute name="showchecklistvalue" type="boolean" default="false"/>
+    <aura:attribute name="ControllingValue" type="String" default="" description="to store controller field values"/>
+    <aura:handler name="change" value="{!v.ControllingValue}" action="{!c.onControllerFieldChange}"/>
+    <aura:attribute name="uplodedfiles" type="String[]" default="[]"/> 
+    <aura:attribute name="FileListforQAguidelines" type="List"/>
+    
+    <!-- attribute for MultiSelect serials -->
+    <aura:attribute name="SelectSerials" type="boolean" default="false"/>
+    <aura:attribute name="SelectBatchSerials" type="boolean" default="false"/>
+    <!-- attribute for Status translation-Asra-14/2 -->
+    <aura:attribute name="InStockLabel" type="String" />
+    <aura:attribute name="QualityCheckLabel" type="String" />
+    
+    <!-- QA for MO -->
+    <aura:attribute name="MOIds" type="String" default=""/>
+    
+    
+    <body aura:id="body" class="Receive-class1" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}">
+        <div class="erp_mark7 theme-bg maqsood" id="er7">
+            <span class="Receive-class2">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass" onmouseover="{!c.reRender}" onmouseout="{!c.reRender}" onfocus="{!c.reRender}" onblur="{!c.reRender}" onclick="{!c.reRender}"/>
+            </span>
+            <div class="cpq theme-bg">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item">
+                                            <div class="slds-grid">
+                                                <div class="slds-m-right--xx-small slds-truncate2 "> <span class="card-pricing-icon"><i class="fa fa-arrow-right Receive-class7" ></i></span>&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/></div>
+                                                <div class="slds-m-right--xx-small slds-truncate2"> <span class="card-pricing-icon"> <i class=" fa fa-filter Receive-class7" ></i></span>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                                            </div>
+                                        </li>
+                                        
+                                    </ol>
+                                    <!--<ol class="breadcrumb m-0">
+             <li class="breadcrumb-item"><a href="javascript: void(0);">Hyper</a></li>
+             <li class="breadcrumb-item"><a href="javascript: void(0);">Pages</a></li>
+             <li class="breadcrumb-item active">Manufacturing Order</li>
+            </ol>-->
+                                </div>
+                                <h4 class="page-title card-pricing headermt">
+                                    
+                                    <i class="card-pricing-icon slds-icon-standard-budget-allocation"><img src="/resource/erp7__SLDS213/assets/icons/custom/Stock_receiving.png" width="58"/></i>&nbsp;{!$Label.c.Inbound_Logistics}
+                                </h4>
+                                <aura:if isTrue="{!v.Container.LogisticWrapperList.length > 0}">
+                                    <aura:iteration var="so" indexVar="Counter" items="{!v.Container.LogisticWrapperList}">
+                                        <lightning:formattedUrl label="{!so.Logistic.Name}" target="_blank" value="{!'/'+so.Logistic.Id}"/>
+                                        <aura:If isTrue="{!(v.Container.LogisticWrapperList.length-1 > Counter)}">,&nbsp;</aura:If> 
+                                    </aura:iteration>
+                                </aura:if>
+                                <aura:if isTrue="{!v.Container.MOWrapperList.length > 0}">
+                                    <aura:iteration var="so" indexVar="Counter" items="{!v.Container.MOWrapperList}">
+                                        <lightning:formattedUrl label="{!so.MOrders.Name}" target="_blank" value="{!'/'+so.MOrders.Id}"/>
+                                        <aura:If isTrue="{!(v.Container.MOWrapperList.length-1 > Counter)}">,&nbsp;</aura:If> 
+                                    </aura:iteration>
+                                </aura:if>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+            </div>
+            <div class="slds-page-header slds-page-header--object-home slds-hide" role="banner">
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">                                
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large Receive-class3"> 
+                                        <img src="/resource/erp7__SLDS213/assets/icons/custom/Stock_receiving.png" width="58"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod Receive-class4">
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate Receive-class5" title="Inbound Logistics" onclick="{!c.Back2Inbound}">{!$Label.c.Inbound_Logistics}</h1>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Receive-class6">
+                        
+                        <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Receive-class7" ></i>&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/></div>
+                        <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter Receive-class7" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                        
+                    </div>
+                </div>
+                <div class="slds-p-left--small text-left" >
+                    <aura:iteration var="so" indexVar="Counter" items="{!v.Container.LogisticWrapperList}">
+                        <lightning:formattedUrl label="{!so.Logistic.Name}" target="_blank" value="{!'/'+so.Logistic.Id}"/>
+                        <aura:If isTrue="{!(v.Container.LogisticWrapperList.length-1 > Counter)}">,&nbsp;</aura:If> 
+                    </aura:iteration>
+                </div>
+            </div>
+            <div class="epr_Mark7 erp_mark7 theme-bg" >
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-2">
+                            <div class="card-body p-1">
+                                <div class="panel-collapse collapse in">
+                                    <div class="panel-body Receive-class9" >
+                                        <!-- Nav tabs --> 
+                                        <ul class="nav nav-tabs " role="tablist">
+                                            <li class="nav-item ">
+                                                <a class="nav-link Receive-class10 " data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Inbound}">
+                                                    <i class="fa fa-file-text Receive-class11" aria-hidden="true" ></i>&nbsp;{!$Label.c.List_Outbound_logistics}</a>
+                                            </li> 
+                                            <li class="nav-item active">
+                                                <a class="nav-link Receive-class10" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.getAllRecieveDetails}">
+                                                    <i class="fa fa-cart-arrow-down Receive-class11" aria-hidden="true" ></i>&nbsp;{!$Label.c.Inbound_Receive}</a>
+                                            </li> 
+                                        </ul>
+                                        
+                                    </div>
+                                </div>
+                                <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed Receive-class13','slds-notify_container slds-is-fixed Receive-class12')}">
+                                    <div class="slds-notify slds-notify_toast slds-theme_error Receive-class14" role="status">
+                                        <span class="slds-assistive-text">{!$Label.c.error}</span>
+                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                            <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                        </span>
+                                        <div class="slds-notify__content">
+                                            <h2 class="slds-text-heading_x-small Receive-class15" >{!v.exceptionError}
+                                            </h2>
+                                        </div>
+                                        <div class="slds-notify__close Receive-class16">
+                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />	
+                                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="Receive-class17 erp_Mark7 maqsood" >
+                                <div class="{!if(and(v.Container.DisMsg != undefined, v.Container.DisMsg != ''),'col-md-12 Receive-class48','col-md-12 Receive-class49')}">{!v.Container.DisMsg}</div>
+                                <div class="row-fluid Receive-class50" >
+                                    <div class="col-md-12 Receive-class51 pt-2" >
+                                        <aura:if isTrue="{!and(v.Container.LOLIS.length > 0,v.Container.SPLIS.length > 0)}">
+                                            
+                                            <aura:if isTrue="{!v.NormalProdsize > 0}">
+                                                
+                                                <div class="card mb-2 mt-2">
+                                                    <h2 class="slds-card__header-title slds-p-around_x-small">{!$Label.c.Normal_Products}</h2>
+                                                    <div class="card-body ">
+                                                        <!--h5 class="card-title  mb-2"><i class="far fa-file-alt"></i>&nbsp;Products/Items</h5-->
+                                                        <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIS}">
+                                                            <aura:if isTrue="{!LOLI.silisize > 0}">
+                                                                <aura:if isTrue="{!and(LOLI.isSerialized == false,LOLI.isBatchLot == false)}">
+                                                                    <div class="card-header text-leftpadding-10-5 ">
+                                                                        <div class="slds-grid slds-wrap">
+                                                                            
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Product_Name_StockTake}</label>
+                                                                                <span class="Receive-class21">
+                                                                                    <div class="slds-grid slds-wrap">
+                                                                                        {!itemCounter+1}.&nbsp;
+                                                                                        <div class="col-md-12 ri-mx180 pr-0" title="{!LOLI.LOLI.ERP7__Product__r.Name}">
+                                                                                            
+                                                                                            <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.Id}" class=""/>
+                                                                                        </div>
+                                                                                        
+                                                                                        
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+                                                                            <aura:if isTrue="{!v.showVendorCode}">
+                                                                                            
+                                                                                            <div class="slds-col">
+                                                                                                <label class="slds-form-element__label" >{!$Label.c.Product_Code}</label>
+                                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                                    <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Product__r.ProductCode}" class=""/>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                             <div class="slds-col">
+                                                                                                 <label class="slds-form-element__label" >{!$Label.c.PO_Vendor_part_no}</label>
+                                                                                                 <div class="slds-p-top_small ri-mx150">
+                                                                                                     <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Vendor_product_Name__c}" class=""/>
+                                                                                                 </div>
+                                                                                            </div>
+                                                                                        </aura:if>
+                                                                                    
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.Expected_QTY}</label>
+                                                                                     <div class="slds-p-top_small ri-mx150">
+                                                                                        <strong>
+                                                                                            <span class="badge bg-primary"><lightning:formattedNumber value="{!LOLI.ExpectedQty}"/></span>
+                                                                                        </strong>
+                                                                                    </div>
+                                                                                </div>
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Acc_Pay_PO_Name}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__c}" class=""/>
+                                                                                </div>
+                                                                            </div>
+                                                                           <aura:if isTrue="{!v.displayUplaodforItems}">
+        <div class="slds-col">
+            <!-- File Upload Component -->
+            <lightning:fileUpload 
+                label="{!$Label.c.Attach_Files}" 
+                multiple="true" 
+                recordId="{!LOLI.LOLI.Id}" 
+                onuploadfinished="{!c.handleUploadFinished}"
+            />
+            
+            <!-- Display Error Message -->
+            
+
+            <!-- Display Attachments -->
+            <aura:if isTrue="{!(LOLI.Attach.length > 0)}">
+                <aura:iteration items="{!LOLI.Attach}" var="attachment" indexVar="index">
+                    <div class="slds-grid">
+                        <div class="slds-col">
+                            <lightning:button 
+                                onclick="{!c.DeleteRecordAT}" 
+                                class="neutralC" 
+                                name="{!attachment.Id}" 
+                                title="{!LOLI.LOLI.Id}"
+                            >
+                                <a href="javascript:void(0)" title="delete" class="InboundLog-class32">
+                                    <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="InboundLog-class33"/>
+                                </a>
+                            </lightning:button>
+                            &nbsp;
+                            <lightning:formattedUrl 
+                                value="{!'/'+attachment.ContentDocumentId}" 
+                                label="{!attachment.ContentDocument.Title}" 
+                                tooltip="{!attachment.ContentDocument.Title}" 
+                                target="_blank" 
+                                class="fcolor"
+                            />
+                        </div>
+                        <!-- Commented out image preview -->
+                        <!--div class="slds-col">
+                            <img src="{!'/servlet/servlet.FileDownload?file='+attachment.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                        </div-->
+                    </div>
+                </aura:iteration>
+            </aura:if>
+        </div>
+    </aura:if>
+                                                                            <aura:if isTrue="{!v.showBarcode}">
+                                                                                <div class="slds-p-top_small col-md-12">
+                                                                                    <span class="mobiledisplaynone mobiledisplaynone-landscape" >
+                                                                                        <div class="slds-truncate">
+                                                                                            <aura:if isTrue="{!and(and(LOLI.ProdBarcode != undefined,LOLI.ProdBarcode != null),LOLI.ProdBarcode != '')}">
+                                                                                                <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!LOLI.ProdBarcode}"/>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <aura:if isTrue="{!and(v.AllocationAccess,v.Container.poliDimensions.length>0)}">
+                                                                        <aura:if isTrue="{!and(LOLI.LOLI.ERP7__Purchase_Line_Items__c != undefined,LOLI.LOLI.ERP7__Purchase_Line_Items__c != null)}">
+                                                                            <table class="table slds-no-row-hover Receive-class61">
+                                                                                <aura:iteration items="{!v.Container.poliDimensions}" var="poliD" indexVar="poliDCounter">
+                                                                                    <aura:if isTrue="{!poliD.ERP7__Purchase_Line_Items__c == LOLI.LOLI.ERP7__Purchase_Line_Items__c}">
+                                                                                        <tr>
+                                                                                            <td colspan="10">
+                                                                                                <div class="erp_Mark7">
+                                                                                                    <div class="row m-0">
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Account_Category} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Account_Category__c != undefined,poliD.ERP7__Account_Category__c != null)}">
+                                                                                                                <lightning:formattedText value="{!poliD.ERP7__Account_Category__c}" />
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Accounting_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Chart_of_Account__c != undefined,poliD.ERP7__Chart_of_Account__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Chart_of_Account__c}" label="{!poliD.ERP7__Chart_of_Account__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Percentage} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Percentage__c != undefined,poliD.ERP7__Allocation_Percentage__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Percentage__c}" style="percent-fixed"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Amount} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Amount__c != undefined,poliD.ERP7__Allocation_Amount__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Amount__c}" /> <!--style="currency"-->
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Analytical_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Project__c != undefined,poliD.ERP7__Project__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Project__c}" label="{!poliD.ERP7__Project__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </table>
+                                                                        </aura:if>
+                                                                    </aura:if>
+                                                                    
+                                                                    <table class="table slds-no-row-hover Receive-class61">
+                                                                        <thead>
+                                                                            <tr bgcolor="#f3f3f3">
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class62" width="5%">
+                                                                                    &nbsp; 
+                                                                                </th>
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle" width="">{!$Label.c.Qty2Receive}<span class="redtxt"> *</span></th>
+                                                                                <aura:if isTrue="{!v.DisplayStatus}"><th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InboundStatus} </th></aura:if>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InventoryConsole_Location} </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""><aura:if isTrue="{!LOLI.showBin}"> {!$Label.c.Bin} </aura:if> </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.Expiry_date} </th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <aura:iteration items="{!v.Container.SPLIS}" var="Stock" indexVar="stockCounter">
+                                                                                <aura:if isTrue="{!LOLI.loliId == Stock.loliId}">
+                                                                                    <aura:if isTrue="{!and(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == false,Stock.sili.ERP7__Product__r.ERP7__Lot_Tracked__c == false)}">
+                                                                                        <tr class="{!if((Stock.siliverified),'Pick-newClass28','')}">
+                                                                                            <td> <lightning:input type="Checkbox" checked="{!Stock.isSelected}" aura:id="newCheck" onchange="{!c.getselectedlineitems}" title="{!itemCounter}" name="{!stockCounter}"></lightning:input></td>
+                                                                                            <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                <lightning:input type="number" variant="label-hidden" value="{!Stock.sili.ERP7__Quantity__c}" onchange="{!c.handlequantity}" title="{!Stock.sili.ERP7__Logistic_Line_Item__c}" name="{!stockCounter}"/>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.DisplayStatus}">
+                                                                                                <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                   <!-- <aura:if isTrue="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                        {!Stock.sili.ERP7__Status__c}
+                                                                                                        <aura:set attribute="else">-->
+                                                                                                            <lightning:select  label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden"   value="{!Stock.sili.ERP7__Status__c}" class="nolabel" disabled="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                                <aura:iteration items="{!v.statusOption}" var="item">
+                                                                                                                    <option text="{!item.label}" value="{!item.value}" selected="{!Stock.sili.ERP7__Status__c == item.value}"/>
+                                                                                                                </aura:iteration>
+                                                                                                            </lightning:select> 
+                                                                                                      <!--  </aura:set>
+                                                                                                    </aura:if> -->
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="sl" IconName="standard:location" selectedRecordId="{!Stock.sili.ERP7__Location__c}" qry="{!' AND ERP7__Site__c = \''+v.selectedSite+'\''}" hideRemove="{!v.disableLocReceive}"/></span>
+                                                                                            </td>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <aura:if isTrue="{!LOLI.showBin}"> 
+                                                                                                    <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c" aura:id="sl" IconName="standard:entity" selectedRecordId="{!Stock.sili.ERP7__StorageContainer__c}" qry="{!' AND ERP7__Location__c = \''+Stock.sili.ERP7__Location__c+'\' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <!--by matheen-->
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <lightning:input type="date" aura:id="ed" value="{!Stock.sili.ERP7__Expiry_Date__c}"  variant="label-hidden" title="Expiry Date" />
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                    
+                                                                                </aura:if>
+                                                                                
+                                                                            </aura:iteration>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            
+                                            <aura:if isTrue="{!v.BatchProdsize > 0}">
+                                               
+                                                <div class="card mb-2 mt-2">
+                                                    <h2 class="slds-card__header-title slds-p-around_x-small"> {!$Label.c.Batch_Products}:</h2>
+                                                    <div class="card-body">
+                                                        <!--h5 class="card-title mb-2"><i class="far fa-file-alt"></i>&nbsp;{!$Label.c.Batch_Lot} Products</h5--> 
+                                                        <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIS}">
+                                                            <aura:if isTrue="{!LOLI.silisize > 0}">
+                                                                <aura:if isTrue="{!and(LOLI.isSerialized == false,LOLI.isBatchLot == true)}">
+                                                                    <div class="card-header text-left padding-10-5">
+                                                                        <div class="slds-grid slds-wrap">
+                                                                            <div class="slds-col">
+                                                                                 <span class="Receive-class21">
+                                                                                     <label class="slds-form-element__label" >{!$Label.c.Product_Name_StockTake}</label>
+                                                                                    <div class="slds-grid">
+                                                                                        {!itemCounter+1}.&nbsp; 
+                                                                                        <div class="col-md-12 ri-mx180 pr-0" title="{!LOLI.LOLI.ERP7__Product__r.Name}">
+                                                                                            <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.Id}" class="" />
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+                                                                            
+                                                                            <aura:if isTrue="{!v.showVendorCode}">
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.Product_Code}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Product__r.ProductCode}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.PO_Vendor_part_no}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Vendor_product_Name__c}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Expected_QTY}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <span class="badge bg-primary"><strong><lightning:formattedNumber value="{!LOLI.ExpectedQty}"/></strong></span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Acc_Pay_PO_Name}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__c}" class="" />
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="slds-col">
+                                                                                <div class="ri-mx200">
+                                                                                    <span >
+                                                                                        <label  class="slds-form-element__label" for="input-unique-id">{!$Label.c.Batch_Lot}<span class="redtxt"> *</span></label>
+                                                                                        <div class="slds-grid scanMN epr_Mark7">
+                                                                                            <div class="col-md-11 pl-0 pr-0">
+                                                                                                <span data-index="{!LOLI.LOLI.Id}" name="{!LOLI.assignedBatch}" onclick="{!c.handlelotchange}">
+                                                                                                    <c:CustomInputLookUp objectAPIName="ERP7__Batch__c" aura:id="sl" IconName="standard:user" selectedRecordId="{!LOLI.assignedBatch}" qry="{!' And ERP7__Expired__c=false And ERP7__Product__c = \''+LOLI.LOLI.ERP7__Product__c+'\''}" />
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div class="col-md-1 pr-0 Receive-class73" >                                                                                               
+                                                                                                <i class="fa fa-cogs Receive-class74" onclick="{!c.createBatchModal}" title="Create New Batch" data-index="{!LOLI.LOLI.Id}" data-prodId="{!LOLI.LOLI.ERP7__Product__c}" data-proName="{!LOLI.LOLI.ERP7__Product__r.Name}"/>                                                                                               
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <aura:if isTrue="{!v.displayUplaodforItems}">
+                                                                                <div class="slds-col">
+                                                                                    <lightning:fileUpload label="{!$Label.c.Attach_Files}"   multiple="true"  recordId="{!LOLI.LOLI.Id}" onuploadfinished="{!c.handleUploadFinished}"/>
+                                                                                    <aura:if isTrue="{!(LOLI.Attach.length > 0)}">
+                                                                                        <aura:iteration items="{!LOLI.Attach}" var="attachment" indexVar="index">
+                                                                                            <div class="slds-grid">
+                                                                                                <div class="slds-col">
+                                                                                                    <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC" name="{!attachment.Id}" title="{!LOLI.LOLI.Id}">
+                                                                                                        <a href="javascript:void(0)" title="delete" class="InboundLog-class32">
+                                                                                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="InboundLog-class33" />  
+                                                                                                        </a>
+                                                                                                    </lightning:button>
+                                                                                                    &nbsp;
+                                                                                                    <lightning:formattedUrl value="{!'/'+attachment.ContentDocumentId}" label="{!attachment.ContentDocument.Title}" tooltip="{!attachment.ContentDocument.Title}" target="_blank" class="fcolor"/>
+                                                                                                </div>
+                                                                                                <!--div class="slds-col">
+                                                                                                    <img src="{!'/servlet/servlet.FileDownload?file='+attachment.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                                                                </div-->
+                                                                                            </div>
+                                                                                        </aura:iteration>
+                                                                                    </aura:if> 
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <aura:if isTrue="{!v.showBarcode}">
+                                                                                <div class="slds-p-top_small col-md-12">
+                                                                                    <span class="mobiledisplaynone mobiledisplaynone-landscape" >
+                                                                                        <div class="slds-truncate">
+                                                                                            <aura:if isTrue="{!and(and(LOLI.ProdBarcode != undefined,LOLI.ProdBarcode != null),LOLI.ProdBarcode != '')}">
+                                                                                                <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!LOLI.ProdBarcode}"/>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                        </div>
+                                                                    </div>
+                                                                    <aura:if isTrue="{!and(v.AllocationAccess,v.Container.poliDimensions.length>0)}">
+                                                                        <aura:if isTrue="{!and(LOLI.LOLI.ERP7__Purchase_Line_Items__c != undefined,LOLI.LOLI.ERP7__Purchase_Line_Items__c != null)}">
+                                                                            <table class="table slds-no-row-hover Receive-class61">
+                                                                                <aura:iteration items="{!v.Container.poliDimensions}" var="poliD" indexVar="poliDCounter">
+                                                                                    <aura:if isTrue="{!poliD.ERP7__Purchase_Line_Items__c == LOLI.LOLI.ERP7__Purchase_Line_Items__c}">
+                                                                                        <tr>
+                                                                                            <td colspan="10">
+                                                                                                <div class="erp_Mark7">
+                                                                                                    <div class="row m-0">
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Account_Category} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Account_Category__c != undefined,poliD.ERP7__Account_Category__c != null)}">
+                                                                                                                <lightning:formattedText value="{!poliD.ERP7__Account_Category__c}" />
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Accounting_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Chart_of_Account__c != undefined,poliD.ERP7__Chart_of_Account__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Chart_of_Account__c}" label="{!poliD.ERP7__Chart_of_Account__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Percentage} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Percentage__c != undefined,poliD.ERP7__Allocation_Percentage__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Percentage__c}" style="percent-fixed"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Amount} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Amount__c != undefined,poliD.ERP7__Allocation_Amount__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Amount__c}" /><!--style="currency"-->
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Analytical_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Project__c != undefined,poliD.ERP7__Project__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Project__c}" label="{!poliD.ERP7__Project__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </table>
+                                                                        </aura:if>
+                                                                    </aura:if>
+                                                                    
+                                                                    <table class="table slds-no-row-hover Receive-class61">
+                                                                        <thead>
+                                                                            <tr bgcolor="#f3f3f3">
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class62" width="5%">
+                                                                                    &nbsp; 
+                                                                                </th>
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle" width="">{!$Label.c.Qty2Receive}<span class="redtxt"> *</span></th>
+                                                                                <aura:if isTrue="{!v.DisplayStatus}"><th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InboundStatus} </th></aura:if>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InventoryConsole_Location} </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> <aura:if isTrue="{!LOLI.showBin}"> {!$Label.c.Bin} </aura:if> </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.Expiry_date}</th> <!-- Added the expiry date field by matheen-->
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <aura:iteration items="{!v.Container.SPLIS}" var="Stock" indexVar="stockCounter">
+                                                                                <aura:if isTrue="{!LOLI.loliId == Stock.loliId}">
+                                                                                    <aura:if isTrue="{!and(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == false,Stock.sili.ERP7__Product__r.ERP7__Lot_Tracked__c == true)}">
+                                                                                        <tr class="{!if((Stock.siliverified),'Pick-newClass28','')}">
+                                                                                            <td> <lightning:input type="Checkbox" checked="{!Stock.isSelected}" aura:id="newCheck" onchange="{!c.getselectedlineitems}" title="{!itemCounter}" name="{!stockCounter}"></lightning:input></td>
+                                                                                            
+                                                                                            <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                <lightning:input type="number" variant="label-hidden" value="{!Stock.sili.ERP7__Quantity__c}" onchange="{!c.handlequantity}" title="{!Stock.sili.ERP7__Logistic_Line_Item__c}" name="{!stockCounter}"/>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.DisplayStatus}">
+                                                                                                <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                    <!--<aura:if isTrue="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}"><'In Stock' & 'Quality Check(QA)'>
+                                                                                                        {!Stock.sili.ERP7__Status__c}
+                                                                                                        <aura:set attribute="else">-->
+                                                                                                            <lightning:select label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden" value="{!Stock.sili.ERP7__Status__c}" class="nolabel" disabled="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                                <aura:iteration items="{!v.statusOption}" var="item">
+                                                                                                                    <option text="{!item.label}" value="{!item.value}" selected="{!Stock.sili.ERP7__Status__c == item.value}"/>
+                                                                                                                </aura:iteration>
+                                                                                                            </lightning:select> 
+                                                                                                        <!--</aura:set>
+                                                                                                    </aura:if>-->
+                                                                                                    
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="sl" IconName="standard:location" selectedRecordId="{!Stock.sili.ERP7__Location__c}" qry="{!' AND ERP7__Site__c = \''+v.selectedSite+'\''}" hideRemove="{!v.disableLocReceive}"/></span>
+                                                                                            </td>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <aura:if isTrue="{!LOLI.showBin}"> 
+                                                                                                    <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c" aura:id="sl" IconName="standard:entity" selectedRecordId="{!Stock.sili.ERP7__StorageContainer__c}" qry="{!' AND ERP7__Location__c = \''+Stock.sili.ERP7__Location__c+'\' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                        
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <lightning:input type="date" value="{!Stock.sili.ERP7__Expiry_Date__c}" variant="label-hidden" aura:id="ed" title="Expiry Date" />
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                                
+                                                                            </aura:iteration>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            
+                                            <aura:if isTrue="{!v.SerialProdsize > 0}">
+                                                
+                                                <div class="card mb-2 mt-2">
+                                                     <h2 class="slds-card__header-title slds-p-around_x-small">{!$Label.c.Serialized_Products}</h2>
+                                                    <div class="card-body">
+                                                        <!--h5 class="card-title  mb-2"><i class="far fa-file-alt"></i>&nbsp;Serialized Products</h5-->
+                                                        <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIS}">
+                                                            <aura:if isTrue="{!LOLI.silisize > 0}">
+                                                                <aura:if isTrue="{!and(LOLI.isSerialized == true,LOLI.isBatchLot == false)}">
+                                                                    <div class="card-header text-left padding-10-5 b-bottom-0">
+                                                                        <div class="slds-grid slds-wrap">
+                                                                            
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Product_Name_StockTake}</label>
+                                                                                <span class="Receive-class21">
+                                                                                    <div class="slds-grid">
+                                                                                        {!itemCounter+1}.&nbsp;
+                                                                                        <div class="col-md-12 ri-mx180 pr-0">
+                                                                                            <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.Id}" class=""/>
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+                                                                           
+                                                                           
+                                                                            <aura:if isTrue="{!v.showVendorCode}">
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.Product_Code}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Product__r.ProductCode}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.PO_Vendor_part_no}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText  value="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Vendor_product_Name__c}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Expected_QTY}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <span class="badge bg-primary"> <strong><lightning:formattedNumber value="{!LOLI.ExpectedQty}"/></strong></span>
+                                                                                </div>
+                                                                            </div>
+                                                                             <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Acc_Pay_PO_Name}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__c}" class=""/>
+                                                                                </div>
+                                                                            </div> 
+                                                                        
+                                                                            <aura:if isTrue="{!v.displayUplaodforItems}">
+                                                                                <div class="slds-col">
+                                                                                    <lightning:fileUpload label="{!$Label.c.Attach_Files}"  accept="{!v.filetype}"  multiple="true"  recordId="{!LOLI.LOLI.Id}" onuploadfinished="{!c.handleUploadFinished}"/>
+                                                                                    <aura:if isTrue="{!(LOLI.Attach.length > 0)}">
+                                                                                        <aura:iteration items="{!LOLI.Attach}" var="attachment" indexVar="index">
+                                                                                            <div class="slds-grid">
+                                                                                                <div class="slds-col">
+                                                                                                    <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC" name="{!attachment.Id}" title="{!LOLI.LOLI.Id}">
+                                                                                                        <a href="javascript:void(0)" title="delete" class="InboundLog-class32">
+                                                                                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="InboundLog-class33" />  
+                                                                                                        </a>
+                                                                                                    </lightning:button>
+                                                                                                    &nbsp;
+                                                                                                    <lightning:formattedUrl value="{!'/'+attachment.ContentDocumentId}" label="{!attachment.ContentDocument.Title}" tooltip="{!attachment.ContentDocument.Title}" target="_blank" class="fcolor"/>
+                                                                                                </div>
+                                                                                                <!--div class="slds-col">
+                                                                                                    <img src="{!'/servlet/servlet.FileDownload?file='+attachment.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                                                                </div-->
+                                                                                            </div>
+                                                                                        </aura:iteration>
+                                                                                    </aura:if> 
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <aura:if isTrue="{!v.showBarcode}">
+                                                                                <div class="col-md-12">
+                                                                                    <span class="mobiledisplaynone mobiledisplaynone-landscape" >
+                                                                                        <div class="slds-truncate">
+                                                                                            <aura:if isTrue="{!and(and(LOLI.ProdBarcode != undefined,LOLI.ProdBarcode != null),LOLI.ProdBarcode != '')}">
+                                                                                                <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!LOLI.ProdBarcode}"/>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <aura:if isTrue="{!and(v.AllocationAccess,v.Container.poliDimensions.length>0)}">
+                                                                        <aura:if isTrue="{!and(LOLI.LOLI.ERP7__Purchase_Line_Items__c != undefined,LOLI.LOLI.ERP7__Purchase_Line_Items__c != null)}">
+                                                                            <table class="table slds-no-row-hover Receive-class61">
+                                                                                <aura:iteration items="{!v.Container.poliDimensions}" var="poliD" indexVar="poliDCounter">
+                                                                                    <aura:if isTrue="{!poliD.ERP7__Purchase_Line_Items__c == LOLI.LOLI.ERP7__Purchase_Line_Items__c}">
+                                                                                        <tr>
+                                                                                            <td colspan="10">
+                                                                                                <div class="erp_Mark7">
+                                                                                                    <div class="row m-0">
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Account_Category} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Account_Category__c != undefined,poliD.ERP7__Account_Category__c != null)}">
+                                                                                                                <lightning:formattedText value="{!poliD.ERP7__Account_Category__c}" />
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Accounting_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Chart_of_Account__c != undefined,poliD.ERP7__Chart_of_Account__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Chart_of_Account__c}" label="{!poliD.ERP7__Chart_of_Account__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Percentage} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Percentage__c != undefined,poliD.ERP7__Allocation_Percentage__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Percentage__c}" style="percent-fixed"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Amount} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Amount__c != undefined,poliD.ERP7__Allocation_Amount__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Amount__c}" /><!--style="currency"-->
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Analytical_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Project__c != undefined,poliD.ERP7__Project__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Project__c}" label="{!poliD.ERP7__Project__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </table>
+                                                                        </aura:if>
+                                                                    </aura:if>
+                                                                    <!-- added by shaguftha-->
+                                                                    <div class="slds-grid slds-wrap slds-m-bottom_small">
+                                                                        <div class="col-md-4">
+                                                                            <lightning:input type="text" label="{!$Label.c.Serial_Prefix}" value="{!LOLI.LOLI.ERP7__Serial_Number_Prefix__c}"  />
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <lightning:input type="text" label="{!$Label.c.From_Serial_Number}"  value="{!LOLI.LOLI.ERP7__Starting_Number__c}"   />
+                                                                        </div>
+                                                                        <div class="col-md-4 p-top">
+                                                                            <lightning:button label="{!$Label.c.Generate_Serial_Numbers}" onclick="{!c.generateSerials}" variant="brand" name="{!LOLI.LOLI.Id}"/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <table class="table slds-no-row-hover Receive-class61">
+                                                                        <thead>
+                                                                            <tr bgcolor="#f3f3f3">
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class62" width="5%">
+                                                                                    <lightning:input type="Checkbox"  aura:id="selectAllSerials" onchange="{!c.selectAllSerials}" name="{!LOLI.loliId}"></lightning:input>&nbsp; <!--checked="{!v.SelectSerials}"-->
+                                                                                </th> 
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle" width="">{!$Label.c.Qty2Receive}<span class="redtxt"> *</span></th>
+                                                                                <th  scope="col" align="left" class="slds-text-heading--label slds-truncate2 Receive-class65" valign="middle" width=""> {!$Label.c.Serial_StockTake} <span class="redtxt"> *</span></th>
+                                                                                <aura:if isTrue="{!v.DisplayStatus}"><th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InboundStatus} </th></aura:if>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InventoryConsole_Location} </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> <aura:if isTrue="{!LOLI.showBin}"> {!$Label.c.Bin} </aura:if> </th> 
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.Expiry_date} </th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <aura:iteration items="{!v.Container.SPLIS}" var="Stock" indexVar="stockCounter">
+                                                                                <aura:if isTrue="{!LOLI.loliId == Stock.loliId}">
+                                                                                    <aura:if isTrue="{!and(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == true,Stock.sili.ERP7__Product__r.ERP7__Lot_Tracked__c == false)}">
+                                                                                        <tr class="{!if((Stock.siliverified),'Pick-newClass28','')}">
+                                                                                            <td><lightning:input type="Checkbox" checked="{!Stock.isSelected}" aura:id="newCheck" onchange="{!c.getselectedlineitems}" title="{!itemCounter}" name="{!stockCounter}"></lightning:input></td>
+                                                                                            <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                <lightning:input type="number" variant="label-hidden" value="{!Stock.sili.ERP7__Quantity__c}" onchange="{!c.handlequantity}" title="{!Stock.sili.ERP7__Logistic_Line_Item__c}" name="{!stockCounter}" disabled="true"/>
+                                                                                            </td>
+                                                                                            <td data-label="Serial No." align="left" class="{!if(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == true,'slds-truncate2 scanMN ','slds-truncate2 scanMN Receive-class34')}" valign="middle">
+                                                                                                <aura:if isTrue="{!or(and(and(Stock.sili.ERP7__Transfer_Order_Line_Item__c != undefined,Stock.sili.ERP7__Transfer_Order_Line_Item__c != null),Stock.sili.ERP7__Transfer_Order_Line_Item__c != ''),and(and(Stock.sili.ERP7__RMA_Line_Item__c != undefined,Stock.sili.ERP7__RMA_Line_Item__c != null),Stock.sili.ERP7__RMA_Line_Item__c != ''))}">
+                                                                                                    <aura:if isTrue="{!and(and(Stock.sili.ERP7__Serial__c != undefined,Stock.sili.ERP7__Serial__c != null),Stock.sili.ERP7__Serial__c != '')}">
+                                                                                                        <span><c:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="standard:macros" selectedRecordId="{!Stock.sili.ERP7__Serial__c}"  hideRemove="true"/></span>
+                                                                                                        <aura:set attribute="else">
+                                                                                                            <lightning:input type="text" variant="label-hidden" value="{!Stock.sili.ERP7__Serial_Number__c}" name="{!stockCounter}" class="scanMN" oncommit="{!c.checkSerials}"/>
+                                                                                                        </aura:set>
+                                                                                                    </aura:if>
+                                                                                                    <aura:set attribute="else">
+                                                                                                        <lightning:input type="text" variant="label-hidden" value="{!Stock.sili.ERP7__Serial_Number__c}" name="{!stockCounter}" class="scanMN" oncommit="{!c.checkSerials}"/>
+                                                                                                    </aura:set>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.DisplayStatus}">
+                                                                                                <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                    <!--<aura:if isTrue="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                        {!Stock.sili.ERP7__Status__c}
+                                                                                                        <aura:set attribute="else">-->
+                                                                                                            <lightning:select label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden"   value="{!Stock.sili.ERP7__Status__c}" class="nolabel" disabled="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                                <aura:iteration items="{!v.statusOption}" var="item">
+                                                                                                                    <option text="{!item.label}" value="{!item.value}" selected="{!Stock.sili.ERP7__Status__c == item.value}"/>
+                                                                                                                </aura:iteration>
+                                                                                                            </lightning:select> 
+                                                                                                       <!-- </aura:set>
+                                                                                                    </aura:if>-->
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="sl" IconName="standard:location" selectedRecordId="{!Stock.sili.ERP7__Location__c}" qry="{!' AND ERP7__Site__c = \''+v.selectedSite+'\''}" hideRemove="{!v.disableLocReceive}"/></span>
+                                                                                            </td>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <aura:if isTrue="{!LOLI.showBin}"> 
+                                                                                                    <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c" aura:id="sl" IconName="standard:entity" selectedRecordId="{!Stock.sili.ERP7__StorageContainer__c}" qry="{!' AND ERP7__Location__c = \''+Stock.sili.ERP7__Location__c+'\' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                                </aura:if>
+                                                                                            </td> 
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <lightning:input type="date" variant="label-hidden" value="{!Stock.sili.ERP7__Expiry_Date__c}" aura:id="ed" title="Expiry Date" />
+                                                                                            </td>                                                                                   </tr>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                                <!--<aura:if isTrue="{!LOLI.LOLI.ERP7__Product__r.ERP7__Quality_Check_QA__c}">                                                       
+                                                                                    <aura:if isTrue="{!and(v.showQA,v.Container.ProdChecks.length>0)}"> 
+                                                                                        <aura:iteration items="{!v.Container.ProdChecks}" var="ck" indexVar="checklistsIndex">
+                                                                                            
+                                                                                            <aura:if isTrue="{!Stock.sili.ERP7__Product__c == ck.ERP7__Product__c}">
+                                                                                                
+                                                                                                <tr>
+                                                                                                    <td></td>
+                                                                                                    <td>
+                                                                                                        
+                                                                                                        <div class="slds-truncate2" title="">
+                                                                                                            <aura:if isTrue="{!ck.ERP7__Is_Mandatory__c}">
+                                                                                                                {!ck.Name}<span class="cpo-class21">*</span>
+                                                                                                                <aura:set attribute="else">
+                                                                                                                    <lightning:formattedText value="{!ck.Name}"/>
+                                                                                                                </aura:set>
+                                                                                                            </aura:if> 
+                                                                                                        </div>
+                                                                                                        
+                                                                                                    </td>
+                                                                                                    <td>
+                                                                                                        <aura:if isTrue="{!ck.ERP7__Has_Checklist__c}">
+                                                                                                            <aura:if isTrue="{!greaterthan(v.depnedentFieldMap.length,0)}">
+                                                                                                                <aura:iteration items="{!v.depnedentFieldMap}"  var="mapKey" indexVar="key">  
+                                                                                                                    <aura:if isTrue="{!(mapKey.key == ck.Name)}">
+                                                                                                                        <lightning:select name="dependentFld"
+                                                                                                                                          value="{!ck.ERP7__Result__c}" 
+                                                                                                                                          variant ="label-hidden"
+                                                                                                                                          disabled="" class="checklistlabel">
+                                                                                                                            <aura:iteration items="{!mapKey.value}" var="val">
+                                                                                                                                <option value="{!val}" selected="{!val==ck.ERP7__Result__c}">{!val}</option>
+                                                                                                                            </aura:iteration>
+                                                                                                                        </lightning:select>
+                                                                                                                    </aura:if>  
+                                                                                                                </aura:iteration>
+                                                                                                            </aura:if>			                                                                                                                    
+                                                                                                            <aura:if isTrue="{!(ck.Name==key)}">
+                                                                                                                
+                                                                                                            </aura:if>
+                                                                                                            
+                                                                                                            <aura:set attribute="else">
+                                                                                                                
+                                                                                                                <lightning:inputRichText label="" placeholder="Enter your comments" class="mheight300"
+                                                                                                                                         title="note"
+                                                                                                                                         value="{!ck.ERP7__Action_Detail__c}" disabledCategories="FORMAT_TEXT,FORMAT_FONT,FORMAT_BODY,ALIGN_TEXT,INSERT_CONTENT,REMOVE_FORMATTING"
+                                                                                                                                         />
+                                                                                                            </aura:set>
+                                                                                                            
+                                                                                                        </aura:if>
+                                                                                                    </td>
+                                                                                                </tr>
+                                                                                            </aura:if>
+                                                                                        </aura:iteration>
+                                                                                        
+                                                                                        
+                                                                                        
+                                                                                    </aura:if>
+                                                                                </aura:if>-->
+                                                                            </aura:iteration>
+                                                                        </tbody>
+                                                                    </table>
+                                                                    
+                                                                    <div class="b-top-n-p-20"></div>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            
+                                            <aura:if isTrue="{!v.SerBatchProdsize > 0}">
+                                                
+                                                <div class="card mb-2 mt-2">
+                                                         <h2 class="slds-card__header-title slds-p-around_x-small">{!$Label.c.Serialized_and_Batch_Products}</h2>
+                                                    <div class="card-body">
+                                                        <!--h5 class="card-title mb-2"><i class="far fa-file-alt"></i>&nbsp;Serialized and Lot Products</h5-->
+                                                        <aura:iteration var="LOLI" indexVar="itemCounter" items="{!v.Container.LOLIS}">
+                                                            <aura:if isTrue="{!LOLI.silisize > 0}">
+                                                                <aura:if isTrue="{!and(LOLI.isSerialized == true,LOLI.isBatchLot == true)}">
+                                                                    <div class="card-header text-left padding-10-5 b-bottom-0">
+                                                                        <div class="slds-grid slds-wrap">
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Product_Name_StockTake}</label>
+                                                                                
+                                                                                    <span class="Receive-class21">
+                                                                                        <div class="slds-grid">
+                                                                                            {!itemCounter+1}.&nbsp; 
+                                                                                            <div class="col-md-12 ri-mx180 pr-0"  title="{!LOLI.LOLI.ERP7__Product__r.Name}">
+                                                                                                <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Product__r.Name}" value="{!'/'+LOLI.LOLI.Id}" class=""/>
+                                                                                            </div>
+                                                                                            
+                                                                                        </div>
+                                                                                    </span>
+                                                                                
+                                                                            </div>
+                                                                           
+                                                                            <aura:if isTrue="{!v.showVendorCode}">
+                                                                                 <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.Product_Code}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText label="Product Code" value="{!LOLI.LOLI.ERP7__Product__r.ProductCode}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="slds-col">
+                                                                                    <label class="slds-form-element__label" >{!$Label.c.PO_Vendor_part_no}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                        <lightning:formattedText  label="Vendor Product Code" value="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Vendor_product_Name__c}" class=""/>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Expected_QTY}</label>
+                                                                                    <div class="slds-p-top_small ri-mx150">
+                                                                                <span class="badge bg-primary"><strong><lightning:formattedNumber value="{!LOLI.ExpectedQty}"/></strong></span>
+                                                                                </div>
+                                                                            </div>
+                                                                             <div class="slds-col">
+                                                                                <label class="slds-form-element__label" >{!$Label.c.Acc_Pay_PO_Name}</label>
+                                                                                <div class="slds-p-top_small ri-mx150">
+                                                                                    <lightning:formattedUrl target="_blank"  label="{!LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__r.Name}" value="{!'/'+LOLI.LOLI.ERP7__Purchase_Line_Items__r.ERP7__Purchase_Orders__c}" class=""/>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="slds-col">
+                                                                                <div class="ri-mx200">
+                                                                                <span >
+                                                                                    <label  class="slds-form-element__label" for="input-unique-id">{!$Label.c.Batch_Lot}<span class="redtxt"> *</span></label>
+                                                                                    <div class="slds-grid scanMN epr_Mark7">
+                                                                                        <div class="col-md-11 pl-0 pr-0">
+                                                                                            <span data-index="{!LOLI.LOLI.Id}" name="{!LOLI.assignedBatch}" onclick="{!c.handlelotchange}">
+                                                                                                <c:CustomInputLookUp objectAPIName="ERP7__Batch__c" aura:id="sl" IconName="standard:user" selectedRecordId="{!LOLI.assignedBatch}" qry="{!' And ERP7__Expired__c=false And ERP7__Product__c = \''+LOLI.LOLI.ERP7__Product__c+'\''}" />
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div class="col-md-1 pr-0 Receive-class73" >                                                                                               
+                                                                                            <i class="fa fa-cogs Receive-class74" onclick="{!c.createBatchModal}" title="Create New Batch" data-index="{!LOLI.LOLI.Id}" data-prodId="{!LOLI.LOLI.ERP7__Product__c}" data-proName="{!LOLI.LOLI.ERP7__Product__r.Name}"/>                                                                                               
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <aura:if isTrue="{!v.displayUplaodforItems}">
+                                                                                <div class="slds-col">
+                                                                                    <lightning:fileUpload label="{!$Label.c.Attach_Files}"   multiple="true"  recordId="{!LOLI.LOLI.Id}" onuploadfinished="{!c.handleUploadFinished}"/>
+                                                                                    <aura:if isTrue="{!(LOLI.Attach.length > 0)}">
+                                                                                        <aura:iteration items="{!LOLI.Attach}" var="attachment" indexVar="index">
+                                                                                            <div class="slds-grid">
+                                                                                                <div class="slds-col">
+                                                                                                    <lightning:button onclick="{!c.DeleteRecordAT}" class="neutralC" name="{!attachment.Id}" title="{!LOLI.LOLI.Id}">
+                                                                                                        <a href="javascript:void(0)" title="delete" class="InboundLog-class32">
+                                                                                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="InboundLog-class33" />  
+                                                                                                        </a>
+                                                                                                    </lightning:button>
+                                                                                                    &nbsp;
+                                                                                                    <lightning:formattedUrl value="{!'/'+attachment.ContentDocumentId}" label="{!attachment.ContentDocument.Title}" tooltip="{!attachment.ContentDocument.Title}" target="_blank" class="fcolor"/>
+                                                                                                </div>
+                                                                                                <!--div class="slds-col">
+                                                                                                    <img src="{!'/servlet/servlet.FileDownload?file='+attachment.Id}" onerror="{!c.imageError}" class="InboundLog-class34"/>
+                                                                                                </div-->
+                                                                                            </div>
+                                                                                        </aura:iteration>
+                                                                                    </aura:if> 
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                            <aura:if isTrue="{!v.showBarcode}">
+                                                                                <div class="slds-p-top_small col-md-12">
+                                                                                    <span class="mobiledisplaynone mobiledisplaynone-landscape" >
+                                                                                        <div class="slds-truncate">
+                                                                                            <aura:if isTrue="{!and(and(LOLI.ProdBarcode != undefined,LOLI.ProdBarcode != null),LOLI.ProdBarcode != '')}">
+                                                                                                <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!LOLI.ProdBarcode}"/>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                    </span>
+                                                                                </div>
+                                                                            </aura:if>
+                                                                            
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    <aura:if isTrue="{!and(v.AllocationAccess,v.Container.poliDimensions.length>0)}">
+                                                                        <aura:if isTrue="{!and(LOLI.LOLI.ERP7__Purchase_Line_Items__c != undefined,LOLI.LOLI.ERP7__Purchase_Line_Items__c != null)}">
+                                                                            <table class="table slds-no-row-hover Receive-class61">
+                                                                                <aura:iteration items="{!v.Container.poliDimensions}" var="poliD" indexVar="poliDCounter">
+                                                                                    <aura:if isTrue="{!poliD.ERP7__Purchase_Line_Items__c == LOLI.LOLI.ERP7__Purchase_Line_Items__c}">
+                                                                                        <tr>
+                                                                                            <td colspan="10">
+                                                                                                <div class="erp_Mark7">
+                                                                                                    <div class="row m-0">
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Account_Category} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Account_Category__c != undefined,poliD.ERP7__Account_Category__c != null)}">
+                                                                                                                <lightning:formattedText value="{!poliD.ERP7__Account_Category__c}" />
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Accounting_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Chart_of_Account__c != undefined,poliD.ERP7__Chart_of_Account__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Chart_of_Account__c}" label="{!poliD.ERP7__Chart_of_Account__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Percentage} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Percentage__c != undefined,poliD.ERP7__Allocation_Percentage__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Percentage__c}" style="percent-fixed"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-2">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Allocation_Amount} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Allocation_Amount__c != undefined,poliD.ERP7__Allocation_Amount__c != null)}">
+                                                                                                                <lightning:formattedNumber value="{!poliD.ERP7__Allocation_Amount__c}" /><!--style="currency"-->
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                        <div class="col-md-3 slds-truncate">
+                                                                                                            <label  class="slds-form-element__label">{!$Label.c.Analytical_Account} : </label>
+                                                                                                            <aura:if isTrue="{!and(poliD.ERP7__Project__c != undefined,poliD.ERP7__Project__c != null)}">
+                                                                                                                <lightning:formattedUrl target="_blank" value="{!'/'+poliD.ERP7__Project__c}" label="{!poliD.ERP7__Project__r.Name}"/>
+                                                                                                            </aura:if>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </table>
+                                                                            <div class="b-top-n-p-20"></div>
+                                                                        </aura:if>
+                                                                    </aura:if>
+                                                                      <div class="slds-grid slds-wrap slds-m-bottom_small">
+                                                                        <div class="col-md-4">
+                                                                            <lightning:input type="text" label="{!$Label.c.Serial_Prefix}" value="{!LOLI.LOLI.ERP7__Serial_Number_Prefix__c}"   />
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <lightning:input type="text" label="{!$Label.c.From_Serial_Number}"  value="{!LOLI.LOLI.ERP7__Starting_Number__c}"  />
+                                                                        </div>
+                                                                        <div class="col-md-4 p-top">
+                                                                            <lightning:button label="{!$Label.c.Generate_Serial_Numbers}" onclick="{!c.generateSerials}" variant="brand" name="{!LOLI.LOLI.Id}"/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <table class="table slds-no-row-hover Receive-class61">
+                                                                        <thead>
+                                                                            <tr bgcolor="#f3f3f3">
+                                                                                
+                                                                                
+                                                                                
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class62" width="5%">
+                                                                                    <lightning:input type="Checkbox" checked="{!v.SelectBatchSerials}" aura:id="selectAllBatchSerials" onchange="{!c.selectAllbatchSerials}" name="{!LOLI.loliId}"></lightning:input>&nbsp; 
+                                                                                </th>
+                                                                                <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle" width="">{!$Label.c.Qty2Receive}<span class="redtxt"> *</span></th>
+                                                                                <th  scope="col" align="left" class="slds-text-heading--label slds-truncate2 Receive-class65" valign="middle" width=""> {!$Label.c.Serial_StockTake} <span class="redtxt"> *</span></th>
+                                                                                <aura:if isTrue="{!v.DisplayStatus}"> <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InboundStatus} </th></aura:if>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.InventoryConsole_Location} </th>
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""><aura:if isTrue="{!LOLI.showBin}"> {!$Label.c.Bin} </aura:if></th> 
+                                                                                <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle" width=""> {!$Label.c.Expiry_date} </th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <aura:iteration items="{!v.Container.SPLIS}" var="Stock" indexVar="stockCounter">
+                                                                                <aura:if isTrue="{!LOLI.loliId == Stock.loliId}">
+                                                                                    <aura:if isTrue="{!and(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == true,Stock.sili.ERP7__Product__r.ERP7__Lot_Tracked__c == true)}">
+                                                                                        <tr class="{!if((Stock.siliverified),'Pick-newClass28','')}">
+                                                                                            <td><lightning:input type="Checkbox" checked="{!Stock.isSelected}" aura:id="newCheck" onchange="{!c.getselectedlineitems}" title="{!itemCounter}" name="{!stockCounter}"></lightning:input></td>
+                                                                                            <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                <lightning:input type="number" variant="label-hidden" value="{!Stock.sili.ERP7__Quantity__c}" onchange="{!c.handlequantity}" title="{!Stock.sili.ERP7__Logistic_Line_Item__c}" name="{!stockCounter}" disabled="true"/>
+                                                                                            </td>
+                                                                                            <td data-label="Serial No." align="left" class="{!if(Stock.sili.ERP7__Product__r.ERP7__Serialise__c == true,'slds-truncate2 scanMN ','slds-truncate2 scanMN Receive-class34')}" valign="middle">
+                                                                                                <aura:if isTrue="{!or(and(and(Stock.sili.ERP7__Transfer_Order_Line_Item__c != undefined,Stock.sili.ERP7__Transfer_Order_Line_Item__c != null),Stock.sili.ERP7__Transfer_Order_Line_Item__c != ''),and(and(Stock.sili.ERP7__RMA_Line_Item__c != undefined,Stock.sili.ERP7__RMA_Line_Item__c != null),Stock.sili.ERP7__RMA_Line_Item__c != ''))}">
+                                                                                                    <aura:if isTrue="{!and(and(Stock.sili.ERP7__Serial__c != undefined,Stock.sili.ERP7__Serial__c != null),Stock.sili.ERP7__Serial__c != '')}">
+                                                                                                        <span><c:CustomInputLookUp objectAPIName="ERP7__Serial_Number__c" IconName="standard:macros" selectedRecordId="{!Stock.sili.ERP7__Serial__c}"  hideRemove="true"/></span>
+                                                                                                        <aura:set attribute="else">
+                                                                                                            <lightning:input type="text" variant="label-hidden" value="{!Stock.sili.ERP7__Serial_Number__c}" name="{!stockCounter}" class="scanMN" oncommit="{!c.checkSerials}"/>
+                                                                                                        </aura:set>
+                                                                                                    </aura:if>
+                                                                                                    <aura:set attribute="else">
+                                                                                                        <lightning:input type="text" variant="label-hidden" value="{!Stock.sili.ERP7__Serial_Number__c}" name="{!stockCounter}" class="scanMN" oncommit="{!c.checkSerials}"/>
+                                                                                                    </aura:set>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <aura:if isTrue="{!v.DisplayStatus}">
+                                                                                                <td class="slds-truncate2 scanMN" data-label="Quantity" align="left"  valign="middle">
+                                                                                                    <!--<aura:if isTrue="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                        {!Stock.sili.ERP7__Status__c}
+                                                                                                        <aura:set attribute="else">-->
+                                                                                                            <lightning:select label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden"   value="{!Stock.sili.ERP7__Status__c}" class="nolabel" disabled="{!and((Stock.sili.ERP7__Status__c == 'In Stock' || Stock.sili.ERP7__Status__c == 'Quality Check(QA)'),v.showQA)}">
+                                                                                                                <aura:iteration items="{!v.statusOption}" var="item">
+                                                                                                                    <option text="{!item.label}" value="{!item.value}" selected="{!Stock.sili.ERP7__Status__c == item.value}"/>
+                                                                                                                </aura:iteration>
+                                                                                                            </lightning:select> 
+                                                                                                       <!-- </aura:set>
+                                                                                                    </aura:if>-->
+                                                                                                </td>
+                                                                                            </aura:if>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <span><c:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="sl" IconName="standard:location" selectedRecordId="{!Stock.sili.ERP7__Location__c}" qry="{!' AND ERP7__Site__c = \''+v.selectedSite+'\''}" hideRemove="{!v.disableLocReceive}"/></span>
+                                                                                            </td>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <aura:if isTrue="{!LOLI.showBin}"> 
+                                                                                                    <span><c:CustomInputLookUp objectAPIName="ERP7__StorageContainer__c" aura:id="sl" IconName="standard:entity" selectedRecordId="{!Stock.sili.ERP7__StorageContainer__c}" qry="{!' AND ERP7__Location__c = \''+Stock.sili.ERP7__Location__c+'\' AND ERP7__Site__c = \''+v.selectedSite+'\''}"/></span>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <td align="left" class="scanMN" valign="middle">
+                                                                                                <lightning:input type="date" value="{!Stock.sili.ERP7__Expiry_Date__c}" variant="label-hidden" aura:id="ed" title="Expiry Date" />
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                            </aura:iteration>
+                                                                        </tbody>
+                                                                    </table>
+                                                                    <div class="b-top-n-p-20"></div>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </div>
+                                                </div>
+                                            </aura:if>
+                                            
+                                            <aura:set attribute="else">
+                                                <div class=" mb-2 mt-2">
+                                                    <div class="card-body p-1 text-center">
+                                                        <i class="fa fa-check-circle check-circle"></i>
+                                                        <h5 class="success-message__title  mb-2">{!$Label.c.All_Items_Received}</h5>
+                                                    </div>
+                                                </div>
+                                            </aura:set>
+                                        </aura:if>
+                                        
+                                        <aura:if isTrue="{!greaterthan(v.ExistingSILI.length,0)}"> 
+                                            <div class="row">
+                                                <div class="col-12 mt-2 p-0">
+                                                    <div class="card shadow-sm">
+                                                        <div class="card-body p-2">
+                                                            <div class="page-title-box" data-aura-rendered-by="1215:0">
+                                                                <aura:if isTrue="{!and(v.DisplayStatus,v.preventsStatusEdit == false)}">
+                                                                    <div class="page-title-right" data-aura-rendered-by="1216:0">
+                                                                        <lightning:button label="{!$Label.c.Change_Status_of_All_Received_Items}" onclick="{!c.showStatusChange}" variant="brand"  aura:id="changeStatus"/>
+                                                                    </div>
+                                                                </aura:if>
+                                                                <h4 class="page-title card-pricing headermt" data-aura-rendered-by="1292:0">
+                                                                    <strong>{!$Label.c.Received_Line_Items}</strong>
+                                                                </h4>
+                                                            </div>
+                                                            <table class="table slds-no-row-hover Receive-class61">
+                                                                <thead>
+                                                                    <tr bgcolor="#f3f3f3">
+                                                                        <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class63" scope="col" valign="middle">{!$Label.c.Name_ManageLeave}</th>
+                                                                        <aura:if isTrue="{!v.showVendorCode}">
+                                                                            <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle">{!$Label.c.PurchaseOrderPDF_Product}</th>
+                                                                        </aura:if>
+                                                                        <th class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" align="left" valign="middle">{!$Label.c.Qty2Receive}</th>
+                                                                        <th  scope="col" align="left" class="slds-text-heading--label slds-truncate2 Receive-class65" valign="middle"> {!$Label.c.Batch_Lot} </th>
+                                                                        <th  scope="col" align="left" class="slds-text-heading--label slds-truncate2 Receive-class65" valign="middle"> {!$Label.c.Serial_StockTake} </th>
+                                                                        <aura:if isTrue="{!v.DisplayStatus}"><th  scope="col" align="left" class="slds-text-heading--label slds-truncate2 Receive-class65" valign="middle"> {!$Label.c.InboundStatus} </th></aura:if>
+                                                                        <th align="left" class="slds-text-heading--label slds-truncate2 Receive-class64" scope="col" valign="middle"> {!$Label.c.InventoryConsole_Location} </th>                                    
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <aura:iteration items="{!v.ExistingSILI}" var="sili" indexVar="index">
+                                                                        <tr>
+                                                                            <td align="left" class="slds-truncate2 scanMN Receive-class71" valign="middle">
+                                                                                <lightning:formattedText  variant="label-hidden" value="{!sili.sili.Name}" class=" scanMN"/>
+                                                                            </td>
+                                                                             <aura:if isTrue="{!v.showVendorCode}">
+                                                                                 <td class="scanMN Receive-class72" data-label="Product" align="left"  valign="middle">
+                                                                                     <lightning:formattedText  variant="label-hidden" value="{!sili.sili.ERP7__Product__r.Name}" class=" scanMN"/>
+                                                                                 </td>
+                                                                            </aura:if>
+                                                                            <td class="slds-truncate2 scanMN Receive-class72" data-label="Quantity" align="left"  valign="middle">
+                                                                                <lightning:formattedNumber  variant="label-hidden" value="{!sili.sili.ERP7__Quantity__c}" class=" scanMN"/>
+                                                                            </td>
+                                                                            <td data-label="Batch No." align="left" class="slds-truncate2 scanMN" valign="middle">
+                                                                                <aura:if isTrue="{!sili.sili.ERP7__Product__r.ERP7__Lot_Tracked__c == true}">
+                                                                                    <aura:if isTrue="{!and(and(sili.sili.ERP7__Material_Batch_Lot__c != undefined,sili.sili.ERP7__Material_Batch_Lot__c != null),sili.sili.ERP7__Material_Batch_Lot__c != '')}">
+                                                                                        <lightning:formattedText  variant="label-hidden" value="{!sili.sili.ERP7__Material_Batch_Lot__r.Name}" class=" scanMN"/>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                            </td>
+                                                                            <td data-label="Serial No." align="left" class="slds-truncate2 scanMN" valign="middle">
+                                                                                <aura:if isTrue="{!sili.sili.ERP7__Product__r.ERP7__Serialise__c == true}">
+                                                                                    <aura:if isTrue="{!and(and(sili.sili.ERP7__Serial__c != undefined,sili.sili.ERP7__Serial__c != null),sili.sili.ERP7__Serial__c != '')}">
+                                                                                        <lightning:formattedText  variant="label-hidden" value="{!sili.sili.ERP7__Serial__r.Name}" class=" scanMN"/>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                            </td>
+                                                                            <aura:if isTrue="{!v.DisplayStatus}">
+                                                                                <td data-label="Status" align="left" class="slds-truncate2 scanMN" valign="middle">
+                                                                                    <aura:if isTrue="{!(v.preventsStatusEdit == false)}">
+                                                                                        <lightning:select name="{!sili.sili.Id}"  label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden"   value="{!sili.sili.ERP7__Status__c}" onchange="{!c.handleStatusChange}" class="nolabel"> 
+                                                                                            <aura:iteration items="{!v.statusOption}" var="item">
+                                                                                                <option text="{!item.label}" value="{!item.value}" selected="{!(sili.sili.ERP7__Status__c == item.value)}"/> 
+                                                                                            </aura:iteration>
+                                                                                        </lightning:select>  
+                                                                                        <aura:set attribute="else">
+                                                                                            {!sili.sili.ERP7__Status__c}
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                    
+                                                                                    <!--<aura:if isTrue="{!sili.ERP7__Status__c != 'In Stock'}"><aura:set attribute="else">
+                                                                                        <lightning:formattedText  variant="label-hidden" value="{!sili.ERP7__Status__c}" class=" scanMN"/>
+                                                                                   </aura:set>
+                                                                                </aura:if>-->
+                                                                                </td>
+                                                                            </aura:if>
+                                                                            
+                                                                            <td align="left" class="scanMN slds-truncate2" valign="middle">
+                                                                                <aura:if isTrue="{!and(and(sili.sili.ERP7__Location__c != undefined,sili.sili.ERP7__Location__c != null),sili.sili.ERP7__Location__c != '')}">
+                                                                                    <lightning:formattedText  variant="label-hidden" value="{!sili.sili.ERP7__Location__r.Name}" class=" scanMN"/>
+                                                                                </aura:if>
+                                                                            </td>
+                                                                        </tr>
+                                                                        
+                                                                        <aura:if isTrue="{!(sili.sili.ERP7__Product__r.ERP7__Quality_Check_QA__c || sili.sili.ERP7__Product__r.ERP7__QA_Handling_Inbound_Post_MO_Completion__c)}">                                           
+                                                                            <aura:if isTrue="{!(sili.guideline.length > 0)}"> 
+                                                                                <aura:iteration items="{!sili.guideline}" var="ck" indexVar="checklistsIndex">
+                                                                                    <aura:if isTrue="{!sili.sili.Id == ck.ERP7__Stock_Inward_Line_Item__c}">
+                                                                                        <tr>
+                                                                                            <td valign="top" class="valigntop"></td>
+                                                                                            <td valign="top" class="valigntop">
+                                                                                                
+                                                                                                <div class="slds-truncate2" title="{!ck.Name}">
+                                                                                                    <aura:if isTrue="{!ck.ERP7__Checklist__r.ERP7__Is_Mandatory__c}">
+                                                                                                        <span class="cpo-class21">*</span>{!ck.Name}
+                                                                                                        <aura:set attribute="else">
+                                                                                                            <lightning:formattedText value="{!ck.Name}"/>
+                                                                                                        </aura:set>
+                                                                                                    </aura:if> 
+                                                                                                </div>
+                                                                                                
+                                                                                            </td>
+                                                                                            <td valign="top" class="valigntop">
+                                                                                                <aura:if isTrue="{!and(ck.ERP7__Checklist__r.ERP7__Comply__c != null, ck.ERP7__Checklist__r.ERP7__Comply__c != '--None--')}">
+                                                                                                    <aura:if isTrue="{!greaterthan(v.depnedentFieldMap.length,0)}">
+                                                                                                        <aura:iteration items="{!v.depnedentFieldMap}"  var="mapKey" indexVar="key">  
+                                                                                                            <aura:if isTrue="{!(mapKey.key == ck.Name)}">
+                                                                                                                <lightning:select label="{!$Label.c.Checklist_Operation}" value="{!ck.ERP7__Instructions__c}" variant ="label-hidden" disabled="{!or(sili.sili.ERP7__Status__c == $Label.c.InStockPickListValue, ck.ERP7__Is_Mandatory__c == false)}" class="checklistlabel" onchange="{!c.setChecklistResult}"><!-- Moin added label="{!$Label.c.Checklist_Operation}" on 09th september -->
+                                                                                                                    <aura:iteration items="{!mapKey.value}" var="val">
+                                                                                                                        <option value="{!val.value}" selected="{!val.value == ck.ERP7__Instructions__c}">{!val.label}</option>
+                                                                                                                    </aura:iteration>
+                                                                                                                </lightning:select>
+                                                                                                            </aura:if>  
+                                                                                                        </aura:iteration>
+                                                                                                    </aura:if>	
+                                                                                                    
+                                                                                                    <aura:set attribute="else">
+                                                                                                        
+                                                                                                        <lightning:textarea type="text" label="" placeholder="Enter your comments" class="mheight300 nolabel" maxlength="255"
+                                                                                                                         onchange="{!c.setActions}" disabled="{!or(sili.sili.ERP7__Status__c == $Label.c.InStockPickListValue,ck.ERP7__Is_Mandatory__c == false)}"
+                                                                                                                         value="{!ck.ERP7__Instructions__c}" disabledCategories="FORMAT_TEXT,FORMAT_FONT,FORMAT_BODY,ALIGN_TEXT,INSERT_CONTENT,REMOVE_FORMATTING"
+                                                                                                                         />
+                                                                                                    </aura:set>
+                                                                                                    
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                            <td class="valigntop">
+                                                                                                <aura:if isTrue="{!and(v.displayUplaodforItems,ck.ERP7__Is_Mandatory__c)}">
+                                                                                                    <div class="slds-grid slds-wrap">
+                                                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12">
+                                                                                                            <lightning:input aura:id="fileId" type="file" name="{!ck}" onchange="{!c.onFileUploadedQAGuideLines}"  multiple="true" class="InboundLog-class31"/>
+                                                                                                        </div>
+                                                                                                        <aura:if isTrue="{!and(ck.Id != undefined,ck.Id != null)}"> 
+                                                                                                            <aura:if isTrue="{!and(ck.Attachments != undefined,ck.Attachments != null)}">
+                                                                                                                <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 slds-truncate">
+                                                                                                                    <div class="scroll-wrap-height-cntl">
+                                                                                                                        <aura:if isTrue="{!ck.Attachments.length > 0}">
+                                                                                                                            <aura:iteration var="attch" indexVar="attchIndex" items="{!ck.Attachments}">
+                                                                                                                                <aura:if isTrue="{!(attch.Id != undefined)}">
+                                                                                                                                    <div class="slds-grid slds-p-top_small">
+                                                                                                                                        <div class="slds-col">
+                                                                                                                                            <lightning:buttonIcon iconName="utility:delete" variant="bare" name="{!attch.Id}" title="{!ck.Id}" onclick="{!c.DeleteRecordATforQAGuideLines}" alternativeText="delete" class="colorRed"/>
+                                                                                                                                            &nbsp;
+                                                                                                                                            <lightning:formattedUrl value="{!'/'+attch.Id}" label="{!attch.Name}" tooltip="{!attch.Name}" target="_blank" class="fcolor"/>
+                                                                                                                                        </div>
+                                                                                                                                    </div>
+                                                                                                                                </aura:if>
+                                                                                                                            </aura:iteration>
+                                                                                                                        </aura:if>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </aura:if>
+                                                                                                        </aura:if>
+                                                                                                    </div>
+                                                                                                </aura:if>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    </aura:if>
+                                                                                </aura:iteration>
+                                                                            </aura:if>
+                                                                        </aura:if>
+                                                                        
+                                                                    </aura:iteration>
+                                                                </tbody>
+                                                            </table>
+                                                            <!--aura:set attribute="else">
+                                                                {!$Label.c.No_Received_Items}
+                                                            </aura:set-->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </aura:if>
+                                    </div>
+                                </div>
+                                <div class="slds-docked-form-footer" >
+                                    <div class="col-md-12 Receive-class46" > 
+                                        <!--<aura:if isTrue="{!!v.hideSave}"> </aura:if>-->
+                                        <lightning:button label="{!$Label.c.ContractConsole_Save}" onclick="{!c.SaveAllLOLines}" variant="brand"  aura:id="saveId" disabled="{!v.hideSave}"/>
+                                        
+                                        <button type="button" class="slds-button slds-button--neutral" onclick="{!c.back2Inbound}">{!$Label.c.Cancel_ManageLeave}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <aura:if isTrue="{!v.showCreateNewLotModal}">
+            <section role="dialog" tabindex="-1" id="myModalCard" aura:id="myModalCard" class="slds-modal  slds-modal_xx-small slds-fade-in-open" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                            <lightning:icon iconName="utility:close" class="customfill" alternativeText="{!$Label.c.Close_Timesheets}" title="Close" onclick="{!c.closeBatchModal}"/>
+                        </button>
+                        <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate Receive-class81" >{!$Label.c.Inbound_Create_New}&nbsp; {!$Label.c.Batch_Lot}</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium pt-c" id="modal-content-id-1">                
+                        <div class="container-fluid">
+                            <div class="row slds-m-top--xx-small">
+                                <div class="col-md-12 col-sm-12 col-xs-12">
+                                    <span class="Receive-class82">
+                                        <lightning:formattedText aura:id="paymentError" value="{!v.BatchError}"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                                <div class="quote-main">
+                                    <label class="slds-form-element__label Receive-class8"><strong>{!$Label.c.Batch_Lot} <span class="red">*</span></strong></label>
+                                </div>
+                                <lightning:input type="text" aura:id="NewLotNameFocus" value="{!v.newBatch.Name}" placeholder="{!$Label.c.Batch_Lot+'Number'}" class="nolble scanMN" onchange="{!c.updateBarcode}"/>
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                                <div class="quote-main">
+                                    <label class="slds-form-element__label Receive-class8"><strong>{!$Label.c.Inbound_Expiry_Date}</strong></label>
+                                </div>
+                                <lightning:input type="date" value="{!v.newBatch.ERP7__Shelf_Life_Expiration_Date__c}" placeholder="{!$Label.c.Inbound_Expiry_Date}" class="nolble scanMN"/>
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                                <div class="quote-main slds-m-top--xx-small">
+                                    <label class="slds-form-element__label Receive-class8"><strong>{!$Label.c.ProdVersion}</strong></label>
+                                </div>
+                                <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="sl" IconName="standard:catalog" selectedRecordId="{!v.newBatch.ERP7__Production_Version__c}" qry="{!' AND ERP7__Product__c = \''+v.newBatch.ERP7__Product__c+'\''}" required="true"/>                         
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                                <div class="quote-main slds-m-top--xx-small">
+                                    <label class="slds-form-element__label Receive-class8"><strong>{!$Label.c.Product_UsersShiftMatch}</strong></label>
+                                </div>                                                                                                                          
+                                <!--<c:CustomInputLookUp objectAPIName="Product2" aura:id="sl" IconName="standard:product_item" selectedRecordId="{!v.newBatch.ERP7__Product__c}" qry="{!' AND Id = \''+v.newBatch.ERP7__Product__c+'\''}"/>-->
+                                <lightning:input value="{!v.proNameForBatch}" placeholder="{!$Label.c.Product_UsersShiftMatch}" class="nolble" disabled="true"/>
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                                <div class="quote-main">
+                                    <label class="slds-form-element__label Receive-class8"><strong>{!$Label.c.Barcode_Outbound_logistics}</strong></label>
+                                </div>
+                                <lightning:input value="{!v.newBatch.ERP7__Barcode__c}" placeholder="{!$Label.c.Barcode_Outbound_logistics}" class="nolble" disabled="true"/>
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                                <div class="quote-main">
+                                    <label class="slds-form-element__label Receive-class8"><strong>Description</strong></label>
+                                </div>
+                                <lightning:textarea value="{!v.newBatch.ERP7__Description__c}" placeholder="Description" class="nolble" />
+                            </div>
+                            <aura:if isTrue="{!v.showfileUpload}">
+                                <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small">
+                                    
+                                    <div class="slds-grid"><span >{!$Label.c.Attachment}</span></div>
+                                    <lightning:input aura:id="fileId" type="file"  onchange="{!c.handleFilesChange}" multiple="true" label="{!$Label.c.Upload_Attachment}" variant="label-hidden" />
+                                    <aura:if isTrue="{!v.showDelete}">
+                                        <a onclick="{!c.removeAttachment}" title="Remove Attachment" class="createbill-class6">
+                                            <i class="fa fa-minus-circle" aria-hidden="true"></i>
+                                        </a>                        
+                                    </aura:if>
+                                    <aura:iteration items="{!v.fillList}" var="file" indexVar='count'>
+                                        <div class="slds-text-body_small slds-text-color_error">{!file}&nbsp;&nbsp;&nbsp;
+                                        </div>
+                                    </aura:iteration>
+                                    <aura:if isTrue="{!v.showLoadingSpinner}">
+                                        <div class="slds-text-body_small slds-text-color_error">{!$Label.c.Uploading} 
+                                            <img src="/auraFW/resources/aura/images/spinner.gif" class="spinner-img" alt="Loading"/>'
+                                        </div>
+                                    </aura:if>
+                                    <br/>
+                                </div>
+                            </aura:if>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer text-center">
+                        <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closeBatchModal}">{!$Label.c.Cancel_ManageLeave}</button>
+                        <button type="button" class="slds-button slds-button--brand" onclick="{!c.CreateBatch1}">{!$Label.c.Transfer_Order_Create}&nbsp;{!$Label.c.Batch_Lot}</button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open" aura:id="myModalCardBackdrop"></div> 
+        </aura:if>
+        
+        <section role="dialog" tabindex="-1" id="myModalStatus" aura:id="myModalStatus" class="slds-modal  slds-modal_xx-small" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close">
+                        <lightning:icon iconName="utility:close" class="customfill" alternativeText="{!$Label.c.Close_Timesheets}" title="Close" onclick="{!c.closestatusModal}"/>
+                    </button>
+                    <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate Receive-class81" >{!$Label.c.Change_Status}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium pt-c" id="modal-content-id-1">                
+                    <div class="container-fluid">
+                        
+                        <div class="col-md-12 col-sm-12 col-xs-12 slds-m-top--xx-small scanMN">
+                            <lightning:select  label="{!$Label.c.CreateClubcard_Status}" variant="label-hidden" aura:id="siliStatus" value="{!v.SelectedStatus}"  class="nolabel">
+                                <aura:iteration items="{!v.statusOption}" var="item">
+                                    <option text="{!item.label}" value="{!item.value}" selected="{!v.SelectedStatus == item.value}"/>
+                                </aura:iteration>
+                            </lightning:select> 
+                        </div>
+                        
+                    </div>
+                </div>
+                <footer class="slds-modal__footer text-center">
+                    <button type="button" class="slds-button slds-button--neutral" onclick="{!c.closestatusModal}">{!$Label.c.Cancel_ManageLeave}</button>
+                    <button type="button" class="slds-button slds-button--brand" onclick="{!c.updateStatus}">{!$Label.c.Change_Status}</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop" aura:id="myModalStatusBackdrop"></div> 
+    </body>
+</aura:component>

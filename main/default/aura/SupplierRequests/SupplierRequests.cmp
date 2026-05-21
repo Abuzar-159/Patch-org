@@ -1,0 +1,487 @@
+<aura:component controller="ManageSupplierRFP" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes" access="global" >
+    
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"/>
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/SupplierRequests.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    
+    <!--Pagination Attributes-->
+    <aura:attribute name="PNS" type="Object"/>
+    <aura:attribute name="startCount" type="Integer" default="0"/>
+    <aura:attribute name="endCount" type="Integer" default="0"/>
+    <aura:attribute name="Offset" type="Integer" default="0"/>
+    <aura:attribute name="recSize" type="Integer" default="0"/>
+    <aura:attribute name="PageNum" type="Integer" default="1"/>
+    <aura:attribute name="show" type="Integer" default="{!$Label.c.Pagination_Default_Limit}"/>
+    <aura:attribute name="CheckOffset" type="Boolean" default="false"/>
+    <!--Pagination Attributes End-->
+    
+    <aura:attribute name = "ReviewRFPs" type = "Integer" default = "0"/>
+    <aura:attribute name = "OpenRFPs" type = "Integer" default = "0"/>
+    <aura:attribute name = "ClosedRFPs" type = "Integer" default = "0"/>
+    <aura:attribute name = "CancelledRFPs" type = "Integer" default = "0"/>
+    <aura:attribute Name="singleRFPStatus" type="String" default = "All"/>
+    <aura:attribute Name="searchReqProd" type="String" default = ""/>
+    <aura:attribute Name="sortRFPBy" type="String" default = ""/>
+    <aura:attribute Name="ascRFPOrder" type="String" default=""/>
+    <aura:attribute Name="searchPublicReqProd" type="String"/>
+    <aura:attribute Name="selectAll" type="Boolean" default="false"/>
+    <aura:attribute name = "RFPWrap" type = "object[]" default="{'sObjectType' : 'RFPWrapper'}"/>
+    <aura:attribute name = "requests" type = "Request__c[]"/>
+    <aura:attribute name = "publicRequests" type = "Request__c[]"/>
+    <aura:attribute name = "vendor" type = "Account" default="{'sObjectType' : 'Account'}"/>
+    <aura:attribute Name="currentSupplier" type="String" default=""  access="global" /><!--0011o00001U1SQ0AAN-->
+    <aura:attribute name = "serverSuccess" type = "String" default=""/>
+    <aura:attribute name = "exceptionError" type = "String" default = ""/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:handler name="change" value="{!v.singleRFPStatus}" action="{!c.doInit}"/>
+    <aura:attribute Name="fromSite" type="Boolean" default="false"  access="global" />
+    <aura:attribute Name="VendorLookUpId" type="String" default=""  access="global" />
+    <aura:handler name="change" value="{!v.currentSupplier}" action="{!c.doInit}"/>
+    <div class="maqsood erp_Mark7 erp_mark7 SupplierReq-class1 heighvh" aura:id="body" >
+        
+        <!--Success Message-->
+        <div class="{!if(and(v.serverSuccess != '', v.serverSuccess != undefined),'slds-notify_container slds-is-fixed SupplierReq-class2','slds-notify_container slds-is-fixed SupplierReq-class3')}">
+            <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                <span class="slds-assistive-text">success</span>
+                <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                    <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_small ">{!v.serverSuccess}</h2>
+                </div>
+                <div class="slds-notify__close">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeSuccess}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--Success Message End-->
+        
+        <!--Error Message-->
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed SupplierReq-class2','slds-notify_container slds-is-fixed SupplierReq-class3')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error SupplierReq-class4" role="status" >
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small SupplierReq-class5" >{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--Error Message End-->
+        
+        <span class="SupplierReq-class6">
+            <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <div class="container-fluid pt-2 pl-4 SupplierReq-class7" > 
+            <div class="d-flex justify-content-between SupplierReq-class8" >
+                <h6 class="card-title mb-0 pt-1">
+                    <aura:if isTrue="{!v.fromSite}">
+                        <a class="SupplierReq-class9" onclick="{!c.home}" href="">
+                            Home&nbsp; 
+                        </a>
+                        >&nbsp;RFPs
+                        <aura:set attribute="else">
+                            <label style="padding:10px;font-size:small;">Vendor : &nbsp;</label> <c:CustomInputLookUp aura:id="VendorLookupId" objectAPIName="Account" selectedRecordId="{!v.currentSupplier}" IconName="custom:custom62" qry="AND ERP7__Account_Type__c = 'Vendor'"/>
+                        </aura:set>
+                    </aura:if>
+                </h6> 
+                <div>
+                    <table>
+                        <tr>
+                            <td>
+                                <lightning:button class="mr-2 " label="New" iconName="utility:add" iconPosition="left" onclick="{!c.openRFPModal}" disabled="{!or(or(v.currentSupplier == undefined,v.currentSupplier == null),v.currentSupplier == '')}"/>
+                            </td>
+                            <td>
+                                <div class="slds-grid pr-2">
+                                    <span onkeypress="{!c.searchRFP}" class="slds-size--11-of-12">
+                                        <lightning:input onchange= "{!c.searchRFP}" type="Search" name="searchPjt" value="{!v.searchReqProd}" placeholder="Search RFP/Product..."/>
+                                    </span>
+                                </div> 
+                            </td>
+                            <td>
+                                <!--<aura:if isTrue="{!v.singleRFPStatus != 'All'}">-->
+                                <a href="" class="mr-3 SupplierReq-class12" aura:id="refreshProjects" data-record="All" onclick = "{!c.setSingleStatus}" >
+                                    <i class="fa fa-refresh"></i>
+                                </a>
+                                <!--</aura:if>-->
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid">
+            <div class="row pt-2 pb-2"> 
+                <div class="col-lg-3 col-sm-6">
+                    <div data-record="Review" onclick="{!c.setSingleStatus}" class="{!(v.singleRFPStatus == 'Review')?'support-box text-center l-bg-review-active shadow-custom-top slds-grid SupplierReq-class13':'support-box text-center l-bg-review shadow-custom-top slds-grid SupplierReq-class13'}">
+                        <div class="slds-col">
+                            <div class="text m-b-10 mr-5 pt-1 SupplierReq-class15" >Review</div>
+                        </div>
+                        <div class="slds-col">
+                            <h3 class="m-b-0 SupplierReq-class14" >
+                                {!v.ReviewRFPs}
+                            </h3>
+                        </div>     
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div data-record="Open" onclick="{!c.setSingleStatus}" class="{!(v.singleRFPStatus == 'Open')?'support-box text-center l-bg-open-active shadow-custom-top slds-grid SupplierReq-class13':'support-box text-center l-bg-open shadow-custom-top slds-grid SupplierReq-class13'}" >
+                        <div class="slds-col">
+                            <div class="text m-b-10 pt-1 SupplierReq-class15">Open</div>
+                        </div>
+                        <div class="slds-col">
+                            <h3 class="m-b-0 SupplierReq-class14">
+                                {!v.OpenRFPs}
+                            </h3>  
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div data-record="Closed" onclick="{!c.setSingleStatus}" class="{!(v.singleRFPStatus == 'Closed')?'support-box text-center l-bg-closed-active shadow-custom-top slds-grid SupplierReq-class13':'support-box text-center l-bg-closed shadow-custom-top slds-grid SupplierReq-class13'}" >
+                        <div class="slds-col">
+                            <div class="text m-b-10 pt-1 SupplierReq-class15" >Closed</div>
+                        </div>
+                        <div class="slds-col">
+                            <h3 class="m-b-0 SupplierReq-class14">
+                                {!v.ClosedRFPs} 
+                            </h3>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6"> 
+                    <div data-record="Cancelled" class="{!(v.singleRFPStatus == 'Cancelled')?'support-box text-center l-bg-orange-active shadow-custom-top slds-grid SupplierReq-class13':'support-box text-center l-bg-orange shadow-custom-top slds-grid SupplierReq-class13'}" onclick="{!c.setSingleStatus}">
+                        <div class="slds-col">
+                            <div class="text m-b-10 pt-1 SupplierReq-class15" >Cancelled</div>
+                        </div>
+                        <div class="slds-col">
+                            <h3 class="m-b-0 SupplierReq-class14">
+                                {!v.CancelledRFPs}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid pb-1 SupplierReq-class16" >
+            <div class="card mb-4 shadow-custom SupplierReq-class17" >
+                <div class="card-body">
+                    
+                    <div class="tab-pane active" id="rfpWorkbench">
+                        <div class="table-responsive SupplierReq-class18" tabindex="1" >
+                            <table class="table">
+                                <thead class="">
+                                    <tr>
+                                        
+                                        <th>Name</th>
+                                        <th>RFP</th>
+                                        <th>Product</th>
+                                        <th>Organisation</th>
+                                        <th>Channel</th>
+                                        <th class="text-left">Timeline</th>
+                                        <!--
+                                        <th class="text-center">Status</th>-->
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <aura:if isTrue="{!not(greaterthan(v.requests.length, 0))}">
+                                        <tr>
+                                            <td colspan="8">
+                                                <div class="no projects SupplierReq-class19" >
+                                                    <div class="slds-notify_container slds-is-relative SupplierReq-class20" style="z-index: 10 !important;" >
+                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                            <div>
+                                                                <span class="slds-assistive-text">warning</span>
+                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                                </span>
+                                                            </div>
+                                                            <div class="slds-notify__content SupplierReq-class21">
+                                                                <h2 class="slds-text-heading_small SupplierReq-class22">Sorry, No Requests Available.</h2>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <aura:set attribute="else">
+                                            <aura:iteration items="{!v.requests}" var="req" indexVar="reqIndex">
+                                                <tr>
+                                                    
+                                                    <td>
+                                                        <div class="projectName " aura:id="reqSuppName">
+                                                            <div class="slds-grid"> 
+                                                                <div class="pr-1">
+                                                                    <lightning:formattedText value = "{!v.Offset + reqIndex + 1 + '.'}"/>
+                                                                </div>
+                                                                <div class="pr-2">
+                                                                    <aura:if isTrue="{!and(req.reqSupplier.ERP7__Is_Submitted__c, not(req.request.ERP7__Status__c == 'Cancelled'))}">
+                                                                        <i class="fa fa-bookmark SupplierReq-class23" aria-hidden="true" title="{!'Submitted - '+req.request.ERP7__Status__c}"></i>&nbsp;
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!req.request.ERP7__Status__c == 'Cancelled'}">
+                                                                                <i class="fa fa-times-circle SupplierReq-class24" title="{!req.request.ERP7__Status__c}"></i>&nbsp;
+                                                                                <aura:set attribute="else">
+                                                                                    <i title="{!req.request.ERP7__Status__c}" class="{!(req.request.ERP7__Status__c == 'Review')?'fa fa-check-circle SupplierReq-class26' : (req.request.ERP7__Status__c == 'Open')?'fa fa-check-circle SupplierReq-class23' : (req.request.ERP7__Status__c == 'Closed')?'fa fa-check-circle SupplierReq-class25' : 'fa fa-check-circle SupplierReq-class24'}"></i>&nbsp;
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </div>
+                                                                <div class="slds-col slds-truncate2">
+                                                                    <a href="" onclick="{!c.NavConsole}" data-record="{!req.request.Id}" data-record-id="{!req.reqSupplier.Id}" data-index="{!reqIndex}" class="SupplierReq-class27">
+                                                                        <lightning:formattedText value="{!req.reqSupplier.Name}" title="{!req.reqSupplier.Name}"/>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="projectName slds-truncate2" aura:id="reqName">
+                                                            <!-- <a  data-record-id="{!req.request.Id}" > onclick="{!c.getRecord}" class="SupplierReq-class27" -->
+                                                            <lightning:formattedText value="{!req.request.Name}" class="textdecocolor" title="{!req.request.Name}"/>
+                                                            <!--/a-->
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="projectName slds-truncate2" aura:id="reqProduct">
+                                                            <lightning:formattedText value="{!req.request.ERP7__Product__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Product__r.Name}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="projectName slds-truncate2" aura:id="reqOrg">
+                                                            <lightning:formattedText value="{!req.request.ERP7__Organisation__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Organisation__r.Name}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="projectName slds-truncate2" aura:id="reqChannel">
+                                                            <lightning:formattedText value="{!req.request.ERP7__Channel__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Channel__r.Name}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-left ">
+                                                        <div class="startime-maq SupplierReq-class29">
+                                                            <b>Start : </b><lightning:formattedDateTime value="{!req.request.ERP7__Request_Date__c}"/>
+                                                        </div>
+                                                        <div class="endime-maq SupplierReq-class30">
+                                                            <b>Due : </b> <lightning:formattedDateTime value="{!req.request.ERP7__Response_Due_Date__c}"/>
+                                                        </div>
+                                                    </td>
+                                                    
+                                                </tr>
+                                            </aura:iteration>
+                                        </aura:set>
+                                    </aura:if>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <!--Pagination starts-->
+        <div class="slds-docked-form-footer">
+            <aura:if isTrue="{!v.requests.length>0}">
+                <div class="col-md-2 SupplierReq-class31">
+                    <div class="slds-grid" >
+                        <div class="slds-col SupplierReq-class32">
+                            Show&nbsp;
+                        </div>  
+                        <div class="slds-col SupplierReq-class33"> 
+                            <lightning:select class="slds-show_inline-block"  name="select1"  value="{!v.show}" onchange="{!c.setShow}">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="50">100</option>
+                            </lightning:select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 displaynonemobile SupplierReq-class34" >
+                    Showing <span class="text-lightblue">{!v.startCount}-{!v.endCount}</span> of total <span class="text-lightblue"> {!v.recSize} </span> Records
+                </div>
+                
+                <div class="col-md-4 mb-1 text-align-custom">
+                    <nav aria-label="Page navigation example" >
+                        <ul class="pagination SupplierReq-class35" >
+                            <li class="SupplierReq-class36" >
+                                <a class="{!if(1 >= v.startCount,'SupplierReq-class37','SupplierReq-class39')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> <!-- -->
+                            </li>
+                            <li class="SupplierReq-class36" >
+                                <a class="{!if(1 >= v.startCount,'SupplierReq-class37','SupplierReq-class39')}"  onclick="{!c.Previous}"> &lt; Previous</a> <!-- -->
+                            </li>
+                            
+                            <aura:if isTrue="{!lessthan(v.requests.length,v.show)}">
+                                <li class="SupplierReq-class36">
+                                    <a class="SupplierReq-class37">Next &gt;</a> <!--  -->
+                                </li>
+                                <aura:set attribute="else">
+                                    <li class="SupplierReq-class36">
+                                        <a class="{!if(v.endCount == v.recSize,'SupplierReq-class37','SupplierReq-class39')}" onclick="{!c.Next}">Next &gt;</a> <!--  -->
+                                    </li>
+                                </aura:set>
+                            </aura:if>
+                            <aura:if isTrue="{!lessthan(v.requests.length,v.show)}">
+                                <li class="SupplierReq-class36" >
+                                    <a class="SupplierReq-class37">&gt;&gt; </a> <!--  -->
+                                </li>
+                                <aura:set attribute="else">
+                                    <li class="SupplierReq-class36" >
+                                        <a class="{!if(v.endCount == v.recSize,'SupplierReq-class37','SupplierReq-class38')}" onclick="{!c.NextLast}">&gt;&gt; </a> <!--  -->
+                                    </li>
+                                </aura:set>
+                            </aura:if>
+                            
+                        </ul>
+                    </nav>
+                </div>
+                
+                <div class="col-md-3 mb-1 displaynonemobile" >
+                    <div class="slds-grid">
+                        <div class="slds-col SupplierReq-class40" >
+                            Page 
+                        </div>
+                        <div class="slds-col">
+                            <lightning:input type="number" variant="label-hidden"  aura:id="pageId" value="{!v.PageNum}" oncommit="{!c.OfsetChange}" class="width100p"/> 
+                        </div>
+                        <div class="slds-col SupplierReq-class40">
+                            <span class="text-lightblue"> of {!v.PNS.length}</span>
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+        </div>
+            <!--Pagination End-->
+        <div class="editMSmodal">
+            <section aura:id="newRFP" role="dialog" tabindex="-1" class="slds-modal slds-modal_small" aria-labelledby="contactModalHeading" aria-modal="true" aria-describedby="contactModalBody1">
+                <div class="slds-modal__container">  
+                    <header class="slds-modal__header">
+                        <lightning:buttonicon class=" slds-modal__close" iconName="utility:close" title="Close" onclick="{!c.closeRFPModal}" variant="bare-inverse" size="large"/> 
+                        <div class="container-fluid">
+                            <div class="col-md-3 pl-0 mb-2">
+                                <div class="slds-grid SupplierReq-class41" >
+                                    <span onkeypress="{!c.searchPublicRequest}" class="">
+                                        <lightning:input onchange= "{!c.searchPublicRequest}" type="Search" name="searchPjt" value="{!v.searchPublicReqProd}" placeholder="Search RFP/Product..."/>
+                                    </span>
+                                </div> 
+                            </div>
+                        </div>
+                    </header>
+                    <div class="slds-grid slds-wrap SupplierReq-class42" >
+                        <div class="SupplierReq-class44" id="rfpWorkbench">
+                            <div class="table-responsive SupplierReq-class43" tabindex="1" >
+                                <table class="table">
+                                    <thead class="">
+                                        <tr>
+                                            <th>
+                                                <aura:if isTrue="{!greaterthan(v.publicRequests.length, 0)}">
+                                                    <lightning:input type="checkbox-button" checked="{!v.selectAll}" onchange="{!c.handleRFPSelectAll}" aura:id="selectAllRFP" name="input1" />
+                                                </aura:if>
+                                            </th>
+                                            <th>RFP</th>
+                                            <th>Product</th>
+                                            <th>Organisation</th>
+                                            <th>Channel</th>
+                                            <!--<th class="text-center">Status</th>-->
+                                            <th class="text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:if isTrue="{!not(greaterthan(v.publicRequests.length, 0))}">
+                                            <tr>
+                                                <td colspan="8">
+                                                    <div class="no projects SupplierReq-class19">
+                                                        <div class="slds-notify_container slds-is-relative SupplierReq-class20" style="z-index: 10 !important;">
+                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                <div>
+                                                                    <span class="slds-assistive-text">warning</span>
+                                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                        <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                                    </span>
+                                                                </div>
+                                                                <div class="slds-notify__content SupplierReq-class21" >
+                                                                    <h2 class="slds-text-heading_small SupplierReq-class22" >Sorry, No RFPs Available.</h2>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <aura:set attribute="else">
+                                                <aura:iteration items="{!v.publicRequests}" var="req" indexVar="reqPIndex">
+                                                    <tr>
+                                                        <td>
+                                                            <div class="projectName slds-truncate2" aura:id="reqSelect">
+                                                                <lightning:input type="checkbox-button" checked="{!req.selected}" onchange="{!c.handleRFPSelect}" disabled="{!and(req.request.ERP7__Status__c != 'Open',req.request.ERP7__Status__c != 'Review')}" aura:id="selectRFP" name="input1"/>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="projectName slds-truncate2" aura:id="reqName">
+                                                                <a  data-record-id="{!req.request.Id}" class="textdecocolor" > <!-- class="SupplierReq-class27" onclick="{!c.NavRecord}"-->
+                                                                    <i title="{!req.request.ERP7__Status__c}" class="{!(req.request.ERP7__Status__c == 'Review')?'fa fa-check-circle SupplierReq-class45' : (req.request.ERP7__Status__c == 'Open')?'fa fa-check-circle SupplierReq-class23' : (req.request.ERP7__Status__c == 'Closed')?'fa fa-check-circle SupplierReq-class46' : 'fa fa-check-circle SupplierReq-class24'}"></i>&nbsp;
+                                                                    <lightning:formattedText value="{!req.request.Name}"  title="{!req.request.Name}"/> <!--onclick="{!c.NavRecord}"-->
+                                                                </a>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="projectName slds-truncate2" aura:id="reqProduct">
+                                                                <lightning:formattedText value="{!req.request.ERP7__Product__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Product__r.Name}"/>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="projectName slds-truncate2" aura:id="reqOrg">
+                                                                <lightning:formattedText value="{!req.request.ERP7__Organisation__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Organisation__r.Name}"/>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="projectName slds-truncate2" aura:id="reqChannel">
+                                                                <lightning:formattedText value="{!req.request.ERP7__Channel__r.Name}" class="textdecocolor" title="{!req.request.ERP7__Channel__r.Name}"/>
+                                                            </div>
+                                                        </td>
+                                                        
+                                                        <td class="text-center">
+                                                            <span class="badge badge-planned">
+                                                                <a onclick="{!c.applyRFPsingle}" data-record-id="{!req.request.Id}" data-index="{!reqPIndex}" class="SupplierReq-class27" style="color: white;">
+                                                                    <lightning:formattedText value="Apply"/>&nbsp;<i class="fa fa-angle-double-right"></i>
+                                                                </a>
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>
+                                            </aura:set>
+                                        </aura:if>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <footer class="slds-modal__footer text-center erp_Mark7">
+                        <lightning:button  label="Cancel" onclick="{!c.closeRFPModal}" variant="neutral"/>
+                        <lightning:button onclick="{!c.applyRFPs}" label="Apply" variant="brand"/>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop" aura:id="newRFPBackdrop"></div>
+        </div>
+    </div>
+</aura:component>

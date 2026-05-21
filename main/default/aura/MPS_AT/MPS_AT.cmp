@@ -1,0 +1,600 @@
+<aura:component Controller="ERP7.MPS_AT_Lightning" implements="force:appHostable" >
+	<!--<ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+    <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+    <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />-->
+    <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>  
+    <ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-main.css" /> 
+    <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  /> 
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    <aura:attribute name="MPSId" type="String"/> 
+     <aura:attribute name="ProdId" type="String"/> 
+    <aura:attribute name="VersionId" type="String"/>
+    <aura:attribute name="Dirty" type="Boolean" default="false"/>
+    <aura:attribute name="Dirtys" type="Boolean" default="false"/>
+    <aura:attribute name="SRR" type="String"/>
+    <aura:attribute name="MPS" type="Object" />
+    <aura:attribute name="SelectedProduct" type="Object" />
+    <aura:attribute name="onloadDate" type="Date"/>
+    <aura:attribute name="exceptionError" type="String"/>
+     <aura:attribute name="prevent" type="Boolean" default="false"/>
+    <aura:attribute name="siteId" type="String" />
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="popInit" action="{!c.getAllDetails}"></aura:method>
+    <aura:handler event="force:refreshView" action="{!c.getAllDetails}" />
+    <aura:handler name="change" value="{!v.MPS.MPS.ERP7__Version__c}" action="{!c.getVersionBOMs}"/>
+   
+    <aura:attribute name="mpsStatusOptions" type="List"/>
+    
+    <!--<html xmlns="https://www.w3.org/2000/svg" xmlns:xlink="https://www.w3.org/1999/xlink"> Commenting for Security Review-->
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+        </head>
+        <body class="MPS_AT-newClass1">
+            <div class="{!empty(v.exceptionError)?'slds-hide':'errmsgclass slds-show'}">
+                <div class="slds-notify slds-notify--alert slds-theme--alert-texture slds-theme--error" role="alert">
+                    <p class="MPS_AT-newClass2">{!v.exceptionError}</p>  
+                </div>
+            </div>
+          	<div class="erp_mark7 theme-bg maqsood erp cpq c11" id="epr">
+                <span class="MPS_AT-newClass3">
+                    <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+                </span>
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right col-md-9 mt-2">
+                                       <div class="slds-grid slds-wrap slds-align-top ">
+                                           <div class="col-md-3 slds-p-right_small">
+                                               <aura:If isTrue="{!and(v.SRR == 'true',v.MPS.MPS.ERP7__Product__r.ERP7__Issue_Manufacturing_Order__c)}">
+                                                       <!--<label class="slds-form-element__label MPS_AT-newClass5" for="unique-id-of-input"><strong>Product Version</strong></label>-->
+                                                        <c:CustomInputLookUp objectAPIName="ERP7__Version__c" aura:id="mvr" label="Product Version" IconName="standard:flow" selectedRecordId="{!v.MPS.MPS.ERP7__Version__c}"  qry="{!'And ERP7__Active__c=true AND ERP7__Product__c=\'' + v.SelectedProduct.Prod.Id + '\''}" />             
+                                               </aura:If>
+                                               </div>
+                                                <aura:renderIf isTrue="{!and(v.MPS.MPSLines.length > 0, v.MPS.MPSLines[0].MPSLine.Id != undefined)}">
+                                                    <div class="col-md-2">
+                                                        <div class="mb-1">
+                                                            <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.From_StockRunRate}</strong></label>
+                                                        </div>
+                                                        <aura:If isTrue="{!(v.SRR == 'true')}">
+                                                            <lightning:formattedDateTime aura:id="std"  class="field2" value="{!v.onloadDate}"/><!-- value="{!v.onloadDate}" -->
+                                                            <aura:set attribute="else">
+                                                                <lightning:formattedDateTime aura:id="std"  class="field2" value="{!v.MPS.MPS.ERP7__Start_Date__c}"/>
+                                                            </aura:set>
+                                                        </aura:If>
+                                                        &nbsp; 
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <div class="mb-1">
+                                                        <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.To_StockRunRate}</strong></label>
+                                                        </div>
+                                                        <lightning:formattedDateTime aura:id="end"  class="field2" value="{!v.MPS.MPS.ERP7__End_Date__c}"/>
+                                                        
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="mb-0">
+                                                            <label class="slds-form-element__label MPS_AT-newClass5" for="unique-id-of-input"><strong>{!$Label.c.Schedule_Period}</strong></label>
+                                                        </div>
+                                                        <div class="MPS_AT-newClass16" >
+                                                            {!v.MPS.MPS.ERP7__Schedule_Period__c}
+                                                        </div>
+                                                    </div>
+                                                </aura:renderIf>
+                                                <aura:renderIf isTrue="{!and(v.MPS.MPSLines.length > 0, v.MPS.MPSLines[0].MPSLine.Id == undefined)}">
+                                                    
+                                                    <div class="slds-col slds-col slds-grid MPS_AT-newClass4">
+                                                        <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.From_StockRunRate}</strong></label>
+                                                        <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="std" value="{!v.MPS.MPS.ERP7__Start_Date__c}" onchange="{!c.reloadAllDetails}"/>
+                                                        &nbsp; 
+                                                    </div>
+                                                    <div class="slds-col slds-col slds-grid MPS_AT-newClass4">
+                                                        <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.To_StockRunRate}</strong></label>
+                                                        <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="end" value="{!v.MPS.MPS.ERP7__End_Date__c}" onchange="{!c.reloadAllDetails}"/>
+                                                        &nbsp; 
+                                                    </div> 
+                                                    <div class="slds-col slds-p-right--xx-small slds-grid MPS_AT-newClass4 display-lable">
+                                                        <label class="slds-form-element__label MPS_AT-newClass6" for="unique-id-of-input"><strong>{!$Label.c.Schedule_Period}</strong></label>
+                                                        <lightning:select aura:id="mpsStatus" value="{!v.MPS.MPS.ERP7__Schedule_Period__c}" onchange="{!c.reloadAllDetails}" variant="label-hidden"  class="display-label" label="Period">
+                                                            <aura:iteration items="{!v.mpsStatusOptions}" var="option">
+                                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.MPS.MPS.ERP7__Schedule_Period__c, option.value)}" />
+                                                            </aura:iteration>
+                                                        </lightning:select>
+                                                    </div>
+                                                    
+                                                </aura:renderIf>
+                                            </div>
+                                    </div>
+                                <h4 class="page-title card-pricing headermt col-md-3">
+                                    
+                                    <i class="card-pricing-icon text-primary fa fa-file"></i>&nbsp;MPS &amp; AT</h4>
+                                
+                                
+                                
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+                <div class="slds-page-header slds-hide">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <div class="slds-media slds-no-space slds-grow">
+                                
+                                <div class="slds-media__figure">
+                                    <lightning:icon iconName="standard:record"  size="large" alternativeText="{!$Label.c.record}" title="record" />
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-grid">
+                                        <div class="slds-col">
+                                              <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">MPS &amp; AT</h1>
+                          
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top ">
+                            <aura:renderIf isTrue="{!and(v.MPS.MPSLines.length > 0, v.MPS.MPSLines[0].MPSLine.Id != undefined)}">
+                                <div class="slds-col slds-col slds-p-right--xx-small MPS_AT-newClass4">
+                                    <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.From_StockRunRate}</strong></label>
+                                    <aura:If isTrue="{!(v.SRR == 'true')}">
+                                        <lightning:formattedDateTime aura:id="std"  class="field" value="{!v.onloadDate}"/><!-- value="{!v.onloadDate}" -->
+                                     <aura:set attribute="else">
+                                    <lightning:formattedDateTime aura:id="std"  class="field" value="{!v.MPS.MPS.ERP7__Start_Date__c}"/>
+                                      </aura:set>
+                                    </aura:If>
+                                    &nbsp; 
+                                </div>
+                                <div class="slds-col slds-col slds-p-right--xx-small MPS_AT-newClass4">
+                                    <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.To_StockRunRate}</strong></label>
+                                    <lightning:formattedDateTime aura:id="end"  class="field" value="{!v.MPS.MPS.ERP7__End_Date__c}"/>
+                                    &nbsp; 
+                                </div>
+                                <div class="slds-col">
+                                    <label class="slds-form-element__label MPS_AT-newClass5" for="unique-id-of-input"><strong>{!$Label.c.Schedule_Period}</strong></label>
+                                    <div class="MPS_AT-newClass16" >
+                                        {!v.MPS.MPS.ERP7__Schedule_Period__c}
+                                    </div>
+                                </div>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!and(v.MPS.MPSLines.length > 0, v.MPS.MPSLines[0].MPSLine.Id == undefined)}">
+                               
+                                <div class="slds-col slds-col slds-grid MPS_AT-newClass4">
+                                    <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.From_StockRunRate}</strong></label>
+                                    <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="std" value="{!v.MPS.MPS.ERP7__Start_Date__c}" onchange="{!c.reloadAllDetails}"/>
+                                    &nbsp; 
+                                </div>
+                                <div class="slds-col slds-col slds-grid MPS_AT-newClass4">
+                                    <label class="slds-form-element__label" for="unique-id-of-input"><strong>{!$Label.c.To_StockRunRate}</strong></label>
+                                    <lightning:input type="date" variant="label-hidden" class="display-lable" aura:id="end" value="{!v.MPS.MPS.ERP7__End_Date__c}" onchange="{!c.reloadAllDetails}"/>
+                                    &nbsp; 
+                                </div>
+                                <div class="slds-col slds-p-right--xx-small slds-grid MPS_AT-newClass4">
+                                    <label class="slds-form-element__label MPS_AT-newClass6" for="unique-id-of-input"><strong>{!$Label.c.Schedule_Period}</strong></label>
+                                    <lightning:select aura:id="mpsStatus" value="{!v.MPS.MPS.ERP7__Schedule_Period__c}" onchange="{!c.reloadAllDetails}" variant="label-hidden"  class="display-lable">
+                                        <aura:iteration items="{!v.mpsStatusOptions}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.MPS.MPS.ERP7__Schedule_Period__c, option.value)}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div>
+                                
+                            </aura:renderIf>
+                        </div>
+                    </div>
+                </div>
+                <!-- Month View Start-->
+                <div class="container-fluid">
+                <div class="card card-experience mg-t-20">
+                    <div class="card-body p-2">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="media">
+                                    <div class="experience-logo">
+                                        <aura:renderIf isTrue="{!(v.MPS.MPS.ERP7__Product__r.ERP7__Picture__c != undefined)}">
+                                            <img src="{!v.MPS.MPS.ERP7__Product__r.ERP7__Picture__c}" class="MPS_AT-newClass8" />
+                                        </aura:renderIf>  
+                                        
+                                    </div><!-- experience-logo -->
+                                    <div class="media-body">
+                                        <h4><lightning:formattedUrl value="{!'/'+v.MPS.MPS.ERP7__Product__c}" label="{!v.MPS.MPS.ERP7__Product__r.Name}" target="_blank" /></h4>
+                                        
+                                    </div><!-- media-body -->
+                                </div><!-- media -->
+                            </div>
+                            <div class="col-md-8">
+                                <div class="slds-grid slds-wrap mt-2">
+                                    <div class="slds-col slds-m-right_small">
+                                        <div class="card shadow-none mb-2">
+                                            <div class="card-body p-1 d-flex justify-content-between align-items-start">
+                                                <div class="slds-grid">
+                                                    
+                                                    <div class="cl9 slds-grid">
+                                                        <div class="slds-col slds-p-right_small mt-1">
+                                                            <lightning:icon iconName="utility:collection_alt" size="small"></lightning:icon>&nbsp;
+                                                        </div>
+                                                        <div class="slds-col slds-p-right_small"> 
+                                                        <h6 class="mt-0 mb-0">
+                                                            <div class="slds-grid">
+                                                                <div class="mt-2">
+                                                                {!$Label.c.ProductionSupply_Lot_Size1}&nbsp;-&nbsp;</div> 
+                                                                <span class="">
+                                                                	 <lightning:input type="number"  step="0.01" variant="label-hidden" value="{!v.MPS.MPS.ERP7__Lot_Size__c}" />
+                                                                 </span>
+                                                            </div>
+                                                            </h6>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-m-right_small">
+                                        <div class="card shadow-none mb-2">
+                                            <div class="card-body p-1 d-flex justify-content-between align-items-start">
+                                                <div class="slds-grid">
+                                                    
+                                                    <div class="cl9 slds-grid">
+                                                        <div class="slds-col slds-p-right_small">
+                                                            <lightning:icon iconName="utility:archive" size="small"></lightning:icon>&nbsp;
+                                                        </div>
+                                                        <div class="slds-col slds-p-right_small">
+                                                            <h6 class="mt-0">{!$Label.c.Minimum_Inventory_Level}&nbsp;- <span class="slds-badge">{!v.MPS.MPS.ERP7__Minimum_Inventory_Level__c}</span></h6 > 
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                 
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                </div>
+                
+                <div class="epr_Mark7">
+                    <div class="container-fluid ">
+                        <div class="card mb-2">
+                            <div class="card-body p-2">
+                                <div class="row">
+                                    <div class="col-md-3 col-xs-3">
+                                        <table class="slds-table slds-table--condensed" >
+                                            <tbody>
+                                                <tr class="slds-hint-parent MPS_AT-newClass17" bgcolor="#f7f8f9">
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title=""><b>{!$Label.c.Starting_Inventory} -&nbsp; {!v.MPS.MPS.ERP7__Starting_Inventory__c}</b></div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="" >- {!$Label.c.Demand_Forecast}</div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="">- {!$Label.c.Actual_Demand}</div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="" >- {!$Label.c.Net_Inventory_Before_Supply_Produce_StockRunRate}</div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="">- {!$Label.c.To_Supply_Produce_StockRunRate}</div>
+                                                    </td>
+                                                </tr>
+                                                <br/>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="" >- {!$Label.c.Projected_Inventory}</div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="slds-hint-parent" >
+                                                    <td data-label="Contact">
+                                                        <div class="slds-truncate" title="" >- {!$Label.c.Available_to_Promise}</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody> 
+                                        </table>
+                                    </div>
+                                    <div class="slds-grid col-md-9 hoverdiv">
+                                        <aura:iteration var="MPSLine" indexVar="counts" items="{!v.MPS.MPSLines}">
+                                            <div class="slds-col">
+                                                <table class="slds-table slds-table--condensed" cellspacing="0" cellpadding="0" border="0">
+                                                    <tbody>
+                                                        <tr class="slds-hint-parent MPS_AT-newClass17" bgcolor="#f7f8f9">
+                                                            <td data-label="Contact" class="MPS_AT-newClass18">
+                                                                <div class="slds-truncate" title="">{!MPSLine.MPSLine.Name}</div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                <div class="slds-form-element">
+                                                                    <div class="slds-form-element__control">
+                                                                         <lightning:input type="number" class="width120" variant="label-hidden" value="{!MPSLine.MPSLine.ERP7__Demand_Forecast__c}" onchange="{!c.DirtyChange}" name="{!counts}"/>
+                                                                        <!--<aura:if isTrue="{!!MPSLine.display}">
+                                                                            <lightning:formattedNumber value="{!MPSLine.MPSLine.ERP7__Demand_Forecast__c}"/>
+                                                                            <aura:set attribute="else">
+                                                                                <lightning:input type="number"  variant="label-hidden" value="{!MPSLine.MPSLine.ERP7__Demand_Forecast__c}" onchange="{!c.DirtyChange}" name="{!counts}"/>
+                                                                            </aura:set>
+                                                                        </aura:if>-->
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:formattedNumber value="{!MPSLine.MPSLine.ERP7__Actual_Demand__c}"/>
+                                                                </div>  
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                <aura:renderIf isTrue="{!(MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c >= v.MPS.MPS.ERP7__Minimum_Inventory_Level__c)}">
+                                                                    <div class="slds-truncate" title="">{!MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c}</div> 
+                                                                </aura:renderIf>
+                                                                <aura:renderIf isTrue="{!!(MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c >= v.MPS.MPS.ERP7__Minimum_Inventory_Level__c)}">
+                                                                    <div class="slds-truncate MPS_AT-newClass19" title="" ><b>{!MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c}</b></div> 
+                                                                </aura:renderIf>
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass24">
+                                                                <div class="erp_Mark7" title="">{!MPSLine.MPSLine.ERP7__To_Supply_Manufacture__c} 
+                                                                   <!-- <aura:if isTrue="{!MPSLine.display}">-->
+                                                                        <aura:renderIf isTrue="{!and(MPSLine.MPSLine.ERP7__To_Supply_Manufacture__c > MPSLine.OrderedQuantity,MPSLine.MPSLine.Id != undefined)}">
+                                                                            <!-- click="{!c.MOorWO}" title="{!MPSLine.MPSLine.Id}" -->
+                                                                          
+                                                                            
+                                                                            <div class="dropdown">
+                                                                                <a  class="slds-button slds-button-brand dropdown-toggle" href="" target="_blank" aria-haspopup="true" data-toggle="dropdown"> 
+                                                                                    <span class="MPS_AT-newClass20">&nbsp;(<lightning:formattedText value="{!MPSLine.OrderedQuantity}"/>)</span>
+                                                                                </a>
+                                                                                <div class="dropdown">
+                                                                                    <ul class="MPS_AT-newClass21">
+                                                                                        <li>
+                                                                                            <aura:If isTrue="{!(MPSLine.IssuePO)}">
+                                                                                                
+                                                                                                <a href="{!'/apex/ERP7__CreatePurchaseOrderLC?mpslineId='+MPSLine.MPSLine.Id}" target="_blank" data-recordId="{!MPSLine.MPSLine.Id}" data-toggle="modal" data-target="#myModal2"><span class="slds-form-element__label" >{!$Label.c.Create_Purchase_Order}</span></a>
+                                                                                            </aura:If>
+                                                                                        </li>
+                                                                                        <li>
+                                                                                            <aura:If isTrue="{!(MPSLine.IssueMO)}">
+                                                                                                <a onclick="{!c.navigateToSchedular}" data-mosoliId="{!MPSLine.MPSLine.Id}" data-record="{!v.MPS.MPS.Id}" data-moprId="{!v.MPS.MPS.ERP7__Product__c}"><span class="slds-form-element__label" >{!$Label.c.Create_Manufacturing_Order}</span></a>
+                                                                                            </aura:If>
+                                                                                        </li>
+                                                                                    </ul>
+                                                                                </div>
+                                                                            </div>
+                                                                        </aura:renderIf>
+                                                                  <!--  </aura:if> -->
+                                                                </div> 
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                <div class="slds-truncate" title=""><b>{!MPSLine.MPSLine.ERP7__Projected_Inventory__c}</b></div>  
+                                                            </td>
+                                                        </tr>
+                                                        <tr class="slds-hint-parent" >
+                                                            <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                <div class="slds-truncate MPS_AT-newClass22" title=""><b>{!MPSLine.MPSLine.ERP7__Available_To_Promise__c}</b></div>  
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>       
+                                            </div>
+                                        </aura:iteration>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <aura:iteration var="cMPS" indexVar="BOMCount" items="{!v.MPS.MPSS}">
+                  
+                	<div class="epr_Mark7">
+                        <div class="container-fluid ">
+                            <div class="row">
+                                <div class="col-md-6 slds-p-around--xx-small" >
+                                     <h4 class="MPS_AT-newClass7" title="Product" id="{!cMPS.MPS.ERP7__Product__c}">
+                                        {!BOMCount+1}. <lightning:formattedText value="{!cMPS.MPS.ERP7__Product__r.Name}" onclick="{!c.NavRecord}" title="{!cMPS.MPS.ERP7__Product__c}"/>
+                                        <aura:renderIf isTrue="{!(cMPS.MPS.ERP7__Product__r.ERP7__Picture__c != undefined)}">
+                                            &nbsp;&nbsp;<img src="{!cMPS.MPS.ERP7__Product__r.ERP7__Picture__c}" class="MPS_AT-newClass8" />
+                                        </aura:renderIf>    
+                                	</h4>
+                                </div>
+                                <div class="col-md-6 MPS_AT-newClass9 float-right"> 
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-p-right_small text-right slds-p-top_xx-small">
+                                        {!$Label.c.ProductionSupply_Lot_Size1} -&nbsp; 
+                                        </div>
+                                        <div class="slds-col slds-p-right_small">
+                                        <lightning:input type="number"  step="0.01" variant="label-hidden" value="{!cMPS.MPS.ERP7__Lot_Size__c}" />
+                                        </div>
+                                        <div class="slds-col">{!$Label.c.Minimum_Inventory_Level} -&nbsp; {!cMPS.MPS.ERP7__Minimum_Inventory_Level__c}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="epr_Mark7">
+                        <div class="container-fluid">
+                            <div class="card mb-2">
+                                <div class="card-body p-2">
+                                    <div class="row">
+                                        <div class="col-md-3 col-xs-3">
+                                            <table class="slds-table slds-table--condensed" >
+                                                <tbody>
+                                                    <tr class="slds-hint-parent MPS_AT-newClass17" bgcolor="#f7f8f9">
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title=""><b>{!$Label.c.Starting_Inventory} -&nbsp; {!cMPS.MPS.ERP7__Starting_Inventory__c}</b></div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.Demand_Forecast}</div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.Actual_Demand}</div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.Net_Inventory_Before_Supply_Produce_StockRunRate}</div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.To_Supply_Produce_StockRunRate}</div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.Projected_Inventory}</div>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="slds-hint-parent" >
+                                                        <td data-label="Contact">
+                                                            <div class="slds-truncate" title="">- {!$Label.c.Available_to_Promise}</div>
+                                                        </td>
+                                                    </tr>
+                                                </tbody> 
+                                            </table>
+                                        </div>
+                                        <div class="slds-grid col-md-9 hoverdiv">
+                                            <aura:iteration var="MPSLine" indexVar="counts" items="{!cMPS.MPSLines}">
+                                                <div class="slds-col">
+                                                    <table class="slds-table slds-table--condensed" cellspacing="0" cellpadding="0" border="0">
+                                                        <tbody>
+                                                            <tr class="slds-hint-parent MPS_AT-newClass17" bgcolor="#f7f8f9">
+                                                                <td data-label="Contact" class="MPS_AT-newClass18">
+                                                                    <div class="slds-truncate" title="">{!MPSLine.MPSLine.Name}</div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                    <div class="slds-form-element">
+                                                                        <div class="slds-form-element__control">
+                                                                            <lightning:input type="number"  class="width120" variant="label-hidden" value="{!MPSLine.MPSLine.ERP7__Demand_Forecast__c}" onchange="{!c.Dirty}"/>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                    <div class="slds-truncate" title="">{!MPSLine.MPSLine.ERP7__Actual_Demand__c}</div>  
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                    <aura:renderIf isTrue="{!(MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c >= cMPS.MPS.ERP7__Minimum_Inventory_Level__c)}"> 
+                                                                        <div class="slds-truncate" title="">{!MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c}</div> 
+                                                                    </aura:renderIf>
+                                                                    <aura:renderIf isTrue="{!!(MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c >= cMPS.MPS.ERP7__Minimum_Inventory_Level__c)}">
+                                                                        <div class="slds-truncate MPS_AT-newClass19" title=""><b>{!MPSLine.MPSLine.ERP7__Net_Inventory_Before_Supply_Produce__c}</b></div> 
+                                                                    </aura:renderIf> 
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass12">
+                                                                    <div class="" title="">{!MPSLine.MPSLine.ERP7__To_Supply_Manufacture__c} 
+                                                                        <aura:renderIf isTrue="{!and(MPSLine.MPSLine.ERP7__To_Supply_Manufacture__c > MPSLine.OrderedQuantity,MPSLine.MPSLine.Id != undefined)}">
+                                                                            <div class="dropdown">
+                                                                                <a  class="slds-button slds-button-brand dropdown-toggle" href="" target="_blank" aria-haspopup="true" data-toggle="dropdown"> 
+                                                                                    <span class="MPS_AT-newClass20">&nbsp;(<lightning:formattedText value="{!MPSLine.OrderedQuantity}"/>)</span>
+                                                                                </a>
+                                                                                <div class="dropdown">
+                                                                                    <ul class="MPS_AT-newClass21">
+                                                                                        <li>
+                                                                                            <aura:If isTrue="{!(MPSLine.IssuePO)}">
+                                                                                                <a href="{!'/apex/ERP7__CreatePurchaseOrderLC?mpslineId='+MPSLine.MPSLine.Id}" target="_blank" data-recordId="{!MPSLine.MPSLine.Id}" data-toggle="modal" data-target="#myModal2"><span class="slds-form-element__label" >{!$Label.c.Create_Purchase_Order}</span></a>
+                                                                                            </aura:If>
+                                                                                        </li>
+                                                                                        <li>
+                                                                                            <aura:If isTrue="{!(MPSLine.IssueMO)}">
+                                                                                                <a onclick="{!c.navigateToSchedular}" data-mosoliId="{!MPSLine.MPSLine.Id}" data-record="{!v.MPS.MPS.Id}" data-moprId="{!v.MPS.MPS.ERP7__Product__c}"><span class="slds-form-element__label" >{!$Label.c.Create_Manufacturing_Order}</span></a>
+                                                                                            </aura:If>
+                                                                                        </li>
+                                                                                    </ul>
+                                                                                </div>                                                    
+                                                                                <span class="slds-assistive-text">{!$Label.c.More_Options}</span>
+                                                                            </div>
+                                                                        </aura:renderIf>
+                                                                    </div>  
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                    <div class="slds-truncate" title=""><b>{!MPSLine.MPSLine.ERP7__Projected_Inventory__c}</b></div>  
+                                                                </td>
+                                                            </tr>
+                                                            <tr class="slds-hint-parent" >
+                                                                <td data-label="Contact" class="MPS_AT-newClass11">
+                                                                    <div class="slds-truncate MPS_AT-newClass22" title=""><b>{!MPSLine.MPSLine.ERP7__Available_To_Promise__c}</b></div>  
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>       
+                                                </div>
+                                            </aura:iteration>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aura:iteration>
+                <!-- Month View End-->
+            </div>
+            <div class="slds-clearfix MPS_AT-newClass23"></div>
+            <div class="slds">
+                <div class="slds-docked-form-footer">
+                    <div class="col-md-12 slds-m-bottom--small" >
+                        <span class="MPS_AT-newClass14">
+                            <lightning:spinner variant="brand" size="small" aura:id="blueSpins" class="slds-hide" alternativeText ="Please wait while loading.."/>
+                        </span>
+                        <aura:renderIf isTrue="{!v.MPS.MPS.Id != undefined}">
+                            <aura:renderIf isTrue="{!(v.Dirty == false)}">
+                                <button class="slds-button slds-button--success" onclick="{!c.Evaluate}">{!$Label.c.Evaluate}</button>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!(v.Dirty == true)}">
+                                <button class="slds-button slds-button--success MPS_AT-newClass15"  onclick="{!c.Evaluate}">{!$Label.c.Evaluate}</button>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!(v.Dirtys == false)}">
+                                <button class="slds-button slds-button--brand" onclick="{!c.Save}">{!$Label.c.ContractConsole_Save}</button>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!(v.Dirtys == true)}">
+                                <aura:renderIf isTrue="{!(v.Dirty == false)}">
+                                    <button class="slds-button slds-button--brand MPS_AT-newClass15" onclick="{!c.Save}">{!$Label.c.ContractConsole_Save}</button>
+                                </aura:renderIf>
+                                <aura:renderIf isTrue="{!(v.Dirty == true)}">
+                                    <button class="slds-button slds-button--brand MPS_AT-newClass15" disabled="disabled" onclick="{!c.Save}">{!$Label.c.ContractConsole_Save}</button>
+                                </aura:renderIf>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!(v.SRR == 'true')}">
+                                <lightning:formattedUrl value="{!'/lightning/n/ERP7__Stock_Run_Rate_New'}" label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral slds-m-right--small"/>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!(v.SRR != 'true')}">
+                            	<lightning:formattedUrl value="{!'/'+ v.MPS.MPS.Id}" label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral slds-m-right--small"/>
+                            </aura:renderIf>
+                        </aura:renderIf>
+                    </div>
+                </div>
+            </div>
+        </body>
+    </html>
+</aura:component>

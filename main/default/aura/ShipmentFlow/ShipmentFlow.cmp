@@ -1,0 +1,705 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" controller="ShippingRates" >
+    <aura:attribute name="PackageType" type="object"/>
+    <aura:handler name="change" value="{!v.Organisation.Id}" action="{!c.fetchOrgAddress}"/> 
+    <aura:attribute name="Organisation" type="Map" default="{}"/> 
+    <aura:attribute name="ShowTimeInCostTab" type="boolean" default="false"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="displayService" type="boolean" default="false"/>
+    <aura:attribute name="ShowGetRate" type="boolean" default="true"/>
+    <aura:attribute name="selectedTab" type="String" default="SHIPPING_SERVICES"/>
+    <aura:attribute name="signatureservice" type="List"/>
+    <aura:attribute name="statusconfirmation" type="List"/>
+    <aura:attribute name="packageId" type="List"/>
+    <aura:attribute name="shipmentId" type="String"/>
+    <aura:attribute name="address" type="Address__c" default="{'sObjectType':'Address__c'}"/> 
+    <aura:attribute name="rateWrap" type="object" default="{'sObjectType':'rateWrapper'}"/> 
+    <aura:attribute name="fromAddress" type="Address__c"/> 
+    <aura:attribute name="myConsW" type="Object"/> 
+    <aura:attribute name="packageList" type="List"/> 
+    <aura:attribute name="packageLists" type="List"/>
+    <aura:attribute name="recordIdMap" type="Map"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:attribute name="shipment" type="Shipment__c" default="{ 'sobjectType': 'Shipment__c', 'ERP7__Terms_Of_Shipment__c': '--None--', 'ERP7__Reason_For_Export__c':'SAMPLE', 'ERP7__Signature_Services__c':'SERVICE_DEFAULT', 'ERP7__Status__c':''}"/>
+    <aura:attribute name="fedexCred" type="Object"/>
+    <aura:attribute name="FEDEX_Services" type="Object" />
+    <aura:attribute name="result" type="String"/>
+    <aura:attribute name="retValue" type="String" default=""/>
+    <aura:attribute name="pkgType" type="String" default=""/>
+    <aura:attribute name="errorMsg" type="String"/>
+    <aura:attribute name="WrapperMsg" type="String"/>
+    <aura:attribute name="errorMsg1" type="String"/>
+    <aura:attribute name="trackWrapperList" type="Object"/>
+    <aura:attribute name="toShipmentType" type="Boolean" default="false"/>
+    <aura:attribute name="fromShipmentType" type="Boolean" default="false"/>
+    <aura:attribute name="spodLetter" type="Attachment" default="{'sObjectType':'Attachment'}"/>
+    <aura:attribute name="bufferlbl" type="Attachment" default="{'sObjectType':'Attachment'}"/>
+    <aura:attribute name="attUrl" type="String"/> 
+    <aura:handler name="change" value="{!v.toAddId}" action="{!c.toadresschange}"/>
+    <aura:handler name="change" value="{!v.fromAddId}" action="{!c.fromAddresschange}"/> 
+    <aura:attribute name="statusconfirmationOptions" type="List"/>
+    <aura:attribute name="signatureserviceOptions" type="List"/>
+    <aura:attribute name="serviceList" type="List"/>
+    <aura:attribute name="ServiceName" type="String"/>
+    <aura:attribute name="reasonforexportOptions" type="List"/>
+    <aura:attribute name="termsofshipmentOptions" type="List"/>
+    <aura:attribute name="isforRMA" type="Boolean" default="false"/>
+    <aura:attribute name="showSendReturnLabel" type="boolean" default="false"/>
+    <aura:attribute name="isLoading" type="boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="redirectURL" type="String" default=""/>
+    <aura:attribute name="addresserrmsg" type="String" default=""/>
+    
+    
+    <aura:attribute name="products" type="Product2[]"/>
+    <aura:attribute name="selectedProduct" type="Product2[]"/>
+    <aura:attribute name="AccId" type="String" default=""/>
+    <aura:attribute name="toAddId" type="String" default=""/>
+    <aura:attribute name="fromAddId" type="String" default=""/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="fetchProd" type="String" default=""/>
+    <aura:attribute name="displayProducts" type="Boolean" default="true"/>
+    <aura:attribute name="SaveErrorMsg" type="String" default=""/>
+    <aura:if isTrue="{!and(v.SaveErrorMsg!=undefined, v.SaveErrorMsg!='')}">
+        <div class="slds-notify_container slds-is-fixed BankReconciliation-newClass2" aura:id="criteriaMsgId">
+            <div class="slds-notify slds-notify_toast slds-theme_alert-texture slds-theme_error BankReconciliation-newClass3 " role="status">
+                <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small "> {!v.SaveErrorMsg}
+                    </h2>
+                </div>
+                <div class="slds-notify__close">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.onClick}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="close" />
+                        <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aura:if>
+    <aura:if isTrue="{!v.displayProducts}">
+        
+        <div class="slds-page-header">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title shadow-mrr">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-standard-opportunity" title="opportunity">
+                                <lightning:icon iconName="standard:product" alternativeText="{!$Label.c.AddSubscription_Product}" title="Product" />
+                                <span class="slds-assistive-text"></span>
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <span class="slds-page-header__title slds-truncate" title="Add Products">{!$Label.c.Add_Products}</span>
+                                    </h1>
+                                </div>
+                            </div>
+                            <p class="slds-page-header__name-meta">
+                                <lightning:input type="Text" placeholder="{!$Label.c.Search_Product_UsersShiftMatch}" value="{!v.fetchProd}" onchange="{!c.fetchProducs}" style="width:400px;" variant="label-hidden"></lightning:input>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card shadow-mrr slds-m-around_small">  
+            <table class="slds-table slds-table_bordered slds-m-top_small border-0">
+                <thead>
+                    <tr class="slds-text-title--caps">
+                        <th>
+                            
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="Code">{!$Label.c.Product_Code}</span> 
+                        </th>                    
+                        <th>
+                            <span class="slds-truncate" title="Product">{!$Label.c.AddSubscription_Product}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="UOM">{!$Label.c.UOM}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="Quantity">{!$Label.c.PackageSlip_List_Quantity}</span> 
+                        </th>                                            
+                        <th>
+                            <span class="slds-truncate" title="Description">Description</span> 
+                        </th>
+                    </tr>            
+                </thead>
+                <tbody>
+                    <aura:if isTrue="{!v.products.length>0}">
+                        <aura:iteration items="{!v.products}" var="prod" indexVar="index">
+                            <tr>
+                                <td scope="row" class="slds-text-align--right" valign="top">                                            
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <lightning:input type="checkbox" aura:id="boxPack" value="{!index}" onchange="{!c.checkboxSelect}" variant="label-hidden"/>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td valign="top">
+                                    <div class="slds-truncate">
+                                        {!prod.ProductCode}
+                                    </div>                                            
+                                </td>
+                                <td valign="top">
+                                    <div class="slds-truncate">
+                                        <lightning:formattedUrl value="{!'/'+prod.Id}" label="{!prod.Name}" target="_blank"></lightning:formattedUrl>
+                                        
+                                    </div>   
+                                    
+                                </td>
+                                <td valign="top">
+                                    <div>
+                                        {!prod.QuantityUnitOfMeasure}
+                                    </div>
+                                </td>
+                                <td valign="top">
+                                    <div>
+                                        <lightning:input type="number" value="{!prod.quantity}" ></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                    </div>
+                                </td> 
+                                <td valign="top">
+                                    <div>
+                                        <lightning:textarea value="{!prod.Description}" disabled="true"></lightning:textarea>
+                                    </div> 
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                        <aura:set attribute="else">
+                            <b style="text-align:center;">{!$Label.c.No_Items_Found}</b>
+                        </aura:set>
+                    </aura:if>
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.BackToRecord}" variant="neutral" class="width150px"></lightning:button>
+                        <lightning:button label="{!$Label.c.Next_UsersShiftMatch}" onclick="{!c.createShipment}" variant="brand" class="width150px"></lightning:button>
+                    </div>
+                </tbody>
+            </table>
+        </div>
+        <aura:set attribute="else">
+            <aura:if isTrue="{!!v.displayService}">
+                <div class="slds-grid slds-wrap">
+                    
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 mb50">
+                        <div class="card shadow-mrr slds-m-around_small"> 
+                            <div class="slds-page-header slds-m-top--xx-small fedex-class3">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-hide" aura:id="articleOne" iconName="standard:shipment" size="small" variant="inverse"/>
+                                        <lightning:icon class="slds-show" aura:id="articleOne" iconName="standard:shipment" size="small" variant="inverse"/>
+                                    </div>
+                                    
+                                    <div class="slds-m-left--x-large " >{!$Label.c.Where_is_this_shipment_going}</div>
+                                </section>
+                            </div>
+                            
+                            <div aura:id="articleOne">
+                                <div class="epr_Mark7 slds-p-around_small">
+                                    <div class="slds-grid ">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label"> {!$Label.c.To_Address}</label> 
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" label="" IconName="standard:address" selectedRecordId="{!v.toAddId}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.ERP7__Company__c !=null,v.address.ERP7__Contact__r.ERP7__Company__c !='')}">
+                                                    <lightning:input type="text" label="{!$Label.c.Company}" value="{!v.address.ERP7__Contact__r.ERP7__Company__c}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="text" label="{!$Label.c.Company}" value="{!v.address.ERP7__Customer__r.ERP7__Company__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div> 
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="Contact" value="{!v.address.ERP7__Contact__r.Name}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small"> 
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.Email !=null,v.address.ERP7__Contact__r.Email !='')}">
+                                                    <lightning:input type="email" label="Email" value="{!v.address.ERP7__Contact__r.Email}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="email" label="Email" value="{!v.address.ERP7__Customer__r.ERP7__Email__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.address.ERP7__Contact__r.Phone !=null,v.address.ERP7__Contact__r.Phone !='')}">
+                                                    <lightning:input type="tel" label="Phone" value="{!v.address.ERP7__Contact__r.Phone}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="tel" label="Phone" value="{!v.address.ERP7__Customer__r.Phone}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_1}" value="{!v.address.ERP7__Address_Line1__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_2}" value="{!v.address.ERP7__Address_Line2__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.City_town}" value="{!v.address.ERP7__City__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.State_country}" value="{!v.address.ERP7__State__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Zip_post_code}" value="{!v.address.ERP7__Postal_Code__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Cash_Payment_Country}" value="{!v.address.ERP7__Country__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                {!$Label.c.Is_Residential}
+                                                <lightning:input type="checkbox" label="{!$Label.c.Is_Residential}" variant="label-hidden" class="display-lable" checked="{!v.toShipmentType}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card shadow-mrr slds-m-around_small slds-m-bottom_large"> 
+                            <div class="slds-page-header slds-m-top--xx-small fedex-class3" >
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-hide" aura:id="articleOne" iconName="standard:shipment" size="small" variant="inverse"/>
+                                        <lightning:icon class="slds-show" aura:id="articleOne" iconName="standard:shipment" size="small" variant="inverse"/>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-m-left--small" >{!$Label.c.Where_is_this_shipment_from}</div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small ">
+                                            <div class="width200">
+                                                <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                                        IconName="standard:account" placeholder="Search Organisation" qry="AND ERP7__Account_Type__C = 'Organisation'"/>
+                                            </div>
+                                            
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                            
+                            <div aura:id="articleOne">
+                                <div class="epr_Mark7 slds-p-around_small">
+                                    <div class="slds-grid ">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <label class="slds-form-element__label"> {!$Label.c.From_Address}</label> 
+                                                <c:CustomInputLookUp objectAPIName="ERP7__Address__c" label="" IconName="standard:address" selectedRecordId="{!v.fromAddId}" />
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.ERP7__Company__c !=null,v.fromAddress.ERP7__Contact__r.ERP7__Company__c !='')}">
+                                                    <lightning:input type="text" label="{!$Label.c.Company}" value="{!v.fromAddress.ERP7__Contact__r.ERP7__Company__c}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="text" label="{!$Label.c.Company}" value="{!v.fromAddress.ERP7__Customer__r.ERP7__Company__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div> 
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="Contact" value="{!v.fromAddress.ERP7__Contact__r.Name}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small"> 
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.Email !=null,v.fromAddress.ERP7__Contact__r.Email !='')}">
+                                                    <lightning:input type="email" label="Email" value="{!v.fromAddress.ERP7__Contact__r.Email}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="email" label="Email" value="{!v.fromAddress.ERP7__Customer__r.ERP7__Email__c}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <aura:if isTrue="{!and(v.fromAddress.ERP7__Contact__r.Phone !=null,v.fromAddress.ERP7__Contact__r.Phone !='')}">
+                                                    <lightning:input type="tel" label="Phone" value="{!v.fromAddress.ERP7__Contact__r.Phone}"/>
+                                                    <aura:set attribute="else">
+                                                        <lightning:input type="tel" label="Phone" value="{!v.fromAddress.ERP7__Customer__r.Phone}"/>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_1}" value="{!v.fromAddress.ERP7__Address_Line1__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Address_line_2}" value="{!v.fromAddress.ERP7__Address_Line2__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.City_town}" value="{!v.fromAddress.ERP7__City__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.State_country}" value="{!v.fromAddress.ERP7__State__c}"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-grid">
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Zip_post_code}" value="{!v.fromAddress.ERP7__Postal_Code__c}"/>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="text" label="{!$Label.c.Cash_Payment_Country}" value="{!v.fromAddress.ERP7__Country__c}"/>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 mb50">
+                        <div class="card  shadow-mrr slds-m-around_small ">
+                            <div class="slds-page-header Message slds-m-top--xx-small fedex-class3">
+                                <section class="slds-clearfix">
+                                    <div class="slds-float--left ">
+                                        <lightning:icon class="slds-show" aura:id="articleTwo" iconName="standard:product" size="small" variant="inverse"/>
+                                        <lightning:icon class="slds-hide" aura:id="articleTwo" iconName="standard:product" size="small" variant="inverse"/>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1">
+                                    <div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                    <div class="slds-m-left--x-large" >{!$Label.c.Selected_Products}</div>
+                                    </div>
+                                    <!--<div class="slds-col slds-size_1-of-1 slds-large-size_6-of-12">
+                                    <p class="greyhead Pack-newClass25">Package Type<span class="Pack-newClass23">*</span></p>
+                                    <div class="slds-form-element__control">
+                                        <lightning:select value="{!v.pkgType}" variant="label-hidden" class="display-lable">
+                                            <aura:iteration items="{!v.PackageType}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.pkgType, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                    </div>-->
+                                    </div>
+                                </section>
+                            </div>
+                            <table class="slds-table slds-table_bordered slds-m-top_small slds-table_fixed-layout border-0">
+                                <thead>
+                                    <tr class="slds-text-title--caps">
+                                        
+                                        <th>
+                                            <span class="slds-truncate" title="Code">Code</span> 
+                                        </th>                    
+                                        <th>
+                                            <span class="slds-truncate" title="Product">{!$Label.c.AddSubscription_Product}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="UOM">{!$Label.c.UOM}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Quantity">{!$Label.c.Qty_Pick}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Length">{!$Label.c.ShipmentManagement_Package_Length}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Width">{!$Label.c.ShipmentManagement_Package_Width}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Height">{!$Label.c.Height_Pack}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Weight">{!$Label.c.PackageSlip_List_Weight}</span> 
+                                        </th>
+                                        <th>
+                                            <span class="slds-truncate" title="Description">Descri<br/>ption</span> 
+                                        </th>
+                                    </tr>            
+                                </thead>
+                                <tbody>
+                                    <aura:iteration items="{!v.selectedProduct}" var="prod" indexVar="index">
+                                        <tr>
+                                            
+                                            <td class="valigntop">
+                                                <div class="slds-truncate">
+                                                    {!prod.ProductCode}
+                                                </div>                                            
+                                            </td>
+                                            <td class="valigntop">
+                                                <div class="slds-truncate">
+                                                    <lightning:formattedUrl value="{!'/'+prod.Id}" label="{!prod.Name}" target="_blank"></lightning:formattedUrl>
+                                                    
+                                                </div>   
+                                                
+                                            </td>
+                                            <td class="valigntop">
+                                                <div class="slds-truncate">
+                                                    {!prod.QuantityUnitOfMeasure}
+                                                </div>
+                                            </td>
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:input type="number" value="{!prod.quantity}" disabled="true"></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                                </div>
+                                            </td>
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:input type="number" value="{!prod.ERP7__Length__c}"></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                                </div>
+                                            </td>
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:input type="number" value="{!prod.ERP7__Width__c}" disabled="true"></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                                </div>
+                                            </td>
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:input type="number" value="{!prod.ERP7__Height__c}" disabled="true"></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                                </div>
+                                            </td>
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:input type="number" value="{!prod.ERP7__Weight__c}" disabled="true"></lightning:input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"-->
+                                                </div>
+                                            </td>
+                                            
+                                            <td class="valigntop">
+                                                <div>
+                                                    <lightning:textarea value="{!prod.Description}" disabled="true"></lightning:textarea>
+                                                </div> 
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                </tbody>
+                            </table>
+                        </div> 
+                        <aura:if isTrue="{!v.serviceList.length>0}">
+                            <div class="card  shadow-mrr slds-m-around_small ">
+                                <h1 id="modal-heading-01" class="slds-modal__title slds-hyphenate shipmentrates">
+                                    <lightning:icon iconName="standard:price_book_entries" size="small"></lightning:icon>
+                                    {!$Label.c.Shipment_Rates}</h1>
+                                <table class="slds-table slds-table_bordered slds-m-top_small border-0">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th>
+                                                
+                                            </th>
+                                            <th>
+                                                <span class="slds-truncate" title="Service Name">{!$Label.c.Service_Name}</span> 
+                                            </th>                    
+                                            <th>
+                                                <span class="slds-truncate" title="Delivery Date">{!$Label.c.Delivery_Date}</span> 
+                                            </th>
+                                            <!--<th>
+                                                <span class="slds-truncate" title="UOM">ServiceCode</span> 
+                                            </th>-->
+                                            <th>
+                                                <span class="slds-truncate" title="Currency Code">{!$Label.c.Currency_Code}</span> 
+                                            </th>                                            
+                                            <th>
+                                                <span class="slds-truncate" title="Total Charges">{!$Label.c.Total_Charges}</span> 
+                                            </th>
+                                        </tr>            
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration items="{!v.serviceList}" var="prod" indexVar="index">
+                                            <tr>
+                                                <td scope="row" class="slds-text-align--right">                                            
+                                                    <div class="slds-form-element">
+                                                        <div class="slds-form-element__control">
+                                                            <lightning:input type="radio" variant="label-hidden" aura:id="Fr0" name="others" value="{!index}" onchange="{!c.cheboxSelect}"/><!-- checked="{!twl.Selected}" -->
+                                                            <!--<lightning:input type="checkbox" aura:id="boxPack" value="{!index}" onchange="{!c.cheboxSelect}"/>-->
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate">
+                                                        {!prod.ServiceManual}
+                                                    </div>                                            
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate">
+                                                        {!prod.DeliveryDate}
+                                                        
+                                                    </div>   
+                                                    
+                                                </td>
+                                                <!--<td>
+                                                    <div>
+                                                        {!prod.ServiceCode}
+                                                    </div>
+                                                </td>-->
+                                                <td>
+                                                    <div>
+                                                        {!prod.currencyCode}
+                                                    </div>
+                                                </td> 
+                                                <td>
+                                                    <div>
+                                                        {!prod.totalCharges}
+                                                    </div> 
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </aura:if>
+                        
+                        
+                    </div>
+                </div>
+                
+                
+                
+                <div class="slds-docked-form-footer">
+                    <lightning:button label="{!$Label.c.EmployeeReviewV2_Back}" onclick="{!c.Back}" variant="neutral" class="width150px"></lightning:button>
+                    <lightning:button label="{!$Label.c.Get_Rates}" onclick="{!c.getR}" variant="brand" class="width150px"></lightning:button>
+                    <aura:if isTrue="{!v.serviceList.length>0}">
+                        <lightning:button label="{!$Label.c.Create_Shipment}" onclick="{!c.createShipmentRecord}" variant="success" class="width150px"></lightning:button>
+                    </aura:if>
+                </div>
+                <aura:set attribute="else">
+                    <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="modal-heading-01" class="slds-modal slds-fade-in-open slds-modal_large">
+                        <div class="slds-modal__container">
+                            
+                            <div class="slds-modal__header">
+                                <!--<div class="slds-grid">
+                                <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">-->
+                                <h1 id="modal-heading-01" class="slds-modal__title slds-hyphenate" style="text-align:center;">{!$Label.c.Shipment_Rates}</h1>
+                                <!--</div>
+                                <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small" style="width:300px;">
+                                    <c:CustomInputLookUp objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                        IconName="standard:account" placeholder="Search Organisation" qry="AND ERP7__Account_Type__C = 'Organisation'"/>
+                                </div>
+                                </div>-->
+                            </div>
+                            <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                                <table class="slds-table slds-table_bordered slds-m-top_small">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th>
+                                                
+                                            </th>
+                                            <th>
+                                                <span class="slds-truncate" title="Code">{!$Label.c.Service_Name}</span> 
+                                            </th>                    
+                                            <th>
+                                                <span class="slds-truncate" title="Product">{!$Label.c.Delivery_Date}</span> 
+                                            </th>
+                                            <!--<th>
+                                                <span class="slds-truncate" title="UOM">ServiceCode</span> 
+                                            </th>-->
+                                            <th>
+                                                <span class="slds-truncate" title="Quantity">{!$Label.c.Currency_Code}</span> 
+                                            </th>                                            
+                                            <th>
+                                                <span class="slds-truncate" title="Description">totalCharges</span> 
+                                            </th>
+                                        </tr>            
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration items="{!v.serviceList}" var="prod" indexVar="index">
+                                            <tr>
+                                                <td scope="row" class="slds-text-align--right">                                            
+                                                    <div class="slds-form-element">
+                                                        <div class="slds-form-element__control">
+                                                            <lightning:input type="checkbox" aura:id="boxPack" value="{!index}" onchange="{!c.cheboxSelect}"/>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate">
+                                                        {!prod.ServiceManual}
+                                                    </div>                                            
+                                                </td>
+                                                <td>
+                                                    <div class="slds-truncate">
+                                                        {!prod.DeliveryDate}
+                                                        
+                                                    </div>   
+                                                    
+                                                </td>
+                                                <!--<td>
+                                                    <div>
+                                                        {!prod.ServiceCode}
+                                                    </div>
+                                                </td>-->
+                                                <td>
+                                                    <div>
+                                                        {!prod.currencyCode}
+                                                    </div>
+                                                </td> 
+                                                <td>
+                                                    <div>
+                                                        {!prod.totalCharges}
+                                                    </div> 
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="text-align:center;background:#fff;" class="slds-p-around_small">
+                                <lightning:button label="{!$Label.c.Cancel_UserAvailabilities}" onclick="{!c.cancelCale}" variant="neutral"></lightning:button>
+                                <lightning:button label="{!$Label.c.Create_Shipment}" onclick="{!c.createShipmentRecord}" variant="brand"></lightning:button>
+                                
+                            </div>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+                </aura:set>
+            </aura:if>
+        </aura:set>
+    </aura:if>
+    <aura:if isTrue="{!v.showMmainSpin}">
+        <!--<span class="BankReconciliation-newClass36">-->
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        <!--</span>-->
+    </aura:if>
+</aura:component>

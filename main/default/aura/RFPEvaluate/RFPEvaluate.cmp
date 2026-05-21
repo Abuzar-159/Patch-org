@@ -1,0 +1,457 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,force:lightningQuickAction" access="global" controller="ManageRFP">    
+    <head>
+        <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+        <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="{!join(',',$Resource.SLDS+ '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.BankReconcile + '/css/font-awesome.css')}"  />
+    </head>
+    
+    <aura:attribute name = "RFPWrap" type = "object[]" default="{'sObjectType' : 'RFPWrapper'}"/>
+    <aura:attribute name = "reqSupplier" type = "Request_Supplier__c" default="{'sObjectType' : 'ERP7__Request_Supplier__c'}"/>
+    <aura:attribute name = "request" type = "Request__c" default="{'sObjectType' : 'ERP7__Request__c'}"/>
+    <aura:attribute name = "reqRequirements" type = "object[]" default="{'sObjectType' : 'requirementWrappers'}"/>
+    
+    <aura:attribute name = "MOrderId" type = "Id" default=""/>
+    <aura:attribute name = "reqSupplierId" type = "Id" default="a0a1o00000DJsHjAAL"/>
+    <aura:attribute name = "requestId" type = "Id" default="a3S1o0000002fEaEAI"/>
+    <aura:attribute name = "reqSupplierName" type = "String" default=""/>
+    <aura:attribute name="resRatingOptions" type="List[]"/>
+    <aura:attribute name="resComplianceOptions" type="List[]"/>
+    <aura:attribute name = "EvaluateTab" type = "Boolean" default="true"/>
+    <aura:attribute name = "POTab" type = "Boolean" default="false"/>
+    <aura:attribute name = "isCompare" type = "Boolean" default="false"/>
+    
+    <aura:attribute name = "serverSuccess" type = "String" default=""/>
+    <aura:attribute name = "exceptionError" type = "String" default=""/>
+    <aura:method name="saveAll" action="{!c.saveallResponses}">
+        <aura:attribute name="param1" type="Boolean" default="false"/>
+    </aura:method>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <span class="RFPEval-class1">
+        <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading..." aura:id="mainSpin" class="mainSpinClass"/>
+    </span>
+    
+    <div class="maqsood erp_mark7 RFPEval-class2" aura:id="body">
+        
+        <!--Success Message-->
+        <div class="{!if(and(v.serverSuccess != '', v.serverSuccess != undefined),'slds-notify_container slds-is-fixed RFPEval-class3','slds-notify_container slds-is-fixed RFPEval-class4')}">
+            <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                <span class="slds-assistive-text">success</span>
+                <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                    <lightning:icon iconName="action:approval" size="x-small" alternativeText="Success!" title="Success" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_small ">{!v.serverSuccess}</h2>
+                </div>
+                <div class="slds-notify__close">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeSuccess}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--Success Message End-->
+        
+        <!--Error Message-->
+        <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed RFPEval-class3','slds-notify_container slds-is-fixed RFPEval-class4')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error RFPEval-class5" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small RFPEval-class6" >{!v.exceptionError}
+                    </h2>
+                </div>
+                <div class="slds-notify__close RFPEval-class7">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!--Error Message End-->
+        
+        <div class="erp_Mark7">
+            <!--Req and Res Tab Start-->
+            <div class="{!(v.EvaluateTab)?'slds-show':'slds-hide'}" id="rrhome" aura:id="rrhome">
+                <div class="slds-page-header">
+                    <div class="slds-page-header__row">
+                        <div class="slds-page-header__col-title">
+                            <div class="slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-avatar" >
+                                       <lightning:icon iconName="standard:record"  size="large" alternativeText="record!" title="record" />
+                                        <span class="slds-assistive-text">R&amp;P</span>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset" data-aura-rendered-by="520:0">Evaluate Responses</p>
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h1>
+                                                <span class="slds-page-header__title slds-truncate" title="">{!v.reqSupplier.Name}</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <aura:if isTrue = "{!v.reqSupplier.ERP7__Is_Submitted__c}">
+                    <aura:iteration items="{!v.reqRequirements}" var = "require" indexVar = "reqIndex">
+                        <div class="col-md-12 col-lg-12 mb-4 mt-3">
+                            <div class="card mb-4 bl-blue">
+                                <div class="card-body">
+                                    <div class="d-flex flex-row mb-3">
+                                        <a onclick="{!c.selectRequirement}" data-index="{!reqIndex}"  data-record-id="{!require.Req.Id}">
+                                            <figure class="avatar avatar-sm RFPEval-class8" >
+                                                <div class="rounded-circle"  alt="avatar">{!reqIndex + 1}</div>
+                                            </figure>    
+                                        </a>
+                                        <div class="pl-3">
+                                            <a onclick="{!c.selectRequirement}" data-index="{!reqIndex}"  data-record-id="{!require.Req.Id}">
+                                                <p class="font-weight-medium mb-0 RFPEval-class9" >
+                                                    <strong>
+                                                        <lightning:formattedText value = "{!require.Req.Name}"/>
+                                                    </strong>
+                                                </p>
+                                                <!--<p class="text-muted mb-0 text-small">09.01.2020 - 12:45</p>-->
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <p>
+                                        <lightning:formattedRichText value="{!require.Req.ERP7__Question__c}"/>
+                                    </p>
+                                   <!-- <aura:if isTrue = "{!require.isCurrentReq}"> -->
+                                        <div class="mt-3">
+                                            <div class="RFPEval-class10">
+                                                
+                                            </div> 
+                                            <div class="areadownresponse">
+                                                <p class="RFPEval-class11"><strong>Responses</strong></p>
+                                                <!--Parent Res-->
+                                                <aura:if isTrue="{!not(greaterthan(require.ResPackList.length,0))}">
+                                                    <div class="no projects RFPEval-class12" >
+                                                        <div class="slds-notify_container slds-is-relative RFPEval-class18">
+                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                <div>
+                                                                    <span class="slds-assistive-text">warning</span>
+                                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                        <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                                    </span>
+                                                                </div>
+                                                                <div class="slds-notify__content RFPEval-class16">
+                                                                    <h2 class="slds-text-heading_small RFPEval-class17">Sorry, No Response Available.</h2>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <aura:set attribute="else">
+                                                        <aura:iteration items = "{!require.ResPackList}" var = "response" indexVar = "resIndex"> 
+                                                            <div class="slds-grid slds-wrap pt-2 pb-2 RFPEval-class19"> 
+                                                                <div class="col-md-3 col-sm-12 text-right pt-0 pb-2">
+                                                                    <div class="scroll-bar-wrap">
+                                                                        <div class="scroll-box RFPEval-class20" >
+                                                                            <div class="input-group"> 
+                                                                                <lightning:formattedRichText value="{!response.Res.ERP7__Response_Answer__c}"/>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="cover-bar"></div>
+                                                                    </div>
+                                                                    
+                                                                </div>
+                                                                <div class="col-md-3 col-sm-12 pr-0">
+                                                                    <div class=" slds-grid" >
+                                                                        <div class="col-7 p-0 RFPEval-class21">
+                                                                            <strong>Sup.Rating</strong>&nbsp;	
+                                                                        </div>
+                                                                        <div class="col-5 p-0 RFPEval-class21">  
+                                                                            <lightning:formattedText value = "{!response.Res.ERP7__Supplier_Rating__c}"/>
+                                                                        </div> 
+                                                                    </div>
+                                                                    <div class=" slds-grid " >
+                                                                        <div class="col-7 p-0 RFPEval-class21">
+                                                                            <strong>Sup.Compliance</strong>&nbsp;	
+                                                                        </div>
+                                                                        <div class="col-5 p-0 RFPEval-class21" >
+                                                                            <lightning:formattedText value = "{!response.Res.ERP7__Supplier_Compliancy__c}"/>
+                                                                        </div>
+                                                                    </div>  
+                                                                </div>                                    
+                                                                <div class="col-md-3 col-sm-12">
+                                                                    <div class="slds-grid pt-1" >
+                                                                        <div class="col-6 p-0 RFPEval-class21">
+                                                                            <label for="exampleFormControlSelect2"><strong>Score%</strong></label>&nbsp;
+                                                                        </div>
+                                                                        <div class="col-6 p-0">
+                                                                            <lightning:input type="number" value="{!response.Res.ERP7__Score__c}" placeholder="Enter Score..."/>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class=" slds-grid pt-1" >
+                                                                        <div class="col-6 p-0 RFPEval-class21 ">
+                                                                            <label for="exampleFormControlSelect2"><strong>Rating</strong></label>&nbsp;
+                                                                        </div>    
+                                                                        <div class="col-6 p-0">
+                                                                            <lightning:select class="" name="suppRatingSelect" aura:id="suppRatingSelect" value="{!response.Res.ERP7__Actual_Rating__c}">
+                                                                                <aura:iteration items="{!v.resRatingOptions}" var="option">
+                                                                                    <option text="{!option.label}" value="{!option.id}" selected="{!option.selected}"/>
+                                                                                </aura:iteration>
+                                                                            </lightning:select>
+                                                                        </div>      
+                                                                    </div>
+                                                                    <div class="slds-grid pt-1" >
+                                                                        <div class="col-6 p-0 RFPEval-class21">
+                                                                            <label for="exampleFormControlSelect2"><strong>Compliance</strong></label>&nbsp;
+                                                                        </div>
+                                                                        <div class="col-6 p-0">
+                                                                            <lightning:select class="" name="supComplianceSelect" aura:id="supComplianceSelect" value="{!response.Res.ERP7__Actual_Compliancy__c}">
+                                                                                <aura:iteration items="{!v.resComplianceOptions}" var="option">
+                                                                                    <option text="{!option.label}" value="{!option.id}" selected="{!option.selected}"/>
+                                                                                </aura:iteration>
+                                                                            </lightning:select>
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    
+                                                                </div>
+                                                                <div class="col-md-3 col-sm-12 comment-contaiener">
+                                                                    <div class="slds-col text-left pt-2"> 
+                                                                        <aura:If isTrue="{!not(response.Att.Id == undefined)}">
+                                                                            <div class="slds-grid">
+                                                                                <div class="col-4 p-0 RFPEval-class21" >
+                                                                                    <label for="exampleFormControlSelect2"><strong>Attachment : </strong></label>&nbsp;
+                                                                                </div>    
+                                                                                <div class="col-6 p-0 RFPEval-class22" >
+                                                                                   <div class="slds-truncate2"> <lightning:formattedUrl value="{!'/'+response.Att.Id}" label="{!response.Att.Name}" target="_blank" class="fcolor"/></div>
+                                                                                </div>
+                                                                               
+                                                                            </div>
+                                                                        </aura:If>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </aura:iteration>
+                                                    </aura:set>
+                                                </aura:if>
+                                                <!--Parent Res End-->
+                                                
+                                                <!--CHILD req-->
+                                                <aura:iteration items="{!require.childReqs}" var = "chRequire" indexVar = "cReqIndex">
+                                                    <div class="col-md-12 col-lg-12 mb-4 mt-3" >
+                                                        <div class="card mb-4 bl-blue">
+                                                            <div class="card-body">
+                                                                <div class="d-flex flex-row mb-3">
+                                                                    <a onclick="{!c.selectChRequirement}" data-req-index="{!reqIndex}" data-index="{!cReqIndex}"  data-record-id="{!chRequire.Req.Id}">
+                                                                        <figure class="avatar avatar-sm RFPEval-class8" >
+                                                                            <div class="rounded-circle"  alt="avatar">{!(reqIndex + 1)+'.'+ (cReqIndex+1)}</div>
+                                                                        </figure>    
+                                                                    </a>
+                                                                    <div class="pl-3">
+                                                                        <a onclick="{!c.selectChRequirement}" data-req-index="{!reqIndex}" data-index="{!cReqIndex}"  data-record-id="{!chRequire.Req.Id}">
+                                                                            <p class="font-weight-medium mb-0 RFPEval-class9" >
+                                                                                <strong>
+                                                                                    <lightning:formattedText value = "{!chRequire.Req.Name}"/>
+                                                                                </strong>
+                                                                            </p>
+                                                                            <!--<p class="text-muted mb-0 text-small">09.01.2020 - 12:45</p>-->
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                                <p>
+                                                                    <lightning:formattedRichText value="{!chRequire.Req.ERP7__Question__c}"/>
+                                                                </p>
+                                                              <!--  <aura:if isTrue = "{!chRequire.isCurrentReq}">-->
+                                                                    <div class="mt-3">
+                                                                        <div class="RFPEval-class10">
+                                                                            
+                                                                        </div> 
+                                                                        <div class="areadownresponse">
+                                                                            <p><strong>Responses</strong></p>
+                                                                            <!--Child Res-->
+                                                                            <aura:if isTrue="{!not(greaterthan(chRequire.ResPackList.length,0))}">
+                                                                                <div class="no projects RFPEval-class12" >
+                                                                                    <div class="slds-notify_container slds-is-relative RFPEval-class18">
+                                                                                        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                                            <div>
+                                                                                                <span class="slds-assistive-text">warning</span>
+                                                                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                                                                                    <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div class="slds-notify__content RFPEval-class16" >
+                                                                                                <h2 class="slds-text-heading_small RFPEval-class17">Sorry, No Response Available.</h2>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <aura:set attribute="else">
+                                                                                    <aura:iteration items = "{!chRequire.ResPackList}" var = "chResponse" indexVar = "cResIndex">
+                                                                                        <div class="slds-grid slds-wrap pt-2 pb-2 RFPEval-class19"> 
+                                                                                            <div class="slds-col col-3 text-left pt-0">
+                                                                                                
+                                                                                                <div class="input-group"> 
+                                                                                                    <lightning:formattedRichText value="{!chResponse.Res.ERP7__Response_Answer__c}"/>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-md-3 col-sm-12">
+                                                                                                <div class=" slds-grid" >
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <strong>Sup.Rating</strong>&nbsp;	
+                                                                                                    </div>
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >  
+                                                                                                        <lightning:formattedText value = "{!chResponse.Res.ERP7__Supplier_Rating__c}"/>
+                                                                                                    </div> 
+                                                                                                </div>
+                                                                                                <div class=" slds-grid " >
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <strong>Sup.Compliance</strong>&nbsp;	
+                                                                                                    </div>
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <lightning:formattedText value = "{!chResponse.Res.ERP7__Supplier_Compliancy__c}"/>
+                                                                                                    </div>
+                                                                                                </div>  
+                                                                                            </div>                                    
+                                                                                            <div class="col-md-3 col-sm-12">
+                                                                                                <div class="slds-grid pt-1" >
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <label for="exampleFormControlSelect2"><strong>Score%</strong></label>&nbsp;
+                                                                                                    </div>
+                                                                                                    <div class="col-6 p-0">
+                                                                                                        <lightning:input type="number" value="{!chResponse.Res.ERP7__Score__c}" placeholder="Enter Score..."/>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <div class=" slds-grid pt-1" >
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <label for="exampleFormControlSelect2"><strong>Rating</strong></label>&nbsp;
+                                                                                                    </div>    
+                                                                                                    <div class="col-6 p-0">
+                                                                                                        <lightning:select class="" name="suppRatingSelect" aura:id="suppRatingSelect" value="{!chResponse.Res.ERP7__Actual_Rating__c}">
+                                                                                                            <aura:iteration items="{!v.resRatingOptions}" var="option">
+                                                                                                                <option text="{!option.label}" value="{!option.id}" selected="{!option.selected}"/>
+                                                                                                            </aura:iteration>
+                                                                                                        </lightning:select>
+                                                                                                    </div>      
+                                                                                                </div>
+                                                                                                <div class="slds-grid pt-1" >
+                                                                                                    <div class="col-6 p-0 RFPEval-class21" >
+                                                                                                        <label for="exampleFormControlSelect2"><strong>Compliance</strong></label>&nbsp;
+                                                                                                    </div>
+                                                                                                    <div class="col-6 p-0">
+                                                                                                        <lightning:select class="" name="supComplianceSelect" aura:id="supComplianceSelect" value="{!chResponse.Res.ERP7__Actual_Compliancy__c}">
+                                                                                                            <aura:iteration items="{!v.resComplianceOptions}" var="option">
+                                                                                                                <option text="{!option.label}" value="{!option.id}" selected="{!option.selected}"/>
+                                                                                                            </aura:iteration>
+                                                                                                        </lightning:select>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-md-3 col-sm-12 comment-contaiener ">
+                                                                                                <div class="slds-col text-left pt-2">
+                                                                                                    <aura:If isTrue="{!not(chResponse.Att.Id == undefined)}">
+                                                                                                        <div class="slds-grid">
+                                                                                                            <div class="col-5 p-0 RFPEval-class21" >
+                                                                                                                <label for="exampleFormControlSelect2"><strong>Attachment : </strong></label>&nbsp;
+                                                                                                            </div>    
+                                                                                                            <div class="col-7 p-0 RFPEval-class22" >
+                                                                                                                <div class="slds-truncate2">
+                                                                                                                    <lightning:formattedUrl value="{!'/'+chResponse.Att.Id}" label="{!chResponse.Att.Name}" target="_blank" class="fcolor"/>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            
+                                                                                                        </div>
+                                                                                                    </aura:If>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </aura:iteration>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                            <!--Child Res End-->
+                                                                        </div>
+                                                                    </div>
+                                                              <!--  </aura:if>-->
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </aura:iteration>
+                                                <!--Child Req End-->
+                                            </div>
+                                        </div>
+                                  <!--  </aura:if>-->
+                                </div>
+                            </div>
+                        </div>
+                    </aura:iteration>
+                    <!--Parent Req End-->
+                    <div class="slds-docked-form-footer RFPEval-class15" >
+                        <lightning:button onclick="{!c.navSupplier}" label="Back" class="slds-button slds-button_neutral"/>
+                        <lightning:button label="Save" onclick="{!c.saveallResponses}" class="slds-button slds-button_brand"/>
+                    </div>
+                    <aura:set attribute="else">
+                        <div class="no-submitted-response RFPEval-class13">
+                            <div class="slds-notify_container slds-is-relative RFPEval-class14" >
+                                <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                    <div>
+                                        <span class="slds-assistive-text">warning</span>
+                                        <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Projects">
+                                            <lightning:icon iconName="utility:warning" size="medium" alternativeText="warning"/>
+                                        </span>
+                                    </div>
+                                    <div class="slds-notify__content RFPEval-class16" >
+                                        <h2 class="slds-text-heading_small RFPEval-class17" >Supplier response not submitted.</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-docked-form-footer RFPEval-class15">
+                            <lightning:button onclick="{!c.navSupplier}" label="Back" class="slds-button slds-button_neutral"/>
+                            <lightning:button label="Save" disabled="true" onclick="{!c.saveallResponses}" class="slds-button slds-button_brand"/>
+                        </div>
+                    </aura:set>
+                </aura:if>
+            </div>
+            <!--Req and Res Tab End-->
+            
+            <!--Create PO Tab-->
+            <div class="{!(v.POTab)?'slds-show':'slds-hide'}" id="rrhome" aura:id="rrhome">
+                <div class="slds-page-header">
+                    <div class="slds-page-header__row">
+                        <div class="slds-page-header__col-title">
+                            <div class="slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-avatar" >
+                                        <lightning:icon iconName="standard:record"  size="large" alternativeText="record!" title="record" />
+                                        <span class="slds-assistive-text">R&amp;P</span>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-title--caps slds-line-height--reset" data-aura-rendered-by="520:0">Evaluate Responses</p>
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h1>
+                                                <span class="slds-page-header__title slds-truncate" title="">{!v.reqSupplier.Name}</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--Create PO Tab End-->
+            
+        </div>
+    </div>
+</aura:component>

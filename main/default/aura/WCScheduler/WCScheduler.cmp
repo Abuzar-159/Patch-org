@@ -1,0 +1,146 @@
+<aura:component controller="MO_WO_Scheduler" access="global" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction">
+	<head>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/WCScheduler.css"/>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"/>
+		<ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.BankReconcile + '/css/font-awesome.css')}" />
+		<ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-ltng.css')}" />
+		<ltng:require styles="{!join(',',$Resource.ERPFonts + '/src/stylesheet.css')}" />
+ 		<ltng:require styles="{!join(',',$Resource.bootStrap + '/css/bootstrap-4.1.css')}"/>
+		    
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Contact-Form-Clean.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/Features-Boxed.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/styles.css"/>
+        <ltng:require styles="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/nouislider.css,
+                              /resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/css/range-slider.css"/>
+        <ltng:require scripts="/resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/js/wNumb.js, 
+                               /resource/ERP7__WorkCenterSchedule/WorkCenterSchedule/assets/js/SliderScript.js" afterScriptsLoaded="{!c.fetchWorkCenterInfo}"/>
+        <!--ltng:require scripts="/resource/ERP7__bootStrap/js/bootstrap.min.js" /-->
+        <ltng:require scripts="/resource/jQuery/js/jquery_3.5.0.min.js'" />
+        
+    </head>
+    <aura:attribute Name="disableScheduleMO" type="Boolean" default="false"/>
+	<aura:attribute name="WCId" type="String" default=""/>
+    <aura:attribute name="WOId" type="String" default=""/>
+    <aura:attribute name="WCUniqueId" type="String"/>
+	<aura:attribute Name="selDate" type="Date" default=""/>
+	<aura:attribute Name="WorkCenterList" type="list" default=""/>
+    <aura:attribute name="Action" type="String" default=""/>
+	<aura:attribute Name="NextDisabled" type="Boolean" default="false"/>
+	<aura:attribute Name="PrevDisabled" type="Boolean" default="true"/>
+	<aura:attribute Name="SliderTimeSlots" type="list" default=""/>
+	<aura:attribute Name="SliderStartTime" type="Integer" default=""/>
+	<aura:attribute Name="SliderEndTime" type="Integer" default=""/>
+    <aura:attribute Name="SliderLandingStartTime" type="Integer" default=""/>
+	<aura:attribute Name="SliderLandingEndTime" type="Integer" default=""/>
+    <aura:attribute Name="errorMsg" type="String" default=""/>
+    <aura:attribute Name="initial" type="Boolean" default="true"/>
+    <aura:attribute Name="showEditable" type="Boolean" default="false"/>
+    <aura:attribute Name="selectedbyuser" type="Boolean" default="false"/>
+    <aura:method name="fetchWorkCenterInfo" action="{!c.fetchWorkCenterInfo}" ></aura:method>
+    <aura:method name="fetchInfo" action="{!c.fetchdataInfo}" access="Public">
+        <aura:attribute name="SelectedNewDate" type="datetime" default="" />
+         <aura:attribute name="selectedbyuser1" type="Boolean" default="false" />
+    </aura:method>
+    <aura:method name="ScheduleTime" action="{!c.ScheduleTime}"></aura:method>
+    <aura:handler name="change" value="{!v.initial}" action="{!c.ScheduleTime}"/>
+    <aura:registerEvent name="cmpEvent" type="c:SchedulerEvent"/>
+    
+    
+	<body class="erp_mark7" aura:id="body">
+        <span class="cs1">
+            <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+        </span>
+        <div class="erp_Mark7">
+            <div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),'cs2','cs3')}">
+                {!v.errorMsg}
+            </div> 
+           <div class="container-fluid">
+                <div class="row">
+                    <div class="col-md-12 pl-1 pr-0 cs4">
+                       	<div class="container-fluid">
+                            <div class="row">
+                                <div class="col-2"></div>
+                                <div class="col-2 cs5">
+                                    <span onclick="{!c.previous}"  data-button="Prev" data-action="Prev" class="{!v.PrevDisabled?'DisabledClass cs6':'cs6'}">
+                                        <i class="fa fa-chevron-left cs7" aria-hidden="true" ></i>&nbsp;{!$Label.c.Previous}
+                                    </span>
+                                </div> 
+                                <div class="col-3 cs8">
+                                    <aura:if isTrue="{!v.showEditable}">
+                                        <lightning:input type='date' value="{!v.selDate}" onchange="{!c.setSelectedDate}"></lightning:input>
+                                        <aura:set attribute="else">
+                                            <lightning:formattedDateTime aura:id="selDateId"  value="{!v.selDate}"/>
+                                        </aura:set>
+                                    </aura:if>
+                                    
+                                   <!-- <lightning:formattedDateTime aura:id="selDateId"  value="{!v.selDate}"/>-->
+                                </div>
+                                <div class="col-2 cs5">
+                                    <span  onclick="{!c.next}" aura:id="nextId" data-button="Next" data-action="Next" class="{!v.NextDisabled?'DisabledClass cs6':'cs6'}">
+                                        {!$Label.c.Next_UsersShiftMatch}&nbsp;<i class="fa fa-chevron-right cs7" aria-hidden="true" ></i>
+                                    </span> 
+                                </div>
+                                <div class="col-3"></div>
+                            </div>
+                            <div class="container-fluid cs9">
+                                <aura:if isTrue="{!v.selDate != undefined}">
+                                    <div class="{!or(v.WorkCenterList.length==0 ,v.WorkCenterList=='')?'row slds-hide':'row'}">
+                                        <div class="col s10 offset s1 mb-1 mt-3">
+                                            <br/>
+                                            <div id="{!v.WCUniqueId}" class="noUi-target noUi-ltr noUi-horizontal noUi-background" >
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="pmd-content pmd-content-custom" id="content">
+                                        <div class="container range-slider-container">
+                                            <!--Horizontal range slider with tooltip -->               
+                                        </div>
+                                        <!--range slider container -->        
+                                    </div>
+                                    <!--Range slider constructor end -->
+                                </aura:if>
+                                
+                 
+                                <div class="Service-Description maq">
+                                    <div class="scroll-bar-wrap">
+                                        <div class="scroll-box" >
+                                            <aura:iteration items="{!v.WorkCenterList}" var="workcenter" indexVar="index">
+                                                	<div class="row mt-4 m-0">
+                                                        <div class="col-md-6 p-0">
+                                                            <h3 class="font-size2 mb-0" >
+                                                                {!workcenter.WorkCenter.Name} 
+                                                            </h3>
+                                                        </div>
+                                                        <div class="col-md-6 text-right">
+                                                            <h3 class="font-size2 mb-0">
+                                                                <i class="fa fa-building" aria-hidden="true"></i>&nbsp; {!$Label.c.Capacity_UsersShiftMatch}
+                                                                <aura:if isTrue="{!workcenter.WorkCenter.ERP7__Available_Capacity__c >0}">
+                                                                    <lightning:formattedNumber style="decimal" variant="label-hidden" value="{!workcenter.WorkCenter.ERP7__Available_Capacity__c}"/> 
+                                                                    <aura:set Attribute="else"> 0.00 </aura:set>
+                                                                </aura:if>
+                                                            </h3>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-grid m-0">
+                                                        <aura:iteration items="{!workcenter.WorkCenterSlots}" var="ts" indexVar="slotsIndex">
+                                                            <div class="slds-col p-0 cs10" title="{!ts.Notification}" >
+                                                                <div class="{!and(ts.IsAvailable, ts.Status=='Applicable')?'bg-green-schedular cs11':and(ts.IsAvailable==false,ts.Status!='Applicable')?'bg-grey-workcenter cs11':'bg-red-workcenter cs11'}">
+                                                                <!-- Slots View -->    
+                                                                </div>
+                                                            </div>
+                                                        </aura:iteration>
+                                                    </div>
+                                                    <br/> 
+                                            </aura:iteration>
+                                        </div>
+                                        <div class="cover-bar"></div>
+                                    </div>
+                                </div>
+                            </div> 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</body>
+</aura:component>

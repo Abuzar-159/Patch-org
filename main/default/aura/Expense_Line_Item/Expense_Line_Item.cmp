@@ -1,0 +1,99 @@
+<aura:component Controller="ERP7.ExpenseSheetLC">
+    <ltng:require styles="/resource/ERP7__ShippingManagement/ShippingManagement/css/font-awesome.css" />
+    <ltng:require styles="/resource/ERP7__SLDS0122/assets/styles/salesforce-lightning-design-system.css" />
+    <ltng:require styles="/resource/ERP7__Accordions/Src/erp_mark7_bootstrap.css" />
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/Expense_Line_Item.css"/>	
+    <!--Picklist-->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    <!--file upload attribute-->
+    <aura:attribute name="recordId" type="String" />
+    <aura:attribute name="attachments" type="Attachment[]" />
+    <aura:attribute name="Aname" type="String" />
+    <!--<aura:handler name="init" value="{!this}" action="{!c.getAttach}" />-->
+    <aura:attribute name="parentId" type="Id" />
+    <aura:attribute name="AttachId" type="Expense_Line_Item__c[]" />
+    <!--file upload End-->
+    <aura:registerEvent name="delete" type="c:timesheetDelete" />
+    <!-- Event handlers -->
+    <aura:handler event="c:saveEvent" action="{!c.handleApplicationEventFired}" />
+    <aura:handler name="delete" action="{!c.handleAccountDelete}" />
+    <aura:attribute name="eLineItem" access="global" type="Expense_Line_Item__c" default="{'sobjectType' : 'Expense_Line_Item__c'}" />
+    <aura:attribute name="expenseComp" type="Expense__c" access="global" />
+    <aura:attribute name="Expense" type="Expense__c" default="{ 'sobjectType': 'Expense__c',
+                                                                    'ERP7__Employees__c': '',
+                                                                    'unknown_custom_field':'',
+                                                                    'unknown_custom_field':'',
+                                                                    'ERP7__Status__c': '',
+                                                                    'ERP7__Approver__c': ''
+                                                                    }" />
+    
+    <aura:attribute name="ExpenseCategoryOptions" type="List"/>
+    
+    <tr>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Delete">
+        <a href="#" class="svg" onclick="{!c.handleDelClick}">
+            <lightning:icon iconName="action:delete" size="x-small" alternativeText="delete!" title="delete" />
+        </a>
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Name" width="12%">
+        <lightning:input type="text" variant="label-hidden" class="display-lable" value="{!v.eLineItem.Name}" /> 
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Expense Category" width="12%">
+        <div class="slds-form-element">
+            <div class="slds-select_container">
+                <lightning:select aura:id="ExpenseCategory" value="{!v.eLineItem.ERP7__Expense_Category__c}" variant="label-hidden" class="display-lable">
+                    <aura:iteration items="{!v.ExpenseCategoryOptions}" var="option">
+                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.eLineItem.ERP7__Expense_Category__c, option.value)}"/>
+                    </aura:iteration>
+                </lightning:select>
+            </div>
+        </div>
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Expense Type" width="12%">
+        <div class="slds-select_container">
+           <lightning:select aura:id="ExpenseType" value="{!v.eLineItem.ERP7__Expense_Type__c }" variant="label-hidden" class="display-lable">
+                <option value="none" >--None--</option>
+                <option value="Air Travel(International)" >Air Travel(International)</option>
+                <option value="Air Travel(Domestic)" >Air Travel(Domestic)</option>
+                <option value="Car Hire" >Car Hire</option>
+                <option value="Fares - Home to Work(Taxable)" >Fares - Home to Work(Taxable)</option>
+                <option value="Parking Charges" >Parking Charges</option>
+                <option value="Public Transport(inc Bus and Tram)" >Public Transport(inc Bus and Tram)</option>
+                <option value="Rail Travel(Overseas)" >Rail Travel(Overseas)</option>
+                <option value="Rail Travel(UK)" >Rail Travel(UK)</option>
+                <option value="Sea Travel (inc Ferry)(Overseas)" >Sea Travel(inc Ferry)(Overseas)</option>
+                <option value="Sea Travel(inc Ferry)(UK)" >Sea Travel(inc Ferry)(UK)</option>
+                <option value="Student Travel Arrangement" >Student Travel Arrangement</option>
+                <option value="Taxi" >Taxi</option>
+                <option value="Toll Charges" >Toll Charges</option>
+                <option value="Van Hire" >Van Hire</option>
+            </lightning:select>
+        </div>
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Expense Date" width="10%">
+        <lightning:input type="date" variant="label-hidden" class="display-lable" value="{!v.eLineItem.ERP7__Expense_Date__c}" />
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Amount Submitted" width="10%">
+        <lightning:input type="number" variant="label-hidden" class="display-lable"  value="{!v.eLineItem.ERP7__Expensed_Submitted__c}" aura:id="SubmittedAmount" /> 
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="VAT Amount" width="10%">
+        <lightning:input type="number" variant="label-hidden" class="display-lable" value="{!v.eLineItem.ERP7__VAT_Amount__c}" /> 
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Claimed Amount" width="5%">
+        <lightning:input type="number" variant="label-hidden" class="display-lable" value="{!v.eLineItem.ERP7__Claimed_Amount__c}" aura:id="ClaimedAmount" /> 
+    </td>
+    <td class="slds-size--1-of-10" colspan="2" data-label="Add Receipt">
+        <input type="file" class="file displaynone" aura:id="fval" id="fval" />
+        <a  class="svg textnone-clrfff" aura:id="rejectbtn" buttonTitle="Reject" onclick="{!c.uploadFileClick}" href="#" data-index="{!i}">
+            <lightning:icon iconName="utility:attach" size="x-small" alternativeText="attach!" title="attach" />
+        </a>
+    </td>
+    <!--Attachment Dispaly-->
+    <td class="slds-size--1-of-10" colspan="2" data-label="Current Receipt">
+        <img aura:id="myImg" class="width50" />
+    </td>         
+        </tr>
+    {!v.body}
+    <div aura:id="TimeCEContent">
+    </div>
+</aura:component>

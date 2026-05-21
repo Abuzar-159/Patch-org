@@ -1,0 +1,1240 @@
+<aura:component controller="BudgetPlannerUpdated" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    <head>
+       <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+    <!--ltng:require styles="/resource/ERP7__axoltmain/Assets/css/axolt-dashboard.css"/-->
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>
+    <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/> 
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>   
+    
+    <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css"/>
+    </head>
+    <aura:attribute name="ShowBudgetType" type="Boolean" default="true"/>
+    <aura:attribute name="isMonthlyManage" type="Boolean" default="false"/>
+    <aura:attribute name="showBudgetConfirmation" type="Boolean" default="false"/>
+    <aura:attribute name="displayProgramme" type="Boolean" default="false"/>
+    <aura:attribute name="displayDepartment" type="Boolean" default="false"/>
+    <aura:attribute name="BudgetId" type="String"/>
+    <aura:attribute name="ProjectId" type="String" default=""/>
+    <aura:attribute name="setBudgetType" type="String"/>
+    <aura:attribute name="setRT" type="String"/>
+    <aura:attribute name="budgetType" type="String"/>
+    <aura:attribute name="totalBudget" type="Integer" default="0"/>
+    <aura:attribute name="thresholdvalue" type="Integer" default="90"/>
+    <aura:attribute name="selectedMonth" type="String" default="January"/>
+    <aura:attribute name="selectedPeriod" type="String" default="--None--"/>
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="fromProject" type="Boolean" default="false"/>
+    <aura:attribute name="fromProjectWB" type="Boolean" default="false"/>
+    <aura:attribute name = "currentProj" type = "Project__c" default="{'sObjectType':'ERP7__Project__c',
+                                                                            'Name': '',
+                                                                            'ERP7__Status__c': '--none--',
+                                                                            'ERP7__Project_Manager__c': '',
+                                                                            'ERP7__Organisations__c' : '',
+                                                                            'ERP7__Default_Routing__c' : '',
+                                                                            'ERP7__Team__c' : '',
+                                                                            'ERP7__Account__c' : '',
+                                                                            'ERP7__Contact__c' : '',
+                                                                            'ERP7__Total_Expense_Amount__c' : '',
+                                                                            'ERP7__Total_Income__c' : ''
+                                                                            }"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/> 
+    <aura:attribute name="Project" type="Map" default="{}"/> 
+    <aura:attribute name="ProjectWrapperList" type="list" default="{'sObjectType' : 'programmeWrapper'}"/> 
+    <aura:attribute name="fetchRecordsBool" type="Boolean" default="true"/>
+    <aura:attribute name="years" type="String[]" />
+    <aura:attribute name="options" type="List" default="[
+                                                        {'label': 'Posted Actual Expenditures', 'value': 'Posted Actual Expenditures'},
+                                                        {'label': 'UnPosted Actual Expenditures', 'value': 'UnPosted Actual Expenditures'}
+                                                        ]"/>
+    <aura:attribute name="selectedYear" type="String" default="2024"/>
+    <aura:attribute name="selectedOption" type="String" default="Posted Actual Expenditures"/>
+    <aura:attribute name="MonthlyBudgetAccount" type="list" default="{'sObjectType' : 'budgetWrapper'}"/>
+    <body  style="background-color: #f3f4f7;min-height:100vh;">
+        <div class="erp_mark7 bg-gp erp">
+            <aura:if isTrue="{!v.ShowBudgetType}"> 
+                <div class="erp_Mark7 ">
+                    <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-modal_medium slds-fade-in-open">
+                        <div class="slds-modal__container">
+                            <header class="slds-modal__header">
+                                <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="{!$Label.c.Close_Timesheets}" onclick="{!c.cancelclick}">
+                                    <lightning:icon iconName="utility:close" variant="inverse" size="small" alternativeText="{!$Label.c.Close_Timesheets}" title="{!$Label.c.Close_Timesheets}" />
+                                    
+                                    <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                                </button>
+                                <p id="modal-heading-01" class="createbill-class8">Select Budget Type</p>
+                            </header>
+                            <div class="slds-modal__content" id="modal-content-id-1">
+                                
+                                <div class="epr_Mark7">
+                                    <div class="container-fluid ">
+                                        <div class="row slds-p-around--small createbill-class9">
+                                            
+                                            <div class="col-md-4">
+                                                <div class="card cursor-pointer card-extra-po" aura:id="pOcheckbox" data-billType='Cost Budget' onclick="{!c.onCheck}">
+                                                    <div class="card-content">
+                                                        <div class="card-body">
+                                                            <div class="media d-flex">
+                                                                <div class="align-self-center">
+                                                                    <lightning:icon iconName="standard:bill_of_materials" size="medium"></lightning:icon>
+                                                                </div>
+                                                                <div class="media-body text-center pt-1">
+                                                                    
+                                                                    <span class="pofsize-16">Cost Budget</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!--div class="card maqbutton-ns cursor-pointer border-0" aura:id="pOcheckbox" data-billType='PO Bill' onclick="{!c.onCheck}">
+                                                <div class="slds-grid pt-2 pl-3 pb-2 cslabel slds-button slds-button_neutral p-100">
+                                                    <i class="fa fa-file-text" aria-hidden="true" data-aura-rendered-by="971:0"></i>
+                                                    &nbsp;<label class="slds-form-element__label slds-p-left-/-small cursor-pointer">{!$Label.c.PO_Bill}</label>
+                                                </div>
+                                            </div-->
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card cursor-pointer card-extra-eb"  aura:id="billcheckbox" data-billType="Time and Material Budget" onclick="{!c.onCheck}">
+                                                    <div class="card-content">
+                                                        <div class="card-body">
+                                                            <div class="media d-flex">
+                                                                <div class="align-self-center">
+                                                                    <lightning:icon iconName="standard:expense" size="medium"></lightning:icon>
+                                                                </div>
+                                                                <div class="media-body text-center pt-1">
+                                                                    <span class="pofsize-16">Time and Material Budget</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!--div class="card maqbutton-ns cursor-pointer border-0" aura:id="billcheckbox" data-billType="Expense Bill" onclick="{!c.onCheck}">
+                                                <div class="slds-grid pt-2 pl-3 pb-2 cslabel slds-button slds-button_neutral p-100">
+                                                    <i class="fa fa-file-text-o" aria-hidden="true" data-aura-rendered-by="971:0"></i>
+                                                    &nbsp;<label class="slds-form-element__label slds-p-left-/-small cursor-pointer">{!$Label.c.Expense_Bill}</label>
+                                                </div>
+                                            </div-->
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card cursor-pointer card-extra-atv"  aura:id="Advcheckbox" data-billType="Fixed Budget" onclick="{!c.onCheck}">
+                                                    <div class="card-content">
+                                                        <div class="card-body">
+                                                            <div class="media d-flex">
+                                                                <div class="align-self-center">
+                                                                    <lightning:icon iconName="standard:currency" size="medium"></lightning:icon>
+                                                                    
+                                                                </div>
+                                                                <div class="media-body text-center pt-1">
+                                                                    <span class="pofsize-16">Fixed Budget</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!--div class="card maqbutton-ns cursor-pointer border-0" aura:id="Advcheckbox" data-billType="Advance to vendor" onclick="{!c.onCheck}">
+                                                <div class="slds-grid pt-2 pl-3 pb-2 cslabel slds-button slds-button_neutral p-100">
+                                                    <i class="fa fa-file" aria-hidden="true" data-aura-rendered-by="971:0"></i>
+                                                    &nbsp;<label class="slds-form-element__label slds-p-left-/-small cursor-pointer">{!$Label.c.Advance_to_Vendor}</label>
+                                                </div>
+                                            </div-->
+                                            </div>
+                                        </div> 
+                                        
+                                    </div>
+                                    <footer class="slds-modal__footer createbill-class10">
+                                        <lightning:button label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                                    </footer>
+                                </div>
+                                
+                            </div> 
+                        </div>
+                        
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open"></div>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!!v.ShowBudgetType}">
+                <aura:if isTrue="{!v.showBudgetConfirmation}">
+                    <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open mbr-class19">
+                        <div class="slds-modal__container">
+                            <div class="slds-modal__content slds-p-around_large" id="modal-content-id-1">
+                                <span class="slds-f-size14">Are you sure you want to Change the Budget Periodical?</span>
+                            </div>
+                            <footer class="slds-modal__footer slds-text-align_center">
+                                <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-record="delete" value="Yes"  aura:id="yesId" onclick="{!c.changeBudgetPeriod}">Yes</button> 
+                                <button type="button" value="No" class="slds-button slds-button--neutral" data-record="NO"  aura:id="noId" onclick="{!c.cancelSubmit}">No</button> 
+                                
+                            </footer>
+                        </div>
+                    </section>
+                    <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+                </aura:if>
+                <aura:if isTrue="{!v.setBudgetType!='Time and Material Budget'}">
+                    <div class="card3-header">
+                        <div class="card3-header slds-page-header__row slds-p-around_small">
+                            <div class="slds-page-header__col-title slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-budget" title="">
+                                        <lightning:icon iconName="standard:budget" size="medium"></lightning:icon>
+                                        
+                                        <span class="slds-assistive-text"></span>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h1>
+                                                <span class="slds-page-header__title slds-truncate" title="">Budget Allocation - {!v.setBudgetType}</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+                                    <p class="slds-page-header__name-meta">{!v.selectedMonth} &nbsp;{!v.selectedYear}</p>
+                                </div>
+                                <div class="slds-p-right_small" style="display: flex;">
+                                    <aura:if isTrue="{!v.selectedPeriod!='--None--'}">
+                                        <lightning:select name="selectYear" label="Select Year" aura:id="yearPicklist" value="{!v.selectedYear}">
+                                            <aura:iteration items="{!v.years}" var="year">
+                                                <option value="{!year}">{!year}</option>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                        <lightning:select name="selectMonth" label="Select Month" aura:id="monthPicklist" value="{!v.selectedMonth}">
+                                            <option value="January">January</option>
+                                            <option value="February">February</option>
+                                            <option value="March">March</option>
+                                            <option value="April">April</option>
+                                            <option value="May">May</option>
+                                            <option value="June">June</option>
+                                            <option value="July">July</option>
+                                            <option value="August">August</option>
+                                            <option value="September">September</option>
+                                            <option value="October">October</option>
+                                            <option value="November">November</option>
+                                            <option value="December">December</option>
+                                        </lightning:select>
+                                    </aura:if>
+                                    <div style="margin-left: 10px;">
+                                        <c:CustomInputLookUp label="Organisation" objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                                IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>  
+                                    </div>
+                                    <div style="margin-left: 10px;">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="slds-p-left_small slds-p-right_small slds-p-top_x-small">
+                                <div class="slds-grid slds-wrap">
+                                    
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small slds-p-right_small">
+                                        
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Budget Configurations&nbsp;<lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                                            </lightning:helptext></p>
+                                                        <div class="slds-grid">
+                                                            <div class="slds-col">
+                                                                <p class="mb-0"><lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" /></p>
+                                                            </div>
+                                                            <div class="slds-col">
+                                                                <lightning:select name="selectMonth" label="Budget periodical" aura:id="monthPicklist" value="{!v.selectedPeriod}" onchange="{!c.confirmation}">
+                                                                    <option value="--None--">--None--</option>
+                                                                    <option value="Monthly">Monthly</option>
+                                                                    <option value="Quarterly">Quarterly</option>
+                                                                    <option value="Yearly">Yearly</option>
+                                                                </lightning:select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:bill_of_materials" size="small" class="mt-2"></lightning:icon>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>    
+                                    </div>
+                                    
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Available Funds Calculation</p>
+                                                        <h5 class="text-left mb-0 pt-1">
+                                                            <lightning:radioGroup name="radioGroup"
+                                                                          label=""
+                                                                          value="{!v.selectedOption}"
+                                                                          options="{!v.options}"
+                                                                          onchange="{!c.handleOptionChange}"/>
+                                                        </h5>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:budget" size="small" class="mt-2"></lightning:icon> 
+                                                </div>
+                                                
+                                            </div>
+                                        </div>   
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small ">
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Budget Amount</p>
+                                                        <h5 class="text-left mb-0 pt-1">
+                                                             <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" /> 
+                                                        </h5>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:budget_category_value" size="small" class="mt-2"></lightning:icon>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>   
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="erp_Mark7 slds-m-right_small slds-m-left_small">
+                                <div class="erp_Mark7 table-responsive mb-pb100">
+                                    
+                                    <aura:iteration var="wrapper" items="{!v.ProjectWrapperList}" indexVar="Indexing">
+                                        <div class="slds-page-header slds-page-header_related-list mt-2">
+                                            <aura:if isTrue="{!v.displayProgramme}">
+                                                
+                                                
+                                                <div class="slds-page-header__row ">
+                                                    <div class="slds-page-header__col-title">
+                                                        
+                                                        <div class="slds-media">
+                                                            <div class="slds-media__body slds-m-left_large">
+                                                                <div class="slds-page-header__name">
+                                                                    <div class="slds-page-header__name-title">
+                                                                        <div class="" data-index="{!Indexing}" data-value="{!wrapper.Programme}" >
+                                                                            <c:CustomInputLookUp label="Programme" objectAPIName="ERP7__Programme__c" selectedRecordId="{!wrapper.Programme}"
+                                                                                                    IconName="standard:account" placeholder="Search Programme...." /> 
+                                                                        </div>     
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-page-header__col-actions slds-m-top_small slds-m-right_large">
+                                                        <lightning:buttonGroup>
+                                                            <lightning:button variant="neutral" label="Programme" iconName="utility:add" onclick="{!c.addProgramme}"/>
+                                                            <!--<aura:if isTrue="{!and(v.ProjectWrapperList.length>1, Indexing!=0)}">-->
+                                                            <lightning:buttonMenu disabled="{!v.ProjectWrapperList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="right" onselect="{!c.deleteProgramme}">
+                                                                <lightning:menuItem label="Delete Programme" value="{!Indexing}"/>
+                                                            </lightning:buttonMenu>
+                                                            <!--</aura:if>-->
+                                                        </lightning:buttonGroup> 
+                                                        
+                                                        <!--div class="slds-page-header__controls">
+                                                    <div class="slds-page-header__control">
+                                                        <ul class="slds-button-group-list">
+                                                            <li>
+                                                                <lightning:button variant="neutral" title="Add Programme" label="Add Programme" onclick="{!c.addProgramme}"/>
+                                                            </li>
+                                                            <li>
+                                                                <lightning:button variant="neutral" title="Delete Programme" label="Delete Programme" onclick="{!c.deleteProgramme}" value="{!Indexing}"/>
+                                                             </li>
+                                                        </ul>
+                                                    </div>
+                                                </div-->
+                                                    </div>
+                                                </div>
+                                                <!-- hidden area -->
+                                                <div class="card-body p-2 slds-hide">
+                                                    <div class="d-flex align-items-center justify-content-between"> 
+                                                        <h5 class="mb-3">Programme overview</h5>
+                                                        <div class="dropdown">
+                                                            <div class="slds-grid">
+                                                                <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                <div class="slds-truncate-custom" data-index="{!Indexing}" data-value="{!wrapper.Programme}" >
+                                                                    <c:CustomInputLookUp label="Programme" objectAPIName="ERP7__Programme__c" selectedRecordId="{!wrapper.Programme}"
+                                                                                            IconName="standard:account" placeholder="Search Programme...." /> 
+                                                                </div>
+                                                                
+                                                                <div class="slds-m-top_large-mb">
+                                                                    <lightning:buttonGroup>
+                                                                        <lightning:button variant="neutral" label="Add Programme" iconName="utility:add" onclick="{!c.addProgramme}"/>
+                                                                        <aura:if isTrue="{!v.ProjectWrapperList.length>1}">
+                                                                            <lightning:buttonMenu alternativeText="Show menu" class="slds-button_last" menuAlignment="center">
+                                                                                <lightning:menuItem label="Delete Programme" value="item1" />
+                                                                            </lightning:buttonMenu>
+                                                                        </aura:if>
+                                                                    </lightning:buttonGroup> 
+                                                                    
+                                                                    <!--lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Add Programme" onclick="{!c.addProgramme}">
+                                                                <lightning:icon iconName="utility:add" size="x-small"></lightning:icon>
+                                                                
+                                                                <span class="slds-assistive-text">Add Programme</span>
+                                                            </lightning:button>
+                                                            <lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled deleteClass" title="Delete Programme" onclick="{!c.deleteProgramme}" value="{!Indexing}">
+                                                                <lightning:icon iconName="utility:delete" size="x-small" variant="inverse"></lightning:icon>
+                                                                
+                                                                <span class="slds-assistive-text">Delete Programme</span>
+                                                            </lightning:button-->
+                                                                </div>
+                                                            </div>
+                                                            <!--lightning:button class="slds-button slds-button_brand float-right" onclick="{!c.addProject}" ><i class="fa fa-plus"></i>&nbsp;Project</lightning:button-->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- hidden area up-->
+                                            </aura:if>
+                                            <aura:iteration var="wrap" items="{!wrapper.projWrapList}" indexVar="Index">
+                                                
+                                                <div class="card2 m-2">
+                                                    <div class="card-body">
+                                                        <div class="d-flex align-items-center justify-content-between"> 
+                                                            <div class="" data-index="{!Index}" data-value="{!wrap.Project}"  >
+                                                                <c:CustomInputLookUp label="Project" objectAPIName="ERP7__Project__c" selectedRecordId="{!wrap.Project}"
+                                                                                        IconName="standard:account" placeholder="Search Project...." /> 
+                                                            </div>
+                                                            <div class="dropdown">
+                                                                <div class="slds-grid">
+                                                                    <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                    <lightning:buttonGroup>
+                                                                        <lightning:button variant="neutral" label="Project" iconName="utility:add" onclick="{!c.addProject}" value="{!Indexing}" />
+                                                                        <!--<aura:if isTrue="{!and(wrapper.projWrapList.length>1, Index!=0)}">-->
+                                                                        <lightning:buttonMenu disabled="{!wrapper.projWrapList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="center" onselect="{!c.deleteProject}">
+                                                                            <lightning:menuItem label="Delete Project" value="{!Index}" title="{!Indexing}" />
+                                                                        </lightning:buttonMenu>
+                                                                        <!--</aura:if>-->
+                                                                    </lightning:buttonGroup>
+                                                                    
+                                                                    <div class="slds-m-top_large-mb slds-hide"> 
+                                                                        <!--lightning:buttonMenu alternativeText="Show menu" tooltip="Add/Delete Project"  iconName="utility:add"  menuAlignment="right" onselect="{!c.handledebitmenu}" class="height35">
+                                                                    <lightning:menuItem  label="Add Project" title="{!Indexing}"></lightning:menuItem>
+                                                                    <lightning:menuItem  label="Delete Project" value="{!Index}" title="{!Indexing}"></lightning:menuItem>
+                                                                    
+                                                                </lightning:buttonMenu-->
+                                                                        <!--lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Add Project" onclick="{!c.addProject}" value="{!Indexing}">
+                                                                <lightning:icon iconName="utility:add" size="x-small"></lightning:icon>
+                                                                
+                                                                <span class="slds-assistive-text">Add Project</span>
+                                                            </lightning:button>
+                                                            <lightning:button  class="slds-button slds-button_icon slds-button_icon-border-filled deleteClass" title="Delete Project" onclick="{!c.deleteProject}" name="{!Index}" value="{!Indexing}">
+                                                                <lightning:icon iconName="utility:delete" size="x-small" variant="inverse"></lightning:icon>
+                                                                
+                                                                <span class="slds-assistive-text">Delete Project</span>
+                                                            </lightning:button -->
+                                                                    </div>
+                                                                </div>
+                                                                <!--lightning:button class="slds-button slds-button_brand float-right" onclick="{!c.addProject}" ><i class="fa fa-plus"></i>&nbsp;Project</lightning:button-->
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        
+                                                        <aura:iteration var="depwrap" items="{!wrap.depWrapList}" indexVar="DepIndex">
+                                                            
+                                                            
+                                                            <div class="slds-grid slds-wrap slds-p-bottom_small">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                                                                    <div class="card mt-2"> 
+                                                                        <div class="card-body p-2">
+                                                                            <div class="slds-grid slds-wrap slds-p-bottom_small">
+                                                                                <aura:if isTrue="{!v.displayDepartment}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                                        <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                                        
+                                                                                        <div class="slds-truncate-custom">
+                                                                                            
+                                                                                            <c:CustomInputLookUp label="Department" objectAPIName="ERP7__Business_Unit__c " selectedRecordId="{!depwrap.DepartmentId}"
+                                                                                                                    IconName="standard:account" placeholder="Search Department...." /> 
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small slds-m-top_small">
+                                                                                    <div class="bg-body p-2 rounded bg-mbui">
+                                                                                        <div class="d-flex align-items-center mb-2">
+                                                                                            <div class="flex-shrink-0">
+                                                                                                
+                                                                                            </div>
+                                                                                            <div class="flex-grow-1 ms-2">
+                                                                                                <p class="mb-0">&nbsp;Project Budget Amount</p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <h6 class="mb-0"><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectBudgetAmount}" /><small class="text-muted"></small></h6>
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                                <aura:if isTrue="{!and(depwrap.DepartmentId!=null, depwrap.DepartmentId!='')}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_small">
+                                                                                        
+                                                                                        <div class="bg-body p-2 rounded bg-mbui">
+                                                                                            <div class="d-flex align-items-center mb-2">
+                                                                                                <div class="flex-shrink-0">
+                                                                                                    
+                                                                                                </div>
+                                                                                                <div class="flex-grow-1 ms-2">
+                                                                                                    <p class="mb-0">&nbsp;Department Budget Amount</p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <h6 class="mb-0"><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!depwrap.DepartmentBudgetAmount}" /> </h6>
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!v.displayDepartment}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_small">
+                                                                                        <div class="dropdown float-right">
+                                                                                            <div class="slds-grid">
+                                                                                                <lightning:buttonGroup>
+                                                                                                    <lightning:button variant="neutral" label="Department" iconName="utility:add" onclick="{!c.addDepartment}" value="{!Index}" name="{!Indexing}" />
+                                                                                                    <!--<aura:if isTrue="{!and(wrap.depWrapList.length>1, DepIndex!=0)}">-->
+                                                                                                    <lightning:buttonMenu disabled="{!wrap.depWrapList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="center" onselect="{!c.deleteDepartment}">
+                                                                                                        <lightning:menuItem label="Delete Department" value="{!Index}" title="{!DepIndex}" tabindex="{!Indexing}"/>
+                                                                                                    </lightning:buttonMenu>
+                                                                                                    <!--</aura:if>-->
+                                                                                                </lightning:buttonGroup>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-m-top_small">
+                                                                                    <table class="slds-table table_bordered   slds-no-row-hover">
+                                                                                        <thead>
+                                                                                            
+                                                                                            <tr>
+                                                                                                
+                                                                                                <th scope="col" width="10%">
+                                                                                                    <lightning:button class="slds-button slds-button_neutral " iconName="utility:add" onclick="{!c.addBudgetAccount}" title="{!Indexing}" name="{!DepIndex}" value="{!Index}">
+                                                                                                       New
+                                                                                                    </lightning:button>
+                                                                                                    <!--a data-record="{!Index}" onclick="{!c.addBudgetAccount}">Add Budget Subcategory</a-->
+                                                                                                </th>
+                                                                                                <th>SI No</th>
+                                                                                                <th scope="col" width="25%">Budget Sub Category<span class="cpo-class21">*</span></th>
+                                                                                                <th scope="col">Account Number</th>
+                                                                                                <th scope="col">Account Type</th>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                    <th scope="col">Budget Amount</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                    <th scope="col" width="15%">Budget&nbsp;{!v.selectedMonth} &nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                    <th scope="col" width="10%">Q1&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q2&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q3&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q4&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                    <th scope="col" width="100">Jan&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Feb&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Mar&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Apr&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">May&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jun&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jul&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Aug&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Sep&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Oct&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Nov&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Dec&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            <aura:if isTrue="{!depwrap.budgetAccount.length>0}">
+                                                                                                <aura:iteration var="budget" items="{!depwrap.budgetAccount}" indexVar="Indexed">
+                                                                                                    <tr>
+                                                                                                        <td><lightning:button class="slds-button slds-button_neutral neutralC" tabindex="{!Indexed}" name="{!Indexing}" value="{!DepIndex}" title="{!Index}" onclick="{!c.removeItem}"><!-- onclick="{!c.removeItem}" -->
+                                                                                                            <a title="Remove Item">
+                                                                                                                <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                                                                                            </a>
+                                                                                                            </lightning:button></td>
+                                                                                                        <td>{!Indexed+1}</td>
+                                                                                                        <td><div class="slds-truncate-custom" data-indexing="{!Indexing}" data-index="{!Index}" data-indexe="{!DepIndex}" data-indexed="{!Indexed}" data-value="{!budget.ERP7__Chart_of_Account__c}" onmouseleave="{!c.lookupClickProduct}" ><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="custom:custom57" selectedRecordId="{!budget.ERP7__Chart_of_Account__c}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true"/></div></td>
+                                                                                                        <td>{!budget.ERP7__Account_Number__c}</td>
+                                                                                                        <td>{!budget.ERP7__Budget_Account_Category__c}</td>
+                                                                                                        <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                            <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Amount__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                            <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Amount__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__First_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Second_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Third_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Fourth_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        </aura:if>
+                                                                                                        <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__January_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__February_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__March_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__April_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__May_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__June_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__July_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__August_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__September_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__October_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__November_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                            <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__December_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        </aura:if>
+                                                                                                    </tr>
+                                                                                                </aura:iteration>
+                                                                                                <aura:set attribute="else">
+                                                                                                    <div class="slds-notify_container slds-is-relative" aura:id="criteriaMsgId">
+                                                                                                        <div class="slds-notify slds-notify_toast slds-theme_alert-texture slds-theme_error" role="status">
+                                                                                                            <span class="slds-assistive-text">Add Budget Accounts</span>
+                                                                                                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                                                                                                <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                                                                                            </span>
+                                                                                                            <div class="slds-notify__content">
+                                                                                                                <h2 class="slds-text-heading_x-small "> Add Budget Accounts
+                                                                                                                </h2>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </tbody>
+                                                                                    </table> 
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                            </div>
+                                                        </aura:iteration>
+                                                        
+                                                        
+                                                        
+                                                        
+                                                    </div>
+                                                </div>
+                                                
+                                            </aura:iteration>
+                                        </div>
+                                    </aura:iteration>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                        <lightning:button label="{!$Label.c.ContractConsole_Save}" class="slds-button slds-button__brand" onclick="{!c.saveBudgetUpdate}" variant="brand" disabled="{!v.showMmainSpin}"/>
+                    </div>
+                </aura:if>
+                
+                
+                <aura:if isTrue="{!v.setBudgetType=='Time and Material Budget'}">
+                    <div class="card3-header">
+                        <div class="card3-header slds-page-header__row slds-p-around_small">
+                            <div class="slds-page-header__col-title slds-media">
+                                <div class="slds-media__figure">
+                                    <span class="slds-icon_container slds-icon-standard-budget" title="">
+                                        <lightning:icon iconName="standard:budget" size="medium"></lightning:icon>
+                                        
+                                        <span class="slds-assistive-text"></span>
+                                    </span>
+                                </div>
+                                <div class="slds-media__body">
+                                    <div class="slds-page-header__name">
+                                        <div class="slds-page-header__name-title">
+                                            <h1>
+                                                <span class="slds-page-header__title slds-truncate" title="">Budget Allocation - {!v.setBudgetType}</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+                                    <p class="slds-page-header__name-meta">{!v.selectedMonth} &nbsp;{!v.selectedYear}</p>
+                                </div>
+                                <div class="slds-p-right_small" style="display: flex;">
+                                    <aura:if isTrue="{!v.selectedPeriod!='--None--'}">
+                                        <lightning:select name="selectYear" label="Select Year" aura:id="yearPicklist" value="{!v.selectedYear}">
+                                            <aura:iteration items="{!v.years}" var="year">
+                                                <option value="{!year}">{!year}</option>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                        <lightning:select name="selectMonth" label="Select Month" aura:id="monthPicklist" value="{!v.selectedMonth}">
+                                            <option value="January">January</option>
+                                            <option value="February">February</option>
+                                            <option value="March">March</option>
+                                            <option value="April">April</option>
+                                            <option value="May">May</option>
+                                            <option value="June">June</option>
+                                            <option value="July">July</option>
+                                            <option value="August">August</option>
+                                            <option value="September">September</option>
+                                            <option value="October">October</option>
+                                            <option value="November">November</option>
+                                            <option value="December">December</option>
+                                        </lightning:select>
+                                    </aura:if>
+                                    <div style="margin-left: 10px;">
+                                        <c:CustomInputLookUp label="Organisation" objectAPIName="Account" selectedRecordId="{!v.Organisation.Id}" NameValue="{!v.Organisation.Name}"
+                                                                IconName="standard:account" placeholder="{!$Label.c.Acc_Recev_Search_Organisation}" qry="AND (ERP7__Account_Type__C = 'Organisation' OR ERP7__Account_Type__c = 'Organisation/Vendor')"/>  
+                                    </div>
+                                    <div style="margin-left: 10px;">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="slds-p-left_small slds-p-right_small slds-p-top_x-small">
+                                <div class="slds-grid slds-wrap slds-hide">
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small">
+                                        <div class="erp_Mark7">
+                                            <div class="card2 stat-widget">
+                                                <div class="card-body">
+                                                    <span class="card-title">
+                                                        <!--i class="card-icon-indicator fa fa-file-text bg-inverse-icon-primary mt-2" data-aura-rendered-by="479:0"></i-->
+                                                        <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                            <lightning:icon iconName="standard:budget_category_value" size="small"></lightning:icon>&nbsp;&nbsp;Budget Amount
+                                                        </label>
+                                                    </span><br/>
+                                                    <h4 class="pt-3">
+                                                        <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" /> 
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small">
+                                        <div class="erp_Mark7">
+                                            <div class="card2 stat-widget">
+                                                <div class="card-body">
+                                                    <span class="card-title">
+                                                        
+                                                        <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                            <lightning:icon iconName="standard:bill_of_materials" size="small"></lightning:icon>&nbsp;&nbsp;Budget Configurations</label>
+                                                        <lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                                        </lightning:helptext>
+                                                    </span>
+                                                    
+                                                    <p><lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" /></p>
+                                                    <lightning:select name="selectMonth" label="Budget periodical" aura:id="monthPicklist" value="{!v.selectedPeriod}" onchange="{!c.confirmation}">
+                                                        <option value="--None--">--None--</option>
+                                                        <option value="Monthly">Monthly</option>
+                                                        <option value="Quarterly">Quarterly</option>
+                                                        <option value="Yearly">Yearly</option>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                        <div class="erp_Mark7">
+                                            <div class="card2 stat-widget">
+                                                <div class="card-body">
+                                                    <span class="card-title">
+                                                        <label class="slds-form-element__label mb-fsize14" for="unique-id-of-input">
+                                                            <lightning:icon iconName="standard:budget" size="small"></lightning:icon>&nbsp;&nbsp;Available Funds Calculation
+                                                        </label>
+                                                    </span>
+                                                    
+                                                    <lightning:radioGroup name="radioGroup"
+                                                                          label=""
+                                                                          value="{!v.selectedOption}"
+                                                                          options="{!v.options}"
+                                                                          onchange="{!c.handleOptionChange}"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                <div class="slds-grid slds-wrap">
+                                    
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small slds-p-right_small">
+                                        
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Budget Configurations&nbsp;<lightning:helptext content="The user will receive the Warning message on reaching threshold limit.">
+                                                            </lightning:helptext></p>
+                                                        <div class="slds-grid">
+                                                            <div class="slds-col">
+                                                                <p class="mb-0"><lightning:input formatter="percentage" label="Set Threshold Limit(%)" value="{!v.thresholdvalue}" placeholder="Amount" /></p>
+                                                            </div>
+                                                            <div class="slds-col">
+                                                                <lightning:select name="selectMonth" label="Budget periodical" aura:id="monthPicklist" value="{!v.selectedPeriod}" onchange="{!c.confirmation}">
+                                                                    <option value="--None--">--None--</option>
+                                                                    <option value="Monthly">Monthly</option>
+                                                                    <option value="Quarterly">Quarterly</option>
+                                                                    <option value="Yearly">Yearly</option>
+                                                                </lightning:select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:bill_of_materials" size="small" class="mt-2"></lightning:icon>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>    
+                                    </div>
+                                    
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-p-right_small">
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Available Funds Calculation</p>
+                                                        <h5 class="text-left mb-0 pt-1">
+                                                            <lightning:radioGroup name="radioGroup"
+                                                                          label=""
+                                                                          value="{!v.selectedOption}"
+                                                                          options="{!v.options}"
+                                                                          onchange="{!c.handleOptionChange}"/>
+                                                        </h5>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:budget" size="small" class="mt-2"></lightning:icon> 
+                                                </div>
+                                                
+                                            </div>
+                                        </div>   
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-bottom_x-small ">
+                                        <div class="card l-bg-cvd mb-2 mt-0" style="min-height: 98px;">
+                                            <div class="card-body px-3 py-1">
+                                                <div class="d-flex justify-content-between align-items-start" >
+                                                    <div class="color-card" >
+                                                        <p class="mb-0 color-card-head">Budget Amount</p>
+                                                        <h5 class="text-left mb-0 pt-1">
+                                                             <lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!v.totalBudget}" /> 
+                                                        </h5>
+                                                    </div>
+                                                    <lightning:icon iconName="standard:budget_category_value" size="small" class="mt-2"></lightning:icon>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>   
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                            <div class="erp_Mark7  slds-m-right_small">
+                                <div class="erp_Mark7 table-responsive mb-pb100">
+                                    <aura:iteration var="wrapper" items="{!v.ProjectWrapperList}" indexVar="Indexing">
+                                        <div class="slds-page-header slds-page-header_related-list mt-2">
+                                            <aura:if isTrue="{!v.displayProgramme}">
+                                                
+                                                <div class="slds-page-header__row ">
+                                                    <div class="slds-page-header__col-title">
+                                                        
+                                                        <div class="slds-media">
+                                                            <div class="slds-media__body slds-m-left_large">
+                                                                <div class="slds-page-header__name">
+                                                                    <div class="slds-page-header__name-title">
+                                                                        <div class="" data-index="{!Indexing}" data-value="{!wrapper.Programme}" >
+                                                                            <c:CustomInputLookUp label="Programme" objectAPIName="ERP7__Programme__c" selectedRecordId="{!wrapper.Programme}"
+                                                                                                    IconName="standard:account" placeholder="Search Programme...." /> 
+                                                                        </div>   
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-page-header__col-actions slds-m-top_small slds-m-right_large">
+                                                        <lightning:buttonGroup>
+                                                            <lightning:button variant="neutral" label="Programme" iconName="utility:add" onclick="{!c.addProgramme}"/>
+                                                            <!--<aura:if isTrue="{!and(v.ProjectWrapperList.length>1, Indexing!=0)}">-->
+                                                            <lightning:buttonMenu disabled="{!v.ProjectWrapperList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="right" onselect="{!c.deleteProgramme}">
+                                                                <lightning:menuItem label="Delete Programme" value="{!Indexing}"/>
+                                                            </lightning:buttonMenu>
+                                                            <!--</aura:if>-->
+                                                        </lightning:buttonGroup> 
+                                                        
+                                                        
+                                                    </div>
+                                                </div>
+                                                
+                                                
+                                                <!-- hidden area-->
+                                                <div class="card-body p-2 slds-hide">
+                                                    <div class="d-flex align-items-center justify-content-between"> 
+                                                        <h5 class="mb-3">Programme overview</h5>
+                                                        <div class="dropdown">
+                                                            <div class="slds-grid">
+                                                                <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                <div class="slds-truncate-custom" data-index="{!Indexing}" data-value="{!wrapper.Programme}" >
+                                                                    <c:CustomInputLookUp label="Programme" objectAPIName="ERP7__Programme__c" selectedRecordId="{!wrapper.Programme}"
+                                                                                            IconName="standard:account" placeholder="Search Programme...." /> 
+                                                                </div>
+                                                                
+                                                                <div class="slds-m-top_large-mb">
+                                                                    
+                                                                    <lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Add Programme" onclick="{!c.addProgramme}">
+                                                                        <lightning:icon iconName="utility:add" size="x-small"></lightning:icon>
+                                                                        
+                                                                        <span class="slds-assistive-text">Add Programme</span>
+                                                                    </lightning:button>
+                                                                    <lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled deleteClass" title="Delete Programme" onclick="{!c.deleteProgramme}" value="{!Indexing}">
+                                                                        <lightning:icon iconName="utility:delete" size="x-small" variant="inverse"></lightning:icon>
+                                                                        
+                                                                        <span class="slds-assistive-text">Delete Programme</span>
+                                                                    </lightning:button>
+                                                                </div>
+                                                            </div>
+                                                            <!--lightning:button class="slds-button slds-button_brand float-right" onclick="{!c.addProject}" ><i class="fa fa-plus"></i>&nbsp;Project</lightning:button-->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- hidden area-->
+                                            </aura:if>
+                                            <aura:iteration var="wrap" items="{!wrapper.projWrapList}" indexVar="Index">
+                                                <div class="card2 m-2">
+                                                    <div class="card-body">
+                                                        <div class="d-flex align-items-center justify-content-between"> 
+                                                            <div class="slds-truncate-custom" data-index="{!Index}" data-value="{!wrap.Project}"  >
+                                                                <c:CustomInputLookUp label="Project" objectAPIName="ERP7__Project__c" selectedRecordId="{!wrap.Project}"
+                                                                                        IconName="standard:account" placeholder="Search Project...." /> 
+                                                            </div>
+                                                            <div class="dropdown">
+                                                                <div class="slds-grid">
+                                                                    <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                    
+                                                                    <lightning:buttonGroup>
+                                                                        <lightning:button variant="neutral" label="Project" iconName="utility:add" onclick="{!c.addProject}" value="{!Indexing}" />
+                                                                        <!--<aura:if isTrue="{!and(wrapper.projWrapList.length>1, Index!=0)}">-->
+                                                                        <lightning:buttonMenu disabled="{!wrapper.projWrapList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="center" onselect="{!c.deleteProject}">
+                                                                            <lightning:menuItem label="Delete Project" value="{!Index}" title="{!Indexing}" />
+                                                                        </lightning:buttonMenu>
+                                                                        <!--</aura:if>-->
+                                                                    </lightning:buttonGroup> 
+                                                                    <!--div class="slds-m-top_large-mb">
+                                                                    
+                                                                    <lightning:button class="slds-button slds-button_icon slds-button_icon-border-filled" title="Add Project" onclick="{!c.addProject}" value="{!Indexing}">
+                                                                        <lightning:icon iconName="utility:add" size="x-small"></lightning:icon>
+                                                                        
+                                                                        <span class="slds-assistive-text">Add Project</span>
+                                                                    </lightning:button>
+                                                                    
+                                                                    <lightning:button  class="slds-button slds-button_icon slds-button_icon-border-filled deleteClass" title="Delete Project" onclick="{!c.deleteProject}" name="{!Index}" value="{!Indexing}">
+                                                                        <lightning:icon iconName="utility:delete" size="x-small" variant="inverse"></lightning:icon>
+                                                                        
+                                                                        <span class="slds-assistive-text">Delete Project</span>
+                                                                    </lightning:button>
+                                                                </div-->
+                                                                </div>
+                                                                <!--lightning:button class="slds-button slds-button_brand float-right" onclick="{!c.addProject}" ><i class="fa fa-plus"></i>&nbsp;Project</lightning:button-->
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        
+                                                        <aura:iteration var="depwrap" items="{!wrap.depWrapList}" indexVar="DepIndex">
+                                                            
+                                                            
+                                                            <div class="slds-grid slds-wrap slds-p-bottom_small">
+                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12">
+                                                                    <div class="card mt-2"> 
+                                                                        <div class="card-body p-2">
+                                                                            <div class="slds-grid slds-wrap slds-p-bottom_small">
+                                                                                <aura:if isTrue="{!v.displayDepartment}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                                                                        <!--a data-record="{!Index}" onclick="{!c.addProject}">Add Project</a-->
+                                                                                        
+                                                                                        <div class="slds-truncate-custom">
+                                                                                            
+                                                                                            <c:CustomInputLookUp label="Department" objectAPIName="ERP7__Business_Unit__c " selectedRecordId="{!depwrap.DepartmentId}"
+                                                                                                                    IconName="standard:account" placeholder="Search Department...." /> 
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-p-right_small slds-m-top_small">
+                                                                                    <div class="bg-body p-2 rounded bg-mbui">
+                                                                                        <div class="d-flex align-items-center mb-2">
+                                                                                            <div class="flex-shrink-0">
+                                                                                                
+                                                                                            </div>
+                                                                                            <div class="flex-grow-1 ms-2">
+                                                                                                <p class="mb-0">&nbsp;Project Budget Amount</p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <h6 class="mb-0"><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!wrap.ProjectBudgetAmount}" /><small class="text-muted"></small></h6>
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                                <aura:if isTrue="{!and(depwrap.DepartmentId!=null, depwrap.DepartmentId!='')}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_small">
+                                                                                        
+                                                                                        <div class="bg-body p-2 rounded bg-mbui">
+                                                                                            <div class="d-flex align-items-center mb-2">
+                                                                                                <div class="flex-shrink-0">
+                                                                                                    
+                                                                                                </div>
+                                                                                                <div class="flex-grow-1 ms-2">
+                                                                                                    <p class="mb-0">&nbsp;Department Budget Amount</p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <h6 class="mb-0"><lightning:formattedNumber currencyDisplayAs="code" style="currency"  value="{!depwrap.DepartmentBudgetAmount}" /> </h6>
+                                                                                        </div>
+                                                                                        
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!v.displayDepartment}">
+                                                                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12 slds-m-top_small">
+                                                                                        <div class="dropdown float-right">
+                                                                                            <div class="slds-grid">
+                                                                                                <lightning:buttonGroup>
+                                                                                                    <lightning:button variant="neutral" label="Department" iconName="utility:add" onclick="{!c.addDepartment}" value="{!Index}" name="{!Indexing}" />
+                                                                                                    <!--<aura:if isTrue="{!and(wrap.depWrapList.length>1, DepIndex!=0)}">-->
+                                                                                                    <lightning:buttonMenu disabled="{!wrap.depWrapList.length==1}" alternativeText="Show menu" class="slds-button_last" menuAlignment="center" onselect="{!c.deleteDepartment}">
+                                                                                                        <lightning:menuItem label="Delete Department" value="{!Index}" title="{!DepIndex}" tabindex="{!Indexing}"/>
+                                                                                                    </lightning:buttonMenu>
+                                                                                                    <!--</aura:if>-->
+                                                                                                </lightning:buttonGroup>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </aura:if>
+                                                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-m-top_small">
+                                                                                    
+                                                                                    <table class="slds-table table_bordered   slds-no-row-hover">
+                                                                                        <thead>
+                                                                                            
+                                                                                            <tr>
+                                                                                                
+                                                                                                <th scope="col" width="10%">
+                                                                                                    <lightning:button class="slds-button slds-button_neutral " onclick="{!c.addBudgetAccount}" title="{!Indexing}" name="{!DepIndex}" value="{!Index}"><i class="fa fa-plus"></i>&nbsp;Material</lightning:button>
+                                                                                                    <!--a data-record="{!Index}" onclick="{!c.addBudgetAccount}">Add Budget Subcategory</a-->
+                                                                                                </th>
+                                                                                                <th>SI No</th>
+                                                                                                <th scope="col" width="15%">Budget Sub Category<span class="cpo-class21">*</span></th>
+                                                                                                <th scope="col">Account Number</th>
+                                                                                                <th scope="col">Account Type</th>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                    <th scope="col">Budget Amount</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                    <th scope="col" width="15%">Budget&nbsp;{!v.selectedMonth} &nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                    <th scope="col" width="10%">Q1&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q2&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q3&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q4&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                    <th scope="col" width="100">Jan&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Feb&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Mar&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Apr&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">May&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jun&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jul&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Aug&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Sep&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Oct&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Nov&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Dec&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            <aura:iteration var="budget" items="{!depwrap.budgetAccount}" indexVar="Indexed">
+                                                                                                <tr>
+                                                                                                    <td><lightning:button class="slds-button slds-button_neutral neutralC" name="{!Index}" value="{!DepIndex}" title="{!Indexed}" onclick="{!c.removeItem}"><!-- onclick="{!c.removeItem}" -->
+                                                                                                        <a title="Remove Item">
+                                                                                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                                                                                        </a>
+                                                                                                        </lightning:button></td>
+                                                                                                    <td>{!Indexed+1}</td>
+                                                                                                    <td><div class="slds-truncate-custom" data-indexing="{!Indexing}"  data-index="{!Index}" data-indexe="{!DepIndex}" data-indexed="{!Indexed}" data-value="{!budget.ERP7__Chart_of_Account__c}" onmouseleave="{!c.lookupClickProduct}" ><c:CustomInputLookUp objectAPIName="ERP7__Chart_of_Accounts__c" IconName="custom:custom57" selectedRecordId="{!budget.ERP7__Chart_of_Account__c}" qry=" AND ERP7__Available_for_Budgeting_Process__c = true"/></div></td>
+                                                                                                    <td>{!budget.ERP7__Account_Number__c}</td>
+                                                                                                    <td>{!budget.ERP7__Budget_Account_Category__c}</td>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Amount__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Amount__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__First_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Second_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Third_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__Fourth_Quarter_Amount__c }" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__January_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__February_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__March_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__April_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__May_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__June_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__July_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__August_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__September_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__October_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__November_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__December_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotal}"/></td>
+                                                                                                    </aura:if>
+                                                                                                </tr>
+                                                                                            </aura:iteration>
+                                                                                        </tbody>
+                                                                                    </table> 
+                                                                                    <table class="slds-table table_bordered   slds-no-row-hover">
+                                                                                        <thead>
+                                                                                            
+                                                                                            <tr>
+                                                                                                
+                                                                                                <th scope="col" width="10%">
+                                                                                                    <lightning:button class="slds-button slds-button_neutral " onclick="{!c.addBudgetTimeAccount}" title="{!Indexing}" name="{!DepIndex}" value="{!Index}"><i class="fa fa-plus"></i>&nbsp;Time</lightning:button>
+                                                                                                    <!--a data-record="{!Index}" onclick="{!c.addBudgetAccount}">Add Budget Subcategory</a-->
+                                                                                                </th>
+                                                                                                <th>SI No</th>
+                                                                                                <th scope="col">Activity Type</th>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                    <th scope="col">Charge Per Hour</th>
+                                                                                                    <th scope="col">Allocated Hours</th>
+                                                                                                    <th scope="col">Budget Amount</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                    <th scope="col" width="15%">Charge Per Hour&nbsp;</th>
+                                                                                                    <th scope="col" width="15%">Allocated Hours&nbsp;{!v.selectedMonth} &nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col">Budget Amount</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                    <th scope="col" width="10%">Charge Per Hour&nbsp;</th>
+                                                                                                    <th scope="col" width="10%">Q1 Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q2 Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q3 Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="10%">Q4 Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                                <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                    <th scope="col" width="10%">Charge Per Hour&nbsp;</th>
+                                                                                                    <th scope="col" width="100">Jan Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Feb Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Mar Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Apr Hour&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">May Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jun Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Jul Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Aug Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Sep Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Oct Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Nov Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                    <th scope="col" width="100">Dec Allocated Hours&nbsp;{!v.selectedYear}</th>
+                                                                                                </aura:if>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody>
+                                                                                            <aura:iteration var="budget" items="{!depwrap.budgetTimeAccount}" indexVar="Indexed">
+                                                                                                <tr>
+                                                                                                    <td><lightning:button class="slds-button slds-button_neutral neutralC" name="{!Index}" value="{!DepIndex}" title="{!Indexed}" onclick="{!c.removeItem}"><!-- onclick="{!c.removeItem}" -->
+                                                                                                        <a title="Remove Item">
+                                                                                                            <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="mbr-class12" data-aura-rendered-by="19:1393;a"/>
+                                                                                                        </a>
+                                                                                                        </lightning:button></td>
+                                                                                                    <td>{!Indexed+1}</td>
+                                                                                                    <td><lightning:select value="{!budget.ERP7__Activity_Type__c}" class="no-lable">
+                                                                                                        <option value="Administrative" selected="selected" data-aura-rendered-by="512:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Administrative_AddTimeCardEntry}</option>
+                                                                                                        <option value="Analysis" data-aura-rendered-by="517:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Analysis_AddTimeCardEntry}</option>
+                                                                                                        <option value="Assembling" data-aura-rendered-by="522:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Assembling_AddTimeCardEntry}</option>
+                                                                                                        <option value="Bug Fix" data-aura-rendered-by="527:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Bug_Fix_AddTimeCardEntry}</option>
+                                                                                                        <option value="Crafting" data-aura-rendered-by="532:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Crafting_AddTimeCardEntry}</option>
+                                                                                                        <option value="Development" data-aura-rendered-by="537:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Development_AddTimeCardEntry}</option>
+                                                                                                        <option value="Email" data-aura-rendered-by="542:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Email_AddTimeCardEntry}</option>
+                                                                                                        <option value="Meeting" data-aura-rendered-by="547:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Meeting_AddTimeCardEntry}</option>
+                                                                                                        <option value="Phone" data-aura-rendered-by="552:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Phone_AddTimeCardEntry}</option>
+                                                                                                        <option value="Polishing" data-aura-rendered-by="557:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Polishing_AddTimeCardEntry}</option>
+                                                                                                        <option value="Project Management" data-aura-rendered-by="562:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Project_Management_AddTimeCardEntry}</option>
+                                                                                                        <option value="Proposal" data-aura-rendered-by="567:0" class="uiInputSelectOption" data-aura-class="uiInputSelectOption">{!$Label.c.Proposal_AddTimeCardEntry}</option>
+                                                                                                        </lightning:select>
+                                                                                                    </td>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='--None--'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Cost_Per_Hour__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}" style="display: inline-block;"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Project_Hour__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:formattednumber style="currency" type="Number" name="{!Index}"  value="{!(budget.ERP7__Cost_Per_Hour__c*budget.ERP7__Project_Hour__c)}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Monthly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Cost_Per_Hour__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}" style="display: inline-block;"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Project_Hour__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:formattednumber style="currency" type="Number" name="{!Index}"  value="{!(budget.ERP7__Cost_Per_Hour__c*budget.ERP7__Project_Hour__c)}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Quarterly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Cost_Per_Hour__c}" formatter="currency" onchange="{!c.updateProjectTotal}" style="display: inline-block;"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Q1_Allocated_Hours__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Q2_Allocated_Hours__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Q3_Allocated_Hours__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="Number" name="{!Index}"  value="{!budget.ERP7__Q4_Allocated_Hours__c}" style="display: inline-block;" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                    </aura:if>
+                                                                                                    <aura:if isTrue="{!v.selectedPeriod=='Yearly'}">
+                                                                                                        <td><lightning:input type="currency" name="{!Index}"  value="{!budget.ERP7__Cost_Per_Hour__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}" style="display: inline-block;"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__January_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__February_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__March_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__April_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__May_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__June_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__July_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__August_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__September_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__October_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__November_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                        <td><lightning:input type="currency" name="{!Index}" value="{!budget.ERP7__December_Budget__c}" formatter="currency" onchange="{!c.updateProjectTotalTime}"/></td>
+                                                                                                    </aura:if>
+                                                                                                </tr>
+                                                                                            </aura:iteration>
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                            </div>
+                                                        </aura:iteration>
+                                                        
+                                                        
+                                                        
+                                                        
+                                                    </div>
+                                                </div>
+                                                
+                                            </aura:iteration>
+                                        </div>
+                                    </aura:iteration>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="slds-docked-form-footer">
+                        <lightning:button label="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button--neutral" onclick="{!c.cancelclick}" variant="neutral" />&nbsp;
+                        <lightning:button label="{!$Label.c.ContractConsole_Save}" class="slds-button slds-button__brand" onclick="{!c.saveBudgetUpdate}" variant="brand" disabled="{!v.showMmainSpin}"/>
+                    </div>
+                </aura:if>
+            </aura:if>
+            
+            <aura:if isTrue="{!v.showMmainSpin}">
+                <span class="mbr-class37">
+                    <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+                </span>
+            </aura:if>
+        </div>
+    </body>
+</aura:component>

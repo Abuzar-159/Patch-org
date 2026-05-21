@@ -1,0 +1,493 @@
+<aura:component Controller="ERP7.StockTake" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction,lightning:actionOverride" access="global">
+    
+    <aura:attribute name="show" type="String" default="100"/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="ItemTOdelete" type="String"/>
+    <aura:attribute name="ItemToEdit" type="String"/>
+    <aura:attribute name="stockTake" type="Stock_Take__c" />
+    <aura:attribute name="showPOPUp" type="Boolean" default="false"/>
+    <aura:attribute name="showEditPopup" type="Boolean" default="false"/>
+    
+    <!-- for sorting -->
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/>
+    
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    <aura:handler name="init" value="{!this}" action="{!c.getStockList}"/>
+    <aura:method name="popinit" action="{!c.getStockList}"></aura:method>
+    <aura:handler name="change" value="{!v.searchText}" action="{!c.Load}"/>
+    <aura:handler name="change" value="{!v.currentEmployee.ERP7__Channel__c}" action="{!c.LoadChannelChange}"/>
+    <aura:attribute name="stStatusOptions" type="List"/>
+    <aura:attribute name="SiteOptions" type="List"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="spinnerContent" type="String" default="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>
+    <head>  
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResource + '/assets/styles/erp_mark7_bootstrap.css', $Resource.bootStrap + '/css/bootstrap-4.1.css', $Resource.PickPackShipResource + '/assets/styles/main-scrollers.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.SLDS213 + '/assets/styles/salesforce-lightning-design-system-vf.css')}" />
+        <ltng:require scripts="/resource/ERP7__jQuery/js/jquery_3.5.0.min.js"  afterScriptsLoaded="{!c.focusTOscan}"/> <!-- afterScriptsLoaded="{!c.focusTOscan}" -->
+        
+        <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+        <ltng:require styles="/resource/ERP7__ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/StockTakeList.css"/>
+        <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    </head>
+    
+    <body aura:id="cmpbody" class="cl1">
+        <aura:if isTrue="{!v.showSpinner}">
+            <span class="cl2">
+                
+                <div class="custom-spinner slds-spinner_container ">
+                    <div role="status" class="slds-spinner slds-spinner_large slds-spinner_brand">
+                        <span class="slds-assistive-text">Loading</span>
+                        <div class="slds-spinner__dot-a"></div>
+                        <div class="slds-spinner__dot-b"></div>
+                        
+                    </div>
+                    <div class="custom-loading-text">
+                        {!v.spinnerContent}
+                    </div>
+                </div>
+                
+                <!--lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/-->
+            </span>
+        </aura:if>
+        <div class="maqsood erp_Mark7 erp_mark7 bg-white">
+            
+            <div class="slds-page-header slds-page-header_record-home cl3">
+                <div class="slds-page-header__row">
+                    <div class="slds-page-header__col-title">
+                        <div class="slds-media">
+                            <div class="slds-media__figure">
+                                <span class=" slds-icon_container slds-icon-standard-user">
+                                    <lightning:icon iconName="standard:orders"  size="large" alternativeText="{!$Label.c.orders}" title="orders" />
+                                </span>
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-page-header__name">
+                                    <div class="slds-page-header__name-title">
+                                        <h1>
+                                            <span class="slds-page-header__title slds-truncate slds-p-top_xx-small" title="">{!$Label.c.Stock_Take_Label}</span>
+                                        </h1>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-page-header__col-actions">
+                        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons">
+                            <div class="slds-button-group cl4 slds-p-right_small scanMN" role="group">
+                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" aura:id="emp" IconName="standard:user" selectedRecordId="{!v.currentEmployee.ERP7__Channel__c}" />
+                            </div>
+                            <ul class="slds-grid--vertical-align-left cl5">
+                                <div class="slds-button-group cl6" role="group">
+                                    <a href="javascript:void(0);" class="slds-button slds-button--neutral nuetral-f cl7" >
+                                        <i class="fa fa-filter cl8" aria-hidden="true"></i>
+                                    </a>
+                                    <li> 
+                                        <lightning:select  variant="label-hidden" class="display-lable width200" aura:id="Site" value="{!v.selectedSite}" onchange="{!c.Load}">
+                                            <aura:iteration items="{!v.SiteOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </li> 
+                                </div>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow-custom cl9">
+                <div class="card-body p-2">    
+                    <div class="erp_Mark7 slds-m-top_small cl10">
+                        <div class="row m-0">
+                            <div class="col-md-3" style="padding-right: 0px !important; padding-left: 0px !important;">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control scanMN"  >
+                                        <lightning:input type="search" variant="label-hidden" value="{!v.searchText}" placeholder="{!$Label.c.SalesOrderConsole_Search}" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'cl11 slds-notify_container slds-is-fixed','cl12 slds-notify_container slds-is-fixed')}">
+                                    <div class="slds-notify slds-notify_toast slds-theme_error cl13" role="status">
+                                        <span class="slds-assistive-text">{!$Label.c.Error_UsersShiftMatch}</span>
+                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                            <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                        </span>
+                                        <div class="slds-notify__content">
+                                            <h2 class="slds-text-heading_x-small cl14">{!v.exceptionError}
+                                            </h2>
+                                        </div>
+                                        <div class="slds-notify__close cl15">
+                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive cl16-1" tabindex="1">
+                            <table class="table">
+                                <thead>
+                                    <tr class="slds-line-height_reset">
+                                        <th class="p-3s" scope="col">
+                                            <lightning:button iconName="utility:add" label="{!$Label.c.New_AddTimeCardEntry}" variant="neutral" onclick="{!c.callToStockTakeNew}" class=""></lightning:button>
+                                            <!--<a onclick="{!c.callToStockTakeNew}" data-target="#myModal" class="cl17" data-toggle="modal" title="Create Stock Take" data-aura-rendered-by="1479:0">
+                                                New 
+                                            </a>-->
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate" title="Name" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Name"> 
+                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Name_ManageLeave}
+                                                
+                                            </div>
+                                            
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate cl18" title="{!$Label.c.AddSubscription_Start_Date}" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Start_Date__c"> 
+                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.AddSubscription_Start_Date}
+                                                
+                                            </div>
+                                            <!--<div class="slds-truncate2 cl18" title="Start Date">Start Date</div>-->
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate cl18" title="{!$Label.c.CreateClubcard_End_Date}"  onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__End_Date__c"> 
+                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.CreateClubcard_End_Date}
+                                                
+                                            </div>
+                                            <!-- <div class="slds-truncate2 cl18" title="End Date" >End Date</div>-->
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate" title="{!$Label.c.Employee_StockTake}"  onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Employee__r.Name"> 
+                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Employee_StockTake}
+                                                
+                                            </div>
+                                            <!--<div class="slds-truncate2" title="Employee">Employee</div>-->
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate" title="{!$Label.c.Approver_Timesheets}"  onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="ERP7__Approver__r.Name"> 
+                                                <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Approver_Timesheets}
+                                                
+                                            </div>
+                                            <!-- <div class="slds-truncate2" title="Approver">Approver</div>-->
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2 cl19" title="{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}">{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}</div>
+                                        </th>
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate2" title="{!$Label.c.AddSubscription_Description}">{!$Label.c.AddSubscription_Description}</div>
+                                        </th>
+                                        
+                                        <th class="" scope="col">
+                                            <div class="slds-truncate" title="{!$Label.c.AddSubscription_Action}">{!$Label.c.AddSubscription_Action}</div>
+                                        </th>
+                                        
+                                    </tr> 
+                                </thead> 
+                                <tbody>
+                                    <aura:if isTrue="{!(v.Container.StockTakeRecs.length > 0)}">
+                                        <aura:iteration var="sos" indexVar="STCounter" items="{!v.Container.StockTakeRecs}">
+                                        <tr class="slds-hint-parent">
+                                            <td name="{!STCounter}">
+                                                <lightning:button class="slds-button slds-button_neutral neutralC" name="{!sos.Id}" onclick="{!c.removeItem}" >
+                                                    <a title="Remove Item">
+                                                        <img src="/resource/ERP7__SCM/SCM/Images/slds_delete.png" class="cl20" data-aura-rendered-by="19:1393;a"/>
+                                                    </a>
+                                                </lightning:button>
+                                                <lightning:button class="slds-button slds-button_neutral neutralC" name="{!sos.Id}" onclick="{!c.editRecord}" >
+                                                    <a class="cl21" title="Edit Stock Take" data-aura-rendered-by="28:1393;a" >
+                                                        <img src="/resource/ERP7__SCM/SCM/Images/slds_edit.png" class="cl20" data-aura-rendered-by="29:1393;a"/>
+                                                    </a>
+                                                </lightning:button>
+                                            </td>
+                                            <td data-label="Stock Take Name" scope="row">
+                                                <div id="{!sos.Id}" onclick="{!c.callToStockTake}" class="slds-truncate2 cl23" title="Name">
+                                                    <a class="cl22"><lightning:formattedText value="{!sos.Name}" title="{!sos.Name}" /></a> <!-- click="{!c.NavRecord}" -->
+                                                </div>
+                                            </td>
+                                            <td data-label="SD">
+                                                <div class="slds-truncate2 cl18" title="Start Date">
+                                                    <lightning:formattedDateTime value="{!sos.ERP7__Start_Date__c}" format="dd/MM/yyyy"/>
+                                                </div>
+                                            </td>
+                                            <td data-label="ED">
+                                                <div class="slds-truncate2 cl18" title="End Date">
+                                                    <lightning:formattedDateTime value="{!sos.ERP7__End_Date__c}" format="dd/MM/yyyy"/>
+                                                </div>
+                                            </td>
+                                            <td data-label="EMP">
+                                                <div class="slds-truncate2" title="Employee">
+                                                    <lightning:formattedText value="{!sos.ERP7__Employee__r.Name}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="APPR">
+                                                <div class="slds-truncate2" title="Approver">
+                                                    <lightning:formattedText value="{!sos.ERP7__Approver__r.Name}" />
+                                                </div>
+                                            </td>
+                                            <td data-label="STATUS">
+                                                <div class="slds-truncate2 cl19" title="Status">
+                                                    <aura:if isTrue="{!sos.ERP7__Status__c == 'Open'}">
+                                                        {!$Label.c.Support_Open}
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!sos.ERP7__Status__c == 'Closed'}">
+                                                                {!$Label.c.Support_Closed}
+                                                                <aura:set attribute="else">
+                                                                    <aura:if isTrue="{!sos.ERP7__Status__c == 'Approved'}">
+                                                                        {!$Label.c.MyExpensesheets_Approved}
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!sos.ERP7__Status__c == 'Cancelled'}">
+                                                                                {!$Label.c.Cancelled_AddTimeCardEntry} 
+                                                                                <aura:set attribute="else">
+                                                                                    {!sos.ERP7__Status__c}
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    <!--lightning:formattedText value="{!sos.ERP7__Status__c}" /-->
+                                                </div>
+                                            </td> 
+                                            <td data-label="DESCR">
+                                                <div class="slds-truncate2" title="{!sos.ERP7__Description__c}">
+                                                    <div class="heightscrolldis">
+                                                        <lightning:formattedText value="{!sos.ERP7__Description__c}" />
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="MANAGE">
+                                                <div id="{!sos.Id}" onclick="{!c.callToStockTake}" class="slds-truncate cl24" title="{!$Label.c.Manage_UsersShiftMatch}">
+                                                    <div class="badge badge-pill badge-info2"> <i class="fa fa-share-square"></i>&nbsp;{!$Label.c.Manage_UsersShiftMatch}</div>
+                                                </div>
+                                            </td>
+                                        </tr>                        
+                                    </aura:iteration>
+                                        <aura:set attribute="else">
+                                            <tr>
+                                                <td colspan="12">
+                                                    <div class="no sponsors eb247">
+                                                        <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                                            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                <div>
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch}</span>
+                                                                    <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Sponsors">
+                                                                        <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch}"/>
+                                                                    </span>
+                                                                </div>
+                                                                <div class="slds-notify__content eb248">
+                                                                    <h2 class="slds-text-heading_small eb249">{!$Label.c.No_Records_Available}</h2>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:set>
+                                    </aura:if>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!--aura:renderIf isTrue="{!(v.Container.StockTakeRecs.length == 0)}">
+ <div class="slds-notify_container slds-is-absolute" id="sldspopup">
+                            <div class="slds-notify slds-notify_toast slds-theme_alert-texture slds-theme_error cl25" role="alert">
+                                <span class="slds-assistive-text">warning</span>
+                                <lightning:icon iconName="utility:warning" size="small" alternativeText="warning" class="fill-white"/>
+                                <div class="slds-notify__content cl26">
+                                    <h2 class="slds-text-heading_small cl27">No Records To Display</h2>
+                                </div>
+                                <div class="slds-notify__close cl15">
+                                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closepopup}">
+                                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />
+                                        <span class="slds-assistive-text">Close</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div> 
+                    </aura:renderIf-->
+                    
+                    <!--pagination-->
+                    <div class="epr_Mark7">
+                        <div class="row slds-docked-form-footer"><!-- epr_Mark7 cl28-->
+                            
+                            <aura:if isTrue="{!(v.Container.StockTakeRecs.length > 0)}">
+                                <div class="col-md-2 cl30">
+                                    <div class="slds-grid" >
+                                        <div class="slds-col cl31">
+                                            {!$Label.c.Acc_Recev_Show}&nbsp;&nbsp;
+                                        </div>
+                                        <div class="slds-col">
+                                            <lightning:select value="{!v.show}" onchange="{!c.SetShow}" variant="label-hidden" class="display-lable">
+                                                <option value="10">10</option>
+                                                <option value="25">25</option>
+                                                <option value="50">50</option>
+                                                <option value="100">100</option>
+                                            </lightning:select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 cl32">
+                                    {!$Label.c.Acc_Recev_Showing}&nbsp;<span class="text-lightblue">{!v.Container.startCount}-{!v.Container.endCount}</span>&nbsp; {!$Label.c.Acc_Recev_of_total} <span class="text-lightblue">&nbsp; {!v.Container.recSize} </span>&nbsp; {!$Label.c.Acc_Recev_Records}
+                                </div>
+                                
+                                <div class="col-md-5 cl33">
+                                    <div class="mb-1">
+                                        <nav aria-label="Page navigation example">
+                                            <ul class="pagination cl34">
+                                                <li class="cl35">
+                                                    <a class="{!if(1 >= v.Container.startCount,'cl36','cl37')}"  onclick="{!c.PreviousFirst}"> &lt;&lt; </a> 
+                                                </li>
+                                                <li class="cl38">
+                                                    <a class="{!if(1 >= v.Container.startCount,'cl36','cl37')}"  onclick="{!c.Previous}">{!$Label.c.Previous}</a> 
+                                                </li>
+                                                
+                                                <li class="cl38">
+                                                    <a class="{!if(v.Container.endCount == v.Container.recSize,'cl39','cl40')}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch}</a> 
+                                                </li>
+                                                <li class="cl41">
+                                                    <a class="{!if(v.Container.endCount == v.Container.recSize,'cl39','cl40')}" onclick="{!c.NextLast}">&gt;&gt; </a> 
+                                                </li>
+                                            </ul>
+                                        </nav> 
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-2">
+                                    <div class="mb-1" >
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="33%" class="text-right"><strong>{!$Label.c.page}</strong></td>
+                                                <td width="33%"><lightning:input type="number" variant="label-hidden" value="{!v.Container.PageNum}" oncommit="{!c.OfsetChange}" class="width100"/></td>
+                                                <td width="33%"><strong><span class="text-lightblue"> {!$Label.c.page_of}&nbsp;{!v.Container.PNS.length}</span></strong></td>
+                                            </tr>
+                                        </table>
+                                    </div> 
+                                </div>
+                            </aura:if>
+                            
+                        </div>
+                    </div>
+                    <!--pagination-->
+                    
+                </div>
+            </div>
+            
+            <!-- Delete Popup Start-->
+            <aura:if isTrue="{!v.showPOPUp}">
+                <section role="dialog" tabindex="-2" aria-labelledby="modal-heading-02" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open cl44">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__content slds-p-around_large cl46" id="modal-content-id-1">
+                            <label class="slds-radio">
+                                <span class="cl45">{!$Label.c.Are_you_sure_you_want_to_delete}</span>
+                            </label>
+                        </div>
+                        <footer class="slds-modal__footer cl46">
+                            <button type="button" class="slds-button slds-button--brand" data-dismiss="modal" data-record="delete" value="Yes"  aura:id="yesId" onclick="{!c.DeleteRecordById}">{!$Label.c.Yes_UserAvailabilities}</button> 
+                            <button type="button" value="No" class="slds-button slds-button--neutral" data-record="NO"  aura:id="noId" onclick="{!c.CancelDelete}">{!$Label.c.No}</button> 
+                            
+                        </footer>
+                    </div>
+                </section>
+            </aura:if>
+            <!-- Delete Popup End-->
+            
+            <!-- Edit Popup Start-->
+            <aura:if isTrue="{!v.showEditPopup}">
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open cl47">
+                    <div class="slds-modal__container "><!--cl48-->
+                        <div class="slds-modal__content slds-p-around_medium">
+                            <div class="epr_Mark7 cl1">
+                                <div class="row slds-p-top--xx-small">
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input label="{!$Label.c.Name_ManageLeave}" type="text" value="{!v.stockTake.Name}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <c:CustomInputLookUp label="{!$Label.c.Site_StockTake}" objectAPIName="ERP7__Site__c" IconName="custom:custom32" selectedRecordId="{!v.stockTake.ERP7__Site__c}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <c:CustomInputLookUp label="{!$Label.c.Employee_StockTake}" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecordId="{!v.stockTake.ERP7__Employee__c}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <c:CustomInputLookUp label="{!$Label.c.Approver_Timesheets}" objectAPIName="ERP7__Employees__c" IconName="utility:user" selectedRecordId="{!v.stockTake.ERP7__Approver__c}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row slds-p-top--xx-small">
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="date"  label="{!$Label.c.AddSubscription_Start_Date}" value="{!v.stockTake.ERP7__Start_Date__c}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:input type="date" label="{!$Label.c.CreateClubcard_End_Date}" value="{!v.stockTake.ERP7__End_Date__c}" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                <lightning:select aura:id="stStatus" value="{!v.stockTake.ERP7__Status__c}" label="{!$Label.c.SalesOrderToPurchaseOrder_SOLI_Status}" >
+                                                    <aura:iteration items="{!v.stStatusOptions}" var="option">
+                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.stockTake.ERP7__Status__c, option.value)}"/>
+                                                    </aura:iteration>
+                                                </lightning:select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 slds-p-top--xx-small ">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right scanMN">
+                                                <lightning:textarea label="{!$Label.c.AddSubscription_Description}" value="{!v.stockTake.ERP7__Description__c}" maxlength="250"/> 
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="slds-modal__footer cl46">
+                            <lightning:button variant="brand" label="{!$Label.c.ContractConsole_Save}" title="Save" onclick="{!c.saveEditStockTake}"/>
+                            <lightning:button variant="neutral" label="{!$Label.c.Cancel_ManageLeave}" title="Cancel" onclick="{!c.CancelEdit}"/>
+                        </footer>
+                    </div>
+                </section>
+            </aura:if>
+            <!-- Edit Popup End-->
+            
+        </div>
+    </body>
+</aura:component>

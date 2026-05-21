@@ -1,0 +1,733 @@
+<aura:component controller="AddOrderProducts" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global">
+    
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+    
+    <aura:attribute name="OrderId" type="String" default=""/>
+    <aura:attribute name="errorMsg" type="String" default=""/>
+    <aura:attribute name="orderName" type="String"/>
+    <aura:attribute name="name" type="String" default=""/>
+    <aura:attribute name="proCode" type="String" default=""/>
+    <aura:attribute name="prodFam" type="String"/>
+    <aura:attribute name="prodCat" type="String"/>
+    <aura:attribute name="listOfProduct" type="Object"/>
+    <aura:attribute name="islistOfProduct" type="boolean" default="false"/>
+    <aura:attribute name="selectedProducts" type="String[]"/>
+    <aura:attribute name="selectedItems" type="String[]"/>
+    <aura:attribute name="viewListOfProduct" type="Boolean" default="true"/>
+    <aura:attribute name="DragIndex" type="String"/>
+    <aura:attribute name="itemsToDel" type="String[]"/>
+    <aura:attribute name="allpribook" type="String"/>
+    <aura:attribute name="tooltip" type="Boolean" default="false"/>
+    <aura:attribute name="isSelectFirst" type="Boolean"/>
+    <aura:attribute name="isAllFeatCom" type="Boolean"/>
+    
+    <!--========Product Configuration==========-->
+    <aura:attribute name="proforConfig" type="String"/>
+    <aura:attribute name="proName" type="String"/>
+    <aura:attribute name="proOptions" type="Object"/>
+    <aura:attribute name="optionRules" type="Object"/>
+    <aura:attribute name="totalStock" type="Object"/>
+    <aura:attribute name="proMap" type="Map" default="{}"/>
+    <aura:attribute name="proFeatureMap" type="Map" default="{}"/>
+    <aura:attribute name="selConfiguration" type="String[]"/>
+    <aura:attribute name="resVersion" type="String"/>
+    <!--========Product Configuration==========-->
+    
+    
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    
+    <aura:attribute name="prodFamilyList" type="List"/>
+    <aura:attribute name="prodCategoryList" type="List"/>
+    <aura:attribute name="allpricebookOptions" type="List"/>
+    <aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"/>        
+    </aura:if>
+     
+    <div class="slds-page-header AddOrderProducts-newClass1">
+        <div class="slds-grid">
+            <div class="slds-col slds-has-flexi-truncate">
+                <div class="slds-media slds-no-space slds-grow">
+                    <div class="slds-media__figure">
+                        <lightning:icon iconName="standard:order_item" alternativeText="Order Item" title="Order Item"/>                                
+                    </div>
+                    <div class="slds-media__body">
+                        <p class="slds-text-title--caps slds-line-height--reset">{!v.orderName}</p>
+                        <h1 class="slds-page-header__title slds-m-right--small slds-align-middle" title="">{!$Label.c.Add_Products}</h1>                        
+                    </div>
+                </div>
+            </div>                    
+        </div>
+    </div>
+    <aura:if isTrue="{!not(empty(v.errorMsg))}">
+        <div class="slds-notify_container slds-is-fixed AddOrderProducts-newClass2" >
+            <div class="slds-notify slds-notify_toast slds-theme_error AddOrderProducts-newClass4" role="status">
+                <span class="slds-assistive-text">error</span>
+                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                    <lightning:icon iconName="utility:error" variant="inverse" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" size="small"/>
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small AddOrderProducts-newClass5" >
+                        <lightning:formattedText value="{!v.errorMsg}"/>
+                    </h2>
+                </div>
+                <div class="slds-notify__close AddOrderProducts-newClass6">
+                    <a onclick="{!c.closeError}" class="AddOrderProducts-newClass34">
+                        <lightning:icon iconName="utility:close" variant="inverse" alternativeText="close!" title="Close"  size="small"/>
+                    </a>
+                    <!--<lightning:buttonIcon iconName="utility:close" variant="inverse" alternativeText="Close" title="Close" onclick="{!c.closeError}"/>-->
+                </div>
+            </div>
+        </div>
+    </aura:if>
+    
+    <div class="slds-grid slds-m-top_small">
+        <aura:if isTrue="{!v.viewListOfProduct}">
+            <div class="slds-col slds-size_1-of-1 slds-large-size_8-of-12 AddOrderProducts-newClass7">
+                <article class="slds-card slds-p-around--small">                    
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">  
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="name">{!$Label.c.Name_ManageLeave}</label>
+                                <div class="slds-form-element__control">
+                                    <lightning:input value="{!v.name}" oncommit="{!c.getProduct}"  class="nolble"/>
+                                </div>
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">  
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="name">{!$Label.c.Product_Code}</label>
+                                <div class="slds-form-element__control">
+                                    <lightning:input value="{!v.proCode}" oncommit="{!c.getProduct}" class="nolble"/>
+                                </div>
+                            </div> 
+                        </div>
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">   
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="prodFam">{!$Label.c.Family}</label>
+                                <div class="slds-form-element__control">
+                                    <lightning:select value="{!v.prodFam}" onchange="{!c.getProduct}" aura:id="profamily_List" class="display-lable">
+                                        <aura:iteration items="{!v.prodFamilyList}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.prodFam, option.value)}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">   
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="prodFam">{!$Label.c.Category}</label>
+                                <div class="slds-form-element__control">
+                                    <lightning:select  value="{!v.prodCat}" onchange="{!c.getProduct}" aura:id="proCat_List" class="display-lable">
+                                        <aura:iteration items="{!v.prodCategoryList}" var="option">
+                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.prodCat, option.value)}"/>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </div>
+                            </div>
+                        </div> 
+                    </div>
+                    <div class="scroll-bar-wrap">
+                        <div class="scroll-box AddOrderProducts-newClass8">
+                            <p class="mb-0">  
+                                <table class="slds-table slds-table_bordered slds-m-top_small">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th class="AddOrderProducts-newClass9">
+                                                
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">Code</span> 
+                                            </th>                    
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.AddSubscription_Product}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">Stock</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.Price}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.PackageSlip_List_Quantity}</span> 
+                                            </th>                                            
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.Discount_Plan}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.Add_Subscription_Discount}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.ContractConsole_Description}</span> 
+                                            </th>
+                                        </tr>            
+                                    </thead>
+                                    <tbody>
+                                        <aura:if isTrue="{!v.islistOfProduct}">
+                                        <aura:if isTrue="{!v.listOfProduct.length > 0}">
+                                            <aura:iteration items="{!v.listOfProduct}" var="pro" aura:id="singlepro" indexVar="count">
+                                                <tr>
+                                                    <td scope="row" class="slds-text-align--right AddOrderProducts-newClass10">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control">
+                                                                    <lightning:input type="checkbox" variant="label-hidden" name="{!pro.pbe.Product2.Id}" aura:id="boxPack" checked="{!pro.checkSelected}" onchange="{!c.checkboxSelect}"/>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td >
+                                                        <div class="slds-truncate AddOrderProducts-newClass11">
+                                                            <lightning:formattedText aura:id="code" value="{!pro.pbe.Product2.ProductCode}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate AddOrderProducts-newClass12" title="{!pro.pbe.Product2.Name}"><!-- id="{!pro.product.Id}"-->
+                                                            <lightning:formattedText value="{!pro.pbe.Product2.Name}" onclick="{!c.NavRecord}" title="{!pro.pbe.Product2Id}"/>                                                        
+                                                            <aura:if isTrue="{!pro.pbe.Product2.ERP7__Configure__c == true}">
+                                                            <!--<lightning:icon iconName="utility:settings" alternativeText="Configure Product" title="{!pro.pbe.Product2Id}" size="x-small" onclick="{!c.Configure}"/> -->
+                                                                &nbsp;<lightning:icon iconName="utility:settings" alternativeText="Configure Product" size="xx-small"/>
+                                                        </aura:if>
+                                                        </div>   
+                                                        <aura:if isTrue="{!(v.resVersion == pro.version)}">
+                                                            <aura:if isTrue="{!v.selConfiguration.length > 0}">
+                                                                <a onmouseover="{!c.showToolTip}" onmouseout="{!c.HideToolTip}" href=""><lightning:icon iconName="utility:info" alternativeText="Configuration icon" size='x-small'/>    
+                                                                </a>
+                                                                <aura:if isTrue="{!v.tooltip}" >
+                                                                    <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left AddOrderProducts-newClass13" role="tooltip" id="help">
+                                                                        <div class="slds-popover__body">
+                                                                            <aura:iteration items="{!v.selConfiguration}" var="sc"> 
+                                                                                <lightning:formattedText value="{!sc}"/>&nbsp;<br/>
+                                                                			</aura:iteration>
+                                                                        </div>
+                                                                    </div>
+                                                                </aura:if>
+                                                            </aura:if>
+                                                        </aura:if>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <aura:if isTrue="{!pro.stock == 0}">
+                                                                <aura:if isTrue="{!pro.pbe.Product2.ERP7__Allow_Back_Orders__c}">
+                                                                    <lightning:formattedText value="Back Order"/>
+                                                                    <!--<aura:set attribute="else">
+                                                                        <lightning:formattedNumber value="{!pro.stock}"/>
+                                                                    </aura:set>-->
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!pro.pbe.Product2.ERP7__Is_Kit__c}">
+                                                                    <lightning:formattedText value="Kit"/>
+                                                                   <!-- <aura:set attribute="else">
+                                                                        <lightning:formattedNumber value="{!pro.stock}"/>
+                                                                    </aura:set>-->
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!and(pro.pbe.Product2.ERP7__Is_Kit__c== false,pro.pbe.Product2.ERP7__Allow_Back_Orders__c == false)}">
+                                                                    <lightning:formattedNumber value="{!pro.stock}"/>
+                                                                </aura:if>
+                                                                <aura:set attribute="else">
+                                                                    <p><lightning:formattedNumber value="{!pro.stock}"/></p>
+                                                                </aura:set>
+                                                            </aura:if>      
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <lightning:input type="number" formatter="currency" value="{!pro.pbe.UnitPrice}" class="{!pro.pbe.UnitPrice == '' ? 'hasError1 no-display inputWidth3':'no-display inputWidth3'}"/>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <lightning:input type="number" value="{!pro.quantity}" onchange="{!c.handleQuantity}" title="{!count}" class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"/>
+                                                        </div>
+                                                    </td>                                                    
+                                                    <td>
+                                                        <div>
+                                                            <lightning:select onchange="{!c.handleDiscPlan}" title="{!pro.pbe.Product2Id}" class="no-display1" label=''>
+                                                                <aura:iteration items="{!pro.CurrentDiscounts}" var="cd"> 
+                                                                    <option value="{!cd.value}" text="{!cd.label}"></option>                                           
+                                                                </aura:iteration>
+                                                            </lightning:select>                                                    
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-grid">
+                                                            <lightning:input type="number" value="{!pro.discountPercent}" onchange="{!c.handleDiscount}" title="{!count}" class="{!pro.discountPercent == '' ? 'hasError1 inputWidth1 no-display':'inputWidth1 no-display'}"/>
+                                                            <div class="AddOrderProducts-newClass14">
+                                                                [{!pro.minDiscount}-{!pro.maxDiscount}]
+                                                                <aura:if isTrue="{!(pro.isPercent == true)}">%</aura:if>
+                                                            </div>
+                                                        </div>                                                        
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <lightning:textarea value="{!pro.pbe.Product2.Description}"/>
+                                                        </div> 
+                                                    </td>
+                                                </tr>
+                                            </aura:iteration>
+                                            <aura:set attribute="else">
+                                                <tr>
+                                                    <td colspan="6">
+                                                        <div class="no Venues AddOrderProducts-newClass31">
+                                                            <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning " role="status">
+                                                                    <div>
+                                                                        <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                                                                        <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Venues">
+                                                                            <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="slds-notify__content AddOrderProducts-newClass32">
+                                                                        <h2 class="slds-text-heading_small AddOrderProducts-newClass33">{!$Label.c.Products_Not_Available}</h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </aura:set>
+                                            </aura:if>
+                                        </aura:if>
+                                    </tbody>
+                                </table>
+                            </p>
+                        </div>
+                        <div class="cover-bar"></div>
+                    </div>
+                    <div class="slds-card__footer AddOrderProducts-newClass14">
+                        <div class="slds-form-element">
+                            <lightning:button label="Add Products" class="slds-button slds-button--brand" onclick="{!c.addProducts}"/>   
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12">
+                <article class="slds-card slds-p-around--small">
+                    <h1 class="AddOrderProducts-newClass16"><strong>{!$Label.c.Selected_Line_Items}</strong></h1>
+                    <div class="scroll-bar-wrap">
+                        <div class="scroll-box AddOrderProducts-newClass15">
+                            <p class="mb-0">  
+                                <table class="slds-table slds-table_bordered AddOrderProducts-newClass17">
+                                    <thead>
+                                        <tr class="slds-text-title--caps"> 
+                                            <th class="AddOrderProducts-newClass9"></th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.AddSubscription_Product}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.Price}</span> 
+                                            </th>
+                                            <th class="AddOrderProducts-newClass9">
+                                                <span class="slds-truncate" title="Code">{!$Label.c.PackageSlip_List_Quantity}</span> 
+                                            </th>
+                                        </tr>            
+                                    </thead>
+                                    <tbody>
+                                        <aura:iteration items="{!v.selectedProducts}" var="pro1" indexVar="count1">
+                                            <tr>
+                                                <td class="options">
+                                                    <div class="AddOrderProducts-newClass18">
+                                                        <lightning:icon iconName="action:delete" alternativeText="{!$Label.c.Remove_Item}" title="{!count1}" size="xx-small" onclick="{!c.removeItem}"/> 
+                                                    </div>
+                                                    <!--<a onclick="{!c.removeItem}" data-service="{!count1}"><i class="ti-trash bg-red-cpq"></i></a>-->
+                                                </td>
+                                                <td>
+                                                    <div title="Product" class="slds-truncate AddOrderProducts-newClass19">
+                                                        <lightning:formattedText value="{!pro1.pbe.Product2.Name}" onclick="{!c.NavRecord}" title="{!pro1.pbe.Product2Id}"/>                                        
+                                                    </div>                                        
+                                                </td>                                
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" formatter="currency" onchange="{!c.handleUnitPriceSel}" value="{!pro1.pbe.UnitPrice}" class="{!pro1.pbe.UnitPrice == '' ? 'hasError1 no-display':'no-display'}"/>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <lightning:input type="number" value="{!pro1.quantity}" onchange="{!c.handleQuantitySel}" title="{!count1}" class="{!pro1.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"/>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </aura:iteration>
+                                    </tbody>
+                                </table>
+                            </p>
+                        </div>
+                        <div class="cover-bar"></div>
+                    </div> 
+                    <div class="slds-card__footer AddOrderProducts-newClass20"> 
+                        <div class="slds-form-element">                        
+                            <lightning:button onclick="{!c.cancelOrderLine}">{!$Label.c.Cancel_ManageLeave}</lightning:button>
+                            <aura:if isTrue="{!v.selectedProducts.length > 0}">
+                            	<lightning:button onclick="{!c.next}" variant="brand">{!$Label.c.Next_UsersShiftMatch}</lightning:button>
+                                <aura:set attribute="else">
+                                	<lightning:button disabled="true" variant="brand">{!$Label.c.Next_UsersShiftMatch}</lightning:button>
+                                </aura:set>
+                            </aura:if>
+                        </div>
+                    </div>
+                </article>
+            </div>   
+            <aura:set attribute="else">
+                <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 AddOrderProducts-newClass21">
+                    <article class="slds-card slds-p-around--small">
+                        <div class="scroll-bar-wrap">
+                            <div class="scroll-box AddOrderProducts-newClass22">
+                                <p class="mb-0">  
+                                    <table class="slds-table slds-table_bordered slds-m-top_small">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                                <th>
+                                                    
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">Code</span> 
+                                                </th>                    
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.AddSubscription_Product}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.Price}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.PackageSlip_List_Quantity}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.Discount_Plan}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.Discount_Unit}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.AddSubscription_Tax}</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">Net</span> 
+                                                </th>
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.Gross}</span> 
+                                                </th>
+                                                
+                                                <th>
+                                                    <span class="slds-truncate" title="Code">{!$Label.c.ContractConsole_Description}</span> 
+                                                </th>
+                                            </tr>            
+                                        </thead>
+                                        <tbody>
+                                            <aura:if isTrue="{!v.selectedProducts.length > 0}">
+                                                <aura:iteration items="{!v.selectedProducts}" var="spro" indexVar="count">
+                                                    <tr id="{!count}" class="AddOrderProducts-newClass18" draggable="true" ondragstart="{!c.handleDrag}" ondrop="{!c.handleDrop}" ondragover="{!c.allowDrop}" data-index="{!count}">
+                                                        <td class="options">
+                                                            <div class="AddOrderProducts-newClass18">
+                                                                <lightning:icon iconName="action:delete" alternativeText="{!$Label.c.Remove_Item}" title="{!count}" size="xx-small" onclick="{!c.removeItem}"/> 
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div title="Product Code">
+                                                               <lightning:formattedText value="{!spro.pbe.Product2.ProductCode}"/>                                                
+                                                            </div>                                        
+                                                        </td>
+                                                        <td>
+                                                            <div title="Product" class="AddOrderProducts-newClass23"><!-- id="{!pro.product.Id}"-->
+                                                                <div class="slds-grid">
+                                                                	<div class="slds-col AddOrderProducts-newClass24">
+                                                                        <aura:if isTrue="{!(spro.pbe.Product2.ERP7__Picture__c != undefined)}">
+                                                                            &nbsp;<img src="{!spro.pbe.Product2.ERP7__Picture__c}" class="pwh40"/>
+                                                                        </aura:if>&nbsp;
+                                                                    </div>
+                                                                    <div class="slds-col AddOrderProducts-newClass24"> 
+                                                                 	   <lightning:formattedText value="{!spro.pbe.Product2.Name}" onclick="{!c.NavRecord}" title="{!spro.pbe.Product2.Id}"/>  
+                                                                	</div>
+                                                                </div>
+                                                              
+                                                            </div>                                        
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <lightning:input type="number" formatter="currency" onchange="{!c.handleUnitPriceSel}" value="{!spro.pbe.UnitPrice}" class="{!spro.pbe.UnitPrice == '' ? 'hasError1 no-display inputWidth3':'no-display inputWidth3'}"/>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <lightning:input type="number" value="{!spro.quantity}" onchange="{!c.handleQuantitySel}" title="{!count}" class="{!spro.quantity == '' ? 'hasError1 inputWidth no-display':'inputWidth no-display'}"/>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <lightning:select onchange="{!c.handleDiscPlanSel}" title="{!spro.pbe.Product2.Id}" class="no-display1">
+                                                                    <aura:iteration items="{!spro.CurrentDiscounts}" var="cd"> 
+                                                                        <option value="{!cd.value}" text="{!cd.label}" selected="{!cd.value == spro.discountPlan}"></option>                                    
+                                                                    </aura:iteration>
+                                                                </lightning:select>                                                    
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="slds-grid">
+                                                                <lightning:input type="number" value="{!spro.discountPercent}" onchange="{!c.handleDiscountSel}" title="{!count}" class="{!spro.discountPercent == '' ? 'hasError1 inputWidth1 no-display':'inputWidth1 no-display'}"/>
+                                                                <div class="AddOrderProducts-newClass14">
+                                                                    [{!spro.minDiscount}-{!spro.maxDiscount}]
+                                                                    <aura:if isTrue="{!(spro.isPercent == true)}">%</aura:if>
+                                                                </div>
+                                                            </div> 
+                                                            
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <lightning:formattedNumber value="{!(spro.vatAmount+spro.otherTax)}" style="currency"/>                                                                                              
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <aura:if isTrue="{!spro.isPercent}">
+                                                                    <lightning:formattedNumber style="currency"  value="{!((spro.pbe.UnitPrice*spro.quantity-(((spro.pbe.UnitPrice*spro.quantity)*spro.discountPercent)/100)))}"/>
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:formattedNumber style="currency" value="{!(((spro.pbe.UnitPrice*spro.quantity)-(spro.quantity*spro.discountPercent)))}"/>   
+                                                                    </aura:set>
+                                                                </aura:if>                                                                                                 
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <aura:if isTrue="{!spro.isPercent}">
+                                                                    <lightning:formattedNumber style="currency"  value="{!((spro.pbe.UnitPrice*spro.quantity-(((spro.pbe.UnitPrice*spro.quantity)*spro.discountPercent)/100)+(spro.vatAmount+spro.otherTax)))}"/>
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:formattedNumber style="currency"  value="{!(((spro.pbe.UnitPrice*spro.quantity)-(spro.quantity*spro.discountPercent)+(spro.vatAmount+spro.otherTax)))}"/>   
+                                                                    </aura:set>
+                                                                </aura:if>                                                                                                 
+                                                            </div>
+                                                        </td>
+                                                       
+                                                        <td>
+                                                            <div>
+                                                                <lightning:textarea value="{!spro.pbe.Product2.Description}"/>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </aura:iteration>
+                                                <aura:set attribute="else">
+                                                    <tr>
+                                                    <td colspan="6">
+                                                        <div class="no Venues AddOrderProducts-newClass31">
+                                                            <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning " role="status">
+                                                                    <div>
+                                                                        <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                                                                        <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Venues">
+                                                                            <lightning:icon iconName="utility:warning" size="small" alternativeText="warning"/>
+                                                                        </span>
+                                                                    </div>
+                                                                    <div class="slds-notify__content AddOrderProducts-newClass32">
+                                                                        <h2 class="slds-text-heading_small AddOrderProducts-newClass33">{!$Label.c.Line_Items_Not_Available}</h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                </aura:set>
+                                            </aura:if>
+                                        </tbody>
+                                    </table>
+                                </p>
+                            </div>
+                            <div class="cover-bar"></div>
+                        </div>
+                        <div class="slds-card__footer AddOrderProducts-newClass20">
+                            <div class="slds-form-element">
+                                <lightning:button onclick="{!c.previous}">{!$Label.c.Previous}</lightning:button>
+                                <lightning:button onclick="{!c.cancelOrderLine}">{!$Label.c.QuotationConsole_Cancel}</lightning:button>
+                                <lightning:button onclick="{!c.saveOrderLine1}" variant="brand">{!$Label.c.ContractConsole_Save}</lightning:button>   
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                
+            </aura:set>
+        </aura:if>
+    </div>
+    
+    <div>
+        <section aura:id="PBModal" role="dialog" tabindex="-1" aria-labelledby="PBModalHeading" aria-modal="true" aria-describedby="PBModalBody" class="slds-modal">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning:buttonIcon class="slds-modal__close" alternativeText="Close" iconName="utility:close" onclick="{!c.PBcloseModal}" variant="bare-inverse" size="large"></lightning:buttonIcon>
+                    <h2 id="deleteModalHeading" class="slds-text-heading_medium slds-hyphenate">{!$Label.c.Select_PriceBook}</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="contactModalBody">
+                    <p>
+                        {!$Label.c.AddOrd_label}
+                    </p><br/>
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">   
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label" for="pribook">{!$Label.c.Price_Book}</label>
+                            <div class="slds-form-element__control">
+                                <lightning:select  value="{!v.allpribook}" aura:id="allpricebook" variant="label-hidden"  class="display-lable">
+                                    <aura:iteration items="{!v.allpricebookOptions}" var="option">
+                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.allpribook, option.value)}"/>
+                                    </aura:iteration>
+                                </lightning:select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning:button onclick="{!c.PBcloseModal}" variant="neutral">{!$Label.c.Cancel_ManageLeave}</lightning:button>
+                    <lightning:button onclick="{!c.savePricebook}" variant="brand" >{!$Label.c.Continue}</lightning:button>
+                </footer>
+            </div>
+        </section>
+        <div aura:id="PBModalBackdrop" class="slds-backdrop"></div>
+    </div>
+    
+    <!--======================Configuration Modal start=============================-->
+    <div id="configModal" aura:Id="configModal1" class="slds-modal" role="dialog">        
+        <div class="slds-modal__container AddOrderProducts-newClass25">            
+            <div class="slds-modal__content AddOrderProducts-newClass26">
+                <div class="positon-fixed-maq"><Strong>Configuration - {!v.proName}</Strong></div><br/>
+                <aura:if isTrue="{!v.proOptions.length >0}">
+                    <aura:iteration items="{!v.proOptions}" var="pro">
+                        <article class="slds-card maq-card AddOrderProducts-newClass27">
+                            <div class="slds-card__header slds-grid header-maq">
+                                <header class="slds-media slds-media_center slds-has-flexi-truncate">                            
+                                    <div class="slds-media__body">
+                                        <h1 class="slds-card__header-title AddOrderProducts-newClass28">   
+                                            <aura:if isTrue="{!pro.feature.Name != undefined}">
+                                                <strong >{!pro.feature.Name}</strong>
+                                            </aura:if>
+                                        </h1>
+                                    </div>
+                                    <div class="slds-no-flex">                                
+                                    </div>
+                                </header>
+                            </div>
+                            <div class="slds-card__body">
+                                <table class="slds-table slds-table_cell-buffer slds-no-row-hover slds-table_bordered slds-table_fixed-layout" role="grid">
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">                                            
+                                                </div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">{!$Label.c.Product_Name_StockTake}</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">{!$Label.c.Product_Code}</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">Stock</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">{!$Label.c.Price}</div>
+                                            </th>
+                                            <th class="" scope="col">
+                                                <div class="slds-truncate" title="">{!$Label.c.PackageSlip_List_Quantity}</div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <aura:if isTrue="{!pro.featOpt.length > 0}">
+                                            <aura:iteration items="{!pro.featOpt}" var="fo">
+                                                <tr class="slds-hint-parent">                                     
+                                                    <td>
+                                                        <div class="slds-form-element__control" title="{!fo.Id}"><!-- title="Hello"-->
+                                                            <label class="slds-checkbox">
+                                                                <input type="checkbox" id="{!fo.Id}" onchange="{!c.handleChange}" data-value="{!fo.Id}" data-feature="{!pro.feature.Id}" checked="false"/>
+                                                                <span class="slds-checkbox--faux"></span>
+                                                                <span class="slds-form-element__label text"></span>
+                                                            </label>
+                                                        </div>
+                                                    </td>
+                                                    <th>
+                                                        <div class="slds-truncate slds-grid" title="">
+                                                            <aura:if isTrue="{!and(or(pro.feature.Name == 'Color',pro.feature.Name == 'Colors',pro.feature.Name == 'Colour',pro.feature.Name == 'Colours',pro.feature.Name == 'color',pro.feature.Name == 'colors'),fo.ERP7__Optional_SKU__r.ERP7__Picture__c != undefined)}">
+                                                                <aura:if isTrue="{!(fo.ERP7__Optional_SKU__r.ERP7__Picture__c != undefined)}">
+                                                                    <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                        <img src="{!fo.ERP7__Optional_SKU__r.ERP7__Picture__c}" class="AddOrderProducts-newClass29" />
+                                                                    </div>
+                                                                </aura:if>
+                                                                <aura:set attribute="else">
+                                                                    <a onclick="{!c.detailPage}" data-proId="{!fo.ERP7__Optional_SKU__r.Id}">{!fo.ERP7__Optional_SKU__r.Name}</a>
+                                                                    <aura:if isTrue="{!(fo.ERP7__Optional_SKU__r.ERP7__Picture__c != undefined)}">
+                                                                        <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-12">
+                                                                            <img src="{!fo.ERP7__Optional_SKU__r.ERP7__Picture__c}" class="AddOrderProducts-newClass30" />
+                                                                        </div>
+                                                                    </aura:if>
+                                                                </aura:set>                                                            
+                                                            </aura:if>                                                            
+                                                        </div>
+                                                    </th>
+                                                    <td>
+                                                        <div class="slds-truncate" title="">{!fo.ERP7__Optional_SKU__r.ProductCode}</div>
+                                                    </td>  
+                                                    <td>
+                                                        <aura:iteration items="{!v.totalStock}" var="stock">                                                                
+                                                            <aura:if isTrue="{! (stock.ProId == fo.ERP7__Optional_SKU__c)}">
+                                                                <aura:if isTrue="{!stock.stockAvlb == 0}">
+                                                                    <aura:if isTrue="{!fo.ERP7__Optional_SKU__r.ERP7__Allow_Back_Orders__c}">
+                                                                        <lightning:formattedText value="Back Order"/>
+                                                                        <aura:set attribute="else">
+                                                                            <lightning:formattedText value="{!stock.stockAvlb}"/>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                    <aura:set attribute="else">
+                                                                        <lightning:formattedText value="{!stock.stockAvlb}"/>
+                                                                    </aura:set>
+                                                                </aura:if>                                                         
+                                                            </aura:if>                                                            
+                                                        </aura:iteration>                                                         
+                                                    </td>  
+                                                    <td>
+                                                        <aura:iteration items="{!pro.pbe}" var="pri">
+                                                            <aura:if isTrue="{!(pri.Product2Id ==fo.ERP7__Optional_SKU__c)}">
+                                                                <div class="slds-truncate" title="">
+                                                                    <lightning:input type="number" variant="label-hidden"  value="{!pri.UnitPrice}"/>
+                                                                </div>
+                                                            </aura:if>
+                                                        </aura:iteration>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate" title=""><input type="number" value="1" class="slds-input width100p" id="{!fo.ERP7__Optional_SKU__r.Id}"/></div><!---->
+                                                    </td>  
+                                                </tr>
+                                            </aura:iteration>                             
+                                        </aura:if>                                    
+                                    </tbody>
+                                </table>
+                            </div>                        
+                        </article>
+                    </aura:iteration>
+                    <aura:set attribute="else">
+                        <tr>
+                            <td colspan="6">
+                                <div class="no Venues AddOrderProducts-newClass31">
+                                    <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                        <div class="slds-notify slds-notify_toast slds-theme_warning " role="status">
+                                            <div>
+                                                <span class="slds-assistive-text">{!$Label.c.warning}</span>
+                                                <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Venues">
+                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning}"/>
+                                                </span>
+                                            </div>
+                                            <div class="slds-notify__content AddOrderProducts-newClass32">
+                                                <h2 class="slds-text-heading_small AddOrderProducts-newClass33">{!$Label.c.Configuration_Not_Available}</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </aura:set>   
+                </aura:if>
+            </div>
+            <div class="slds-modal__footer AddOrderProducts-newClass20">
+                <lightning:button aura:id="addConfiguration" onclick="{!c.confirmConfiguration}" variant="brand">{!$Label.c.Confirm_Configuration}</lightning:button>
+                <a href="javascript:void(0);" onclick="{!c.closeConfigureModal}" class="slds-button slds-buttonneutral">{!$Label.c.Cancel_ManageLeave}</a>               
+            </div>
+        </div>
+        <!-- Modal content-->
+    </div>
+    <div class="slds-backdrop" aura:id="configModalBackdrop"></div>
+    <!-- ===================Configuration modal ends=============================== --> 
+    
+    
+    
+</aura:component>

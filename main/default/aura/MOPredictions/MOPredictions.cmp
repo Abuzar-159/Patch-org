@@ -1,0 +1,336 @@
+<aura:component controller="MO_WO_Scheduler" implements="flexipage:availableForAllPageTypes,force:appHostable,forceCommunity:availableForAllPageTypes" access="global" >
+	<aura:attribute name="qry" type="String" /> 
+    <aura:attribute name="Count" type="object[]" default="{'1','2','3','4'}"/>
+    <aura:attribute name="Count1" type="object[]" default="{'1','2','3','4'}"/>
+    <aura:attribute name="Cards" type="object[]"/>
+    <aura:attribute name="Filter" type="Object" default="{'sObjectType':'ERP7__Inventory_Stock__c','ERP7__Location__c':'','ERP7__Product__c':''}"/>
+	<aura:attribute name="SelectedRouting" type="Object"/>
+    <aura:attribute name="MO" type="Object"/>
+    <aura:attribute name="WOS" type="Object"/>
+    <aura:attribute name="ATS" type="Object"/>
+    <aura:attribute name="SelectedLoc" type="String" default=""/>
+    <aura:attribute name="Type" type="String" default="Manufacturing"/>
+    <aura:attribute name="errorMsg" type="String" default=""/>
+    <aura:attribute name="proceed" type="Boolean" default="false"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/MOPredictions.css"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="popInit" action="{!c.getAllDetails}"></aura:method>
+      <head>
+         <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css" />
+         <ltng:require styles="/resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-ltng.min.css" />
+         <ltng:require styles="/resource/ERP7__bootStrap/css/bootstrap-4.1.css" />
+         <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css" />
+      </head>
+      <body id="body" class="MOPredictions-newClass1">
+          <div class="erp_mark7">
+            <span class="MOPredictions-newClass2">
+                <lightning:spinner variant="brand" size="large" alternativeText="Please wait while loading" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+             <div class="slds-page-header slds-page-header_record-home MOPredictions-newClass3">
+                <div class="slds-page-header__row">
+                   <div class="slds-page-header__col-title">
+                      <div class="slds-media">
+                         <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-action-back MOPredictions-newClass4">
+                               <lightning:icon iconName="action:defer" size="large" alternativeText="defer!" title="defer" />
+                            </span>
+                         </div>
+                         <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                               <div class="slds-page-header__name-title slds-m-top--small">
+                                  <h1 onclick="{!c.getAllDetails}">
+                                     <span class="slds-page-header__title slds-truncate MOPredictions-newClass5" title="">Scheduler</span>
+                                  </h1>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+                 </div>
+              <aura:renderIf isTrue="{!!v.proceed}">
+                <div class="slds-page-header__row slds-page-header__row_gutters MOPredictions-newClass6">
+                   <div class="slds-page-header__col-details">
+                       <ul class="slds-page-header__detail-row MOPredictions-newClass7">
+                        <li class="slds-page-header__detail-block widthfixed">
+                            <div class="slds-text-title slds-m-bottom--xx-small" title="Product" ><strong>Product <span class="MOPredictions-newClass8">*</span></strong></div>
+                            <div class="slds-form-element slds-m-top--xx-small">
+                               <div class="slds-form-element__control">
+                                   <div class="" >
+                                  <c:CustomInputLookUp objectAPIName="Product2" aura:id="pro" IconName="standard:product" selectedRecordId="{!v.Filter.ERP7__Product__c}" inputStyleclass="slds-input "/>
+                              </div>
+                                   </div>
+                            </div>
+                         </li>
+                         <li class="slds-page-header__detail-block widthfixed">
+                            <div class="slds-text-title" title="Location">
+                                <strong>Location</strong>
+                                <span><lightning:helptext content="Provide City, State/province, Country or Zip/Postal Code."/></span>
+                               <div class="slds-form-element slds-m-top--xx-small">
+                                  <div class="slds-form-element__control">
+                                      <!--<ERP7:CustomInputLookUp objectAPIName="ERP7__Location__c" aura:id="loc" IconName="standard:entity" selectedRecordId="{!v.Filter.ERP7__Location__c}" inputStyleclass="slds-input"/>-->
+                                      <ui:inputText aura:id="locn" class="slds-input" value="{!v.Filter.Name}"/>
+                                  </div>
+                               </div>
+                            </div>
+                         </li>
+                         <li class="slds-page-header__detail-block widthfixed">
+                            <div class="slds-text-title" title="Type">
+                                <strong>Type</strong>
+                                <div class="slds-form-element slds-m-top--xx-small">
+                                  <div class="slds-form-element__control">
+                                      <ui:inputSelect multiple="false" value="{!v.Type}" class="slds-select">
+                                        <ui:inputSelectOption text="Manufacturing" label="Manufacturing"/>
+                                        <ui:inputSelectOption text="Maintenance" label="Maintenance"/>
+                                     </ui:inputSelect>
+                                  </div>
+                               </div>
+                            </div>
+                         </li>
+                          
+                         <li class="slds-page-header__detail-block slds-m-top--small MOPredictions-newClass13">
+                            <button class="slds-button slds-button_brand MOPredictions-newClass14" title="Find" onclick="{!c.fetchAllDetails}">
+                               Find
+                               <span class="slds-assistive-text">Find</span>
+                            </button>
+                         </li>
+                         
+                       </ul>
+                   </div>
+                </div>
+             <div class="erp_Mark7">
+                <div class="container-fluid mt-2">
+                    <div>
+                        <div class="{!if(and(v.errorMsg != '',v.errorMsg != undefined),'MOPredictions-newClass25slds-notify_container slds-is-fixed ','MOPredictions-newClass26 slds-notify_container slds-is-fixed')}">
+                            <div class="slds-notify slds-notify_toast slds-theme_error MOPredictions-newClass27" role="status">
+                                <span class="slds-assistive-text">error</span>
+                                <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top" title="Description of icon when needed">
+                                 <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="Error!" title="Error" />
+                                    
+                                </span>
+                                <div class="slds-notify__content">
+                                <h2 class="slds-text-heading_x-small MOPredictions-newClass15" >{!v.errorMsg}
+                                </h2>
+                                </div>
+                                <div class="slds-notify__close MOPredictions-newClass16">
+                                <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                               		<lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Close!" title="Close" />	
+                               		<span class="slds-assistive-text">Close</span>
+                                </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row MOPredictions-newClass10">
+                       <aura:iteration items="{!v.Cards}" var="card" indexVar="C">
+                          <div class="col-md-4  slds-m-bottom--x-small MOPredictions-newClass17">
+                             <div class="card shadow">
+                                <div class="card-body MOPredictions-newClass18">
+                                   <!--<h5 class="card-title"></h5>-->
+                                  <div class="slds-grid">
+                                      <div class="col-4 p-0 MOPredictions-newClass19">
+                                         <p class="card-text slds-truncate MOPredictions-newClass20">
+                                             <!--Routings ({!card.Routings.length})-->
+                                             {!card.Routings[0].ERP7__Product__r.Name}
+                                         </p> 
+                                     </div>
+                                      <div class="col-8 pr-0">
+                                          <div class="scroll-bar-wrap">
+                                      <div class="scroll-box MOPredictions-newClass21" >
+                                     <p class="card-text MOPredictions-newClass22">
+                                       <strong>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__Address_Line1__c != undefined)}">{!card.Routings[0].ERP7__Address__r.ERP7__Address_Line1__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__Address_Line2__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__Address_Line2__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__Address_Line3__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__Address_Line3__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__City__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__City__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__State__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__State__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__Country__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__Country__c}</aura:renderIf>
+                                           <aura:renderIf isTrue="{!(card.Routings[0].ERP7__Address__r.ERP7__Postal_Code__c)}">, {!card.Routings[0].ERP7__Address__r.ERP7__Postal_Code__c}</aura:renderIf>
+                                       </strong>
+                                    </p>
+                                              </div>
+                                               <div class="cover-bar MOPredictions-newClass23"></div>
+                                          </div>
+                                      </div>
+                                    </div>
+                                </div>
+                                  <div class="scroll-bar-wrap">
+                                      <div class="scroll-box MOPredictions-newClass24">
+                                        <div class="slds-grid slds-p-around--small m-0">
+                                           
+                                               <div class="col-md-5 col-xs-5"><div class="workcenter-list"><strong>Routing</strong></div></div>
+                                               <div class="col-md-4 col-xs-4"><div class="workcenter-list"><strong>Process</strong></div></div>
+                                               <div class="col-md-3 col-xs-3"><div class="workcenter-list"><strong>Time(hrs)</strong></div></div>
+                                          </div>   
+                                            <aura:iteration items="{!card.Routings}" var="routing" indexVar="R">
+                                                  <div onclick="{!c.Toggle}" data-name="{!routing.ERP7__Address__c}" data-title="{!routing.Id}" class="{!if(v.SelectedRouting.Id == routing.Id,'slds-grid m-0 customactive MOPredictions-newClass5',' slds-grid m-0 custominactive MOPredictions-newClass5')}" >
+                                                      <div class="col-md-5 col-xs-5">
+                                                          <div >
+                                                              {!R+1}. {!routing.Name} 
+                                                          </div>
+                                                     </div>
+                                                      <div class="col-md-4 col-xs-4">
+                                                          <div >
+                                                              {!routing.ERP7__Process__r.Name}
+                                                          </div>
+                                                     </div>
+                                                      <div class="col-md-3 col-xs-3">
+                                                          <div >
+                                                              {!routing.ERP7__Operation_Time__c}
+                                                          </div>
+                                                     </div>
+                                                </div>
+                                              </aura:iteration>
+                                        </div>
+                                      <div class="cover-bar"></div>
+                                      </div>
+                                 </div>
+                             </div>
+                        
+                        	</aura:iteration>
+                       </div>
+                        <div class="MOPredictions-newClass11">
+                            <aura:renderIf isTrue="{!and(v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Manufacturing Process', v.SelectedRouting.Id != undefined)}">
+                                <button id="cwo" class="slds-button slds-button_brand" title="Proceed" onclick="{!c.NavMO}">
+                                    <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                                    &nbsp;Create MO
+                                    <span class="slds-assistive-text">Next</span>
+                                </button>
+                            </aura:renderIf>
+                            <aura:renderIf isTrue="{!and(v.SelectedRouting.ERP7__Process__r.RecordType.Name == 'Maintenance Process', v.SelectedRouting.Id != undefined)}">
+                                <button id="cwo" class="slds-button slds-button_brand" title="Proceed" onclick="{!c.NavWO}">
+                                    <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                                    &nbsp;Create WO
+                                    <span class="slds-assistive-text">Next</span>
+                                </button>
+                            </aura:renderIf>
+                        </div>
+                 	</div>
+              	</div>
+              </aura:renderIf>
+              
+              <aura:renderIf isTrue="{!v.proceed}">
+                  <div class="erp_Mark7">
+                    <div class="row slds-p-around--xx-small MOPredictions-newClass6" >
+                       <div class="col-md-3">
+                            <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01"> Product </label>
+                                <ui:outputURL value="{!'/'+v.SelectedRouting.ERP7__Product__c}" label="{!v.SelectedRouting.ERP7__Product__r.Name}" target="_blank"/> 
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01"> Version </label>
+                                <ui:outputURL value="{!'/'+v.SelectedRouting.ERP7__BOM_Version__c}" label="{!v.SelectedRouting.ERP7__BOM_Version__r.Name}" target="_blank"/> 
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01"> Routing </label>
+                            	<ui:outputURL value="{!'/'+v.SelectedRouting.Id}" label="{!v.SelectedRouting.Name}" target="_blank"/> 
+                            </div>
+                        </div>
+                        
+                        
+                    </div>
+                    <div class="row slds-p-around--xx-small MOPredictions-newClass6" >
+                       
+                        <div class="col-md-3">
+                            <div class="">
+                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Product Qnty <span class="MOPredictions-newClass8">*</span></label>
+                                    <div class="slds-form-element__control">
+                                        <ui:inputNumber class="slds-input" value="{!v.MO.ERP7__Quantity__c}" /> </div>
+                                </div>
+                            </div>
+                        </div>
+                      </div>
+                      
+                      
+                     Operations 
+					 
+                      <table class="table table-condensed slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                          <thead>
+                              <tr class="slds-text-title--caps">
+                                  <th class="slds-is-sortable " scope="col">
+                                      <div class="slds-truncate"> Name </div>
+                                  </th>
+                                  <th class="slds-is-sortable" scope="col">
+                                      <div class="slds-truncate"> Work Center </div>
+                                  </th>
+                                  <th class="slds-is-sortable" scope="col">
+                                      <div class="slds-truncate"> Start Date </div>
+                                  </th>
+                                  <th class="slds-is-sortable" scope="col">
+                                      <div class="slds-truncate"> End Date </div>
+                                  </th>
+                              </tr>
+                          </thead>
+                          <aura:iteration items="{!v.WOS}" var="WO" indexVar="i">
+                              <tbody>
+                                  <tr class="slds-hint-parent">
+                                     <td scope="row" data-label="Operation" valign="middle" class="MOPredictions-newClass9">
+                                          <div class="slds-truncate" title="Cloudhub">
+                                              <span class="MOPredictions-newClass12">{!WO.Name}</span> 
+                                         </div>
+                                      </td>
+                                      <td data-label="Quantity" valign="middle" class="MOPredictions-newClass9">
+                                          <div class="slds-form-element">
+                                              <div class="slds-form-element__control"> 
+                                                  <c:CustomInputLookUp objectAPIName="ERP7__Work_Center__c" aura:id="wc" IconName="standard:macros" selectedRecordId="{!WO.ERP7__Work_Center__c}" inputStyleclass="slds-input "/>
+                                              </div>
+                                          </div>
+                                      </td>
+                                      <td data-label="Quantity" valign="middle" class="MOPredictions-newClass9">
+                                          <div class="slds-form-element">
+                                              <div class="slds-form-element__control"> 
+                                                  <ui:inputDateTime value="{!WO.ERP7__Start_Date__c}" displayDatePicker="true"/>
+                                              </div>
+                                          </div>
+                                      </td>
+                                      <td data-label="Quantity" valign="middle" class="MOPredictions-newClass9">
+                                          <div class="slds-form-element">
+                                              <div class="slds-form-element__control"> 
+                                                  <ui:inputDateTime value="{!WO.ERP7__End_Date__c}" displayDatePicker="true"/> 
+                                              </div>
+                                          </div>
+                                      </td>
+                                  </tr>
+                              </tbody>
+                          </aura:iteration>
+                      </table>
+                  	  <div class="row slds-p-around--xx-small MOPredictions-newClass10">
+                        <div class="col-md-3">
+                            <div class="">
+                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Start Date <span class="MOPredictions-newClass8">*</span></label>
+                                    <div class="slds-form-element__control">
+                                        <ui:inputDateTime class="slds-input" value="{!v.MO.ERP7__StartDate__c}" displayDatePicker="true" /> </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="">
+                                <div class="slds-form-element"> <label class="slds-form-element__label" for="text-input-01">Expected Date <span class="MOPredictions-newClass8">*</span></label>
+                                    <div class="slds-form-element__control">
+                                        <ui:inputDateTime class="slds-input" value="{!v.MO.ERP7__Expected_Date__c}" displayDatePicker="true" /> </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                      <div class="MOPredictions-newClass11">
+                          <button id="cwo" class="slds-button slds-button_neutral" title="Cancel" onclick="{!c.Back}">
+                              <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                              &nbsp;Previous
+                              <span class="slds-assistive-text">Previous</span>
+                          </button>
+                          <button id="cwo" class="slds-button slds-button_brand" title="Save" onclick="{!c.Save}">
+                              <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                              &nbsp;Schedule
+                              <span class="slds-assistive-text">Schedule</span>
+                          </button>
+                      </div>
+                  
+                  </div>
+              </aura:renderIf>
+              
+            
+         	</div>
+        </body>
+</aura:component>

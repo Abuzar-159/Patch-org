@@ -1,0 +1,828 @@
+<aura:component controller="TrialBalanceLightning" implements="force:hasSObjectName,force:hasRecordId,force:appHostable,forceCommunity:availableForAllPageTypes,flexipage:availableForRecordHome,force:appHostable,force:lightningQuickActionWithoutHeader" access="global">
+    <ltng:require styles="/resource/ERP7__PickPackShipResource/assets/styles/erp_mark7_bootstrap.css, /resource/ERP7__PickPackShipResource/assets/styles/font-awesome.css,
+                          /resource/ERP7__SLDS/assets/styles/salesforce-lightning-design-system-vf.css
+                          "/>
+    <ltng:require styles="/resource/ERP7__ERPTheme/css/erpmain-theme.css"/>   
+    
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/global-axolt.css"/>
+    <ltng:require styles="/resource/ERP7__CMP_CSS/CSS/TrialBalance.css"/>
+    <aura:attribute name="Instance"    type="c.TrialBalanceLightning" />
+    <aura:attribute name="showSpinner" type="Boolean" default="false" />
+    <aura:attribute name="showFilter"  type="Boolean" default="false" />
+    <aura:attribute name="stopRepeat"  type="Boolean" default="true"  />
+    <aura:attribute name="url" type="String"/>
+    <aura:attribute name="selectedCurrency" type="String"/>
+    
+    <aura:handler   name="init"   value="{!this}"                       		 action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.transEdate}"  		     action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.transSdate}" 				 action="{!c.doInit}"  />
+    <!--<aura:handler   name="change" value="{!v.Instance.SelectedCurrency}"			 action="{!c.fetchDetailscontroller}"  />-->
+    
+    <aura:handler   name="change" value="{!v.Instance.TB.Id}" 					 action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Project__c}"   action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Customer__c}"  action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Product__c}"   action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Employee__c}"  action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Site__c}"      action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.ERP7__Supplier__c}"  action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.Channel__c}"         action="{!c.doInit}"  />
+    <aura:handler   name="change" value="{!v.Instance.trans.Industry__c}"        action="{!c.doInit}"  />
+    
+    <aura:attribute name="indusOptions" type="List"/>
+    <aura:attribute name="stStatusOptions" type="List"/>
+    
+    
+    <body class="newClass1">
+        <div class="erp_mark7 slds-container--fluid erp bg-tb">
+            <div class="container-fluid bg-white">
+                <div class="slim-pageheader slds-p-around_small  ">
+                    <ol class="breadcrumb slim-breadcrumb">
+                        <li class="breadcrumb-item">
+                        	<span class="newClass11">
+                                <a  href="javascript:void(0);" onclick="{!c.excelOpen}" class="newClass12">
+                                    <i class="fa fa-file-excel-o" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_Excel} </a>&nbsp;
+                                <a  href="javascript:void(0);" onclick="{!c.pdfOpen}" class="newClass14">
+                                    <i class="fa fa-file-pdf-o newClass15" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_PDF} 
+                                </a>
+                            </span>
+                        </li>
+                       
+              
+                    </ol>
+                    <h6 class="slim-pagetitle ">
+                        <div class="row">
+                        <div class="col-md-12"> 
+                             {!$Label.c.TRIAL_BALANCE}&nbsp;  
+                           <lightning:icon iconName="utility:filterList"  size="x-small" alternativeText="filterList!" title="filterList" class="cursor-pointer"  onclick="{!c.perform}"/>
+                            <aura:if isTrue="{!v.showFilter}">	
+                                <section id="headsec" class="slds-popover newClass6" role="dialog" aria-label="Dialog Title" >
+                                    <div class="epr_Mark7">   
+                                        <lightning:buttonIcon class="newClass7" iconName="utility:close" variant="bare" onclick="{! c.closeconfirm }" alternativeText="close" title="close" />
+                                        <div class="container-fluid">
+                                            <div class="slds-popover__body newClass8" >
+                                                <div class="row slds-m-top--small" >
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="Account" label="Organisation" IconName="standard:drafts" selectedRecordId="{!v.Instance.TB.Id}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                                                <c:CustomInputLookUp objectAPIName="ERP7__Project__c" label="Project" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Project__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="Account" label="Customer" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Customer__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="Product2" label="Product" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Product__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row slds-m-top--small" >
+                                                    
+                                                    
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="Account" label="Employee" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Employee__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="ERP7__Site__c" label="Site" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Site__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>  
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="Account" label="Suplier" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.ERP7__Supplier__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" >
+                                                                <c:CustomInputLookUp objectAPIName="ERP7__Channel__c" label="Channel" IconName="standard:drafts" selectedRecordId="{!v.Instance.trans.Channel__c}" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row slds-m-top--small" >
+                                                    
+                                                    <div class="col-md-3">
+                                                        <div class="slds-form-element">
+                                                            <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right" > 
+                                                                <lightning:select label="Industry"  aura:id="indus" value="{!v.Instance.trans.Industry__c}" >
+                                                                    <aura:iteration items="{!v.indusOptions}" var="option">
+                                                                        <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Instance.trans.Industry__c, option.value)}"/>
+                                                                    </aura:iteration>
+                                                                </lightning:select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>  
+                                        </div>
+                                    </div>  
+                                </section>
+                            </aura:if>
+                        </div>
+                        <div class="col-md-12 pt-2">
+                        	 <p class="trialbalance mb-0">{!v.Instance.OrgnisationName} </p>
+                        </div>
+                       
+                        </div>
+                        
+                    </h6>
+                    
+                </div>
+            </div>
+            <!-- old header -->
+            <div class="slds-page-header slds-hide" role="banner">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <div aria-hidden="true" class="slds-icon slds-icon-standard-user slds-icon--large">
+                                    
+                                    <i class="fa fa-file-text-o newClass2" aria-hidden="true" ></i> 
+                                </div>
+                            </div>
+                            <div class="slds-media__body ">
+                                <p class="slds-text-title--caps slds-line-height--reset slds-m-top--x-small">Finance</p>
+                                <div class="slds-grid">
+                                    <h1 class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="Trial Balance">{!$Label.c.TRIAL_BALANCE}</h1>
+                                    
+                                    <div class="slds-no-flex slds-p-top--xx-small slds-p-right--small newClass3" >
+                                        <div class="slds-grid">
+                                            <div class="slds-m-top--xx-small newClass4">
+                                                
+                                                <span class="slds-button slds-button_icon slds-button_icon-border-no-filled newClass5" title="Filters"  onclick="{!c.perform}" >
+                                                    
+                                                    <lightning:icon iconName="utility:filterList" variant="inverse" size="x-small" alternativeText="filterList!" title="filterList" />
+                                                    
+                                                    <span class="slds-assistive-text" >Filters</span>
+                                                </span>
+                                               
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>     
+                            </div>
+                        </div>
+                        
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top">
+                        
+                        <div class="slds-button-group" role="group">
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <!-- old header -->
+            
+           <div class="container-fluid mt-2">
+            <div class="row row-xs">
+                <div class="col-sm-6 col-lg-4">
+                    <div class="card card-status">
+                        <div class="media">
+                            <i class="icon fa fa-calculator tx-primary"></i>
+                            <div class="media-body">
+                                <h1>TOTAL</h1>
+                                <p>{!$Label.c.Trail_Bal_ALL}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-4 mg-t-10 mg-sm-t-0">
+                    <div class="card card-status">
+                        <div class="media">
+                             <i class="icon fa fa-money tx-pink"></i>
+                            
+                            <div class="media-body">
+                                <h1>{!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.Instance.totaldebit_cur_type.ERP7__Opening_Balance__c*v.Instance.currencyRate)}" class="decimal" maximumFractionDigits="2"/></h1>
+                                <p>{!$Label.c.Acc_Recev_Debit}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-4 mg-t-10 mg-lg-t-0">
+                    <div class="card card-status">
+                        <div class="media">
+                            <i class="icon fa fa-money tx-teal"></i>
+                           
+                            <div class="media-body">
+                                <h1> {!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.Instance.totalcredit_cur_type.ERP7__Opening_Balance__c*v.Instance.currencyRate)}" class="decimal" maximumFractionDigits="2"/></h1>
+                                <p>{!$Label.c.Acc_Recev_Credit}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+            </div>
+            
+            <div class="epr_Mark7">
+                <div class="container-fluid">  
+                    <div class="row slds-m-top--xx-small slds-m-bottom--x-small " >
+                        
+                        <div class="col-md-4">
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="form-element-01"> {!$Label.c.AddSubscription_Start_Date}</label>
+                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                    
+                                    <lightning:input type="date" class="input" value="{!v.Instance.transSdate}" id="startdate"  placeholder="{!$Label.c.AddSubscription_Start_Date}"   />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label" for="form-element-01"> {!$Label.c.CreateClubcard_End_Date}</label>
+                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                    
+                                    <lightning:input type="date" value="{!v.Instance.transEdate}"   />
+                                </div>
+                            </div>
+                        </div>
+                        <aura:if isTrue="{!v.Instance.multiCurrencyEnabled}"> 
+                            <div class="col-md-4">
+                                <div class="slds-col slds-form-element">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning:select label="Currency"  aura:id="stStatus" value="{!v.Instance.SelectedCurrency}" onchange="{!c.fetchDetailscontroller}" >
+                                            <aura:iteration items="{!v.stStatusOptions}" var="option">
+                                                <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Instance.SelectedCurrency, option.value)}"/>
+                                            </aura:iteration>
+                                        </lightning:select>
+                                    </div>
+                                </div>
+                            </div>
+                        </aura:if>
+                        
+                    </div>
+                </div>
+            </div> 
+            <div class="newClass9">
+                <div class="shadow-sm p-0">
+                    <div class="slds-p-around--x-small newClass10 slds-hide" ><!-- ERP7__TrialBalanceAsPDF-->   
+                        <p>{!v.Instance.OrgnisationName} {!$Label.c.TRIAL_BALANCE}  
+                            <span class="newClass11">
+                                <a  href="javascript:void(0);" onclick="{!c.excelOpen}" class="newClass12">
+                                    <i class="fa fa-file-excel-o newClass13" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_Excel} </a>&nbsp;
+                                <a  href="javascript:void(0);" onclick="{!c.pdfOpen}" class="newClass14"><i class="fa fa-file-pdf-o newClass15" aria-hidden="true" ></i>&nbsp;{!$Label.c.Bal_Sheet_Download_PDF} </a>
+                            </span>
+                        </p>
+                    </div>
+                    <div class="slds-card newClass16">
+                        <div class="table-responsive">
+                            <table class="table table--bordered slds-max-medium-table--stacked-horizontal slds-no-row-hover">
+                                <thead>
+                                    <tr>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Trail_Bal_Account_Title}</th>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Trail_Bal_ACCOUNT_CODE}</th>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Acc_Recev_Opening_Balance}</th>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Acc_Recev_Debit}</th>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Acc_Recev_Credit}</th>
+                                        <th class="slds-text-heading--label " scope="col">{!$Label.c.Trail_Bal_Closing_Balance}</th>
+                                    </tr>
+                                </thead>
+                                <tbody> 
+                                    <aura:if isTrue="{!v.Instance.ErrorMsg != null}">
+                                        <div class="slds-notify__content newClass18">
+                                            <h2 class="slds-text-heading_small ">{!v.Instance.ErrorMsg != null}</h2>
+                                        </div>
+                                    </aura:if>
+                                    
+                                    <aura:if isTrue="{!!empty(v.Instance.AssetsGroup)}">
+                                        <tr>
+                                            <td colspan="10" bgcolor="aliceblue">
+                                                <b>{!$Label.c.Bal_Sheet_ASSETS}</b>
+                                            </td>
+                                        </tr> 
+                                        <tr/>
+                                    </aura:if>
+                                    <aura:iteration items="{!v.Instance.AssetsGroup}" var="list" >
+                                        <tr class="slds-hint-parent">
+                                            <td class="" data-label="Account Title">
+                                                <div class="slds-truncate2 pl-10 color-jas"><a href="{!$Label.c.Report_Access+'fv0='+list.accountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.Instance.transEdate+'&amp;fv4='+v.Instance.TB.Id}" target="_blank">{!list.accountName}</a></div></td>
+                                            <td class="slds-text-heading--label " scope="col">
+                                                <div class="slds-truncate2">{!list.accountCode}</div>
+                                            </td>
+                                            <td  data-label="opnBalance">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(list.opbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        
+                                                        
+                                                        <c:CurrencyOutputField value="{!list.opbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>list.opbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                
+                                                                <c:CurrencyOutputField value="{!list.opbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Debit" class="debit-color">
+                                                <div class="slds-truncate2">
+                                                    <!--  <apex:outputText value="{!list.totalDebit}"/> -->
+                                                    <aura:if isTrue="{!if(list.Container.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        
+                                                        
+                                                        <c:CurrencyOutputField value="{!list.Container.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>list.Container.ERP7__Amount__c,true,false)}">
+                                                                (
+                                                                
+                                                                
+                                                                <c:CurrencyOutputField value="{!list.NContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Credit" class="credit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(list.creditContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        
+                                                        
+                                                        <c:CurrencyOutputField value="{!list.creditContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>list.creditContainer.ERP7__Amount__c,true,false)}">
+                                                                (
+                                                                
+                                                                
+                                                                <c:CurrencyOutputField value="{!list.creditNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="clsBalance" class="closingbalance-color">
+                                                <div class="slds-truncate2 ">
+                                                    <aura:if isTrue="{!if(list.clbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        
+                                                        
+                                                        <c:CurrencyOutputField value="{!list.clbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>list.clbContainer.ERP7__Amount__c,true,false)}">
+                                                                (
+                                                                <c:CurrencyOutputField value="{!list.clbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    
+                                    <aura:if isTrue="{!!empty(v.Instance.LiabilityGroup)}">
+                                        <tr>
+                                            <td colspan="10" bgcolor="aliceblue">
+                                                <b>{!$Label.c.Trail_Bal_Liabilities}</b>
+                                            </td>
+                                        </tr>
+                                        
+                                    </aura:if>
+                                    <aura:iteration items="{!v.Instance.LiabilityGroup}" var="llist" >
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <td  data-label="Account Title">
+                                                <div class="slds-truncate2 pl-10 color-jas"><a href="{!$Label.c.Report_Access+'fv0='+llist.accountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.Instance.transEdate+'&amp;fv4='+v.Instance.TB.Id}" target="_blank">{!llist.accountName}</a></div></td>
+                                            <td class="slds-text-heading--label " scope="col"> 
+                                                <div class="slds-truncate2">{!llist.accountCode}
+                                                </div>
+                                            </td>
+                                            <td  data-label="opnBalance">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(llist.opbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!llist.opbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>llist.opbContainer.ERP7__Amount__c,true,false)}">
+                                                                (
+                                                                <c:CurrencyOutputField value="{!llist.opbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set> 
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="Debit" class="debit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(llist.Container.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!llist.Container.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>llist.Container.ERP7__Amount__c,true,false)}">
+                                                                (
+                                                                <c:CurrencyOutputField value="{!llist.NContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>   
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Credit" class="credit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(llist.creditContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!llist.creditContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>llist.creditContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!llist.creditNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            
+                                            <td  data-label="clsBalance" class="closingbalance-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(llist.clbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!llist.clbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>llist.clbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!llist.clbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration> 
+                                    <aura:if isTrue="{!!empty(v.Instance.RevenueGroup)}">
+                                        <tr>
+                                            <td colspan="10" bgcolor="aliceblue">
+                                                
+                                                <b>{!$Label.c.Trail_Bal_Income_Revenue}</b>
+                                            </td>
+                                        </tr> 
+                                        
+                                    </aura:if>
+                                    <aura:iteration items="{!v.Instance.RevenueGroup}" var="rlist" >
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <td  data-label="Account Title">
+                                                <div class="slds-truncate2 pl-10 color-jas"><a href="{!$Label.c.Report_Access+'fv0='+rlist.accountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.Instance.transEdate+'&amp;fv4='+v.Instance.TB.Id}" target="_blank">{!rlist.accountName}</a></div>
+                                            </td>
+                                            <td class="slds-text-heading--label " scope="col">
+                                                <div class="slds-truncate">{!rlist.accountCode}</div>
+                                            </td>
+                                            <td  data-label="opnBalance">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(rlist.opbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!rlist.opbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>rlist.opbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!rlist.opbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>  
+                                            <td  data-label="Debit" class="debit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(rlist.Container.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!rlist.Container.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>rlist.Container.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!rlist.NContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td data-label="Credit" class="credit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(rlist.creditContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!rlist.creditContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>rlist.creditContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!rlist.creditNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="clsBalance" class="closingbalance-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(rlist.clbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!rlist.clbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>rlist.clbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!rlist.clbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:if isTrue="{!!empty(v.Instance.EquityGroup)}">
+                                        
+                                        <tr>
+                                            <td colspan="10" bgcolor="aliceblue">
+                                                <b>{!$Label.c.Trail_Bal_Equity}</b>
+                                            </td>    
+                                        </tr>
+                                        
+                                    </aura:if>
+                                    <aura:iteration items="{!v.Instance.EquityGroup}" var="olist" >
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <td  data-label="Account Title">
+                                                <div class="slds-truncate2 pl-10 color-jas"><a href="{!$Label.c.Report_Access+'fv0='+olist.accountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.Instance.transEdate+'&amp;fv4='+v.Instance.TB.Id}" target="_blank">{!olist.accountName}</a></div>
+                                            </td>
+                                            <td class="slds-text-heading--label" scope="col">
+                                                <div class="slds-truncate">
+                                                    {!olist.accountCode}
+                                                </div>
+                                            </td>
+                                            <td data-label="opnBalance">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(olist.opbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!olist.opbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>olist.opbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!olist.opbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Debit" class="debit-color"> 
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(olist.Container.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!olist.Container.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>olist.Container.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!olist.NContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Credit" class="credit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(olist.creditContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!olist.creditContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>olist.creditContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                <c:CurrencyOutputField value="{!olist.creditNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set> 
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="clsBalance" class="closingbalance-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(olist.clbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!olist.clbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>olist.clbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!(0-olist.clbNContainer.ERP7__Amount__c)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </aura:iteration>
+                                    <aura:if isTrue="{!!empty(v.Instance.ExpenseGroup)}">
+                                        
+                                        <tr>
+                                            <td colspan="10" bgcolor="aliceblue">
+                                                <b>{!$Label.c.Trail_Bal_Expense}</b>
+                                            </td>
+                                        </tr>
+                                    </aura:if>
+                                    <aura:iteration items="{!v.Instance.ExpenseGroup}" var="elist" >
+                                        
+                                        <tr class="slds-hint-parent">
+                                            <td  data-label="Account Title">
+                                                <div class="slds-truncate2 pl-10 color-jas"><a href="{!$Label.c.Report_Access+'fv0='+elist.accountName+'&amp;fv1='+v.Instance.transSdate+'&amp;fv2='+v.Instance.transEdate+'&amp;fv4='+v.Instance.TB.Id}" target="_blank">{!elist.accountName}</a></div>
+                                            </td>
+                                            <td class="slds-text-heading--label " scope="col">
+                                                <div class="slds-truncate2">{!elist.accountCode}
+                                                </div>
+                                            </td>
+                                            <td  data-label="opnBalance">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(elist.opbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        <aura:if isTrue="{!v.Instance.multiCurrencyEnabled}">
+                                                            <aura:if isTrue="{!(v.Instance.isoCode != v.Instance.userIsoCode)}">
+                                                                <c:CurrencyOutputField value="{!elist.opbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                            </aura:if>
+                                                        </aura:if>
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>elist.opbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!(0-elist.opbNContainer.ERP7__Amount__c)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set> </aura:if>
+                                                </div>
+                                            </td>  
+                                            <td data-label="Debit" class="debit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(elist.Container.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!elist.Container.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>elist.Container.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                <c:CurrencyOutputField value="{!(0-elist.NContainer.ERP7__Amount__c)}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="Credit" class="credit-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(elist.creditContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!elist.creditContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>elist.creditContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!elist.creditNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                            <td  data-label="clsBalance" class="closingbalance-color">
+                                                <div class="slds-truncate2">
+                                                    <aura:if isTrue="{!if(elist.clbContainer.ERP7__Amount__c>0,true,false)}">
+                                                        
+                                                        <c:CurrencyOutputField value="{!elist.clbContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                        
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!if(0>elist.clbContainer.ERP7__Amount__c,true,false)}">
+                                                                
+                                                                (
+                                                                <c:CurrencyOutputField value="{!elist.clbNContainer.ERP7__Amount__c}" isoCode="{!v.Instance.userIsoCode}" Rate="{!v.Instance.currencyRate}" />
+                                                                )
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </div>
+                                            </td>
+                                        </tr>        
+                                    </aura:iteration> 
+                                </tbody>
+                                <tfoot class="newClass19">
+                                    <tr class="slds-hint-parent">
+                                        <td  data-label="" align="right" class="newClass20"><b>TOTAL</b></td>
+                                        <td  data-label="" class="newClass20"></td>  
+                                        <td  data-label="" class="newClass20"></td>
+                                        <td data-label="" class="newClass20"><b>
+                                            
+                                            {!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.Instance.totaldebit_cur_type.ERP7__Opening_Balance__c*v.Instance.currencyRate)}" class="decimal" maximumFractionDigits="2"/>
+                                            </b> </td>
+                                        <td  data-label="" class="newClass20"><b>
+                                            
+                                            {!v.Instance.userIsoCode}&nbsp;<lightning:formattedNumber value="{!(v.Instance.totalcredit_cur_type.ERP7__Opening_Balance__c*v.Instance.currencyRate)}" class="decimal" maximumFractionDigits="2"/>
+                                            </b></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div> 
+                </div>
+            </div> 
+            
+        </div> 
+        <div >
+            <aura:if isTrue="{!v.showSpinner}">
+                <div >
+                    <lightning:spinner variant="brand" size="large" aura:id="mainSpin" description="Please Wait While Loading" class="mainSpinClass"/>
+                </div>   
+            </aura:if>
+        </div>
+    </body>
+</aura:component>
