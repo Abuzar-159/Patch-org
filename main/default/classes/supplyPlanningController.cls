@@ -2217,14 +2217,17 @@ public class MonthlyPriceDTO implements Comparable {
         }
 
         // 2. Fetch Price Book History (To determine Price WITH Price Book)
-        // This allows us to see what the price was BEFORE it was changed
-        List<PricebookEntryHistory> historyList = [
-            SELECT OldValue, NewValue, CreatedDate 
-            FROM PricebookEntryHistory 
-            WHERE PricebookEntry.Product2Id = :productId
-            AND Field = 'UnitPrice'
-            ORDER BY CreatedDate DESC
-        ];
+        // This allows us to see what the price was BEFORE it was changed.
+        List<SObject> historyList = new List<SObject>();
+        if (Schema.getGlobalDescribe().containsKey('PricebookEntryHistory')) {
+            String historyQuery =
+                'SELECT OldValue, CreatedDate ' +
+                'FROM PricebookEntryHistory ' +
+                'WHERE PricebookEntry.Product2Id = :productId ' +
+                'AND Field = \'UnitPrice\' ' +
+                'ORDER BY CreatedDate DESC';
+            historyList = Database.query(historyQuery);
+        }
 
         // 3. Get Current Price Book Entry (The "Now" value)
         List<PricebookEntry> currentPBEList = [
@@ -2397,16 +2400,22 @@ public class MonthlyPriceDTO implements Comparable {
      * Logic: Compares Order Date against History logs. 
      * If an order was placed before a price change, use the 'OldValue'.
      */
- private static Decimal calculateBookPrice(Date orderDate, List<PricebookEntryHistory> history, Decimal currentPrice) {
-    for (PricebookEntryHistory h : history) {
-        if (orderDate < h.CreatedDate.date()) {
-            // Convert the AnyType (String) to a String first, then to a Decimal
-            String oldValStr = String.valueOf(h.OldValue);
-            return (oldValStr != null) ? Decimal.valueOf(oldValStr) : 0;
+    private static Decimal calculateBookPrice(Date orderDate, List<SObject> history, Decimal currentPrice) {
+        for (SObject historyRecord : history) {
+            Datetime historyCreatedDate = (Datetime) historyRecord.get('CreatedDate');
+            if (historyCreatedDate != null && orderDate < historyCreatedDate.date()) {
+                Object oldValue = historyRecord.get('OldValue');
+                if (oldValue == null) {
+                    return 0;
+                }
+
+                // Price history values are stored as AnyType, so convert safely at runtime.
+                String oldValStr = String.valueOf(oldValue);
+                return String.isBlank(oldValStr) ? 0 : Decimal.valueOf(oldValStr);
+            }
         }
+        return currentPrice;
     }
-    return currentPrice;
-}
 
     public class PriceVarianceWrapper {
         @AuraEnabled public Date orderDate;
