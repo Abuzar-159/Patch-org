@@ -1,17 +1,13 @@
 import { LightningElement, track } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-
 import SOPlogo from '@salesforce/resourceUrl/SOPlogo';
 import getDefaultOrganisation from '@salesforce/apex/sandOP.getDefaultOrganisation';
 
-export default class SandOP extends NavigationMixin (LightningElement) {
+export default class SandOP extends LightningElement {
     logoUrl = SOPlogo;
 
     @track DefaultOrganisation = { Id: '', Name: '' };
     @track isDataLoaded = false;
-    @track currentTab = null;
-    @track showChart = true;
+
     // Main tabs
     @track isDemandTabOpen = true;
     @track isSupplyTabOpen = false;
@@ -19,8 +15,6 @@ export default class SandOP extends NavigationMixin (LightningElement) {
     @track isProductionTabOpen = false;
     @track isFinanceTabOpen = false;
     @track isExecutiveTabOpen = false;
-    @track isRiskAndReturnTabOpen = false;
-    @track isSubscriptionTabOpen = false;
 
     // Subtab value
     @track selectedForecastType = 'Short';
@@ -28,23 +22,6 @@ export default class SandOP extends NavigationMixin (LightningElement) {
     connectedCallback() {
         this.loadDefaultOrganisation();
     }
-
-//     renderedCallback() {
-//   const orgId = this?.DefaultOrganisation?.Id;
-//   if (!orgId || !this.isDataLoaded) return;
-
-//   if (this.refs.demand) {
-//     this.refs.demand.initContext({
-//       organisationId: orgId,
-//       flags: { isDemandTabOpen: this.isDemandTabOpen }
-//     });
-//   }
-
-
-// }
-
-
-// navigateToSupply method removed because tabs render inline child components
 
     loadDefaultOrganisation() {
         getDefaultOrganisation()
@@ -57,85 +34,10 @@ export default class SandOP extends NavigationMixin (LightningElement) {
             });
     }
 
-      handleOrganisationRemoved() {
-        console.log('Organisation lookup cleared');
-        this.DefaultOrganisation = { Id: null, Name: null };
-        this.showChart = false; // hide charts → show SVGs instead
-    }
-
-
     handleOrganisationSelect(event) {
-        // this.DefaultOrganisation = { Id: event.detail.Id, Name: event.detail.Name };
-        this.DefaultOrganisation.Id = event.detail.Id;
-        this.DefaultOrganisation.Name = event.detail.Name;
-         this.showChart = true;
+        this.DefaultOrganisation = { Id: event.detail.Id, Name: event.detail.Name };
         console.log('Selected Organisation:', JSON.stringify(this.DefaultOrganisation));
-        this.isDataLoaded = true;
-        this.resetTabs();
-        if (this.currentTab == null) this.currentTab = 'demand';
-        switch (this.currentTab) {
-            case 'demand':
-                setTimeout(() => {
 
-                    this.isDemandTabOpen = true;
-                    this.currentTab = 'demand';
-                    console.log('Demand tab clicked');
-                    this.selectedForecastType = 'Short'; // Default subtab
-
-                }, 50);
-                break;
-
-            case 'supply':
-                setTimeout(() => {
-                    this.isSupplyTabOpen = true;
-                    this.currentTab = 'supply';
-                    console.log('supply tab clicked - direct HTML rendering');
-                }, 50);
-                break;
-            case 'inventory':
-                setTimeout(() => {
-
-                    this.isInventoryTabOpen = true;
-                    this.currentTab = 'inventory';
-                    console.log('Inventory tab clicked');
-                }, 50);
-                break;
-            case 'production':
-                setTimeout(() => {
-
-                    this.isProductionTabOpen = true;
-                    this.currentTab = 'production';
-                    console.log('Production tab clicked');
-                }, 50);
-                break;
-            case 'finance':
-                setTimeout(() => {
-
-                    this.isFinanceTabOpen = true;
-                    this.currentTab = 'finance';
-                }, 50);
-                break;
-            case 'executive':
-                setTimeout(() => {
-
-                    this.isExecutiveTabOpen = true;
-                    this.currentTab = 'executive';
-                }, 50);
-                break;
-            case 'subscription':
-                setTimeout(() => {
-
-                    this.isSubscriptionTabOpen = true;
-                     }, 50);
-                break;
-            case 'riskAndReturn':
-                setTimeout(() => {
-
-                    this.isRiskAndReturnTabOpen = true; console.log('Risk and Return tab clicked');
-                    this.currentTab = 'riskAndReturn';
-                }, 50);
-                break;
-        }
     }
 
     resetTabs() {
@@ -145,66 +47,33 @@ export default class SandOP extends NavigationMixin (LightningElement) {
         this.isProductionTabOpen = false;
         this.isFinanceTabOpen = false;
         this.isExecutiveTabOpen = false;
-        this.isRiskAndReturnTabOpen = false;
-        this.isSubscriptionTabOpen = false;
-
-        // Tab state is handled by conditional rendering in the template
     }
-
-
 
     handleMainTabClick(event) {
         const tab = event.currentTarget.dataset.tab;
-        // If no organisation is selected, keep charts hidden during tab switch
-        // and show a toast asking the user to select an organisation
-        if (!this.DefaultOrganisation || !this.DefaultOrganisation.Id) {
-            this.showChart = false;
-            this.dispatchEvent(
-                new ShowToastEvent({
-                    title: 'Select Organisation',
-                    message: 'Please select an organisation to view charts.',
-                    variant: 'warning'
-                })
-            );
-        }
         this.resetTabs();
         switch (tab) {
             case 'demand':
                 this.isDemandTabOpen = true;
-                this.currentTab = 'demand';
                 this.selectedForecastType = 'Short'; // Default subtab
                 break;
             case 'supply':
                 this.isSupplyTabOpen = true;
-                this.currentTab = 'supply';
-                console.log('Supply tab clicked - testing direct HTML rendering');
                 break;
             case 'inventory':
                 this.isInventoryTabOpen = true;
-                this.currentTab = 'inventory';
                 break;
             case 'production':
                 this.isProductionTabOpen = true;
-                this.currentTab = 'production';
                 break;
             case 'finance':
                 this.isFinanceTabOpen = true;
-                this.currentTab = 'finance';
                 break;
             case 'executive':
                 this.isExecutiveTabOpen = true;
-                this.currentTab = 'executive';
-                break;
-            case 'subscription':
-                this.isSubscriptionTabOpen = true;
-                this.currentTab = 'subscription';
-                break;
-            case 'riskAndReturn':
-                this.isRiskAndReturnTabOpen = true; console.log('Risk and Return tab clicked');
-                this.currentTab = 'riskAndReturn';
                 break;
         }
-        }
+    }
 
     // Handle subtab switching
     handleSubTabClick(event) {
@@ -242,11 +111,5 @@ export default class SandOP extends NavigationMixin (LightningElement) {
     }
     get executiveTabClass() {
         return `tab-item ${this.isExecutiveTabOpen ? 'active-tab' : ''}`;
-    }
-    get riskAndReturnTabClass() {
-        return `tab-item ${this.isRiskAndReturnTabOpen ? 'active-tab' : ''}`;
-    }
-    get subscriptionTabClass() {
-        return `tab-item ${this.isSubscriptionTabOpen ? 'active-tab' : ''}`;
     }
 }
