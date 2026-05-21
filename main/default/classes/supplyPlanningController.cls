@@ -119,23 +119,56 @@ public class ForecastResult {
     @AuraEnabled public List<Decimal> forecastValues;
 }
 
-    @AuraEnabled
-public static Map<String, Object> getHistoricalSupplyDemandData(Id productId) {
-    Date endDate = Date.today();
-    Date startDate = endDate.addYears(-3); // Last 3 years
+private static Map<String, Object> buildHistoricalSupplyDemandData(
+    Id productId,
+    Id organisationId,
+    Date startDate,
+    Date endDate
+) {
+    Date safeEndDate = endDate == null ? Date.today() : endDate;
+    Date safeStartDate = startDate == null ? safeEndDate.addYears(-3) : startDate;
 
-    List<AggregateResult> results = [
-        SELECT CALENDAR_YEAR(Order.EffectiveDate) yr,
-               CALENDAR_MONTH(Order.EffectiveDate) mon,
-               SUM(Quantity) qty,
-               SUM(ERP7__Shipped_Quantity__c) shipped
-        FROM OrderItem
-        WHERE Product2Id = :productId
-        AND Order.Status NOT IN ('Cancelled', 'Draft', 'Entered')
-        AND Order.EffectiveDate >= :startDate AND Order.EffectiveDate <= :endDate
-        GROUP BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
-        ORDER BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
-    ];
+    if (safeStartDate > safeEndDate) {
+        Date tempDate = safeStartDate;
+        safeStartDate = safeEndDate;
+        safeEndDate = tempDate;
+    }
+
+    safeStartDate = safeStartDate.toStartOfMonth();
+    safeEndDate = safeEndDate.toStartOfMonth().addMonths(1).addDays(-1);
+
+    List<AggregateResult> results;
+
+    if (organisationId == null) {
+        results = [
+            SELECT CALENDAR_YEAR(Order.EffectiveDate) yr,
+                   CALENDAR_MONTH(Order.EffectiveDate) mon,
+                   SUM(Quantity) qty,
+                   SUM(ERP7__Shipped_Quantity__c) shipped
+            FROM OrderItem
+            WHERE Product2Id = :productId
+            AND Order.Status NOT IN ('Cancelled', 'Draft', 'Entered')
+            AND Order.EffectiveDate >= :safeStartDate
+            AND Order.EffectiveDate <= :safeEndDate
+            GROUP BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
+            ORDER BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
+        ];
+    } else {
+        results = [
+            SELECT CALENDAR_YEAR(Order.EffectiveDate) yr,
+                   CALENDAR_MONTH(Order.EffectiveDate) mon,
+                   SUM(Quantity) qty,
+                   SUM(ERP7__Shipped_Quantity__c) shipped
+            FROM OrderItem
+            WHERE Product2Id = :productId
+            AND Order.Status NOT IN ('Cancelled', 'Draft', 'Entered')
+            AND Order.ERP7__Organisation__c = :organisationId
+            AND Order.EffectiveDate >= :safeStartDate
+            AND Order.EffectiveDate <= :safeEndDate
+            GROUP BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
+            ORDER BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
+        ];
+    }
 
     Map<String, Decimal> demandMap = new Map<String, Decimal>();
     Map<String, Decimal> supplyMap = new Map<String, Decimal>();
@@ -143,16 +176,21 @@ public static Map<String, Object> getHistoricalSupplyDemandData(Id productId) {
     for (AggregateResult ar : results) {
         Integer y = (Integer)ar.get('yr');
         Integer m = (Integer)ar.get('mon');
-        String label = getMonthLabel(m) + ' ' + y;   Decimal qty = (Decimal)ar.get('qty');   Decimal shipped = (Decimal)ar.get('shipped');
-  demandMap.put(label, qty.setScale(2));  supplyMap.put(label, shipped.setScale(2));
+        String label = getMonthLabel(m) + ' ' + y;
+        Decimal qty = (Decimal)ar.get('qty');
+        Decimal shipped = (Decimal)ar.get('shipped');
+
+        demandMap.put(label, qty.setScale(2));
+        supplyMap.put(label, shipped.setScale(2));
     }
 
     List<String> monthLabels = new List<String>();
     List<Decimal> demandValues = new List<Decimal>();
     List<Decimal> supplyValues = new List<Decimal>();
 
-    Date d = startDate.toStartOfMonth();
-    while (d <= endDate) {
+    Date d = safeStartDate;
+    Date lastMonth = safeEndDate.toStartOfMonth();
+    while (d <= lastMonth) {
         String label = getMonthLabel(d.month()) + ' ' + d.year();
         monthLabels.add(label);
         demandValues.add(demandMap.containsKey(label) ? demandMap.get(label) : 0);
@@ -167,8 +205,19 @@ public static Map<String, Object> getHistoricalSupplyDemandData(Id productId) {
     return result;
 }
 
+@AuraEnabled
+public static Map<String, Object> getHistoricalSupplyDemandData(Id productId) {
+    Date endDate = Date.today();
+    Date startDate = endDate.addYears(-3);
+    return buildHistoricalSupplyDemandData(productId, null, startDate, endDate);
+}
 
-private static ForecastResult runHoltWintersForecast(List<Decimal> values, Integer m, Integer seasonLength) {
+private static ForecastResult runHoltWintersForecast(
+    List<Decimal> values,
+    Integer m,
+    Integer seasonLength,
+    Date baseMonth
+) {
     Decimal alpha = 0.5;
     Decimal beta = 0.3;
     Decimal gamma = 0.2;
@@ -202,7 +251,7 @@ private static ForecastResult runHoltWintersForecast(List<Decimal> values, Integ
     result.forecastMonths = new List<String>();
     result.forecastValues = new List<Decimal>();
 
-    Date today = Date.today();
+    Date forecastBaseMonth = (baseMonth == null ? Date.today() : baseMonth).toStartOfMonth();
     for (Integer i = 1; i <= m; i++) {
         Decimal l = level[len - 1];
         Decimal t = trend[len - 1];
@@ -211,31 +260,110 @@ private static ForecastResult runHoltWintersForecast(List<Decimal> values, Integ
         Decimal f = l + (i * t) + s;
         result.forecastValues.add(Math.max(f, 0).setScale(2));
 
-        Date monthDate = today.addMonths(i);
+        Date monthDate = forecastBaseMonth.addMonths(i);
         result.forecastMonths.add(getMonthLabel(monthDate.month()) + ' ' + monthDate.year());
     }
 
     return result;
 }
 
+private static Integer getForecastMonthCount(Date requestedEndDate, Date trainingEndDate) {
+    Date firstForecastMonth = trainingEndDate.toStartOfMonth().addMonths(1);
+    Date lastRequestedMonth = requestedEndDate.toStartOfMonth();
+
+    if (firstForecastMonth > lastRequestedMonth) {
+        return 0;
+    }
+
+    return ((lastRequestedMonth.year() - firstForecastMonth.year()) * 12)
+        + (lastRequestedMonth.month() - firstForecastMonth.month())
+        + 1;
+}
+
+private static ForecastResult emptyForecastResult() {
+    ForecastResult result = new ForecastResult();
+    result.forecastMonths = new List<String>();
+    result.forecastValues = new List<Decimal>();
+    return result;
+}
+
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getSupplyDemandForecastWithHistory(Id productId, String modelName) {
+public static Map<String, Object> getSupplyDemandForecastWithHistory(
+    Id productId,
+    Id organisationId,
+    Date fromDate,
+    Date toDate,
+    String modelName
+) {
     System.debug('🔮 Running forecast for productId: ' + productId + ' using model: ' + modelName);
-    Map<String, Object> history = getHistoricalSupplyDemandData(productId);
+    Date today = Date.today();
+    Date requestedStartDate = (fromDate == null ? today.addMonths(-11) : fromDate).toStartOfMonth();
+    Date requestedEndDate = toDate == null
+        ? requestedStartDate.addMonths(12).addDays(-1)
+        : toDate.toStartOfMonth().addMonths(1).addDays(-1);
 
-    List<Decimal> demandValues = (List<Decimal>) history.get('historicalDemandValues');
-    List<Decimal> supplyValues = (List<Decimal>) history.get('historicalSupplyValues');
+    if (requestedStartDate > requestedEndDate) {
+        Date tempDate = requestedStartDate;
+        requestedStartDate = requestedEndDate.toStartOfMonth();
+        requestedEndDate = tempDate.toStartOfMonth().addMonths(1).addDays(-1);
+    }
+
+    Map<String, Object> history = buildHistoricalSupplyDemandData(
+        productId,
+        organisationId,
+        requestedStartDate,
+        requestedEndDate
+    );
+
+    Date trainingEndDate = requestedEndDate < today
+        ? requestedEndDate
+        : today;
+    Date trainingStartDate = trainingEndDate.toStartOfMonth().addMonths(-35);
+
+    Map<String, Object> trainingHistory = buildHistoricalSupplyDemandData(
+        productId,
+        organisationId,
+        trainingStartDate,
+        trainingEndDate
+    );
+
+    List<Decimal> demandValues = (List<Decimal>) trainingHistory.get('historicalDemandValues');
+    List<Decimal> supplyValues = (List<Decimal>) trainingHistory.get('historicalSupplyValues');
+    Integer forecastMonths = getForecastMonthCount(requestedEndDate, trainingEndDate);
 
     ForecastResult demandForecast;
     ForecastResult supplyForecast;
 
-    if (modelName == 'MOVING_AVERAGE') {
-       // demandForecast = runMovingAverageForecast(demandValues, 6);
-        //supplyForecast = runMovingAverageForecast(supplyValues, 6);
+    if (forecastMonths <= 0) {
+        demandForecast = emptyForecastResult();
+        supplyForecast = emptyForecastResult();
+    } else if (modelName == 'MOVING_AVERAGE') {
+        demandForecast = runHoltWintersForecast(
+            demandValues,
+            forecastMonths,
+            12,
+            trainingEndDate.toStartOfMonth()
+        );
+        supplyForecast = runHoltWintersForecast(
+            supplyValues,
+            forecastMonths,
+            12,
+            trainingEndDate.toStartOfMonth()
+        );
     } else {
-        demandForecast = runHoltWintersForecast(demandValues, 12, 12);
-        supplyForecast = runHoltWintersForecast(supplyValues, 12, 12);
+        demandForecast = runHoltWintersForecast(
+            demandValues,
+            forecastMonths,
+            12,
+            trainingEndDate.toStartOfMonth()
+        );
+        supplyForecast = runHoltWintersForecast(
+            supplyValues,
+            forecastMonths,
+            12,
+            trainingEndDate.toStartOfMonth()
+        );
     }
     System.debug('🔮 demandForecast ' + demandForecast);
     System.debug('🔮 supplyForecast ' +supplyForecast);

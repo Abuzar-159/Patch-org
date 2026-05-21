@@ -300,6 +300,12 @@ soSort = {
     chart;          // Chart.js instance
     chartJsReady = false;
     hasRenderedCountryChart = false;
+    latestSupplyForecastChartState = null;
+    latestTopFiveChartState = null;
+    latestTopFiveCountryChartState = null;
+    countryBreakdownPending = false;
+    supplyOverviewRequestId = 0;
+    supplyOverviewMonthLabels = [];
 
 forecastAlgorithmOptions = [
     { label: 'Holt-Winters (Seasonal)', value: 'Holt-Winters' }
@@ -312,10 +318,6 @@ forecastAlgorithmOptions = [
         return this.selectedProductId
             ? `${this.selectedProductName}  Monthly Supply vs Demand`
             : 'Top 5 Products   Supply vs Demand';
-    }
-
-    get isProductSelected() {
-        return this.inventoryProduct && this.inventoryProduct.Id;
     }
 
     // get isShowDefaultData() {
@@ -742,7 +744,13 @@ setCustomSpendYearAndLoadData() {
     handleYearTypeChange(event) {
     return new Promise((resolve, reject) => {
         this.selectedYearType = event.detail.value;
-            this.isLoading = true;
+        this.isLoading = true;
+        this.latestSupplyForecastChartState = null;
+        this.latestTopFiveChartState = null;
+        this.latestTopFiveCountryChartState = null;
+        this.countryBreakdownPending = false;
+        this.destroyChart('supplyForecastChart');
+
         if (this.selectedYearType === 'Fiscal') {
             this.setFiscalDates()
                 .then(() => getOrgFiscalStartMonth())
@@ -753,7 +761,8 @@ setCustomSpendYearAndLoadData() {
                         fiscalYear -= 1;
                     }
 
-                    this.fiscalLabels = this.generateFiscalLabels(startMonth, fiscalYear);
+                    this.supplyOverviewMonthLabels = this.generateFiscalLabels(startMonth, fiscalYear);
+                    this.fiscalLabels = this.supplyOverviewMonthLabels;
 
                     // Reset chart data
                     this.supplyData = new Array(12).fill(0);
@@ -783,6 +792,7 @@ setCustomSpendYearAndLoadData() {
             this.loadAllChartData();
 
             // ✅ Custom year is synchronous here, resolve immediately
+            this.isLoading = false;
             resolve();
         }
     });
@@ -811,12 +821,13 @@ setCustomYearDates(year) {
     this.toDate = `${year}-12-31`;
 
     // For custom year, labels should be Jan–Dec
-    this.fiscalLabels = this.generateCustomYearLabels(year);
+    this.supplyOverviewMonthLabels = this.generateCustomYearLabels(year);
+    this.fiscalLabels = this.supplyOverviewMonthLabels;
 }
 generateCustomYearLabels(year) {
     const monthLabels = [];
     for (let i = 0; i < 12; i++) {
-        const monthName = new Date(2000, i, 1).toLocaleString('default', { month: 'short' });
+        const monthName = this.getStableMonthAbbreviation(i);
         monthLabels.push(`${monthName}${year}`);
     }
     return monthLabels;
@@ -854,7 +865,7 @@ generateCustomYearLabels(year) {
 
         const monthIndex = ((startMonth - 1 + i) % 12); // 0-based month
         const labelYear = year + Math.floor((startMonth - 1 + i) / 12);
-        const monthName = new Date(2000, monthIndex, 1).toLocaleString('default', { month: 'short' });
+        const monthName = this.getStableMonthAbbreviation(monthIndex);
 
         const label = `${monthName}${labelYear}`;
         labels.push(label);
@@ -864,6 +875,96 @@ generateCustomYearLabels(year) {
 
     console.log('📦 Final labels array:', JSON.stringify(labels));
     return labels;
+}
+
+getStableMonthAbbreviation(monthIndex) {
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return monthLabels[monthIndex] || 'Jan';
+}
+
+getMonthNumberFromName(monthName) {
+    if (!monthName) {
+        return null;
+    }
+
+    const monthMap = {
+        jan: 1,
+        feb: 2,
+        mar: 3,
+        apr: 4,
+        may: 5,
+        jun: 6,
+        jul: 7,
+        aug: 8,
+        sep: 9,
+        sept: 9,
+        oct: 10,
+        nov: 11,
+        dec: 12
+    };
+
+    return monthMap[monthName.toLowerCase()] || null;
+}
+
+normalizeCompactMonthLabel(label) {
+    if (!label || label.length < 6) {
+        return null;
+    }
+
+    const match = label.match(/^([A-Za-z]+)(\d{4})$/);
+    if (!match) {
+        return null;
+    }
+
+    const [, monthName, yearStr] = match;
+    const monthNumber = this.getMonthNumberFromName(monthName);
+
+    if (!monthNumber) {
+        return null;
+    }
+
+    return `${yearStr}-${String(monthNumber).padStart(2, '0')}`;
+}
+
+normalizeRawMonthLabel(label) {
+    if (!label) {
+        return null;
+    }
+
+    const [monthName, yearStr] = label.trim().split(/\s+/);
+    const monthNumber = this.getMonthNumberFromName(monthName);
+
+    if (!monthName || !yearStr || !monthNumber) {
+        return null;
+    }
+
+    return `${yearStr}-${String(monthNumber).padStart(2, '0')}`;
+}
+
+createDateFromMonthKey(monthKey, endOfMonth = false) {
+    if (!monthKey) {
+        return null;
+    }
+
+    const match = monthKey.match(/^(\d{4})-(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const year = Number(match[1]);
+    const monthNumber = Number(match[2]);
+    if (!Number.isInteger(year) || !Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
+        return null;
+    }
+
+    return endOfMonth
+        ? new Date(year, monthNumber, 0, 23, 59, 59, 999)
+        : new Date(year, monthNumber - 1, 1, 0, 0, 0, 0);
+}
+
+isValidDate(dateValue) {
+    return dateValue instanceof Date && !Number.isNaN(dateValue.getTime());
 }
 
     connectedCallback() {
@@ -918,8 +1019,23 @@ generateCustomYearLabels(year) {
             // ✅ Get fiscal start month and compute fromDate/toDate
             // ✅ Use existing method
             this.setFiscalDates()
-                .then(() => {
+                .then(() => getOrgFiscalStartMonth())
+                .then((startMonth) => {
+                    const today = new Date();
+                    let fiscalYear = today.getFullYear();
+                    if (today.getMonth() + 1 < startMonth) {
+                        fiscalYear -= 1;
+                    }
+
+                    this.selectedYearSup = fiscalYear;
+                    this.supplyOverviewMonthLabels = this.generateFiscalLabels(startMonth, fiscalYear);
+                    this.fiscalLabels = this.supplyOverviewMonthLabels;
+                    this.generateAvailableYearOptions();
+
                     console.log(`📅 Dates set: ${this.fromDate} → ${this.toDate}`);
+                    this.renderPendingSupplyForecastChart();
+                    this.renderPendingTopFiveChart();
+                    this.renderPendingTopFiveCountryChart();
                     this.loadAllChartData();
                 })
                 .catch(error => {
@@ -950,41 +1066,6 @@ generateCustomYearLabels(year) {
                     this.isLoading = false;
                 });
             }
-
-            // ✅ Initialize supply forecast chart (can be safely done here)
-            // this.initializeSupplyForecastChart();
-            this.isLoading = true;
-            getOrgFiscalStartMonth()
-         .then((startMonth) => {
-            const today = new Date();
-            let fiscalYear = today.getFullYear();
-            if (today.getMonth() + 1 < startMonth) {
-                fiscalYear -= 1;
-            }
-
-
-                    this.selectedYearSup = fiscalYear; // 🟢 used in Apex calls
-            this.fiscalLabels = this.generateFiscalLabels(startMonth, fiscalYear);
-            console.log('AZ ingenerateFiscalLabels',this.generateFiscalLabels(startMonth, fiscalYear));
-
-            console.log('❌❌AZ Fiscal Labels',this.fiscalLabels);
-
-            // Now call your chart function
-            console.log('AZ calling initializeSupplyForecastChart from fiscal year');
-
-            this.initializeSupplyForecastChart(
-                this.fiscalLabels,
-                this.supplyData,
-                this.demandData,
-                this.forecastedSupplyData,
-                this.forecastedDemandData
-            );
-                this.generateAvailableYearOptions();
-
-        })
-        .catch((error) => {
-            console.error('Error fetching fiscal start month:', error);
-        });
 
             // ❌ Do NOT call other data loading methods here (they will be called from loadAllChartData)
         })
@@ -2455,27 +2536,13 @@ handleNextPageSo = (event) => {
 
 
     loadAllChartData() {
-    this.fetchCountrySupplyDemand(this.fromDate, this.toDate);
-    this.loadTopFive(this.fromDate, this.toDate);
-    this.loadTop5CountrySupplyDemand(this.fromDate, this.toDate);
-
     if (!this.selectedProductId) {
-        this.loadTop5Data(this.fromDate, this.toDate);
-        this.initializeTop5CountryChart(this.fromDate, this.toDate);
         this.loadTopFive(this.fromDate, this.toDate);
         this.loadTop5CountrySupplyDemand(this.fromDate, this.toDate);
-
-
-
-
     } else {
-        this.fetchData(this.fromDate, this.toDate);
-    }
-
-        this.initializeSupplyForecastChart();
-        this.initializeTop5CountryChart();
         this.resolveSupplyOverviewData();
         this.resolveCountrySupplyDemand();
+    }
 }
 
     initializeBreakdownChart() {
@@ -2544,11 +2611,6 @@ handleNextPageSo = (event) => {
 
             this.availableYears = years;
             this.selectedYear = years[0];
-
-            if (this.inventoryProduct?.Id && this.organisationId) {
-                this.resolveSupplyOverviewData();
-                this.resolveCountrySupplyDemand();
-            }
         } catch (error) {
             console.error('❌ Error in loadAvailableYears():', error);
         }
@@ -2594,10 +2656,17 @@ handleOrgRemoved() {
         }
 
 handleProductRemoved(event) {
+            this.supplyOverviewRequestId += 1;
             this.productId = null;
             this.productName = null;
             this.inventoryProduct = { Id: null, Name: null };
             this.isProductSelected = false;
+            this.selectedProductId = null;
+            this.selectedProductName = null;
+            this.latestSupplyForecastChartState = null;
+            this.latestTopFiveChartState = null;
+            this.latestTopFiveCountryChartState = null;
+            this.countryBreakdownPending = false;
             this.showChart = false;
             this.salesPriceData = [];
             this.purchasePriceData = [];
@@ -2605,6 +2674,7 @@ handleProductRemoved(event) {
             this.salesPriceVarianceRaw = [];
             this.salesPriceChartRows = [];
             this.destroyChart('salesPriceVarianceChart');
+            this.destroyChart('supplyForecastChart');
 
             // Optional: Clear existing chart
             if (this.chart) {
@@ -2654,7 +2724,6 @@ handleProductRemoved(event) {
        // Initialize charts only when we actually show charts
         if (this.showChart) {
             setTimeout(() => {
-                this.initializeSupplyForecastChart();
                 this.initializeBreakdownChart();
                 this.initializeInventoryLevelChart();
             }, 100);
@@ -2883,18 +2952,22 @@ selectSupplierScorecard() {
             return;
         }
 
-            this.isLoading = true;
+        const requestId = ++this.supplyOverviewRequestId;
+        this.isLoading = true;
         //getMonthlyDemandSupply({
         getSupplyDemandForecastWithHistory({
-
             productId: this.inventoryProduct.Id,
             organisationId: this.organisationId,
-            //selectedYear: this.selectedYear,
             fromDate: this.fromDate, // 'YYYY-MM-DD' from LWC
-        toDate: this.toDate
-
+            toDate: this.toDate,
+            modelName: 'HOLT_WINTERS'
         })
             .then(result => {
+                if (requestId !== this.supplyOverviewRequestId) {
+                    console.log('⏭️ Ignoring stale supply overview response', requestId);
+                    return;
+                }
+
                 console.log('📊 Supply Overview Data:', result);
                 console.log('✅this is After removing the apex method❌');
 
@@ -2903,11 +2976,16 @@ selectSupplierScorecard() {
                 //this.issuppydemandloaded = true;
             })
             .catch(error => {
+                if (requestId !== this.supplyOverviewRequestId) {
+                    return;
+                }
                 console.error('Error fetching Supply Overview data:', error);
                 //this.showToast('Error', error.body?.message || 'Failed to fetch supply overview.', 'error');
             })
               .finally(() => {
-                    this.isLoading = false;
+                    if (requestId === this.supplyOverviewRequestId) {
+                        this.isLoading = false;
+                    }
                 });
     }
 
@@ -2928,10 +3006,11 @@ selectSupplierScorecard() {
             .then(result => {
                 this.countrySupplyDemandData = result;
                 this.hasRenderedCountryChart = false; // allow chart to render after DOM update
+                this.countryBreakdownPending = true;
 
                 console.log('✅✅✅before calling renderCountryChart from fetchCountrySupplyDemand getSupplyDemandByCountry ');
 
-                this.renderCountryChart();
+                this.renderPendingCountryBreakdownChart();
             })
             .catch(error => {
                 console.error('Error fetching country supply-demand:', error);
@@ -2962,9 +3041,11 @@ selectSupplierScorecard() {
             .then(result => {
                 console.log('🌍 Supply/Demand by Country:', result);
                 this.countrySupplyDemandData = result;
+                this.hasRenderedCountryChart = false;
+                this.countryBreakdownPending = true;
                 console.log("👍👍countrychart");
 
-                this.renderCountryChart(); // use the real chart rendering here
+                this.renderPendingCountryBreakdownChart();
             })
             .catch(error => {
                 console.error('Error fetching country data:', error);
@@ -2991,31 +3072,19 @@ selectSupplierScorecard() {
         /* ── keep your existing model updates ── */
         this.inventoryProduct.Id = selId;
         this.inventoryProduct.Name = selName;
-
-        /* Refresh the year dropdown (your existing helper) */
-        this.loadAvailableYears();
-
         this.isProductSelected = !!selId;
-
-    if (this.isProductSelected) {
-        this.showChart = true;
-        this.fetchPriceData();
-
-    } else {
-        // Clear data if lookup is cleared
-        this.showChart = false;
-        this.salesPriceData = [];
-        this.purchasePriceData = [];
-        this.salesPriceVarianceRaw = [];
-        this.salesPriceChartRows = [];
-        this.destroyChart('salesPriceVarianceChart');
-    }
 
         /* ───────────────────────────── 1) No product selected → show Top 5 ──────────────────────────── */
         if (!selId) {
 
+            this.supplyOverviewRequestId += 1;
             this.selectedProductId = null;
             this.selectedProductName = null;
+            this.latestSupplyForecastChartState = null;
+            this.latestTopFiveChartState = null;
+            this.latestTopFiveCountryChartState = null;
+            this.countryBreakdownPending = false;
+            this.destroyChart('supplyForecastChart');
 
             // If a line chart was showing, destroy it
             this.destroyChart && this.destroyChart('lineChart');
@@ -3024,13 +3093,59 @@ selectSupplierScorecard() {
         }
 
         /* ───────────────────────────── 2) Same product re‑selected → do nothing ─────────────────────── */
-        if (this.selId === this.selectedProductId) {
+        if (selId === this.selectedProductId) {
             return;
         }
 
         /* ───────────────────────────── 3) New product selected → drill‑down chart ───────────────────── */
+        this.supplyOverviewRequestId += 1;
+        this.latestSupplyForecastChartState = null;
+        this.latestTopFiveChartState = null;
+        this.latestTopFiveCountryChartState = null;
+        this.countryBreakdownPending = false;
+        this.destroyChart('supplyForecastChart');
         this.selectedProductId = selId;
         this.selectedProductName = selName;
+        this.showChart = true;
+
+        /* Refresh the year dropdown (your existing helper) */
+        this.loadAvailableYears();
+
+        if (this.selectedYearType === 'Fiscal') {
+            this.setFiscalDates()
+                .then(() => getOrgFiscalStartMonth())
+                .then((startMonth) => {
+                    const today = new Date();
+                    let fiscalYear = today.getFullYear();
+
+                    if (today.getMonth() + 1 < startMonth) {
+                        fiscalYear -= 1;
+                    }
+
+                    this.supplyOverviewMonthLabels = this.generateFiscalLabels(startMonth, fiscalYear);
+                    this.fiscalLabels = this.supplyOverviewMonthLabels;
+                })
+                .then(() => {
+                    setTimeout(() => {
+                        this.loadAllChartData();
+                        this.fetchPriceData();
+                    }, 0);
+                })
+                .catch((error) => {
+                    console.error('❌ Error preparing fiscal product selection:', error);
+                });
+            return;
+        }
+
+        if (!this.selectedCustomYear) {
+            this.selectedCustomYear = new Date().getFullYear().toString();
+        }
+
+        this.setCustomYearDates(this.selectedCustomYear);
+        setTimeout(() => {
+            this.loadAllChartData();
+            this.fetchPriceData();
+        }, 0);
 
     }
 
@@ -3101,7 +3216,7 @@ selectSupplierScorecard() {
         const demandData = demandRows.map(r => r.totalDemand);
         const supplyData = fullLabels.map(name => supplyByName.get(name) || 0);
 
-        this.initializeTopFiveChart(labels, supplyData, demandData, fullLabels);
+        this.queueTopFiveChart(labels, supplyData, demandData, fullLabels);
     }
 
 
@@ -3221,7 +3336,7 @@ selectSupplierScorecard() {
         const demandData = data.map(r => r.totalDemand);
         const supplyData = data.map(r => r.totalSupply);
 
-        this.initializeTop5CountryChart(labels, supplyData, demandData);
+        this.queueTopFiveCountryChart(labels, supplyData, demandData);
     }
 
     initializeTop5CountryChart(labels, supply, demand) {
@@ -3425,7 +3540,14 @@ selectSupplierScorecard() {
     processMonthlyDataForChart(rawData) {
     console.log('🔍 Raw input to processMonthlyDataForChart:', rawData);
 
-    const monthLabels = this.fiscalLabels; // Will be fiscal OR custom depending on selectedYearType
+    const monthLabels = this.supplyOverviewMonthLabels?.length
+        ? this.supplyOverviewMonthLabels
+        : this.fiscalLabels; // Will be fiscal OR custom depending on selectedYearType
+    if (!Array.isArray(monthLabels) || monthLabels.length !== 12) {
+        console.error('❌ Supply overview labels are not ready for chart rendering.', monthLabels);
+        return;
+    }
+    const monthKeys = monthLabels.map(label => this.normalizeCompactMonthLabel(label));
     const supplyData = new Array(12).fill(0);
     const demandData = new Array(12).fill(0);
     const supplyForecast = new Array(12).fill(null);
@@ -3460,30 +3582,41 @@ selectSupplierScorecard() {
     }
 
     // 🗓 Convert fromDate & toDate to actual Date objects
-    const fromDate = new Date(this.fromDate + 'T00:00:00');
-    let toDate = new Date(this.toDate + 'T23:59:59');
+    const fromDate = new Date(`${this.fromDate}T00:00:00`);
+    let toDate = new Date(`${this.toDate}T23:59:59`);
+    if (!this.isValidDate(fromDate) || !this.isValidDate(toDate)) {
+        console.error('❌ Invalid selected date range for supply overview.', {
+            fromDate: this.fromDate,
+            toDate: this.toDate
+        });
+        return;
+    }
 
     // 🧠 Adjustment: If yearType is "Fiscal" and fiscal end is in next year (e.g., Apr–Mar)
     if (this.selectedYearType === 'Fiscal') {
-        const fiscalEndMonth = (this.fiscalLabels[11] || '').substring(0, 3); // Last month abbreviation
-        const fiscalEndYear = parseInt(this.fiscalLabels[11].substring(3), 10);
+        const fiscalEndKey = monthKeys[monthKeys.length - 1];
+        const fiscalEndDate = this.createDateFromMonthKey(fiscalEndKey, true);
 
-        const monthIndex = new Date(`${fiscalEndMonth} 01, ${fiscalEndYear}`).getMonth();
-        toDate = new Date(fiscalEndYear, monthIndex + 1, 0, 23, 59, 59); // Last day of that month
-        console.log(`📅 Adjusted fiscal toDate: ${toDate.toISOString().split('T')[0]}`);
+        if (this.isValidDate(fiscalEndDate)) {
+            toDate = fiscalEndDate;
+            console.log(`📅 Adjusted fiscal toDate: ${formatDateLocal(toDate)}`);
+        }
     }
 
     unifiedData.forEach(item => {
-        const [monthName, yearStr] = item.month.split(' ');
-        const fullLabel = `${monthName}${yearStr}`;
-        const monthIndex = monthLabels.indexOf(fullLabel);
+        const monthKey = this.normalizeRawMonthLabel(item.month);
+        const monthIndex = monthKeys.indexOf(monthKey);
 
         if (monthIndex === -1) {
-            console.warn(`⚠️ Unknown month: ${item.month} (looking for label ${fullLabel})`);
+            console.warn(`⚠️ Unknown month: ${item.month} (normalized key ${monthKey})`);
             return;
         }
 
-        const monthDate = new Date(`${monthName} 1, ${yearStr}`);
+        const monthDate = this.createDateFromMonthKey(monthKey);
+        if (!this.isValidDate(monthDate)) {
+            console.warn(`⚠️ Invalid month key derived from ${item.month}: ${monthKey}`);
+            return;
+        }
 
         // ⛔ Skip months outside selected range
         if (monthDate < fromDate || monthDate > toDate) {
@@ -3513,18 +3646,17 @@ selectSupplierScorecard() {
 
     // 📦 Save forecast for CSV export
     this.supplyDemandForecastData = [];
-    const currentYear = new Date().getFullYear();
     unifiedData.forEach(item => {
-        const [monthName, yearStr] = item.month.split(' ');
-        const forecastYear = parseInt(yearStr, 10);
-        const label = `${monthName}${yearStr}`;
-        const index = monthLabels.indexOf(label);
+        const monthKey = this.normalizeRawMonthLabel(item.month);
+        const index = monthKeys.indexOf(monthKey);
+        const monthDate = this.createDateFromMonthKey(monthKey);
 
         if ((item.forecastedSupply != null || item.forecastedDemand != null)
             && index !== -1
-            && new Date(`${monthName} 1, ${yearStr}`) >= currentDate) {
+            && this.isValidDate(monthDate)
+            && monthDate >= currentDate) {
             this.supplyDemandForecastData.push({
-                month: `${monthName} ${forecastYear}`,
+                month: item.month,
                 forecastedSupply: item.forecastedSupply ?? 0,
                 forecastedDemand: item.forecastedDemand ?? 0
             });
@@ -3533,10 +3665,10 @@ selectSupplierScorecard() {
 
     this.hasSupplyDemandForecast = this.supplyDemandForecastData.length > 0;
 
-    // 🟢 Initialize chart
+    // 🟢 Queue chart render once the product canvas is available in the DOM
     try {
-        this.initializeSupplyForecastChart(monthLabels, supplyData, demandData, supplyForecast, demandForecast);
-        console.log('✅ initializeSupplyForecastChart executed.');
+        this.queueSupplyForecastChart(monthLabels, supplyData, demandData, supplyForecast, demandForecast);
+        console.log('✅ supply forecast chart queued.');
     } catch (err) {
         console.error('❌ Error initializing chart:', err);
     }
@@ -3595,7 +3727,9 @@ downloadSupplyDemandForecastAsCSV() {
 
     let csv = 'Month,Forecasted Supply,Forecasted Demand\n';
 
-    const labelsToInclude = this.fiscalLabels; // works for both Fiscal and Custom years
+    const labelsToInclude = this.supplyOverviewMonthLabels?.length
+        ? this.supplyOverviewMonthLabels
+        : this.fiscalLabels; // works for both Fiscal and Custom years
     const allowedMonthsSet = new Set(labelsToInclude);
 
     this.supplyDemandForecastData.forEach(entry => {
@@ -3714,7 +3848,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 
       if (!Array.isArray(fiscalLabels)) {
         console.error('❌ fiscalLabels is not an array:', fiscalLabels);
-        return; // 🚫 Stop here if labels are invalid
+        return false; // 🚫 Stop here if labels are invalid
     }
 
 
@@ -3725,7 +3859,17 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
     console.log('💀 AZ Calling Chart.js from fiscal year method');
 
     const canvas = this.template.querySelector('.supply-forecast-chart');
-    if (!canvas) return;
+    if (!canvas) return false;
+
+    if (!Array.isArray(supply) || !Array.isArray(demand) || !Array.isArray(forecastedSupply) || !Array.isArray(forecastedDemand)) {
+        console.error('❌ Invalid supply forecast datasets passed to chart.', {
+            supply,
+            demand,
+            forecastedSupply,
+            forecastedDemand
+        });
+        return false;
+    }
 
     const ctx = canvas.getContext('2d');
     this.destroyChart('supplyForecastChart');
@@ -3811,6 +3955,8 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
             }
         }
     });
+
+    return true;
 }
 
 
@@ -3989,7 +4135,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
             console.log('✅ ');
 
             console.warn('❌ No canvas found for country chart');
-            return;
+            return false;
         }
 
         const countries = this.countrySupplyDemandData.map(item => item.country);
@@ -4003,7 +4149,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
         // const canvas = this.template.querySelector('.breakdown-placeholder-chart');
         console.log('✅ Canvas element found:', canvas);
 
-        if (!canvas) return;
+        if (!canvas) return false;
 
         const ctx = canvas.getContext('2d');
         this.destroyChart('countryBreakdownChart'); // clear previous
@@ -4064,6 +4210,9 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
                 }
             }
         });
+
+        this.hasRenderedCountryChart = true;
+        return true;
     }
 
 
@@ -4930,14 +5079,130 @@ renderQualitySummary(data) {
                 });
     }
     renderedCallback() {
-        this.renderInitial();
-
-        if (this.showChart && this.organisationId) {
+        if (this.isInventoryLevel) {
             this.renderInitial();
-        } else {
-            this.destroyChart();
         }
 
+        if (this.showChart && this.organisationId) {
+            this.renderPendingSupplyForecastChart();
+            this.renderPendingTopFiveChart();
+            this.renderPendingTopFiveCountryChart();
+            this.renderPendingCountryBreakdownChart();
+        }
+
+    }
+
+    queueSupplyForecastChart(labels, supply, demand, forecastedSupply, forecastedDemand) {
+        this.latestSupplyForecastChartState = {
+            labels: [...labels],
+            supply: [...supply],
+            demand: [...demand],
+            forecastedSupply: [...forecastedSupply],
+            forecastedDemand: [...forecastedDemand]
+        };
+
+        this.renderPendingSupplyForecastChart();
+    }
+
+    queueTopFiveChart(labels, supply, demand, fullLabels) {
+        this.latestTopFiveChartState = {
+            labels: [...labels],
+            supply: [...supply],
+            demand: [...demand],
+            fullLabels: [...fullLabels]
+        };
+
+        this.renderPendingTopFiveChart();
+    }
+
+    queueTopFiveCountryChart(labels, supply, demand) {
+        this.latestTopFiveCountryChartState = {
+            labels: [...labels],
+            supply: [...supply],
+            demand: [...demand]
+        };
+
+        this.renderPendingTopFiveCountryChart();
+    }
+
+    renderPendingSupplyForecastChart() {
+        if (!this.latestSupplyForecastChartState || !this.chartJsReady || !this.isProductSelected) {
+            return;
+        }
+
+        const canvas = this.template.querySelector('.supply-forecast-chart');
+        if (!canvas) {
+            return;
+        }
+
+        const rendered = this.initializeSupplyForecastChart(
+            this.latestSupplyForecastChartState.labels,
+            this.latestSupplyForecastChartState.supply,
+            this.latestSupplyForecastChartState.demand,
+            this.latestSupplyForecastChartState.forecastedSupply,
+            this.latestSupplyForecastChartState.forecastedDemand
+        );
+
+        if (rendered) {
+            this.latestSupplyForecastChartState = null;
+        }
+    }
+
+    renderPendingTopFiveChart() {
+        if (!this.latestTopFiveChartState || !this.chartJsReady || this.isProductSelected || !this.showChart) {
+            return;
+        }
+
+        const canvas = this.template.querySelector('.main-chart');
+        if (!canvas) {
+            return;
+        }
+
+        this.initializeTopFiveChart(
+            this.latestTopFiveChartState.labels,
+            this.latestTopFiveChartState.supply,
+            this.latestTopFiveChartState.demand,
+            this.latestTopFiveChartState.fullLabels
+        );
+        this.latestTopFiveChartState = null;
+    }
+
+    renderPendingTopFiveCountryChart() {
+        if (!this.latestTopFiveCountryChartState || !this.chartJsReady || this.isProductSelected || !this.showChart) {
+            return;
+        }
+
+        const canvas = this.template.querySelector('.country-chart');
+        if (!canvas) {
+            return;
+        }
+
+        this.initializeTop5CountryChart(
+            this.latestTopFiveCountryChartState.labels,
+            this.latestTopFiveCountryChartState.supply,
+            this.latestTopFiveCountryChartState.demand
+        );
+        this.latestTopFiveCountryChartState = null;
+    }
+
+    renderPendingCountryBreakdownChart() {
+        if (
+            !this.countryBreakdownPending
+            || !this.chartJsReady
+            || !this.isProductSelected
+            || !this.countrySupplyDemandData?.length
+        ) {
+            return;
+        }
+
+        const canvas = this.template.querySelector('.breakdown-placeholder-chart');
+        if (!canvas) {
+            return;
+        }
+
+        if (this.renderCountryChart()) {
+            this.countryBreakdownPending = false;
+        }
     }
 
     renderInitial() {

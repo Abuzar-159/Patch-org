@@ -194,9 +194,18 @@ public class SupplyPlanningControllerTest {
 
     @IsTest
     static void testGetSupplyDemandForecastWithHistory() {
+        Id orgId = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1].Id;
         Id productId = [SELECT Id FROM Product2 WHERE Name = 'Test Product' LIMIT 1].Id;
+        Date fromDate = Date.today().addMonths(-11).toStartOfMonth();
+        Date toDate = fromDate.addMonths(12).addDays(-1);
         Test.startTest();
-        Map<String, Object> res = SupplyPlanningController.getSupplyDemandForecastWithHistory(productId, 'HOLT_WINTERS');
+        Map<String, Object> res = SupplyPlanningController.getSupplyDemandForecastWithHistory(
+            productId,
+            orgId,
+            fromDate,
+            toDate,
+            'HOLT_WINTERS'
+        );
         Test.stopTest();
 
         System.assertNotEquals(null, res);
@@ -210,13 +219,22 @@ public class SupplyPlanningControllerTest {
 
     @IsTest
     static void testHoltWintersNotEnoughDataException() {
+        Id orgId = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1].Id;
         Product2 p = new Product2(Name = 'Short History Product', Family = 'Hardware', IsActive = true);
         insert p;
+        Date fromDate = Date.today().addMonths(-11).toStartOfMonth();
+        Date toDate = fromDate.addMonths(12).addDays(-1);
 
         Boolean threw = false;
         Test.startTest();
         try {
-            SupplyPlanningController.getSupplyDemandForecastWithHistory(p.Id, 'HOLT_WINTERS');
+            SupplyPlanningController.getSupplyDemandForecastWithHistory(
+                p.Id,
+                orgId,
+                fromDate,
+                toDate,
+                'HOLT_WINTERS'
+            );
         } catch (AuraHandledException e) {
             threw = true;
             // Accept any handled message; don’t assert exact text (avoid brittleness)
