@@ -16,7 +16,7 @@ public static List<MonthlySupplyDemandWrapper> getMonthlySupplyDemand(
         
     
     SELECT
-            FISCAL_MONTH(OrderItem.CreatedDate) monthNum,
+            CALENDAR_MONTH(OrderItem.CreatedDate) monthNum,
             SUM(Quantity) totalDemand,
             SUM(ERP7__Shipped_Quantity__c) totalSupply
         FROM OrderItem
@@ -25,12 +25,12 @@ public static List<MonthlySupplyDemandWrapper> getMonthlySupplyDemand(
             AND Order.ERP7__Organisation__c = :organisationId
             AND OrderItem.CreatedDate <= :toDate
             AND OrderItem.CreatedDate >= :fromDate
-        GROUP BY FISCAL_MONTH(OrderItem.CreatedDate)
-        ORDER BY FISCAL_MONTH(OrderItem.CreatedDate)
+        GROUP BY CALENDAR_MONTH(OrderItem.CreatedDate)
+        ORDER BY CALENDAR_MONTH(OrderItem.CreatedDate)
     ]) {
         Integer month = (Integer) ar.get('monthNum');  Decimal demand = (Decimal) ar.get('totalDemand');  Decimal supply = (Decimal) ar.get('totalSupply');
 
-        System.debug('📊 Fiscal Month: ' + month + ', Demand: ' + demand + ', Supply: ' + supply);
+        System.debug('📊 Calendar Month: ' + month + ', Demand: ' + demand + ', Supply: ' + supply);
 
         results.add(new MonthlySupplyDemandWrapper(month, demand, supply));
     }
@@ -652,6 +652,9 @@ public static Map<String, String> getDefaultTopVendor(Id organisationId, Integer
     Map<String, String> result = new Map<String, String>();
     if (organisationId == null || year == null) return result;
 
+    Date fiscalYearStart = Date.newInstance(year, getOrgFiscalStartMonth(), 1);
+    Date fiscalYearEndExclusive = fiscalYearStart.addYears(1);
+
     // Step 1: Find vendors with Paid Payments
     Set<Id> vendorsWithSpend = new Set<Id>();
     for (AggregateResult ar : [
@@ -660,7 +663,8 @@ public static Map<String, String> getDefaultTopVendor(Id organisationId, Integer
         WHERE ERP7__Status__c = 'Paid'
           AND ERP7__Account__c = :organisationId
           AND ERP7__Accounts__c != null
-          AND FISCAL_YEAR(CreatedDate) = :year
+          AND CreatedDate >= :fiscalYearStart
+          AND CreatedDate < :fiscalYearEndExclusive
         GROUP BY ERP7__Accounts__c
     ]) {
         vendorsWithSpend.add((Id) ar.get('accId'));
@@ -672,7 +676,8 @@ public static Map<String, String> getDefaultTopVendor(Id organisationId, Integer
         SELECT ERP7__Vendor__c vendorId
         FROM ERP7__PO__c
         WHERE ERP7__Order_Date__c != null
-          AND FISCAL_YEAR(ERP7__Order_Date__c) = :year
+          AND ERP7__Order_Date__c >= :fiscalYearStart
+          AND ERP7__Order_Date__c < :fiscalYearEndExclusive
         GROUP BY ERP7__Vendor__c
     ]) {
         vendorsWithPO.add((Id) ar.get('vendorId'));
@@ -684,7 +689,8 @@ public static Map<String, String> getDefaultTopVendor(Id organisationId, Integer
         SELECT ERP7__Purchase_Orders__r.ERP7__Vendor__c vendorId
         FROM ERP7__Stock_Inward_Line_Item__c
         WHERE ERP7__Purchase_Orders__r.ERP7__Vendor__c != null
-          AND FISCAL_YEAR(CreatedDate) = :year
+          AND CreatedDate >= :fiscalYearStart
+          AND CreatedDate < :fiscalYearEndExclusive
         GROUP BY ERP7__Purchase_Orders__r.ERP7__Vendor__c
     ]) {
         vendorsWithQuality.add((Id) ar.get('vendorId'));
@@ -706,7 +712,8 @@ public static Map<String, String> getDefaultTopVendor(Id organisationId, Integer
             WHERE ERP7__Status__c = 'Paid'
               AND ERP7__Account__c = :organisationId
               AND ERP7__Accounts__c IN :eligibleVendors
-              AND FISCAL_YEAR(CreatedDate) = :year
+              AND CreatedDate >= :fiscalYearStart
+              AND CreatedDate < :fiscalYearEndExclusive
             GROUP BY ERP7__Accounts__c
             ORDER BY  SUM(ERP7__Amount__c) DESC
             LIMIT 1
