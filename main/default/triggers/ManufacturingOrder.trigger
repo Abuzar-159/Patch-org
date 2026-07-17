@@ -94,7 +94,10 @@ trigger ManufacturingOrder on Manufacturing_Order__c(after insert, after update,
                             
                             stockIntoAddinv.add(createnewstock);*/
                         }
-                        if(Schema.sObjectType.ERP7__Stock_Outward_Line_Item__c.isUpdateable()) update stockstoCreate; else{ }
+                        if(Schema.sObjectType.ERP7__Stock_Outward_Line_Item__c.isUpdateable()){
+                            PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = true;
+                            update stockstoCreate; 
+                        } else{ }
                         //if(stockIntoAddinv.size() > 0 && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Active__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Manufacturing_Order__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Quantity__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Site_ProductService_InventoryStock__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Product__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Material_Batch_Lot__c.isCreateable() && Schema.sObjectType.Stock_Inward_Line_Item__c.fields.ERP7__Serial__c.isCreateable()) { insert  stockIntoAddinv;  } else{ //('no access'); }
                         
                     }

@@ -541,7 +541,11 @@ trigger WorkOrder on ERP7__WO__c (after insert, after update, after undelete, be
                 if((state != '' && mo.ERP7__Status__c != state) || (stage != '' && stage != mo.ERP7__Stage__c)){
                     if(Schema.sObjectType.ERP7__Manufacturing_Order__c.fields.ERP7__Status__c.isUpdateable()){mo.ERP7__Status__c = state;} else{ /* no access */ }
                     if(Schema.sObjectType.ERP7__Manufacturing_Order__c.fields.ERP7__Stage__c.isUpdateable()){mo.ERP7__Stage__c = stage;} else{ /* no access */ }
-                    if(Schema.sObjectType.ERP7__Manufacturing_Order__c.isUpdateable()){ update mo; } else{ /* no access */ }
+                    if(Schema.sObjectType.ERP7__Manufacturing_Order__c.isUpdateable()){ 
+                        PreventRecursiveLedgerEntry.MOTrigger = true;
+                        PreventRecursiveLedgerEntry.testCasesTransactions = false;
+                        update mo; 
+                    } else{ /* no access */ }
                 }
             }
             
