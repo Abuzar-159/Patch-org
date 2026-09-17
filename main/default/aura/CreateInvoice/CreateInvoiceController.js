@@ -484,7 +484,7 @@
                         //helper.showToast('error','error','Please select the invoice Line Item');
                         console.log('toast total amt',tatalamount);
                         console.log("toast order amt ",parseFloat(comp.get('v.orderAmount')));
-                    }else if(comp.get("v.selectedrecordTypeMap.DeveloperName")==='Schedule_Invoice' && tatalamount > parseFloat(comp.get('v.orderAmount'))){
+                 /*   }else if(comp.get("v.selectedrecordTypeMap.DeveloperName")==='Schedule_Invoice' && tatalamount > parseFloat(comp.get('v.orderAmount'))){
                         comp.set("v.showToast",true);
                         comp.set("v.message","Sum of scheduled amount is greater then order amount");
 
@@ -493,8 +493,25 @@
                                 comp.set("v.showToast",false);
                             }), 3000
                         );
+                        comp.set("v.showMmainSpin",false);  */
+                        
+                        }else if(comp.get("v.selectedrecordTypeMap.DeveloperName")==='Schedule_Invoice' && parseFloat(tatalamount.toFixed(2)) > parseFloat(parseFloat(comp.get('v.orderAmount')).toFixed(2))){
+                        console.log('Raw tatalamount:', tatalamount);
+                        console.log('Rounded tatalamount:', parseFloat(tatalamount.toFixed(2)));
+                        console.log('Raw orderAmount:', comp.get('v.orderAmount'));
+                        console.log('Rounded orderAmount:', parseFloat(parseFloat(comp.get('v.orderAmount')).toFixed(2)));
+                    
+                        comp.set("v.showToast",true);
+                        comp.set("v.message","Sum of scheduled amount is greater then order amount");
+                    
+                        setTimeout(
+                            $A.getCallback(function() {
+                                comp.set("v.showToast",false);
+                            }), 3000
+                        );
                         comp.set("v.showMmainSpin",false);
-                    }else if(comp.get("v.selectedrecordTypeMap.DeveloperName")==='Advance' && (comp.get("v.downPaymentAmount")<=0 || $A.util.isEmpty(comp.get("v.downPaymentAmount")))){
+                    }
+                    else if(comp.get("v.selectedrecordTypeMap.DeveloperName")==='Advance' && (comp.get("v.downPaymentAmount")<=0 || $A.util.isEmpty(comp.get("v.downPaymentAmount")))){
                         comp.set("v.showToast",true);
                         comp.set("v.message","Please Enter the Down Payment Percentage or Amount");
 
