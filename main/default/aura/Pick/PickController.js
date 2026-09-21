@@ -1314,6 +1314,10 @@
         cmp.set('v.selectAllSerials', false);
     },
     
+    /*
+     * Legacy PickMultiSerials implementation.
+     * Kept for reference; the active implementation is below.
+     *
     PickMultiSerials: function (cmp, event) {
         console.log('PickMultiSerials called');
         
@@ -1379,7 +1383,7 @@
                         $A.util.removeClass(cmp.find("myModalMOSerialBackDrop"),"slds-backdrop_open");
                         cmp.set('v.PickMultiScreenInUse',false);
                         
-                        /*
+                        Legacy inactive section:
                         if(response.getReturnValue().soliWrapperList.length == 0) {
                             cmp.createPacks();
                         }
@@ -1408,8 +1412,8 @@
                             
                             var toastEvent = $A.get("e.force:showToast");
                             toastEvent.setParams({
-                                "title": $A.get('$Label.c.Success'),
-                                "message": $A.get('$Label.c.Picked_successfully'),
+                                "title": LegacyLabel.Success,
+                                "message": LegacyLabel.Picked_successfully,
                                 "type": "success",
                             });
                             toastEvent.fire();
@@ -1417,7 +1421,7 @@
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         }
                         cmp.set("v.initialSTOLISerial", "");
-                        */
+                        End legacy inactive section.
                     }
                     else{
                         console.log("error --> ", response.getReturnValue().exceptionError);
@@ -1439,6 +1443,206 @@
             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
         }
         
+    },
+    */
+
+    PickMultiSerials: function (cmp, event) {
+        var logPrefix = '[PickMultiSerials]';
+
+        var log = function (step, message, details) {
+            if (typeof details === 'undefined') {
+                console.log(logPrefix + ' [' + step + '] ' + message);
+            } else {
+                console.log(logPrefix + ' [' + step + '] ' + message, details);
+            }
+        };
+
+        var setSpinner = function (show) {
+            var spinner = cmp.find('mainSpin');
+            if (!spinner) {
+                console.warn(logPrefix + ' Spinner component was not found.');
+                return;
+            }
+
+            if (show) {
+                $A.util.removeClass(spinner, 'slds-hide');
+            } else {
+                $A.util.addClass(spinner, 'slds-hide');
+            }
+        };
+
+        var removeClass = function (localId, className) {
+            var element = cmp.find(localId);
+            if (element) {
+                $A.util.removeClass(element, className);
+            }
+        };
+
+        var fail = function (message, details) {
+            console.error(logPrefix + ' [FAILED] ' + message, details || '');
+            cmp.set('v.exceptionError', message);
+            setSpinner(false);
+        };
+
+        var getServerError = function (response) {
+            var errors = response && response.getError ? response.getError() : [];
+            var firstError = errors && errors.length ? errors[0] : null;
+
+            if (firstError && firstError.message) {
+                return firstError.message;
+            }
+            if (firstError && firstError.pageErrors && firstError.pageErrors.length) {
+                return firstError.pageErrors[0].message;
+            }
+            return 'The server could not save the selected serial numbers.';
+        };
+
+        log('1/6', 'Started.');
+        setSpinner(true);
+        cmp.set('v.exceptionError', '');
+
+        try {
+            var loglineId = cmp.get('v.pickloglineId');
+            var remainingQty = Number(cmp.get('v.RemainingQty'));
+            var selectedSerials = cmp.get('v.PickSelectedSerialNos');
+            var wrapperList = cmp.get('v.soliWrapperList');
+            var logisticValue = cmp.get('v.logisticIds');
+
+            if (!loglineId) {
+                return fail('The pick line is missing. Please reopen the serial selection screen.');
+            }
+            if (!isFinite(remainingQty) || remainingQty <= 0) {
+                return fail('The remaining quantity is invalid. Please refresh the pick screen.', remainingQty);
+            }
+            if (!Array.isArray(selectedSerials) || selectedSerials.length === 0) {
+                return fail('Select at least one serial number before picking.');
+            }
+            if (!Array.isArray(wrapperList) || wrapperList.length === 0) {
+                return fail('The pick lines are unavailable. Please refresh the pick screen.');
+            }
+
+            var logisticIds = [];
+            var rawLogisticIds = Array.isArray(logisticValue) ? logisticValue : String(logisticValue || '').split(',');
+            for (var logisticIndex = 0; logisticIndex < rawLogisticIds.length; logisticIndex++) {
+                var logisticId = String(rawLogisticIds[logisticIndex] || '').trim();
+                if (logisticId) {
+                    logisticIds.push(logisticId);
+                }
+            }
+
+            if (logisticIds.length === 0) {
+                return fail('No logistics record was found. Please refresh the pick screen.');
+            }
+
+            log('2/6', 'Inputs validated.', {
+                pickLineId: loglineId,
+                remainingQty: remainingQty,
+                selectedCount: selectedSerials.length,
+                logisticCount: logisticIds.length
+            });
+
+            var serialsToSave = selectedSerials.slice(0, Math.floor(remainingQty));
+            var selectedSerialIds = [];
+
+            for (var serialIndex = 0; serialIndex < serialsToSave.length; serialIndex++) {
+                var selectedItem = serialsToSave[serialIndex];
+                var serial = selectedItem && selectedItem.SerialNo;
+
+                if (!serial || !serial.Id) {
+                    return fail(
+                        'A selected serial number is invalid. Remove it and select it again.',
+                        selectedItem
+                    );
+                }
+                selectedSerialIds.push(serial.Id);
+            }
+
+            if (selectedSerialIds.length === 0) {
+                return fail('No valid serial numbers were selected.');
+            }
+
+            cmp.set('v.PickSelectedSerialNos', serialsToSave);
+            log('3/6', 'Serial IDs prepared.', selectedSerialIds);
+
+            var selectedWrapper = null;
+            for (var wrapperIndex = 0; wrapperIndex < wrapperList.length; wrapperIndex++) {
+                var wrapper = wrapperList[wrapperIndex];
+                if (!wrapper) {
+                    continue;
+                }
+
+                var wrapperLineId = wrapper.LOLI && wrapper.LOLI.Id;
+                wrapper.soliSelected = String(wrapperLineId || '') === String(loglineId);
+
+                if (wrapper.soliSelected) {
+                    wrapper.MultiSerialIds = selectedSerialIds;
+                    selectedWrapper = wrapper;
+                }
+            }
+
+            if (!selectedWrapper) {
+                return fail('The selected pick line was not found. Please refresh the pick screen.', loglineId);
+            }
+
+            log('4/6', 'Matched the selected pick-line wrapper.', loglineId);
+            window.scrollTo(0, 0);
+
+            var action = cmp.get('c.saveSOLIs');
+            if (!action) {
+                return fail('The save action is unavailable. Please refresh and try again.');
+            }
+
+            action.setParams({
+                SWL: JSON.stringify(wrapperList),
+                SE: JSON.stringify(cmp.get('v.SerialIds2Exempt') || []),
+                SM: JSON.stringify(cmp.get('v.stockMap') || {}),
+                LogisticIds: JSON.stringify(logisticIds)
+            });
+
+            action.setCallback(this, function (response) {
+                try {
+                    var state = response.getState();
+                    log('6/6', 'Server response received: ' + state + '.');
+
+                    if (state !== 'SUCCESS') {
+                        return fail(getServerError(response), response.getError());
+                    }
+
+                    var result = response.getReturnValue();
+                    if (!result) {
+                        return fail('The server returned an empty response. Refresh and verify the pick.');
+                    }
+                    if (result.exceptionError) {
+                        return fail(result.exceptionError, result);
+                    }
+
+                    cmp.set('v.navToPack', true);
+                    removeClass('myModalPickSerial', 'slds-fade-in-open');
+                    removeClass('myModalMOSerialBackDrop', 'slds-backdrop_open');
+                    cmp.set('v.PickMultiScreenInUse', false);
+                    setSpinner(false);
+
+                    log('DONE', 'Serial numbers saved successfully.', selectedSerialIds);
+
+                    // The refresh method manages the spinner for its own request.
+                    if (typeof cmp.getAllDetailsInit === 'function') {
+                        cmp.getAllDetailsInit();
+                    } else {
+                        console.warn(logPrefix + ' Pick saved, but the refresh method is unavailable.');
+                    }
+                } catch (callbackError) {
+                    fail('An unexpected error occurred while processing the save response.', callbackError);
+                }
+            });
+
+            $A.enqueueAction(action);
+            log('5/6', 'Save request queued.', {
+                serialCount: selectedSerialIds.length,
+                logisticIds: logisticIds
+            });
+        } catch (error) {
+            fail('An unexpected error occurred while preparing the save request.', error);
+        }
     },
     
     selectAllSerials : function (cmp,event) {
