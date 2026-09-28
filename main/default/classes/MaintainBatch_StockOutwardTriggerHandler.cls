@@ -66,6 +66,136 @@ public class MaintainBatch_StockOutwardTriggerHandler {
     public static void handleAfterDelete(List<Stock_Outward_Line_Item__c> oldList) {
         BatchStockCommon(oldList);
         LogisticLinesCommon(oldList);
+        handleSerialStockHolderOnDelete(oldList);
+    }
+
+    public static void handleSerialStockHolderOnDelete(List<Stock_Outward_Line_Item__c> oldList) {
+        if (oldList == null || oldList.isEmpty()) {
+            return;
+        }
+
+        Set<String> eligibleStatuses = new Set<String>{
+            'Committed',
+            'Dispatched',
+            'Returned to Supplier'
+        };
+        Set<Id> productIds = new Set<Id>();
+
+        for (Stock_Outward_Line_Item__c deletedSoli : oldList) {
+            if (deletedSoli.ERP7__Logistic_Line_Item__c != null &&
+                deletedSoli.ERP7__Product__c != null &&
+                deletedSoli.ERP7__Serial__c != null &&
+                (deletedSoli.ERP7__Order_Product__c != null ||
+                 deletedSoli.ERP7__Sales_Order_Line_Item__c != null) &&
+                eligibleStatuses.contains(deletedSoli.ERP7__Status__c)) {
+                productIds.add(deletedSoli.ERP7__Product__c);
+            }
+        }
+
+        if (productIds.isEmpty()) {
+            return;
+        }
+
+        Map<Id, Product2> productsById = new Map<Id, Product2>([
+            SELECT Id, ERP7__Serialise__c
+            FROM Product2
+            WHERE Id IN :productIds
+        ]);
+        Map<Id, Decimal> restoreQuantityByLogisticLine = new Map<Id, Decimal>();
+        Map<Id, Stock_Outward_Line_Item__c> sourceByLogisticLine = new Map<Id, Stock_Outward_Line_Item__c>();
+
+        for (Stock_Outward_Line_Item__c deletedSoli : oldList) {
+            Product2 product = productsById.get(deletedSoli.ERP7__Product__c);
+            if (deletedSoli.ERP7__Logistic_Line_Item__c == null ||
+                deletedSoli.ERP7__Product__c == null ||
+                deletedSoli.ERP7__Serial__c == null ||
+                (deletedSoli.ERP7__Order_Product__c == null &&
+                 deletedSoli.ERP7__Sales_Order_Line_Item__c == null) ||
+                !eligibleStatuses.contains(deletedSoli.ERP7__Status__c) ||
+                product == null ||
+                !product.ERP7__Serialise__c) {
+                continue;
+            }
+
+            Id logisticLineId = deletedSoli.ERP7__Logistic_Line_Item__c;
+            Decimal currentQuantity = restoreQuantityByLogisticLine.containsKey(logisticLineId)
+                ? restoreQuantityByLogisticLine.get(logisticLineId)
+                : 0;
+            restoreQuantityByLogisticLine.put(logisticLineId, currentQuantity + 1);
+
+            if (!sourceByLogisticLine.containsKey(logisticLineId)) {
+                sourceByLogisticLine.put(logisticLineId, deletedSoli);
+            }
+        }
+
+        if (restoreQuantityByLogisticLine.isEmpty()) {
+            return;
+        }
+
+        Map<Id, Stock_Outward_Line_Item__c> holderByLogisticLine = new Map<Id, Stock_Outward_Line_Item__c>();
+        for (Stock_Outward_Line_Item__c holder : [
+            SELECT Id, ERP7__Logistic_Line_Item__c, ERP7__Quantity__c, ERP7__Status__c
+            FROM Stock_Outward_Line_Item__c
+            WHERE ERP7__Logistic_Line_Item__c IN :restoreQuantityByLogisticLine.keySet()
+              AND Name = 'Serial Stock Holder'
+        ]) {
+            if (!holderByLogisticLine.containsKey(holder.ERP7__Logistic_Line_Item__c)) {
+                holderByLogisticLine.put(holder.ERP7__Logistic_Line_Item__c, holder);
+            }
+        }
+
+        List<Stock_Outward_Line_Item__c> holdersToUpdate = new List<Stock_Outward_Line_Item__c>();
+        Set<Id> logisticLinesNeedingHolder = new Set<Id>();
+        for (Id logisticLineId : restoreQuantityByLogisticLine.keySet()) {
+            Stock_Outward_Line_Item__c existingHolder = holderByLogisticLine.get(logisticLineId);
+            if (existingHolder != null) {
+                Decimal holderQuantity = existingHolder.ERP7__Quantity__c == null
+                    ? 0
+                    : existingHolder.ERP7__Quantity__c;
+                existingHolder.ERP7__Quantity__c = holderQuantity + restoreQuantityByLogisticLine.get(logisticLineId);
+                existingHolder.ERP7__Status__c = 'Reserved';
+                holdersToUpdate.add(existingHolder);
+            } else {
+                logisticLinesNeedingHolder.add(logisticLineId);
+            }
+        }
+
+        if (!holdersToUpdate.isEmpty()) {
+            Boolean previousUpdateGuard = PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler;
+            PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = false;
+            try {
+                update holdersToUpdate;
+            } finally {
+                PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = previousUpdateGuard;
+            }
+        }
+
+        if (logisticLinesNeedingHolder.isEmpty()) {
+            return;
+        }
+
+        List<Stock_Outward_Line_Item__c> holdersToInsert = new List<Stock_Outward_Line_Item__c>();
+        for (Id logisticLineId : logisticLinesNeedingHolder) {
+            Stock_Outward_Line_Item__c source = sourceByLogisticLine.get(logisticLineId);
+            Stock_Outward_Line_Item__c newHolder = source.clone(false, false, false, false);
+            newHolder.Name = 'Serial Stock Holder';
+            newHolder.ERP7__Active__c = true;
+            newHolder.ERP7__Status__c = 'Reserved';
+            newHolder.ERP7__Quantity__c = restoreQuantityByLogisticLine.get(logisticLineId);
+            newHolder.ERP7__Picked_Quantity__c = 0;
+            newHolder.ERP7__Picked_Date__c = null;
+            newHolder.ERP7__Serial__c = null;
+            newHolder.ERP7__Material_Batch_Lot__c = null;
+            holdersToInsert.add(newHolder);
+        }
+
+        Boolean previousTransactionGuard = PreventRecursiveLedgerEntry.proceed;
+        PreventRecursiveLedgerEntry.proceed = false;
+        try {
+            insert holdersToInsert;
+        } finally {
+            PreventRecursiveLedgerEntry.proceed = previousTransactionGuard;
+        }
     }
     
     public static void handleAfterUndelete(List<Stock_Outward_Line_Item__c> undeletedList) {

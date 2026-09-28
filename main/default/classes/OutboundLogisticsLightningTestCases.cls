@@ -1806,5 +1806,378 @@ system.debug('afeter   : '+PPLIS.size());*/
         Test.stopTest();
         
     }
-    
+    @IsTest
+    static void stockSelectionMethodsCoverAddressLevels() {
+        PreventRecursiveLedgerEntry.testCasesTransactions = true;
+
+        Account organisation = new Account(
+            Name = 'Stock Coverage Organisation',
+            Account_Type__c = 'Organisation'
+        );
+        Account customer = new Account(
+            Name = 'Stock Coverage Customer',
+            Account_Type__c = 'Customer'
+        );
+        insert new List<Account>{ organisation, customer };
+
+        Business_Unit__c businessUnit = new Business_Unit__c(
+            Name = 'Stock Coverage BU',
+            Organisation__c = organisation.Id,
+            Active__c = true
+        );
+        insert businessUnit;
+
+        Contact contact = new Contact(
+            FirstName = 'Stock',
+            LastName = 'Coverage',
+            AccountId = customer.Id,
+            Email = 'stock.coverage@example.com'
+        );
+        insert contact;
+
+        Address__c billingAddress = new Address__c(
+            Customer__c = customer.Id,
+            Contact__c = contact.Id,
+            Active__c = true,
+            Address_Line1__c = '1 Test Street',
+            City__c = 'Test City',
+            State__c = 'New York',
+            Country__c = 'United States',
+            Postal_Code__c = '10001',
+            Is_Billing_Address__c = true
+        );
+        Address__c shippingAddress = new Address__c(
+            Customer__c = customer.Id,
+            Contact__c = contact.Id,
+            Active__c = true,
+            Address_Line1__c = '1 Test Street',
+            City__c = 'Test City',
+            State__c = 'New York',
+            Country__c = 'United States',
+            Postal_Code__c = '10001',
+            Is_Shipping_Address__c = true
+        );
+        insert new List<Address__c>{ billingAddress, shippingAddress };
+
+        Channel__c channel = new Channel__c(
+            Name = 'Stock Coverage Channel',
+            Organisation__c = organisation.Id
+        );
+        insert channel;
+
+        Employees__c employee = new Employees__c(
+            First_Name__c = 'Stock',
+            Last_Name__c = 'Coverage',
+            Email__c = 'stock.coverage@example.com',
+            Organisation__c = organisation.Id,
+            Organisation_Business_Unit__c = businessUnit.Id,
+            Employee_User__c = UserInfo.getUserId(),
+            Employment_Status__c = 'Active',
+            Non_Employee__c = false,
+            Channel__c = channel.Id
+        );
+        insert employee;
+
+        Site__c site = new Site__c(
+            Name = 'Stock Coverage Site',
+            Active__c = true,
+            Organisation__c = organisation.Id,
+            Barcode__c = 'STOCK-COVERAGE-SITE'
+        );
+        insert site;
+
+        Distribution_Channel__c distributionChannel = new Distribution_Channel__c(
+            Name = 'Stock Coverage Distribution',
+            Active__c = true,
+            Channel__c = channel.Id,
+            Site__c = site.Id,
+            Priority__c = '1'
+        );
+        insert distributionChannel;
+
+        Location__c location = new Location__c(
+            Name = 'Stock Coverage Location',
+            Barcode__c = 'STOCK-COVERAGE-LOCATION',
+            Site__c = site.Id,
+            Active__c = true
+        );
+        insert location;
+
+        StorageContainer__c bin = new StorageContainer__c(
+            Location__c = location.Id,
+            Site__c = site.Id,
+            Status__c = 'Checked In',
+            Barcode__c = 'STOCK-COVERAGE-BIN',
+            Active__c = true
+        );
+        insert bin;
+
+        Product2 normalProduct = new Product2(
+            Name = 'Normal Stock Coverage Product',
+            IsActive = true,
+            Barcode__c = 'NORMAL-COVERAGE',
+            Track_Inventory__c = true
+        );
+        Product2 batchProduct = new Product2(
+            Name = 'Batch Stock Coverage Product',
+            IsActive = true,
+            Barcode__c = 'BATCH-COVERAGE',
+            Track_Inventory__c = true,
+            ERP7__Lot_Tracked__c = true
+        );
+        Product2 serialProduct = new Product2(
+            Name = 'Serial Stock Coverage Product',
+            IsActive = true,
+            Barcode__c = 'SERIAL-COVERAGE',
+            Track_Inventory__c = true,
+            ERP7__Serialise__c = true
+        );
+        insert new List<Product2>{ normalProduct, batchProduct, serialProduct };
+
+        ERP7__Batch__c batch = new ERP7__Batch__c(
+            Name = 'BATCH-COVERAGE-001',
+            ERP7__Account__c = customer.Id,
+            ERP7__Product__c = batchProduct.Id,
+            ERP7__Availability_date__c = Date.today(),
+            ERP7__Shelf_Life_Expiration_Date__c = Date.today().addYears(1),
+            ERP7__Vendor_Batch_Number__c = 'BATCH-COVERAGE-001',
+            ERP7__Next_Inspection_Date__c = Date.today().addMonths(1),
+            ERP7__Inward_Quantity__c = 15,
+            ERP7__Outward_Quantity__c = 0,
+            ERP7__Active__c = true,
+            ERP7__Date_of_Manufacture__c = Date.today()
+        );
+        insert batch;
+
+        List<ERP7__Serial_Number__c> serials = new List<ERP7__Serial_Number__c>{
+            new ERP7__Serial_Number__c(
+                Name = 'SERIAL-COVERAGE-WAREHOUSE',
+                ERP7__Serial_Number__c = 'SERIAL-COVERAGE-WAREHOUSE',
+                ERP7__Product__c = serialProduct.Id,
+                ERP7__Available__c = true,
+                ERP7__Barcode_Type__c = 'Code128'
+            ),
+            new ERP7__Serial_Number__c(
+                Name = 'SERIAL-COVERAGE-LOCATION',
+                ERP7__Serial_Number__c = 'SERIAL-COVERAGE-LOCATION',
+                ERP7__Product__c = serialProduct.Id,
+                ERP7__Available__c = true,
+                ERP7__Barcode_Type__c = 'Code128'
+            ),
+            new ERP7__Serial_Number__c(
+                Name = 'SERIAL-COVERAGE-BIN',
+                ERP7__Serial_Number__c = 'SERIAL-COVERAGE-BIN',
+                ERP7__Product__c = serialProduct.Id,
+                ERP7__Available__c = true,
+                ERP7__Barcode_Type__c = 'Code128'
+            )
+        };
+        insert serials;
+
+        List<Inventory_Stock__c> inventory = new List<Inventory_Stock__c>();
+        List<Product2> stockProducts = new List<Product2>{ normalProduct, batchProduct, serialProduct };
+        for (Product2 product : stockProducts) {
+            inventory.add(new Inventory_Stock__c(
+                Name = product.Name + ' Warehouse',
+                Organisation__c = organisation.Id,
+                Active__c = true,
+                Warehouse__c = site.Id,
+                Product__c = product.Id,
+                ERP7__Batch_Lot__c = product.Id == batchProduct.Id ? batch.Id : null,
+                ERP7__Serial__c = product.Id == serialProduct.Id ? serials[0].Id : null
+            ));
+            inventory.add(new Inventory_Stock__c(
+                Name = product.Name + ' Location',
+                Organisation__c = organisation.Id,
+                Active__c = true,
+                Warehouse__c = site.Id,
+                Location__c = location.Id,
+                Product__c = product.Id,
+                ERP7__Batch_Lot__c = product.Id == batchProduct.Id ? batch.Id : null,
+                ERP7__Serial__c = product.Id == serialProduct.Id ? serials[1].Id : null
+            ));
+            inventory.add(new Inventory_Stock__c(
+                Name = product.Name + ' Bin',
+                Organisation__c = organisation.Id,
+                Active__c = true,
+                Warehouse__c = site.Id,
+                Location__c = location.Id,
+                StorageContainer__c = bin.Id,
+                Product__c = product.Id,
+                ERP7__Batch_Lot__c = product.Id == batchProduct.Id ? batch.Id : null,
+                ERP7__Serial__c = product.Id == serialProduct.Id ? serials[2].Id : null
+            ));
+        }
+        insert inventory;
+
+        List<Stock_Inward_Line_Item__c> inwardLines = new List<Stock_Inward_Line_Item__c>();
+        for (Integer index = 0; index < inventory.size(); index++) {
+            Product2 product = stockProducts[index / 3];
+            Integer addressIndex = Math.mod(index, 3);
+            inwardLines.add(new Stock_Inward_Line_Item__c(
+                Name = 'Stock Coverage Inward ' + index,
+                Active__c = true,
+                Site_ProductService_InventoryStock__c = inventory[index].Id,
+                Product__c = product.Id,
+                Quantity__c = product.Id == serialProduct.Id ? 1 : 5,
+                ERP7__Material_Batch_Lot__c = product.Id == batchProduct.Id ? batch.Id : null,
+                ERP7__Serial__c = product.Id == serialProduct.Id ? serials[addressIndex].Id : null
+            ));
+        }
+        insert inwardLines;
+
+        Sales_Order__c salesOrder = new Sales_Order__c(
+            Order_Status__c = 'Entered',
+            Account__c = customer.Id,
+            Contact__c = contact.Id,
+            Channel__c = channel.Id,
+            Bill_To_Address__c = billingAddress.Id,
+            Ship_To_Address__c = shippingAddress.Id,
+            Request_Date__c = Date.today(),
+            Authorised__c = true,
+            ERP7__Ready_To_Pick_Pack__c = true,
+            Fulfilled__c = false,
+            Barcode__c = 'STOCK-COVERAGE-ORDER'
+        );
+        insert salesOrder;
+
+        List<Sales_Order_Line_Item__c> salesLines = new List<Sales_Order_Line_Item__c>();
+        for (Product2 product : stockProducts) {
+            salesLines.add(new Sales_Order_Line_Item__c(
+                Base_Price__c = 10,
+                Product__c = product.Id,
+                Quantity__c = 3,
+                Sales_Order__c = salesOrder.Id,
+                Total_Price__c = 30,
+                Inventory_Tracked__c = true,
+                ERP7__Allocate_Stock__c = true
+            ));
+        }
+        insert salesLines;
+
+        ERP7__Logistic__c logistic = new ERP7__Logistic__c(
+            Name = 'Stock Coverage Logistic',
+            ERP7__Type__c = 'Outbound',
+            ERP7__Account__c = customer.Id,
+            ERP7__Active__c = true,
+            ERP7__Channel__c = channel.Id,
+            ERP7__Distribution_Channel__c = distributionChannel.Id,
+            ERP7__Sales_Order__c = salesOrder.Id,
+            ERP7__Shipment_type__c = 'UPS',
+            ERP7__Shipping_Preferences__c = '--None--'
+        );
+        insert logistic;
+
+        List<ERP7__Logistic_Line_Item__c> logisticLines = new List<ERP7__Logistic_Line_Item__c>();
+        for (Integer index = 0; index < stockProducts.size(); index++) {
+            logisticLines.add(new ERP7__Logistic_Line_Item__c(
+                Name = 'Stock Coverage Logistic Line ' + index,
+                ERP7__Logistic__c = logistic.Id,
+                ERP7__Product__c = stockProducts[index].Id,
+                ERP7__Sales_Order_Line_Item__c = salesLines[index].Id,
+                ERP7__Quantity__c = 3,
+                ERP7__Quantity_Received__c = 0,
+                ERP7__Status__c = 'Reserved'
+            ));
+        }
+        insert logisticLines;
+
+        PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = true;
+        List<Stock_Outward_Line_Item__c> outwardLines = new List<Stock_Outward_Line_Item__c>();
+        for (Integer index = 0; index < stockProducts.size(); index++) {
+            Integer inventoryIndex = index * 3;
+            outwardLines.add(new Stock_Outward_Line_Item__c(
+                Name = 'Stock Coverage Outward ' + index,
+                Active__c = true,
+                Product__c = stockProducts[index].Id,
+                Site_Product_Service_Inventory_Stock__c = inventory[inventoryIndex].Id,
+                Quantity__c = 1,
+                Sales_Order_Line_Item__c = salesLines[index].Id,
+                Sales_Order__c = salesOrder.Id,
+                Logistic_Line_Item__c = logisticLines[index].Id,
+                Status__c = 'Reserved',
+                ERP7__Material_Batch_Lot__c = index == 1 ? batch.Id : null,
+                ERP7__Serial__c = index == 2 ? serials[0].Id : null
+            ));
+        }
+        insert outwardLines;
+
+        Test.startTest();
+
+        OutboundLogisticsLightning.comWrap redirectResult =
+            OutboundLogisticsLightning.redirect2NextTab(JSON.serialize(new List<String>{ logistic.Id }));
+
+
+        Map<Id, Id> emptyStockMap = new Map<Id, Id>();
+        List<Id> addressIds = new List<Id>{ site.Id, location.Id, bin.Id };
+
+        for (Id addressId : addressIds) {
+            OutboundLogisticsLightning.Wrappers batchWrapper = buildStockWrapper(
+                batchProduct,
+                logisticLines[1].Id,
+                addressId,
+                batch.Id,
+                null
+            );
+            OutboundLogisticsLightning.comWrap batchResult = OutboundLogisticsLightning.fetchBatchStocks(
+                JSON.serialize(batchWrapper),
+                JSON.serialize(emptyStockMap)
+            );
+
+            OutboundLogisticsLightning.comWrap batchBinResult = OutboundLogisticsLightning.fetchBinStocks(
+                JSON.serialize(batchWrapper),
+                JSON.serialize(emptyStockMap)
+            );
+        }
+
+        for (Integer addressIndex = 0; addressIndex < addressIds.size(); addressIndex++) {
+            OutboundLogisticsLightning.Wrappers serialWrapper = buildStockWrapper(
+                serialProduct,
+                logisticLines[2].Id,
+                addressIds[addressIndex],
+                null,
+                serials[addressIndex].Id
+            );
+            OutboundLogisticsLightning.comWrap serialResult = OutboundLogisticsLightning.fetchBinStocks(
+                JSON.serialize(serialWrapper),
+                JSON.serialize(emptyStockMap)
+            );
+
+            OutboundLogisticsLightning.Wrappers normalWrapper = buildStockWrapper(
+                normalProduct,
+                logisticLines[0].Id,
+                addressIds[addressIndex],
+                null,
+                null
+            );
+            OutboundLogisticsLightning.comWrap normalResult = OutboundLogisticsLightning.fetchBinStocks(
+                JSON.serialize(normalWrapper),
+                JSON.serialize(emptyStockMap)
+            );
+        }
+
+        Test.stopTest();
+    }
+
+    private static OutboundLogisticsLightning.Wrappers buildStockWrapper(
+        Product2 product,
+        Id logisticLineId,
+        Id addressId,
+        Id batchId,
+        Id serialId
+    ) {
+        OutboundLogisticsLightning.Wrappers wrapper = new OutboundLogisticsLightning.Wrappers();
+        wrapper.Product = product;
+        wrapper.AddressName = String.valueOf(addressId);
+        wrapper.batchLotCode = batchId == null ? '' : String.valueOf(batchId);
+        wrapper.requiredQty = 3;
+        wrapper.remainingQty = 3;
+
+        ERP7__Logistic_Line_Item__c logisticLine = new ERP7__Logistic_Line_Item__c(Id = logisticLineId);
+        logisticLine.ERP7__Product__r = product;
+        wrapper.LOLI = logisticLine;
+        wrapper.SerialNumbers = new Stock_Outward_Line_Item__c(Serial__c = serialId);
+        return wrapper;
+    }
+
 }

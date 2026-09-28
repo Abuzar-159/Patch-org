@@ -2135,15 +2135,28 @@ batchVersion.put(InwardLine.ERP7__Material_Batch_Lot__c,InwardLine.ERP7__Materia
     public static comWrap unCommitSOLI(String SoliId){
         comWrap comW = new comWrap();
         try {
-            List<ERP7__Stock_Outward_Line_Item__c> SOLIS = [SELECT Id, ERP7__Picked_Quantity__c, ERP7__Status__c, ERP7__Picked_Date__c,ERP7__Serial__c FROM ERP7__Stock_Outward_Line_Item__c WHERE Id =: SoliId  LIMIT 1];
-           List<ERP7__Serial_Number__c> serials2Update = new List<ERP7__Serial_Number__c>(); // 19_12_23 shaguftha to mark the deleted outward serials as avaialble
+            List<ERP7__Stock_Outward_Line_Item__c> SOLIS = [SELECT Id, Name, ERP7__Quantity__c, ERP7__Picked_Quantity__c, ERP7__Status__c, ERP7__Picked_Date__c, ERP7__Serial__c, ERP7__Sales_Order_Line_Item__c, ERP7__Order_Product__c,ERP7__Logistic_Line_Item__c FROM ERP7__Stock_Outward_Line_Item__c WHERE Id = :SoliId LIMIT 1];
+            List<ERP7__Serial_Number__c> serials2Update = new List<ERP7__Serial_Number__c>(); // 19_12_23 shaguftha to mark the deleted outward serials as avaialble
+            List<ERP7__Stock_Outward_Line_Item__c> solisToUpdate = new List<ERP7__Stock_Outward_Line_Item__c>();
+            List<ERP7__Stock_Outward_Line_Item__c> solisToDelete = new List<ERP7__Stock_Outward_Line_Item__c>();
             for(ERP7__Stock_Outward_Line_Item__c SOLI : SOLIS){
-                SOLI.ERP7__Picked_Quantity__c = 0;
-                SOLI.ERP7__Picked_Date__c = null;
-                SOLI.ERP7__Status__c = 'Reserved';
+                if((SOLI.ERP7__Order_Product__c != null || SOLI.ERP7__Sales_Order_Line_Item__c != null) &&
+                   SOLI.ERP7__Serial__c != null) {
+                    
+                    solisToDelete.add(SOLI);
+                } else {
+                    SOLI.ERP7__Picked_Quantity__c = 0;
+                    SOLI.ERP7__Picked_Date__c = null;
+                    SOLI.ERP7__Status__c = 'Reserved';
+                    solisToUpdate.add(SOLI);
+                }
                 if(SOLI.ERP7__Serial__c != null) serials2Update.add(new ERP7__Serial_Number__c(Id = SOLI.ERP7__Serial__c ,ERP7__Available__c= true));
             }
-            update SOLIS;
+            if(!solisToDelete.isEmpty()) delete solisToDelete;
+            if(!solisToUpdate.isEmpty()) {
+                PreventRecursiveLedgerEntry.proceedStockOutwardUpdateHandler = true;
+                update solisToUpdate;
+            }
             if(serials2Update.size() > 0) upsert serials2Update;
         } catch(exception e){            comW.exceptionError = e.getMessage() +' Line Number @ : '+ e.getLineNumber();        }
         return comW;

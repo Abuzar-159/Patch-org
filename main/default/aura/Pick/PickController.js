@@ -80,7 +80,7 @@
                         $A.enqueueAction(myaction);
                     }else{
                         console.log('inelse commitedSOLIIdsList');
-                       console.log('event --'+JSON.stringify(event.getSource()));
+                        cmp.set('v.soliExistingList', []);
                         //helper.fetchStocks(cmp, event, helper, -1);
                         $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                     }
@@ -1116,9 +1116,8 @@
                             cmp.set("v.exceptionError", response.getReturnValue().exceptionError);
                             $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
                         } else{
-                            //alert('pick');
-                            cmp.createPicks();
-                            $A.util.addClass(cmp.find('mainSpin'), "slds-hide");
+                            cmp.set('v.soliExistingList', []);
+                            cmp.getAllDetailsInit();
                         }
                     }
                 });
