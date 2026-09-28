@@ -174,6 +174,40 @@ public class MaintainBatch_StockOutwardTriggerHandler {
             return;
         }
 
+        Set<Id> sourceInventoryIds = new Set<Id>();
+        for (Id logisticLineId : logisticLinesNeedingHolder) {
+            Stock_Outward_Line_Item__c source = sourceByLogisticLine.get(logisticLineId);
+            if (source.ERP7__Site_Product_Service_Inventory_Stock__c != null) {
+                sourceInventoryIds.add(source.ERP7__Site_Product_Service_Inventory_Stock__c);
+            }
+        }
+
+        Map<Id, Inventory_Stock__c> sourceInventoryById = new Map<Id, Inventory_Stock__c>([
+            SELECT Id, ERP7__Warehouse__c, ERP7__Organisation__c,
+                   ERP7__Organisation_Business_Unit__c
+            FROM Inventory_Stock__c
+            WHERE Id IN :sourceInventoryIds
+        ]);
+        Map<Id, Inventory_Stock__c> holderInventoryByLogisticLine = new Map<Id, Inventory_Stock__c>();
+        List<Inventory_Stock__c> holderInventoriesToInsert = new List<Inventory_Stock__c>();
+        for (Id logisticLineId : logisticLinesNeedingHolder) {
+            Stock_Outward_Line_Item__c source = sourceByLogisticLine.get(logisticLineId);
+            Inventory_Stock__c sourceInventory = sourceInventoryById.get(
+                source.ERP7__Site_Product_Service_Inventory_Stock__c
+            );
+            Inventory_Stock__c holderInventory = new Inventory_Stock__c(
+                Name = 'Serial Stock Holder',
+                ERP7__Active__c = true,
+                ERP7__Product__c = source.ERP7__Product__c,
+                ERP7__Warehouse__c = sourceInventory.ERP7__Warehouse__c,
+                ERP7__Organisation__c = sourceInventory.ERP7__Organisation__c,
+                ERP7__Organisation_Business_Unit__c = sourceInventory.ERP7__Organisation_Business_Unit__c
+            );
+            holderInventoryByLogisticLine.put(logisticLineId, holderInventory);
+            holderInventoriesToInsert.add(holderInventory);
+        }
+        insert holderInventoriesToInsert;
+
         List<Stock_Outward_Line_Item__c> holdersToInsert = new List<Stock_Outward_Line_Item__c>();
         for (Id logisticLineId : logisticLinesNeedingHolder) {
             Stock_Outward_Line_Item__c source = sourceByLogisticLine.get(logisticLineId);
@@ -186,6 +220,8 @@ public class MaintainBatch_StockOutwardTriggerHandler {
             newHolder.ERP7__Picked_Date__c = null;
             newHolder.ERP7__Serial__c = null;
             newHolder.ERP7__Material_Batch_Lot__c = null;
+            newHolder.ERP7__Site_Product_Service_Inventory_Stock__c =
+                holderInventoryByLogisticLine.get(logisticLineId).Id;
             holdersToInsert.add(newHolder);
         }
 
