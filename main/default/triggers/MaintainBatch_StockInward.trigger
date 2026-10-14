@@ -381,7 +381,7 @@ Auto update Standard Orders and Logistic Lines when all the items of that order 
               for (Id pId: ProductMap2Stock.keySet()) ProductMap2StockReserved.put(pId, 0);
             }
             System.debug('productmap2Stock '+ProductMap2Stock);
-            List < OrderItem > Solis = [Select Id, ERP7__Inventory_Tracked__c, Product2Id, Quantity, OrderId, ERP7__Status__c, ERP7__PriceBookId__c From OrderItem Where Product2Id In: productIds And ERP7__Is_Back_Order__c = true Order By CreatedDate ASC LIMIT 999];
+            List < OrderItem > Solis = [Select Id, ERP7__Inventory_Tracked__c, Product2Id, Quantity, OrderId, ERP7__Status__c, ERP7__PriceBookId__c From OrderItem Where Product2Id In: productIds And ERP7__Is_Back_Order__c = true And Order.AccountId != null And Order.ERP7__Is_Closed__c = false And Order.Status Not In ('Delivered', 'Canceled') Order By CreatedDate ASC LIMIT 999];
             System.debug('sos2updatinng');
             System.debug('solis'+Solis);
             Integer nsSO = 0;

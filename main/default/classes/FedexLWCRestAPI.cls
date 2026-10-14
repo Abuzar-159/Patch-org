@@ -353,6 +353,7 @@ public with Sharing class FedexLWCRestAPI {
                 StatusCode = 200;
         }else {
             response = http.send(request);
+            System.debug('request : '+request.getBody());
             system.debug('response : '+response);
             StatusCode = response.getStatusCode();
         }

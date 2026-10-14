@@ -22,6 +22,10 @@
                         component.set("v.solis",[]); 
                         component.set("v.unfilteredsolis",[]);
                         if(customerdata){
+                            // Populate the receiving lookups from the selected RMA.
+                            component.set("v.DistributeChannel.Id", customerdata.ERP7__Distribution_Channel__c || "");
+                            component.set("v.site.Id", customerdata.ERP7__Site__c || "");
+
                             if(component.get("v.RMA.ERP7__Authorize__c") || component.get("v.RMA.ERP7__Is_Closed__c")){
                                 component.set("v.disaAddbutton",true);
                                 component.set("v.disaeditdelete",true);
@@ -122,6 +126,7 @@
                         component.set("v.CustContact.Name",'');            
                         component.set("v.solis",[]); 
                         component.set("v.unfilteredsolis",[]);
+                        $A.enqueueAction(component.get("c.doinit"));
                         setTimeout(
                             $A.getCallback(function() {
                                 if(component.find('spinner')!=undefined) $A.util.addClass(component.find('spinner'), "slds-hide"); 
