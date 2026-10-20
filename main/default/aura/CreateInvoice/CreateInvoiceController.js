@@ -415,6 +415,7 @@
                     comp.find("RecordTypeId").set("v.value",comp.get("v.selectedrecordTypeMap").RecordTypeId);
                     comp.find("invoiceEditForm").submit();
                 } else{
+                    comp.set("v.showMmainSpin", false);
                     comp.set("v.showToast",true);
                     comp.set("v.message","Review All Error Messages");
 
@@ -657,11 +658,13 @@
                     }
                 }catch(e){
                     console.log('arshad err1',e);
+                    helper.showSaveError(comp, e);
                 }
             }
 
         }catch(e){
             console.log('arshad err2',e);
+            helper.showSaveError(comp, e);
         }
     },
 

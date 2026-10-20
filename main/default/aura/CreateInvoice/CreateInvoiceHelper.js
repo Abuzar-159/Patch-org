@@ -104,9 +104,15 @@
             });
 
             action.setCallback(this, function(response) {
+                if (!comp.isValid()) return;
+                // Saving is complete; navigation must not keep the form blocked.
+                comp.set("v.showMmainSpin", false);
                 var state = response.getState();
-                if (comp.isValid() && state === "SUCCESS") {
+                if (state === "SUCCESS") {
+                    comp.set("v.invoiceSaved", true);
+                    console.log('Invoice saved. Returned invoice ID:', response.getReturnValue());
                     if(comp.get("v.FromAR")){
+                        console.log('Invoice post-save route: Accounts Receivable');
                         var actionInvName = comp.get("c.getInvoiceName");
                         actionInvName.setParams({ InvId: response.getReturnValue() });
                         actionInvName.setCallback(this, function (response) {
@@ -128,6 +134,7 @@
                         });
                         $A.enqueueAction(actionInvName);
                     }else if(comp.get("v.fromProject")){
+                        console.log('Invoice post-save route: Project');
                         var evt = $A.get("e.force:navigateToComponent");
                         evt.setParams({
                             componentDef : "c:Milestones",
@@ -139,36 +146,65 @@
                         });
                         evt.fire();
                     }else {
-                        var navEvt = $A.get("e.force:navigateToSObject");
-                        if(!$A.util.isUndefined(navEvt)){
-                            navEvt.setParams({
-                                "recordId": response.getReturnValue(),
-                            });
-                            navEvt.fire();
-                        }else{
-                            window.open("/"+response.getReturnValue(),"_self");
-                        }
-
+                        console.log('Invoice post-save route: Invoice record');
+                        helper.navigateToInvoice(comp, response.getReturnValue());
                     }
                 }else{
                     console.log('Error:',response.getError());
-                    var errors = response.getError();
-                    var pageerros = errors[0].pageErrors;
-                    comp.set("v.showToast",true);
-                    comp.set("v.message",pageerros[0].message);
-
-                    setTimeout(
-                        $A.getCallback(function() {
-                            comp.set("v.showToast",false);
-                        }), 10000
-                    );
-                    comp.set("v.showMmainSpin",false);
+                    helper.showSaveError(comp, response.getError());
                 }
             });
             $A.enqueueAction(action);
         }catch(e){
-            console.log('err'+JSON.stringify(e))
+            console.log('Invoice save error:', e);
+            helper.showSaveError(comp, e);
         }
+    },
+
+    navigateToInvoice : function(comp, recordId) {
+        if (!comp.isValid()) return;
+        if (typeof recordId !== "string" || !/^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(recordId)) {
+            this.showSaveError(comp, {
+                message: "Invoice was saved, but the server did not return a valid invoice ID. Open it from the Invoices list; do not save again."
+            });
+            return;
+        }
+
+        var recordUrl = "/lightning/r/ERP7__Invoice__c/" + recordId + "/view";
+        try {
+            console.log('Opening saved invoice:', recordUrl);
+            window.location.replace(recordUrl);
+        } catch (error) {
+            console.log('Invoice redirect failed:', error);
+            this.showSaveError(comp, {
+                message: "Invoice was saved (" + recordId + "), but the record page could not be opened. Open it from the Invoices list; do not save again."
+            });
+        }
+    },
+
+    showSaveError : function(comp, errors) {
+        if (!comp.isValid()) return;
+        comp.set("v.showMmainSpin", false);
+        var messages = [];
+        var errorList = Array.isArray(errors) ? errors : [errors];
+        errorList.forEach(function(error) {
+            if (!error) return;
+            if (error.message) messages.push(error.message);
+            (error.pageErrors || []).forEach(function(pageError) {
+                if (pageError.message) messages.push(pageError.message);
+            });
+            var fieldErrors = error.fieldErrors || {};
+            Object.keys(fieldErrors).forEach(function(field) {
+                fieldErrors[field].forEach(function(fieldError) {
+                    if (fieldError.message) messages.push(fieldError.message);
+                });
+            });
+        });
+        comp.set("v.message", messages.join(" ") || "Unable to save the invoice. Check your connection and try again.");
+        comp.set("v.showToast", true);
+        setTimeout($A.getCallback(function() {
+            if (comp.isValid()) comp.set("v.showToast", false);
+        }), 10000);
     },
 
     updateTotalPrice_Handler : function(component){
