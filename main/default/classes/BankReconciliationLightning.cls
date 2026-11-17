@@ -10,44 +10,25 @@ public With Sharing class BankReconciliationLightning {
     @AuraEnabled public static List<Bank_Statement__c> bankStmtlist                   {get;set;} @AuraEnabled public static Boolean showInputFile                                  {get;set;} @AuraEnabled public static Boolean showBanksection                                {get;set;}
     @AuraEnabled public static Boolean showFileData                                   {get;set;}  public String AccessToken {get;set;}
     public String ProviderId {get;set;}
+    public String StartupError {get; private set;}
     public BankReconciliationLightning(){
         showFileData = false;
         org_bankStmtlist = new List<Bank_Statement__c>();
-        String yodlee = '%Yodlee%';
-        Credentials__c cred = [Select Id, Name, Active__c,ERP7__Source_Drive_ID__c, ERP7__Password_Transkey__c, Channel_Id__c, ERP7__Signature__c, URL__c, ERP7__Username_Login__c, ERP7__Encrypted_Key__c, ERP7__Account_Id__c, ERP7__Bank_COA_ID__c  
-                               From Credentials__c
-                               Where Active__c =: true And
-                               Name Like :yodlee order by CreatedDate desc
-                               Limit 1];
-        system.debug('ProviderId-->'+cred.ERP7__Source_Drive_ID__c);
-        ProviderId = cred.ERP7__Source_Drive_ID__c.toString();
-        Blob cryptoKey, userData, passwordData;
-        cryptoKey = encodingUtil.convertFromHex(cred.Encrypted_Key__c);
-        userData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(cred.Username_Login__c));
-        passwordData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(cred.Password_Transkey__c));
-        if(userData != null) system.debug(userData.toString());
-        if(passwordData != null) system.debug(passwordData.toString());
-        String requestEndPoint = cred.URL__c;//'https://development.api.yodlee.uk/ysl/auth/token'; 
-        HttpRequest req = new HttpRequest(); 
-        req.setEndpoint(requestEndPoint);  
-        req.setMethod('POST');    
-        req.setTimeout(2000); 
-        req.setHeader('Content-Type','application/x-www-form-urlencoded');   
-        req.setHeader('Api-Version','1.1');  
-        req.setHeader('loginName',userData.toString());  
-        String body='clientId='+userData.toString()+'&secret='+passwordData.toString();  
-        req.setBody(body);
-        Http http = new Http(); 
-        httpResponse response=http.send(req); 
-        String response_1 = response.getBody(); 
-        Map<String,Object> results=(Map<String,Object>)JSON.deserializeUntyped(response_1); 
-        Object data = (Object)results.get('token');  
-        Map<String,Object> mainresults=(Map<String,Object>)data; 
-        system.debug('mainresults-->'+mainresults);
-        if(mainresults != null){            AccessToken=String.valueOf(mainresults.get('accessToken'));   String issuedAt = String.valueOf(mainresults.get('issuedAt'));
-            system.debug('AccessToken-->'+AccessToken);    system.debug('issuedAt-->'+issuedAt);
+        try {
+            Credentials__c credential = getActiveYodleeCredential();
+            if (credential == null) {
+                StartupError = 'No active Yodlee credentials are configured.';
+                return;
+            }
+            ProviderId = credential.ERP7__Source_Drive_ID__c == null
+                ? null : String.valueOf(credential.ERP7__Source_Drive_ID__c);
+            AccessToken = requestYodleeToken(credential);
+            if (String.isBlank(AccessToken)) {
+                StartupError = 'Unable to authenticate with Yodlee.';
+            }
+        } catch (Exception e) {
+            StartupError = 'Unable to authenticate with Yodlee. Check the active credentials.';
         }
-        
     }
     
     
@@ -55,6 +36,161 @@ public With Sharing class BankReconciliationLightning {
     
     
     public PageReference navigateToPage2() {        return Page.EditYodlee; }// Replace Page2 with the name of your second Visualforce page
+
+    private static Credentials__c getActiveYodleeCredential() {
+        String namePattern = '%Yodlee%';
+        List<Credentials__c> credentials = [
+            SELECT Id, Name, Active__c, ERP7__Source_Drive_ID__c,
+                   ERP7__Password_Transkey__c, URL__c, ERP7__Username_Login__c,
+                   ERP7__Encrypted_Key__c
+            FROM Credentials__c
+            WHERE Active__c = true AND Name LIKE :namePattern
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+        return credentials.isEmpty() ? null : credentials[0];
+    }
+
+    private static String requestYodleeToken(Credentials__c credential) {
+        if (credential == null || String.isBlank(credential.URL__c)
+            || String.isBlank(credential.ERP7__Encrypted_Key__c)
+            || String.isBlank(credential.ERP7__Username_Login__c)
+            || String.isBlank(credential.ERP7__Password_Transkey__c)) return null;
+
+        Blob key = EncodingUtil.convertFromHex(credential.ERP7__Encrypted_Key__c);
+        String clientId = Crypto.decryptWithManagedIV('AES256', key,
+            EncodingUtil.convertFromHex(credential.ERP7__Username_Login__c)).toString();
+        String secret = Crypto.decryptWithManagedIV('AES256', key,
+            EncodingUtil.convertFromHex(credential.ERP7__Password_Transkey__c)).toString();
+        HttpRequest request = new HttpRequest();
+        request.setEndpoint(credential.URL__c);
+        request.setMethod('POST');
+        request.setTimeout(10000);
+        request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+        request.setHeader('Api-Version', '1.1');
+        request.setHeader('loginName', clientId);
+        request.setBody('clientId=' + EncodingUtil.urlEncode(clientId, 'UTF-8')
+            + '&secret=' + EncodingUtil.urlEncode(secret, 'UTF-8'));
+        HttpResponse response = new Http().send(request);
+        if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) return null;
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+        Map<String, Object> token = body == null ? null : (Map<String, Object>) body.get('token');
+        return token == null || token.get('accessToken') == null
+            ? null : String.valueOf(token.get('accessToken'));
+    }
+
+    @RemoteAction
+    public static String getYodleeRefreshStatus(String providerAccountId, String requestId) {
+        return getProviderAccountStatus(providerAccountId, requestId);
+    }
+
+    @RemoteAction
+    public static String getCurrentYodleeAccountStatus() {
+        return getProviderAccountStatus(null, null);
+    }
+
+    private static String getProviderAccountStatus(String providerAccountId, String requestId) {
+        Map<String, Object> result = new Map<String, Object>{
+            'status' => 'CHECK_ERROR',
+            'terminal' => false,
+            'message' => 'Unable to check the Yodlee refresh status.'
+        };
+        if (requestId != null && (String.isBlank(requestId) || requestId.length() > 256)) {
+            result.put('message', 'Yodlee did not provide a valid refresh tracking ID.');
+            return JSON.serialize(result);
+        }
+        try {
+            Credentials__c credential = getActiveYodleeCredential();
+            if (credential == null || credential.ERP7__Source_Drive_ID__c == null
+                || String.isBlank(credential.URL__c)) {
+                result.put('message', 'An active Yodlee credential and provider account ID are required.');
+                return JSON.serialize(result);
+            }
+            String configuredId = String.valueOf(credential.ERP7__Source_Drive_ID__c);
+            if (providerAccountId != null && providerAccountId != configuredId) {
+                result.put('message', 'The selected provider account does not match the configured account.');
+                return JSON.serialize(result);
+            }
+            Integer authPath = credential.URL__c.indexOf('/auth/token');
+            if (authPath < 0) {
+                result.put('message', 'The Yodlee credential URL is not configured for status checks.');
+                return JSON.serialize(result);
+            }
+            String token = requestYodleeToken(credential);
+            if (String.isBlank(token)) {
+                result.put('message', 'Unable to authenticate with Yodlee for a status check.');
+                return JSON.serialize(result);
+            }
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(credential.URL__c.substring(0, authPath)
+                + '/providerAccounts/' + EncodingUtil.urlEncode(configuredId, 'UTF-8')
+                + (requestId == null ? '' : '?requestId=' + EncodingUtil.urlEncode(requestId, 'UTF-8')));
+            request.setMethod('GET');
+            request.setTimeout(10000);
+            request.setHeader('Api-Version', '1.1');
+            request.setHeader('Authorization', 'Bearer ' + token);
+            HttpResponse response = new Http().send(request);
+            if (response.getStatusCode() != 200) {
+                result.put('message', 'Yodlee status check returned HTTP ' + response.getStatusCode() + '.');
+                return JSON.serialize(result);
+            }
+            Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(response.getBody());
+            List<Object> accounts = body == null ? null : (List<Object>) body.get('providerAccount');
+            Map<String, Object> account;
+            if (accounts != null) {
+                for (Object value : accounts) {
+                    Map<String, Object> candidate = (Map<String, Object>) value;
+                    if (candidate != null && String.valueOf(candidate.get('id')) == configuredId) {
+                        account = candidate;
+                        break;
+                    }
+                }
+            }
+            if (account == null || account.get('status') == null) {
+                result.put('message', 'Yodlee returned no provider account refresh status.');
+                return JSON.serialize(result);
+            }
+            if (requestId != null && account.get('requestId') != null
+                && String.valueOf(account.get('requestId')) != requestId) {
+                result.put('message', 'Yodlee returned a status for a different refresh request.');
+                return JSON.serialize(result);
+            }
+            String status = String.valueOf(account.get('status')).toUpperCase();
+            String detail;
+            List<Object> datasets = (List<Object>) account.get('dataset');
+            if (datasets != null) {
+                for (Object value : datasets) {
+                    Map<String, Object> dataset = (Map<String, Object>) value;
+                    if (dataset != null && dataset.get('additionalStatus') != null) {
+                        detail = String.valueOf(dataset.get('additionalStatus'));
+                        if (String.valueOf(dataset.get('name')) == 'BASIC_AGG_DATA') break;
+                    }
+                }
+            }
+            result.put('status', status);
+            result.put('additionalStatus', detail);
+            result.put('lastUpdated', account.get('lastUpdated'));
+            if (status == 'SUCCESS') {
+                result.put('terminal', true);
+                result.put('message', 'Account refresh completed. Yodlee finished aggregating the data.');
+            } else if (status == 'PARTIAL_SUCCESS') {
+                result.put('terminal', true);
+                result.put('message', 'Account refresh partially completed. Some data could not be retrieved.');
+            } else if (status == 'FAILED' || status == 'NON_UPDATABLE') {
+                result.put('terminal', true);
+                result.put('message', 'Account refresh failed. Please try again or update the account details.');
+            } else if (status == 'USER_INPUT_REQUIRED') {
+                result.put('message', 'Yodlee is waiting for additional authentication in FastLink.');
+            } else if (status == 'LOGIN_IN_PROGRESS') {
+                result.put('message', 'Yodlee is signing in to the account.');
+            } else {
+                result.put('message', 'Yodlee is refreshing and aggregating the account data.');
+            }
+        } catch (Exception e) {
+            result.put('message', 'Unable to check the Yodlee refresh status right now.');
+        }
+        return JSON.serialize(result);
+    }
     
     
     // Wrapper Classes

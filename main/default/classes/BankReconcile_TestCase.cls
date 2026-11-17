@@ -95,9 +95,6 @@ BankReconciliationLightning.importedDetails();*/
         
         /*Wrapper Class Instance*/
         
-        String salName = 'Erp7';
-        String sal1Name = 'Erp7';
-        System.assertEquals(salName, sal1Name);
         Test.stopTest();
     }
     
@@ -121,9 +118,6 @@ BankReconciliationLightning.importedDetails();*/
         Test.setCurrentPage(pageRef);
         
         
-        String salName = 'Erp7';
-        String sal1Name = 'Erp7';
-        System.assertEquals(salName, sal1Name);
     }
     static testmethod void unit3()
     {
@@ -154,9 +148,6 @@ BankReconciliationLightning.importedDetails();*/
         Test.setCurrentPage(pageRef);
         
         
-        String salName = 'Erp7';
-        String sal1Name = 'Erp7';
-        System.assertEquals(salName, sal1Name);
         Test.stopTest();
     }
     
@@ -320,6 +311,89 @@ BankReconciliationLightning.importedDetails();*/
         BankReconciliationLightning.getYodleeTransactionList(bankDetails.Id, system.today(),system.today()+10);
         BankReconciliationLightning.processAutoReconcile(JSON.serialize(bt1));
         BankReconciliationLightning.fetchAutoReconcileRecords(testbankobj.Id);
+        Test.stopTest();
+    }
+
+    private class YodleeStatusMock implements HttpCalloutMock {
+        String status = 'SUCCESS';
+        String responseRequestId;
+        String statusBody;
+        Integer statusCode = 200;
+        Boolean tokenFailure = false;
+
+        public HttpResponse respond(HttpRequest request) {
+            HttpResponse response = new HttpResponse();
+            response.setHeader('Content-Type', 'application/json');
+            if (request.getEndpoint().contains('/auth/token')) {
+                response.setStatusCode(tokenFailure ? 503 : 201);
+                response.setBody(tokenFailure ? '{}' : '{"token":{"accessToken":"test-token"}}');
+            } else {
+                response.setStatusCode(statusCode);
+                response.setBody(statusBody == null
+                    ? '{"providerAccount":[{"id":"99990001","status":"' + status
+                        + '","lastUpdated":"2026-11-12T00:00:00Z"'
+                        + (responseRequestId == null ? '' : ',"requestId":"' + responseRequestId + '"')
+                        + ',"dataset":[{"name":"BASIC_AGG_DATA","additionalStatus":"DATA_RETRIEVED"}]}]}'
+                    : statusBody);
+            }
+            return response;
+        }
+    }
+
+    @IsTest
+    static void coversYodleeRefreshStatus() {
+        Credentials__c credential = [
+            SELECT Id, Active__c, Source_Drive_ID__c, URL__c, Encrypted_Key__c,
+                Username_Login__c, Password_Transkey__c
+            FROM Credentials__c
+            WHERE Active__c = true AND Name LIKE '%Yodlee%'
+            ORDER BY CreatedDate DESC LIMIT 1
+        ];
+        Blob key = Crypto.generateAesKey(256);
+        credential.Source_Drive_ID__c = '99990001';
+        credential.URL__c = 'https://example.test/ysl/auth/token';
+        credential.Encrypted_Key__c = EncodingUtil.convertToHex(key);
+        credential.Username_Login__c = EncodingUtil.convertToHex(
+            Crypto.encryptWithManagedIV('AES256', key, Blob.valueOf('test-client')));
+        credential.Password_Transkey__c = EncodingUtil.convertToHex(
+            Crypto.encryptWithManagedIV('AES256', key, Blob.valueOf('test-secret')));
+        update credential;
+
+        YodleeStatusMock mock = new YodleeStatusMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+        Test.startTest();
+        BankReconciliationLightning controller = new BankReconciliationLightning();
+        controller.navigateToPage1();
+        controller.navigateToPage2();
+        for (String status : new List<String>{
+            'SUCCESS', 'PARTIAL_SUCCESS', 'FAILED', 'NON_UPDATABLE',
+            'USER_INPUT_REQUIRED', 'LOGIN_IN_PROGRESS', 'IN_PROGRESS'
+        }) {
+            mock.status = status;
+            BankReconciliationLightning.getYodleeRefreshStatus('99990001', null);
+        }
+        BankReconciliationLightning.getCurrentYodleeAccountStatus();
+        BankReconciliationLightning.getYodleeRefreshStatus('different-account', null);
+        BankReconciliationLightning.getYodleeRefreshStatus('99990001', '');
+        String longRequestId = '';
+        for (Integer i = 0; i < 257; i++) longRequestId += 'x';
+        BankReconciliationLightning.getYodleeRefreshStatus('99990001', longRequestId);
+
+        mock.responseRequestId = 'another-request';
+        BankReconciliationLightning.getYodleeRefreshStatus('99990001', 'this-request');
+        mock.responseRequestId = 'this-request';
+        BankReconciliationLightning.getYodleeRefreshStatus('99990001', 'this-request');
+        mock.responseRequestId = null;
+        mock.statusCode = 503;
+        BankReconciliationLightning.getCurrentYodleeAccountStatus();
+        mock.statusCode = 200;
+        mock.statusBody = '{"providerAccount":[]}';
+        BankReconciliationLightning.getCurrentYodleeAccountStatus();
+        mock.statusBody = 'invalid-json';
+        BankReconciliationLightning.getCurrentYodleeAccountStatus();
+        mock.statusBody = null;
+        mock.tokenFailure = true;
+        BankReconciliationLightning.getCurrentYodleeAccountStatus();
         Test.stopTest();
     }
 }

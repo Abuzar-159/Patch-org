@@ -1,49 +1,214 @@
 <apex:page controller="BankReconciliationLightning">
     <script type="text/javascript" src="https://cdn.yodlee.com/fastlink/v3/initialize.js"></script>
-    <script> var previousOnload = window.onload; window.onload = function() { if (previousOnload) { previousOnload(); } myYodlee(); } </script>
     <style>
-    	iframe {
-        width: 100%;
-        border-width: 0px;
-        display: block;
-        min-height: 700px !important;
-        }
+        iframe { width:100%; border:0; display:block; min-height:700px !important; }
+        #yodlee-status { max-width:720px; margin:16px auto; padding:16px; border:1px solid #DDE1E7; border-radius:10px; font:14px Arial,sans-serif; }
+        #yodlee-status.success { border-color:#2e844a; }
+        #yodlee-status.warning { border-color:#E8A33D; }
+        #yodlee-status.error { border-color:#ba0517; }
+        #yodlee-detail { color:#5c5c5c; margin-top:4px; }
+        #yodlee-check { display:none; margin-top:12px; padding:8px 12px; cursor:pointer; }
     </style>
-    <body onload="myYodlee();">
-        <div id="container-fastlink" >
-            <div style="text-align: center;visibility:hidden;"><!-- visibility:hidden; -->
-                <input type="button" id="btn-fastlink" value="Link an Account" onclick="myYodlee();"/>
-            </div>
-        </div>
-        <script>
-        function myYodlee(){
-            //Open FastLink
-            var Token = 'Bearer '+ '{!AccessToken}';
-            var ProviderId = '{!ProviderId}';
+    <div id="yodlee-status" role="status" aria-live="polite">
+        <div id="yodlee-message"></div>
+        <div id="yodlee-detail"></div>
+        <button id="yodlee-check" type="button" onclick="retryStatusCheck();">Check status again</button>
+    </div>
+    <div id="container-fastlink"></div>
+    <script>
+        var isRefresh = '{!IF($CurrentPage.parameters.flow == "refresh", "true", "false")}' === 'true';
+        var isStatusOnly = '{!IF($CurrentPage.parameters.flow == "status", "true", "false")}' === 'true';
+        var startupError = '{!JSENCODE(StartupError)}';
+        var accessToken = '{!JSENCODE(AccessToken)}';
+        var providerId = '{!JSENCODE(ProviderId)}';
+        var requestId = '';
+        var finished = false;
+        var statusTimer = null;
+        var checkCount = 0;
+        var checkFailures = 0;
+        var statusChecking = false;
+
+        function showStatus(message, tone, detail, allowRetry) {
+            var panel = document.getElementById('yodlee-status');
+            panel.className = tone || '';
+            document.getElementById('yodlee-message').textContent = message || '';
+            document.getElementById('yodlee-detail').textContent = detail || '';
+            document.getElementById('yodlee-check').style.display = allowRetry ? 'inline-block' : 'none';
+        }
+
+        function stopPolling() {
+            if (statusTimer) clearTimeout(statusTimer);
+            statusTimer = null;
+        }
+
+        function refreshContext(value) {
+            if (!value) return null;
+            if (Object.prototype.toString.call(value) === '[object Array]') {
+                for (var i = 0; i < value.length; i++) {
+                    var item = refreshContext(value[i]);
+                    if (item) return item;
+                }
+                return null;
+            }
+            if (value.sites) {
+                var site = refreshContext(value.sites);
+                if (site) return site;
+            }
+            if (value.data) {
+                var nested = refreshContext(value.data);
+                if (nested) return nested;
+            }
+            if (value.requestId && (!value.providerAccountId || String(value.providerAccountId) === providerId)) return value;
+            return null;
+        }
+
+        function tooSoon(value) {
+            if (!value) return false;
+            return String(value.code || '').toUpperCase() === 'E102'
+                || String(value.title || '').toUpperCase() === 'REFRESHING_TOO_SOON'
+                || String(value.message || '').toLowerCase().indexOf('not enough time has passed') >= 0;
+        }
+
+        function showAccountStatus(account) {
+            var status = account.status || '';
+            var detail = account.additionalStatus ? 'Yodlee detail: ' + account.additionalStatus : '';
+            if (status === 'SUCCESS' || status === 'PARTIAL_SUCCESS') {
+                finished = true;
+                stopPolling();
+                showStatus(account.message, status === 'SUCCESS' ? 'success' : 'warning', detail, false);
+            } else if (account.terminal) {
+                finished = true;
+                stopPolling();
+                showStatus(account.message, 'error', detail, false);
+            } else {
+                showStatus(account.message || 'Yodlee is refreshing the account data.', 'warning', detail, false);
+                if (++checkCount < 120) statusTimer = setTimeout(requestId ? checkRefreshStatus : checkCurrentAccountStatus, 10000);
+                else showStatus('Yodlee is taking longer than expected to finish.', 'warning', detail, true);
+            }
+        }
+
+        function statusError() {
+            if (++checkFailures >= 3) {
+                stopPolling();
+                showStatus('Unable to check the account refresh right now.', 'warning', 'The refresh may still be running.', true);
+            } else {
+                statusTimer = setTimeout(requestId ? checkRefreshStatus : checkCurrentAccountStatus, 10000);
+            }
+        }
+
+        function checkRefreshStatus() {
+            if (finished || !requestId || statusChecking) return;
+            stopPolling();
+            statusChecking = true;
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.BankReconciliationLightning.getYodleeRefreshStatus}',
+                providerId, requestId,
+                function (response, event) {
+                    statusChecking = false;
+                    if (!event.status) { statusError(); return; }
+                    var account;
+                    try { account = JSON.parse(response); } catch (e) { statusError(); return; }
+                    checkFailures = 0;
+                    if (account.status === 'CHECK_ERROR') { statusError(); return; }
+                    showAccountStatus(account);
+                },
+                { escape:false, timeout:30000 }
+            );
+        }
+
+        function checkCurrentAccountStatus() {
+            if (statusChecking) return;
+            stopPolling();
+            statusChecking = true;
+            Visualforce.remoting.Manager.invokeAction(
+                '{!$RemoteAction.BankReconciliationLightning.getCurrentYodleeAccountStatus}',
+                function (response, event) {
+                    statusChecking = false;
+                    if (!event.status) { statusError(); return; }
+                    var account;
+                    try { account = JSON.parse(response); } catch (e) { statusError(); return; }
+                    if (account.status === 'CHECK_ERROR') {
+                        showStatus(account.message, 'warning', '', true);
+                        return;
+                    }
+                    showAccountStatus(account);
+                },
+                { escape:false, timeout:30000 }
+            );
+        }
+
+        function retryStatusCheck() {
+            checkFailures = 0;
+            checkCount = 0;
+            finished = false;
+            showStatus('Checking Yodlee refresh status...', '', '', false);
+            if (requestId) checkRefreshStatus();
+            else checkCurrentAccountStatus();
+        }
+
+        function monitorRefresh(value) {
+            if (!isRefresh || finished) return;
+            var context = refreshContext(value);
+            if (!context) return;
+            if (requestId !== String(context.requestId)) {
+                requestId = String(context.requestId);
+                checkCount = 0;
+                checkFailures = 0;
+            }
+            showStatus('Yodlee is refreshing and aggregating the account data.', '', '', false);
+            if (!statusTimer) checkRefreshStatus();
+        }
+
+        function myYodlee() {
+            if (startupError || !accessToken || !providerId) {
+                showStatus(startupError || 'An active Yodlee account is required.', 'error', '', false);
+                return;
+            }
+            if (isStatusOnly) {
+                showStatus('Checking the linked account status...', '', '', false);
+                checkCurrentAccountStatus();
+                return;
+            }
+            if (!window.fastlink || !window.fastlink.open) {
+                showStatus('FastLink could not be loaded.', 'error', 'Reload the page and try again.', false);
+                return;
+            }
+            showStatus(isRefresh ? 'Complete the account refresh in FastLink.' : 'Complete the account update in FastLink.', '', '', false);
             window.fastlink.open({
                 fastLinkURL: 'https://fl4.development.yodlee.uk/authenticate/UKPre-Prod-74/fastlink?channelAppName=ukpreprod',
-                accessToken: Token,
+                accessToken: 'Bearer ' + accessToken,
                 params: {
-                    providerAccountId : ProviderId,
-                    flow : '{!IF($CurrentPage.parameters.flow == "refresh", "refresh", "edit")}',//flow : 'edit',
-                    configName:'Development2'
+                    providerAccountId: providerId,
+                    flow: isRefresh ? 'refresh' : 'edit',
+                    configName: 'Development2'
                 },
                 onSuccess: function (data) {
-                    console.log(data);
+                    if (isRefresh) {
+                        monitorRefresh(data);
+                        if (!requestId) checkCurrentAccountStatus();
+                    } else showStatus('Account update completed in FastLink.', 'success', '', false);
                 },
                 onError: function (data) {
-                    console.log(data);
+                    if (!isRefresh) {
+                        showStatus('FastLink could not update the account.', 'error', data ? data.reason : '', false);
+                        return;
+                    }
+                    if (tooSoon(data)) {
+                        showStatus('Yodlee declined another refresh. Checking the previous account status...', 'warning', '', false);
+                        checkCurrentAccountStatus();
+                        return;
+                    }
+                    monitorRefresh(data);
+                    if (!requestId) showStatus('FastLink could not refresh the account.', 'error', data ? data.reason : '', false);
                 },
                 onExit: function (data) {
-                    console.log(data);
+                    if (!isRefresh || finished) return;
+                    monitorRefresh(data);
+                    if (!requestId) showStatus('FastLink closed before the refresh could be verified.', 'warning', '', true);
                 },
-                onEvent: function (data) {
-                    console.log(data);
-                }
-            },
-          'container-fastlink');
-            
-        };
-        </script>
-    </body>
+                onEvent: function (data) { monitorRefresh(data); }
+            }, 'container-fastlink');
+        }
+        window.addEventListener('load', myYodlee);
+    </script>
 </apex:page>
