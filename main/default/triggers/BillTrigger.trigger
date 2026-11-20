@@ -254,17 +254,38 @@ trigger BillTrigger on Bill__c (after insert,before delete,before update, after 
                     if(!System.isFuture() && !System.isBatch()) CreateDebitNote.updatePO(mulBillIds);
                 }else{
                     if(totalamount!=0){
-                        if(payedamountnew!=payedamountold){System.debug('set ERP7__Amount_Paid__c on PO from Bill ');System.debug(trigger.new);
-                         	list<RollUpSummaryUtility.fieldDefinition> MPSfieldDefinitions = new list<RollUpSummaryUtility.fieldDefinition> {
-                        	new RollUpSummaryUtility.fieldDefinition('SUM', 'ERP7__Amount_Paid__c', 'ERP7__Amount_Paid__c')
-                            	};PreventRecursiveLedgerEntry.billtriggerduringpayment=false;
-                                	RollUpSummaryUtility.rollUpTrigger(MPSfieldDefinitions, trigger.new, 'ERP7__Bill__c','ERP7__Purchase_Order__c', 'ERP7__PO__c', ' ');
-                      	} 
+                        if(payedamountnew!=payedamountold){
+                            PreventRecursiveLedgerEntry.billtriggerduringpayment=false;
+                        }
                      }  
                 }
             }
         }
       }  
+    }
+
+    // Keep the PO paid amount in sync when a later voucher credit changes the Bill.
+    // This must run even after billtriggerduringpayment is set to false.
+    if (Trigger.isAfter && Trigger.isUpdate) {
+        List<ERP7__Bill__c> billsWithPaidAmountChanges = new List<ERP7__Bill__c>();
+        for (ERP7__Bill__c bill : Trigger.new) {
+            ERP7__Bill__c oldBill = Trigger.oldMap.get(bill.Id);
+            if (bill.ERP7__Purchase_Order__c != null &&
+                bill.ERP7__Total_Amount__c != null && bill.ERP7__Total_Amount__c != 0 &&
+                bill.ERP7__Amount_Paid__c != oldBill.ERP7__Amount_Paid__c) {
+                billsWithPaidAmountChanges.add(bill);
+            }
+        }
+        if (!billsWithPaidAmountChanges.isEmpty()) {
+            List<RollUpSummaryUtility.fieldDefinition> paidAmountFields =
+                new List<RollUpSummaryUtility.fieldDefinition>{
+                    new RollUpSummaryUtility.fieldDefinition('SUM', 'ERP7__Amount_Paid__c', 'ERP7__Amount_Paid__c')
+                };
+            RollUpSummaryUtility.rollUpTrigger(
+                paidAmountFields, billsWithPaidAmountChanges,
+                'ERP7__Bill__c', 'ERP7__Purchase_Order__c', 'ERP7__PO__c', ' '
+            );
+        }
     }
     
     //Bills

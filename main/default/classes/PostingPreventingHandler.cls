@@ -939,4 +939,139 @@ newDebitNoteMap.get(DBId).addError(errMessage);
         }
         return isclosed;
     }
+
+    //by Raqeeb: handle CreditsReturn shipping deductions with or without a restock fee when no negative item posts them.
+    public static Boolean isShippingDeductionCase(Transaction__c trans, List<ERP7__Credit_Note_Item__c> noteItems) {
+        if (trans.Transaction_Type__c != 'CreditsReturn' || trans.ERP7__Credit_Note__c == null
+            || (trans.ERP7__Credit_Note__r.ERP7__Fees__c != null && trans.ERP7__Credit_Note__r.ERP7__Fees__c > 0)
+            || trans.ERP7__Credit_Note__r.ERP7__Shipping_Amount__c == null || trans.ERP7__Credit_Note__r.ERP7__Shipping_Amount__c >= 0
+            || trans.ERP7__Credit_Note__r.ERP7__Amount__c == null
+            || trans.ERP7__Credit_Note__r.ERP7__Tax_Amount__c == null || trans.Amount__c == null)
+            return false;
+
+        Decimal positiveItemTotal = 0;
+        for (ERP7__Credit_Note_Item__c noteItem : noteItems) {
+            if (noteItem.ERP7__Credit_Note__c != trans.ERP7__Credit_Note__c || noteItem.ERP7__Amount__c == null) continue;
+            if (noteItem.ERP7__Amount__c < 0) return false;
+            if (noteItem.ERP7__Amount__c > 0 && noteItem.ERP7__Quantity__c != null)
+                positiveItemTotal += noteItem.ERP7__Amount__c * noteItem.ERP7__Quantity__c;
+        }
+        Decimal restockFee = trans.ERP7__Credit_Note__r.ERP7__Fees__c == null ? 0 : -trans.ERP7__Credit_Note__r.ERP7__Fees__c;
+        Decimal deductions = restockFee - trans.ERP7__Credit_Note__r.ERP7__Shipping_Amount__c;
+        return (positiveItemTotal - trans.ERP7__Credit_Note__r.ERP7__Amount__c).setScale(2) == deductions.setScale(2);
+    }
+
+    public static List<Finance_General_Ledger_Entry__c> buildEntries(
+        Transaction__c trans,
+        List<ERP7__Credit_Note_Item__c> noteItems,
+        Map<Id, Chart_of_Accounts__c> chartAccounts,
+        Map<String, Id> productRevenueAccounts,
+        Map<String, Set<ERP7__COA_Mapping__c>> coaMappings,
+        Map<String, Id> existingEntryIds,
+        Id financeLedgerId,
+        Datetime transactionDate,
+        Id accountingPeriodId,
+        Id creditRecordTypeId,
+        Boolean shippingDeductionCase
+    ) {
+        List<Finance_General_Ledger_Entry__c> entries = new List<Finance_General_Ledger_Entry__c>();
+        if (trans.Transaction_Type__c != 'CreditsReturn' || trans.ERP7__Credit_Note__c == null
+            || (!shippingDeductionCase && (trans.ERP7__Credit_Note__r.ERP7__Fees__c == null || trans.ERP7__Credit_Note__r.ERP7__Fees__c >= 0))
+            || trans.ERP7__Credit_Note__r.ERP7__Amount__c == null)
+            return entries;
+
+        Decimal positiveItemTotal = 0;
+        for (ERP7__Credit_Note_Item__c noteItem : noteItems) {
+            if (noteItem.ERP7__Credit_Note__c == trans.ERP7__Credit_Note__c
+                && noteItem.ERP7__Amount__c != null && noteItem.ERP7__Amount__c > 0
+                && noteItem.ERP7__Quantity__c != null)
+                positiveItemTotal += noteItem.ERP7__Amount__c * noteItem.ERP7__Quantity__c;
+        }
+        Decimal restockFee = trans.ERP7__Credit_Note__r.ERP7__Fees__c == null ? 0 : -trans.ERP7__Credit_Note__r.ERP7__Fees__c;
+        if (!shippingDeductionCase
+            && (positiveItemTotal - trans.ERP7__Credit_Note__r.ERP7__Amount__c).setScale(2) != restockFee.setScale(2))
+            return entries;
+
+        Chart_of_Accounts__c restockCoa;
+        if (restockFee > 0) {
+            for (Chart_of_Accounts__c candidate : chartAccounts.values()) {
+                if (candidate.Organisation__c == trans.Organisation__c && candidate.Name == 'Restock Fees') {
+                    if (restockCoa != null) return entries;
+                    restockCoa = candidate;
+                }
+            }
+            if (restockCoa == null) return entries;
+        }
+
+        Chart_of_Accounts__c shippingCoa;
+        if (shippingDeductionCase) {
+            if (!coaMappings.containsKey('CreditsReturn')) return entries;
+            for (ERP7__COA_Mapping__c returnMapping : coaMappings.get('CreditsReturn')) {
+                if (returnMapping.ERP7__Shipment__c != true || returnMapping.ERP7__Chart_of_Account__c == null) continue;
+                Chart_of_Accounts__c candidate = chartAccounts.get(returnMapping.ERP7__Chart_of_Account__c);
+                if (candidate != null && candidate.Organisation__c == trans.Organisation__c) {
+                    if (shippingCoa != null) return entries;
+                    shippingCoa = candidate;
+                }
+            }
+            if (shippingCoa == null) return entries;
+        }
+
+        Decimal feeItemCredit = 0;
+        if (restockFee > 0) {
+            for (ERP7__Credit_Note_Item__c noteItem : noteItems) {
+                if (noteItem.ERP7__Credit_Note__c == trans.ERP7__Credit_Note__c
+                    && noteItem.ERP7__Amount__c != null && noteItem.ERP7__Amount__c < 0
+                    && noteItem.ERP7__Quantity__c != null
+                    && ((productRevenueAccounts.containsKey(noteItem.ERP7__Product__c)
+                        && productRevenueAccounts.get(noteItem.ERP7__Product__c) == restockCoa.Id)
+                        || noteItem.ERP7__Product__r.ERP7__Revenue_Account__c == restockCoa.Id))
+                    feeItemCredit += -noteItem.ERP7__Amount__c * noteItem.ERP7__Quantity__c;
+            }
+        }
+
+        Decimal missingFeeCredit = restockFee - feeItemCredit;
+        Decimal shippingDeduction = 0;
+        if (shippingDeductionCase) {
+            shippingDeduction = -trans.ERP7__Credit_Note__r.ERP7__Shipping_Amount__c;
+            if (restockFee > 0) {
+                Decimal roundedFeeCredit = positiveItemTotal.setScale(2)
+                    + trans.ERP7__Credit_Note__r.ERP7__Tax_Amount__c.setScale(2)
+                    - trans.Amount__c.setScale(2) - shippingDeduction.setScale(2) - feeItemCredit.setScale(2);
+                if (Math.abs(roundedFeeCredit - missingFeeCredit.setScale(2)) <= 0.01)
+                    missingFeeCredit = roundedFeeCredit;
+            }
+        }
+        if (missingFeeCredit > 0) {
+            entries.add(new Finance_General_Ledger_Entry__c(
+                Id = existingEntryIds.get(trans.Id + '_' + restockCoa.Id),
+                ERP7__Chart_of_Account__c = restockCoa.Id,
+                Finance_General_Ledger__c = financeLedgerId,
+                General_Ledger_Entry_DateTime__c = transactionDate,
+                Accounting_period__c = accountingPeriodId,
+                Active__c = trans.Active__c,
+                Organisation__c = trans.Organisation__c,
+                Organisation_Business_Unit__c = trans.Organisation_Business_Unit__c,
+                Transactions__c = trans.Id,
+                ERP7__Credit_Entry__c = missingFeeCredit,
+                RecordTypeId = creditRecordTypeId
+            ));
+        }
+        if (shippingDeductionCase) {
+            entries.add(new Finance_General_Ledger_Entry__c(
+                Id = existingEntryIds.get(trans.Id + '_' + shippingCoa.Id),
+                ERP7__Chart_of_Account__c = shippingCoa.Id,
+                Finance_General_Ledger__c = financeLedgerId,
+                General_Ledger_Entry_DateTime__c = transactionDate,
+                Accounting_period__c = accountingPeriodId,
+                Active__c = trans.Active__c,
+                Organisation__c = trans.Organisation__c,
+                Organisation_Business_Unit__c = trans.Organisation_Business_Unit__c,
+                Transactions__c = trans.Id,
+                ERP7__Credit_Entry__c = shippingDeduction,
+                RecordTypeId = creditRecordTypeId
+            ));
+        }
+        return entries;
+    }
 }
